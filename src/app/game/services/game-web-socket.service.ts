@@ -19,7 +19,7 @@ export class GameWebSocketService {
 
 
         this.stompClient.subscribe("/queue/event/" + gameSessionId, message =>
-          console.log(`Received: ${message.bodyj}`)
+          console.log(`Received: ${message.body}`)
         );
 
         this.stompClient.publish({
