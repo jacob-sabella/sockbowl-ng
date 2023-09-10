@@ -15,12 +15,14 @@ import {MatToolbarModule} from "@angular/material/toolbar";
 import {MatCardModule} from "@angular/material/card";
 import {MatDividerModule} from "@angular/material/divider";
 import {MatSelectModule} from "@angular/material/select";
+import { GameCanvasComponent } from './game/components/game-canvas/game-canvas.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     GameSessionComponent,
-    NavbarComponent
+    NavbarComponent,
+    GameCanvasComponent
   ],
   imports: [
     BrowserModule,

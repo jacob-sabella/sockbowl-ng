@@ -10,7 +10,7 @@ import {JoinGameResponse} from "../models/http/join-game-response";
 })
 export class GameSessionService {
 
-  private baseUrl: string = 'YOUR_API_BASE_URL/api/v1/session';
+  private baseUrl: string = 'http://localhost:8080/api/v1/session';
 
   constructor(private http: HttpClient) { }
 

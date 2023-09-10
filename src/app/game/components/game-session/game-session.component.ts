@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import {Component} from '@angular/core';
 import {CreateGameRequest} from "../../models/http/create-game-request";
 import {JoinGameRequest} from "../../models/http/join-game-request";
 import {GameSessionService} from "../../services/game-session.service";
 import {GameMode} from "../../enum/game-mode";
 import {ProctorType} from "../../enum/proctor-type";
+import {PlayerMode} from "../../enum/player-mode";
+import {Router} from "@angular/router";
 
 
 @Component({
@@ -20,8 +22,10 @@ export class GameSessionComponent {
 
   ProctorTypes = ProctorType;
   GameModes = GameMode;
+  PlayerModes = PlayerMode;
 
-  constructor(private gameSessionService: GameSessionService) {}
+  constructor(private gameSessionService: GameSessionService, private router: Router) {
+  }
 
   onCreateGame(): void {
     this.showCreateForm = true;
@@ -41,13 +45,29 @@ export class GameSessionComponent {
 
   submitCreateGame(): void {
     this.gameSessionService.createNewGame(this.createGameRequest).subscribe(response => {
-      // Handle successful game creation, perhaps by navigating to the game session
+      console.log("Create game response");
+      console.log(response);
+
+      // Populate the join code from the create game response
+      this.joinGameRequest.joinCode = response.joinCode;
+
+      // Join game with new join game request
+      this.submitJoinGame()
     });
   }
 
   submitJoinGame(): void {
     this.gameSessionService.joinGame(this.joinGameRequest).subscribe(response => {
-      // Handle successful game join, perhaps by navigating to the game session
+      console.log("Join game response");
+      console.log(response);
+
+      this.router.navigate(
+        ["/game", {
+          "gameSessionId": response.gameSessionId, "playerSecret": response.playerSecret,
+          "playerSessionId": response.playerSessionId
+        }]
+      ).then(r => console.log(r));
+
     });
   }
 }

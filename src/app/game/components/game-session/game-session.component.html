@@ -18,15 +18,6 @@
 
     <!-- Create Game Form -->
     <div *ngIf="showCreateForm" class="form-container">
-      <mat-form-field>
-        <mat-label>Number of Players</mat-label>
-        <input matInput type="number" [(ngModel)]="createGameRequest.gameSettings.numPlayers">
-      </mat-form-field>
-
-      <mat-form-field>
-        <mat-label>Number of Teams</mat-label>
-        <input matInput type="number" [(ngModel)]="createGameRequest.gameSettings.numTeams">
-      </mat-form-field>
 
       <mat-form-field>
         <mat-label>Proctor Type</mat-label>
@@ -46,19 +37,30 @@
         </mat-select>
       </mat-form-field>
 
+      <!-- Player Name -->
+      <mat-form-field>
+        <mat-label>Your name</mat-label>
+        <input matInput [(ngModel)]="joinGameRequest.name">
+      </mat-form-field>
 
       <button mat-raised-button color="accent" (click)="submitCreateGame()">Create</button>
     </div>
 
     <!-- Join Game Form -->
     <div *ngIf="showJoinForm" class="form-container">
+      <!-- Join Code -->
       <mat-form-field>
         <mat-label>Join Code</mat-label>
         <input matInput [(ngModel)]="joinGameRequest.joinCode">
       </mat-form-field>
 
-      <!-- ... Add other fields as required -->
-
+      <!-- Player Name -->
+      <mat-form-field>
+        <mat-label>Name</mat-label>
+        <input matInput [(ngModel)]="joinGameRequest.name">
+      </mat-form-field>
+      
+      <!-- Submit Button -->
       <button mat-raised-button color="accent" (click)="submitJoinGame()">Join</button>
     </div>
 
