@@ -17,7 +17,6 @@ export class GameWebSocketService {
       onConnect: () => {
         console.log("connected")
 
-
         this.stompClient.subscribe("/queue/event/" + gameSessionId, message =>
           console.log(`Received: ${message.body}`)
         );
