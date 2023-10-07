@@ -1,6 +1,7 @@
 import {Component} from '@angular/core';
 import {ActivatedRoute} from "@angular/router";
 import {GameWebSocketService} from "../../services/game-web-socket.service";
+import {GameMessageService} from "../../services/game-message.service";
 
 @Component({
   selector: 'app-game-canvas',
@@ -9,7 +10,7 @@ import {GameWebSocketService} from "../../services/game-web-socket.service";
 })
 export class GameCanvasComponent {
 
-  constructor(private route: ActivatedRoute, private gameWebSocketService: GameWebSocketService) {
+  constructor(private route: ActivatedRoute, private gameWebSocketService: GameWebSocketService, private gameMessageService: GameMessageService ) {
   }
 
   ngOnInit() {

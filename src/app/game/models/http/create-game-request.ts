@@ -1,9 +1,9 @@
-import {GameSettings} from "../game-settings";
+import {GameSettings} from "../state/sockbowl-interfaces";
 
 export class CreateGameRequest {
   gameSettings: GameSettings;
 
   constructor() {
-    this.gameSettings = new GameSettings();
+    this.gameSettings = <GameSettings>{};
   }
 }
