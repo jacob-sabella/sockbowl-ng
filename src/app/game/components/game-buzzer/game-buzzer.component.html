@@ -1,0 +1,40 @@
+<div class="game-buzzer-container">
+  <mat-card *ngIf="gameSessionObs | async as gameSession" class="player-info-card">
+    <mat-card-content class="player-info-content">
+      <div class="player-name">{{ gameStateService.getCurrentPlayer()?.name }}</div>
+      <div class="player-team">{{ gameStateService.getCurrentPlayerTeam()?.teamName }}</div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="game-buzzer">
+    <mat-card-title>
+      Buzz in for Round {{ gameSession.currentMatch.currentRound.roundNumber }}
+    </mat-card-title>
+    <mat-card-content>
+      <div *ngIf="gameSession.currentMatch.currentRound.currentBuzz" class="active-buzz-info">
+        <!-- Display the active buzz information with names instead of IDs -->
+        <p>{{ gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz.playerId) }} (
+          {{ gameStateService.getTeamNameById(gameSession.currentMatch.currentRound.currentBuzz.teamId) }})
+          has buzzed in
+        </p>
+      </div>
+      <div class="buzz-button-container">
+        <button
+          *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ ||
+          gameSession.currentMatch.currentRound.roundState === RoundState.PROCTOR_READING"
+          mat-raised-button
+          id="buzz-button"
+          (click)="gameStateService.sendPlayerIncomingBuzz()"
+          [disabled]="gameStateService.hasCurrentPlayerTeamBuzzed()"
+          class="buzz-button">
+          {{ getBuzzButtonText() }}
+        </button>
+      </div>
+
+      <app-team-list [teams]="gameSession.teamList"
+                     [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
+                     [previousBuzzList]="gameSession.currentMatch.currentRound.buzzList">
+      </app-team-list>
+    </mat-card-content>
+  </mat-card>
+</div>

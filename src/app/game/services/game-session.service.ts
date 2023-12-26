@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import {CreateGameRequest} from "../models/http/create-game-request";
-import {GameSessionIdentifiers} from "../models/game-session-identifiers";
-import {JoinGameRequest} from "../models/http/join-game-request";
-import {JoinGameResponse} from "../models/http/join-game-response";
+import {
+  CreateGameRequest,
+  GameSessionIdentifiers,
+  JoinGameRequest,
+  JoinGameResponse
+} from "../models/sockbowl/sockbowl-interfaces";
 @Injectable({
   providedIn: 'root'
 })

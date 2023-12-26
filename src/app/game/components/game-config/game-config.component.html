@@ -1,0 +1,85 @@
+<div *ngIf="gameSessionObs | async as gameSession" class="game-session">
+  <!-- Sidenav for Game Settings -->
+  <mat-sidenav-container>
+    <mat-sidenav mode="side" position="end" opened class="sidenav">
+
+      <!-- Game Settings Section -->
+      <mat-card *ngIf="gameSession.gameSettings" class="game-settings">
+        <mat-card-title>Game Settings</mat-card-title>
+        <mat-card-content>
+          <p>Proctor Type: {{ gameSession.gameSettings.proctorType }}</p>
+          <p>Game Mode: {{ gameSession.gameSettings.gameMode }}</p>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Packet Information Section -->
+      <mat-card class="packet-info">
+        <mat-card-title>Packet Information</mat-card-title>
+        <mat-card-content>
+          <div *ngIf="gameSession.currentMatch.packet">
+            <p>Packet ID: {{ gameSession.currentMatch.packet.id }}</p>
+            <p>Packet Name: {{ gameSession.currentMatch.packet.name }}</p>
+          </div>
+          <button mat-raised-button (click)="setPacket()">Set Packet</button>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Start Match Button -->
+      <mat-card class="start-match" *ngIf="gameStateService.isCurrentPlayerGameOwner()">
+        <mat-card-content>
+          <button mat-raised-button (click)="startMatch()">Start Match</button>
+        </mat-card-content>
+      </mat-card>
+
+    </mat-sidenav>
+
+    <!-- Main Content -->
+    <mat-sidenav-content>
+
+      <!-- Proctor Information -->
+      <mat-card class="proctor-card">
+        <mat-card-title>Proctor</mat-card-title>
+        <mat-card-content>
+          <div class="proctor-info">
+            <mat-icon>supervisor_account</mat-icon>
+            <p>Name: {{ gameStateService.getProctor()?.name }}</p>
+          </div>
+          <button mat-raised-button *ngIf="canBecomeProctor()" (click)="becomeProctor()">Become Proctor</button>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Teams Section -->
+      <div class="teams-section" *ngIf="gameSession.teamList">
+        <mat-card *ngFor="let team of gameSession.teamList" class="team-card">
+          <mat-card-title>{{ team.teamName }}</mat-card-title>
+          <mat-card-content class="team-players">
+            <div *ngFor="let player of team.teamPlayers" class="player-icon">
+              <mat-icon>face</mat-icon>
+              <div>{{ player.name }}</div>
+            </div>
+            <button mat-raised-button *ngIf="!gameStateService.isSelfOnTeam(team.teamId)" (click)="joinTeam(team)" class="join-team">Join Team</button>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Players without Teams -->
+      <mat-card class="spectators">
+        <mat-card-title>Spectators</mat-card-title>
+        <mat-card-content>
+          <mat-list>
+            <ng-container *ngFor="let player of gameSession.playerList">
+              <mat-list-item *ngIf="player.playerMode == PlayerMode.SPECTATOR">
+                <mat-icon>face</mat-icon>
+                {{ player.name }}
+              </mat-list-item>
+            </ng-container>
+          </mat-list>
+          <button mat-raised-button *ngIf="gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()" (click)="switchToSpectate()">
+            Spectate
+          </button>
+        </mat-card-content>
+      </mat-card>
+
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

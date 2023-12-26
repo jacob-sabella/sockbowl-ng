@@ -1,0 +1,28 @@
+.team-lists-container {
+  display: flex;
+  justify-content: space-between;
+
+  .team-list {
+    flex: 1;
+    margin-right: 0.5em;
+
+    &:last-child {
+      margin-right: 0;
+    }
+
+    &.buzzed {
+      background-color: #eee;
+    }
+
+    mat-list-item {
+      border-bottom: 1px solid #ddd; // Add border between team members
+      &:last-child {
+        border-bottom: none; // Remove border for the last item
+      }
+
+      &.current-buzz {
+        background-color: #ecff29; // Change highlight to green for current buzzer
+      }
+    }
+  }
+}

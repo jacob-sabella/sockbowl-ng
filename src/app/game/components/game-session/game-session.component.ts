@@ -1,11 +1,13 @@
 import {Component} from '@angular/core';
-import {CreateGameRequest} from "../../models/http/create-game-request";
-import {JoinGameRequest} from "../../models/http/join-game-request";
 import {GameSessionService} from "../../services/game-session.service";
-import {GameMode} from "../../enum/game-mode";
-import {ProctorType} from "../../enum/proctor-type";
-import {PlayerMode} from "../../enum/player-mode";
 import {Router} from "@angular/router";
+import {
+  CreateGameRequest,
+  GameMode,
+  JoinGameRequest,
+  PlayerMode,
+  ProctorType
+} from "../../models/sockbowl/sockbowl-interfaces";
 
 
 @Component({
@@ -17,8 +19,14 @@ export class GameSessionComponent {
   showCreateForm = false;
   showJoinForm = false;
 
-  createGameRequest: CreateGameRequest = new CreateGameRequest();
-  joinGameRequest: JoinGameRequest = new JoinGameRequest();
+  createGameRequest: CreateGameRequest = {
+    gameSettings: {
+      proctorType: ProctorType.IN_PERSON_PROCTOR,
+      gameMode: GameMode.QUIZ_BOWL_CLASSIC
+    }
+  } as CreateGameRequest
+
+  joinGameRequest: JoinGameRequest = {} as JoinGameRequest;
 
   ProctorTypes = ProctorType;
   GameModes = GameMode;
@@ -70,4 +78,6 @@ export class GameSessionComponent {
 
     });
   }
+
+  
 }

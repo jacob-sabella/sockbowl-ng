@@ -1,7 +1,8 @@
 import {Component} from '@angular/core';
 import {ActivatedRoute} from "@angular/router";
-import {GameWebSocketService} from "../../services/game-web-socket.service";
-import {GameMessageService} from "../../services/game-message.service";
+import {GameStateService} from "../../services/game-state.service";
+import {Observable} from "rxjs";
+import {GameSession, MatchState} from "../../models/sockbowl/sockbowl-interfaces";
 
 @Component({
   selector: 'app-game-canvas',
@@ -10,7 +11,10 @@ import {GameMessageService} from "../../services/game-message.service";
 })
 export class GameCanvasComponent {
 
-  constructor(private route: ActivatedRoute, private gameWebSocketService: GameWebSocketService, private gameMessageService: GameMessageService ) {
+  gameSession$: Observable<GameSession>;
+
+  constructor(private route: ActivatedRoute, private gameStateService: GameStateService) {
+    this.gameSession$ = this.gameStateService.gameSession$;
   }
 
   ngOnInit() {
@@ -22,8 +26,21 @@ export class GameCanvasComponent {
 
       console.log(gameSessionId, playerSecret, playerSessionId);
 
-      this.gameWebSocketService.initialize(gameSessionId, playerSecret, playerSessionId);
+      this.gameStateService.initialize(gameSessionId, playerSecret, playerSessionId);
     });
+  }
+
+  shouldShowConfigComponent(): boolean {
+    return this.gameStateService.getMatchState() == MatchState.CONFIG;
+  }
+
+  shouldShowProctorComponent(): boolean {
+    return this.gameStateService.getMatchState() == MatchState.IN_GAME && this.gameStateService.isSelfProctor();
+  }
+
+
+  shouldShowBuzzerComponent(): boolean {
+    return this.gameStateService.getMatchState() == MatchState.IN_GAME && this.gameStateService.isSelfOnAnyTeam();
   }
 
 }

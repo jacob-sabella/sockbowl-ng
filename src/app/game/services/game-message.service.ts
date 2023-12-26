@@ -1,6 +1,13 @@
 import {GameWebSocketService} from "./game-web-socket.service";
 import {BehaviorSubject, Observable} from "rxjs";
 import {Injectable} from "@angular/core";
+import {
+  CorrectAnswer,
+  GameSessionUpdate,
+  GameStartedMessage, IncorrectAnswer, MatchPacketUpdate, PlayerBuzzed,
+  PlayerRosterUpdate, ProcessError, RoundUpdate, SockbowlInMessage,
+  SockbowlOutMessage, UpdatePlayerTeam
+} from "../models/sockbowl/sockbowl-interfaces";
 
 /**
  * GameMessageService
@@ -14,57 +21,71 @@ import {Injectable} from "@angular/core";
 })
 export class GameMessageService {
   // Holds BehaviorSubjects for each type of message content
+  // Key: messageContentType, Value: BehaviorSubject
   private gameEventSubjects: { [messageContentType: string]: BehaviorSubject<any> } = {};
+
   // Exposes Observables for each type of message content
+  // Key: messageContentType, Value: Observable
   public gameEventObservables: { [messageContentType: string]: Observable<any> } = {};
+
+  constructor(private gameWebSocketService: GameWebSocketService) {
+    this.initializeSubjectsAndObservables()
+  }
+
+  private initializeSubjectsAndObservables() {
+    // List of expected message types
+    const expectedMessageTypes = [
+      GameSessionUpdate.name,
+      PlayerRosterUpdate.name,
+      GameStartedMessage.name,
+      MatchPacketUpdate.name,
+      ProcessError.name,
+      CorrectAnswer.name,
+      IncorrectAnswer.name,
+      RoundUpdate.name,
+      PlayerBuzzed.name
+    ];
+
+    // Initialize BehaviorSubjects and Observables for each expected message type
+    for (const messageType of expectedMessageTypes) {
+      this.gameEventSubjects[messageType] = new BehaviorSubject<any>(null);
+      this.gameEventObservables[messageType] = this.gameEventSubjects[messageType].asObservable();
+    }
+  }
 
   /**
    * Constructor
    *
-   * @param gameWebSocketService - GameWebSocketService instance
+   * Initializes the GameMessageService instance and sets up subscriptions to the GameWebSocketService.
+   *
+   * @param gameSessionId
+   * @param playerSecret
+   * @param playerSessionId
    */
-  constructor(private gameWebSocketService: GameWebSocketService) {
-    // Subscribe to the WebSocket message observable
+  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string) {
+
+    this.gameWebSocketService.initialize(gameSessionId, playerSecret, playerSessionId)
+
+    // Subscribe to the WebSocket message observable exposed by GameWebSocketService
     this.gameWebSocketService.messageObservable$.subscribe({
+      // Whenever a new message is received
       next: (message: any) => {
-        const messageContentType = message.messageContentType;
-        if (!this.gameEventSubjects[messageContentType]) {
-          this.gameEventSubjects[messageContentType] = new BehaviorSubject<any>(null);
-          this.gameEventObservables[messageContentType] = this.gameEventSubjects[messageContentType].asObservable();
+        if(message != null){
+          // Parse the incoming WebSocket message and create a SockbowlOutMessage object
+          const sockbowlOutMessage = JSON.parse(message.body);
+
+          // Publish the new message to the corresponding BehaviorSubject
+          this.gameEventSubjects[sockbowlOutMessage.messageContentType].next(sockbowlOutMessage);
         }
-        const model = this.mapMessageToModel(message);
-        this.gameEventSubjects[messageContentType].next(model);
       },
+      // If an error occurs during the subscription
       error: (error: any) => {
         console.error('Error receiving message from websocket', error);
       }
     });
   }
 
-  /**
-   * Translates the received message into a model.
-   *
-   * @param message - The message received from WebSocket
-   * @returns - The translated model
-   */
-  private mapMessageToModel(message: any): any {
-    const messageContentType = message.messageContentType;
-    let model: any;  // Replace with specific type mapping logic
-
-    console.log("test");
-    // Handle different types of messages
-    switch (messageContentType) {
-      case 'GameSessionUpdate':
-        console.log("gamesklrjselk")
-        model = {}
-        break;
-      // Add more cases here
-      default:
-        console.warn(`Unknown messageContentType: ${messageContentType}`);
-        model = {};  // Assign a default, possibly empty, model
-        break;
-    }
-
-    return model;
+  public sendMessage(path: string, value: SockbowlInMessage){
+    this.gameWebSocketService.sendMessage(path, value)
   }
 }

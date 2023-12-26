@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {Client, Message} from "@stomp/stompjs";
+import {SockbowlInMessage} from "../models/sockbowl/sockbowl-interfaces";
 
 /**
  * GameWebSocketService
@@ -21,6 +22,10 @@ export class GameWebSocketService {
   // Observable exposed to subscribers interested in received messages
   public messageObservable$ = this.messageSubject.asObservable();
 
+  private gameSessionId!: string;
+  private playerSecret!: string;
+  private playerSessionId!: string;
+
   constructor() {
   }
 
@@ -32,6 +37,11 @@ export class GameWebSocketService {
    * @param playerSessionId - The ID of the player session
    */
   public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string) {
+
+    this.gameSessionId = gameSessionId;
+    this.playerSecret = playerSecret;
+    this.playerSessionId = playerSessionId;
+
     // Initialize the Stomp.js client with connection details
     this.stompClient = new Client({
       brokerURL: 'ws://localhost:8080/sockbowl-game',
@@ -66,5 +76,18 @@ export class GameWebSocketService {
 
     // Activate the client to initiate the connection
     this.stompClient.activate();
+  }
+
+  public sendMessage(path: string, value: SockbowlInMessage){
+    console.log(JSON.stringify(value))
+    this.stompClient.publish({
+      destination: path,
+      body: JSON.stringify(value),
+      headers: {
+        gameSessionId: this.gameSessionId,
+        playerSecret: this.playerSecret,
+        playerSessionId: this.playerSessionId
+      }
+    })
   }
 }

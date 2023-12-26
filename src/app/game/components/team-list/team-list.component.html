@@ -1,0 +1,11 @@
+<div class="team-lists-container">
+  <mat-list *ngFor="let team of teams" class="team-list" [ngClass]="{'buzzed': hasTeamBuzzed(team.teamId)}">
+    <h3 mat-subheader><b>{{ team.teamName }}</b></h3>
+    <mat-list-item *ngFor="let player of team.teamPlayers"
+                   [ngClass]="{
+        'current-buzz': isCurrentBuzz(player.playerId)
+      }">
+      {{ player.name }}
+    </mat-list-item>
+  </mat-list>
+</div>

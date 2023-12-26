@@ -1,0 +1,112 @@
+.game-proctor-container {
+  display: flex;
+  justify-content: center;
+  align-items: center; // For vertical centering
+  margin: 1em;
+  height: calc(100vh - 40px); // Full height minus the margin
+
+  .game-proctor {
+    width: 100%;
+    max-width: 960px; // or whatever maximum width you prefer
+    margin: auto;
+
+    mat-card-title {
+      padding: 1em; // Added padding for the title
+    }
+
+    mat-card-content {
+      padding: 1em; // Added internal padding for the card content
+
+      .question {
+        margin-bottom: 1em;
+      }
+
+      .answer {
+        margin-bottom: 1em;
+      }
+    }
+  }
+
+  .active-buzz-info {
+    text-align: center; // Center the text
+    font-weight: bold; // Bold the text
+    margin: 1em 0; // Add some space around the text
+    padding: 1em;
+    background-color: #f0f0f0; // Light background to make it stand out
+    border-radius: 8px; // Rounded corners for visual appeal
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); // Subtle shadow for depth
+
+    p {
+      font-size: 1.2em; // Slightly larger text for emphasis
+      color: #d9534f; // A color that stands out, adjust as needed
+    }
+  }
+
+  .team-lists-container {
+    display: flex;
+    justify-content: space-between;
+
+    .team-list {
+      flex: 1;
+      margin-right: 0.5em;
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+  }
+
+  .button-container {
+    display: flex;
+    flex-direction: column;
+    margin: 1em 0;
+
+    #finished-reading-btn, #timeout-btn {
+      width: 100%;
+      margin-bottom: 1em;
+    }
+
+    #finished-reading-btn {
+      background-color: #4CAF50; // Green color
+      color: white;
+      &:hover {
+        background-color: darken(#4CAF50, 10%);
+      }
+    }
+
+    #timeout-btn {
+      background-color: #FFEB3B; // Yellow color
+      color: black;
+      &:hover {
+        background-color: darken(#FFEB3B, 10%);
+      }
+    }
+
+    .right-wrong-buttons {
+      display: flex;
+      justify-content: space-between; // To add space between the buttons
+
+      #right-btn, #wrong-btn {
+        flex: 1; // Make each button take up half of the container width
+      }
+
+      #right-btn {
+        margin-right: 0.5em; // Add space to the right of the "Right" button
+        background-color: #2196F3; // Blue color for 'Right'
+        color: white;
+        &:hover {
+          background-color: darken(#2196F3, 10%);
+        }
+      }
+
+      #wrong-btn {
+        margin-left: 0.5em; // Add space to the left of the "Wrong" button
+        background-color: #F44336; // Red color for 'Wrong'
+        color: white;
+        &:hover {
+          background-color: darken(#F44336, 10%);
+        }
+      }
+    }
+  }
+}

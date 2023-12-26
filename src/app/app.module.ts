@@ -16,28 +16,40 @@ import {MatCardModule} from "@angular/material/card";
 import {MatDividerModule} from "@angular/material/divider";
 import {MatSelectModule} from "@angular/material/select";
 import { GameCanvasComponent } from './game/components/game-canvas/game-canvas.component';
+import {MatListModule} from "@angular/material/list";
+import {MatSidenavModule} from "@angular/material/sidenav";
+import { GameConfigComponent } from './game/components/game-config/game-config.component';
+import { GameProctorComponent } from './game/components/game-proctor/game-proctor.component';
+import { GameBuzzerComponent } from './game/components/game-buzzer/game-buzzer.component';
+import { TeamListComponent } from './game/components/team-list/team-list.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     GameSessionComponent,
     NavbarComponent,
-    GameCanvasComponent
+    GameCanvasComponent,
+    GameConfigComponent,
+    GameProctorComponent,
+    GameBuzzerComponent,
+    TeamListComponent
   ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    BrowserAnimationsModule,
-    MatButtonModule,
-    MatInputModule,
-    FormsModule,
-    HttpClientModule,
-    MatIconModule,
-    MatToolbarModule,
-    MatCardModule,
-    MatDividerModule,
-    MatSelectModule
-  ],
+    imports: [
+        BrowserModule,
+        AppRoutingModule,
+        BrowserAnimationsModule,
+        MatButtonModule,
+        MatInputModule,
+        FormsModule,
+        HttpClientModule,
+        MatIconModule,
+        MatToolbarModule,
+        MatCardModule,
+        MatDividerModule,
+        MatSelectModule,
+        MatListModule,
+        MatSidenavModule
+    ],
   providers: [],
   bootstrap: [AppComponent]
 })
