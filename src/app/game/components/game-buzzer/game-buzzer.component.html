@@ -1,23 +1,33 @@
+<!-- Main container for the game buzzer interface -->
 <div class="game-buzzer-container">
+
+  <!-- Player info card: Shown only if there is an active game session -->
   <mat-card *ngIf="gameSessionObs | async as gameSession" class="player-info-card">
     <mat-card-content class="player-info-content">
+      <!-- Display the current player's name -->
       <div class="player-name">{{ gameStateService.getCurrentPlayer()?.name }}</div>
+      <!-- Display the name of the team to which the current player belongs -->
       <div class="player-team">{{ gameStateService.getCurrentPlayerTeam()?.teamName }}</div>
     </mat-card-content>
   </mat-card>
 
+  <!-- Buzzer card: Allows players to buzz in during a game -->
   <mat-card class="game-buzzer">
     <mat-card-title>
+      <!-- Display the current round number -->
       Buzz in for Round {{ gameSession.currentMatch.currentRound.roundNumber }}
     </mat-card-title>
     <mat-card-content>
+      <!-- Active buzz info: Shown if there's a current buzz -->
       <div *ngIf="gameSession.currentMatch.currentRound.currentBuzz" class="active-buzz-info">
-        <!-- Display the active buzz information with names instead of IDs -->
+        <!-- Display the name of the player and team who have buzzed in -->
         <p>{{ gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz.playerId) }} (
           {{ gameStateService.getTeamNameById(gameSession.currentMatch.currentRound.currentBuzz.teamId) }})
           has buzzed in
         </p>
       </div>
+
+      <!-- Buzz button: Allows players to buzz in, visibility and state depend on round conditions -->
       <div class="buzz-button-container">
         <button
           *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ ||
@@ -27,13 +37,15 @@
           (click)="gameStateService.sendPlayerIncomingBuzz()"
           [disabled]="gameStateService.hasCurrentPlayerTeamBuzzed()"
           class="buzz-button">
+          <!-- Display appropriate text on the buzz button -->
           {{ getBuzzButtonText() }}
         </button>
       </div>
 
+      <!-- Team list component: Displays a list of teams with their respective scores and buzz statuses -->
       <app-team-list [teams]="gameSession.teamList"
                      [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
-                     [previousBuzzList]="gameSession.currentMatch.currentRound.buzzList">
+                     [previousRoundList]="gameSession.currentMatch.previousRounds">
       </app-team-list>
     </mat-card-content>
   </mat-card>

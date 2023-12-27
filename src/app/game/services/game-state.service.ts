@@ -127,7 +127,18 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: CorrectAnswer) => {
+          // Check if the incoming round number is different from the current round number
+          if (msg.currentRound.roundNumber !== this.gameSessionState.currentMatch.currentRound.roundNumber) {
+            // Add the current round to the previous rounds list
+            console.log(this.gameSessionState.currentMatch.previousRounds)
+            this.gameSessionState.currentMatch.previousRounds.push(this.gameSessionState.currentMatch.currentRound);
+            console.log(this.gameSessionState.currentMatch.previousRounds)
+          }
+
+          // Update the current round to the new round
           this.gameSessionState.currentMatch.currentRound = msg.currentRound;
+
+          // Emit the updated game session state
           this.gameSessionSubject.next(this.gameSessionState);
         })
       )
@@ -138,7 +149,16 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: IncorrectAnswer) => {
+          // Check if the incoming round number is different from the current round number
+          if (msg.currentRound.roundNumber !== this.gameSessionState.currentMatch.currentRound.roundNumber) {
+            // Add the current round to the previous rounds list
+            this.gameSessionState.currentMatch.previousRounds.push(this.gameSessionState.currentMatch.currentRound);
+          }
+
+          // Update the current round to the new round
           this.gameSessionState.currentMatch.currentRound = msg.currentRound;
+
+          // Emit the updated game session state
           this.gameSessionSubject.next(this.gameSessionState);
         })
       )
@@ -148,7 +168,16 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: RoundUpdate) => {
+          // Check if the incoming round number is different from the current round number
+          if (msg.round.roundNumber !== this.gameSessionState.currentMatch.currentRound.roundNumber) {
+            // Add the current round to the previous rounds list
+            this.gameSessionState.currentMatch.previousRounds.push(this.gameSessionState.currentMatch.currentRound);
+          }
+
+          // Update the current round to the new round
           this.gameSessionState.currentMatch.currentRound = msg.round;
+
+          // Emit the updated game session state
           this.gameSessionSubject.next(this.gameSessionState);
         })
       )
