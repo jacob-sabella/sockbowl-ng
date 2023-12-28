@@ -12,6 +12,7 @@ export class GameConfigComponent implements OnInit {
 
   gameSessionObs!: Observable<GameSession>;
   gameSession! : GameSession;
+  packetId: number = 0;
 
   /**
    * Readonly property for PlayerMode enum to use in the template
@@ -91,9 +92,7 @@ export class GameConfigComponent implements OnInit {
    * Sets the packet with a static ID.
    */
   setPacket(): void {
-    // Replace 160 with the actual ID you want to use
-    const packetId = 4;
-    this.gameStateService.setMatchPacket(packetId);
+    this.gameStateService.setMatchPacket(this.packetId);
   }
 
   // --------------------------

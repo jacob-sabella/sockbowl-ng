@@ -44,7 +44,7 @@ export class GameWebSocketService {
 
     // Initialize the Stomp.js client with connection details
     this.stompClient = new Client({
-      brokerURL: 'ws://localhost:8080/sockbowl-game',
+      brokerURL: 'ws://alpha.sockbowl.com:7000/sockbowl-game',
       onConnect: () => {
         console.log("connected");
 

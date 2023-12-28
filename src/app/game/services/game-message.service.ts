@@ -35,15 +35,15 @@ export class GameMessageService {
   private initializeSubjectsAndObservables() {
     // List of expected message types
     const expectedMessageTypes = [
-      GameSessionUpdate.name,
-      PlayerRosterUpdate.name,
-      GameStartedMessage.name,
-      MatchPacketUpdate.name,
-      ProcessError.name,
-      CorrectAnswer.name,
-      IncorrectAnswer.name,
-      RoundUpdate.name,
-      PlayerBuzzed.name
+      'GameSessionUpdate',
+      'PlayerRosterUpdate',
+      'GameStartedMessage',
+      'MatchPacketUpdate',
+      'ProcessError',
+      'CorrectAnswer',
+      'IncorrectAnswer',
+      'RoundUpdate',
+      'PlayerBuzzed'
     ];
 
     // Initialize BehaviorSubjects and Observables for each expected message type

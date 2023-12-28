@@ -66,7 +66,7 @@ export class GameStateService {
   private subscribeToGameMessages(): void {
 
     // Subscribe to GameSessionUpdate messages
-    this.gameMessageService.gameEventObservables[GameSessionUpdate.name]
+    this.gameMessageService.gameEventObservables["GameSessionUpdate"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: GameSessionUpdate) => {
@@ -78,7 +78,7 @@ export class GameStateService {
       .subscribe();
 
     // Subscribe to PlayerRosterUpdate messages
-    this.gameMessageService.gameEventObservables[PlayerRosterUpdate.name]
+    this.gameMessageService.gameEventObservables["PlayerRosterUpdate"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: PlayerRosterUpdate) => {
@@ -90,7 +90,7 @@ export class GameStateService {
       .subscribe();
 
     // Subscribe to GameStartedMessage messages to mark game as started
-    this.gameMessageService.gameEventObservables[GameStartedMessage.name]
+    this.gameMessageService.gameEventObservables["GameStartedMessage"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: GameStartedMessage) => {
@@ -101,7 +101,7 @@ export class GameStateService {
       .subscribe();
 
     // Subscribe to MatchPacketUpdate message and update the match packet details
-    this.gameMessageService.gameEventObservables[MatchPacketUpdate.name]
+    this.gameMessageService.gameEventObservables["MatchPacketUpdate"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: MatchPacketUpdate) => {
@@ -113,7 +113,7 @@ export class GameStateService {
       .subscribe();
 
     // Subscribe to ProcessError and output error to console log
-    this.gameMessageService.gameEventObservables[ProcessError.name]
+    this.gameMessageService.gameEventObservables["ProcessError"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: ProcessError) => {
@@ -123,7 +123,7 @@ export class GameStateService {
       .subscribe();
 
     // Subscribe to CorrectAnswer message and update the current round for the new state
-    this.gameMessageService.gameEventObservables[CorrectAnswer.name]
+    this.gameMessageService.gameEventObservables["CorrectAnswer"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: CorrectAnswer) => {
@@ -145,7 +145,7 @@ export class GameStateService {
       .subscribe();
 
     // Subscribe to IncorrectAnswer message and update the current round for the new state
-    this.gameMessageService.gameEventObservables[IncorrectAnswer.name]
+    this.gameMessageService.gameEventObservables["IncorrectAnswer"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: IncorrectAnswer) => {
@@ -164,7 +164,7 @@ export class GameStateService {
       )
       .subscribe();
 
-    this.gameMessageService.gameEventObservables[RoundUpdate.name]
+    this.gameMessageService.gameEventObservables["RoundUpdate"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: RoundUpdate) => {
@@ -184,7 +184,7 @@ export class GameStateService {
       .subscribe();
 
 
-    this.gameMessageService.gameEventObservables[PlayerBuzzed.name]
+    this.gameMessageService.gameEventObservables["PlayerBuzzed"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: PlayerBuzzed) => {

@@ -7,12 +7,13 @@ import {
   JoinGameRequest,
   JoinGameResponse
 } from "../models/sockbowl/sockbowl-interfaces";
+import {environment} from "../../../environments/environment";
 @Injectable({
   providedIn: 'root'
 })
 export class GameSessionService {
 
-  private baseUrl: string = 'http://localhost:8080/api/v1/session';
+  private baseUrl: string = environment.apiUrl;
 
   constructor(private http: HttpClient) { }
 

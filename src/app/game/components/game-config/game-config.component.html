@@ -20,6 +20,11 @@
             <p>Packet ID: {{ gameSession.currentMatch.packet.id }}</p>
             <p>Packet Name: {{ gameSession.currentMatch.packet.name }}</p>
           </div>
+
+          <!-- Number Input for Packet ID -->
+          <input type="number" [(ngModel)]="packetId" placeholder="Enter Packet ID">
+
+          <!-- Button to Set Packet -->
           <button mat-raised-button (click)="setPacket()">Set Packet</button>
         </mat-card-content>
       </mat-card>
