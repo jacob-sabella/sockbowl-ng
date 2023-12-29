@@ -3,7 +3,6 @@ import {BehaviorSubject, Observable} from 'rxjs';
 import {Client, Message} from "@stomp/stompjs";
 import {SockbowlInMessage} from "../models/sockbowl/sockbowl-interfaces";
 import {environment} from "../../../environments/environment";
-
 /**
  * GameWebSocketService
  *
