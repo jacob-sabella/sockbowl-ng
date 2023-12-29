@@ -373,10 +373,12 @@ export class ProcessError extends SockbowlOutMessage {
 
 export class CorrectAnswer extends SockbowlOutMessage {
   currentRound: Round;
+  previousRounds: Round[];
 
   constructor(data: CorrectAnswer) {
     super(data);
     this.currentRound = data.currentRound;
+    this.previousRounds = data.previousRounds;
   }
 }
 
@@ -391,10 +393,12 @@ export class FullContextTossupUpdate extends SockbowlOutMessage {
 
 export class IncorrectAnswer extends SockbowlOutMessage {
   currentRound: Round;
+  previousRounds: Round[];
 
   constructor(data: IncorrectAnswer) {
     super(data);
     this.currentRound = data.currentRound;
+    this.previousRounds = data.previousRounds;
   }
 }
 
@@ -422,10 +426,12 @@ export class PlayerBuzzed extends SockbowlOutMessage {
 
 export class RoundUpdate extends SockbowlOutMessage {
   round: Round;
+  previousRounds: Round[];
 
   constructor(data: RoundUpdate) {
     super(data);
     this.round = data.round;
+    this.previousRounds = data.previousRounds;
   }
 }
 

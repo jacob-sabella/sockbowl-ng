@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {Client, Message} from "@stomp/stompjs";
 import {SockbowlInMessage} from "../models/sockbowl/sockbowl-interfaces";
+import {environment} from "../../../environments/environment";
 
 /**
  * GameWebSocketService
@@ -44,7 +45,7 @@ export class GameWebSocketService {
 
     // Initialize the Stomp.js client with connection details
     this.stompClient = new Client({
-      brokerURL: 'ws://alpha.sockbowl.com:7000/sockbowl-game',
+      brokerURL: environment.wsUrl,
       onConnect: () => {
         console.log("connected");
 
