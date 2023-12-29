@@ -45,6 +45,7 @@
       <!-- Team list component: Displays a list of teams with their respective scores and buzz statuses -->
       <app-team-list [teams]="gameSession.teamList"
                      [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
+                     [currentRound]="gameSession.currentMatch.currentRound"
                      [previousRoundList]="gameSession.currentMatch.previousRounds">
       </app-team-list>
     </mat-card-content>

@@ -9,6 +9,7 @@ import { Team, Buzz, Round } from '../../models/sockbowl/sockbowl-interfaces';
 export class TeamListComponent {
   @Input() teams!: Team[];
   @Input() currentBuzz!: Buzz;
+  @Input() currentRound!: Round
   @Input() previousRoundList!: Round[];
 
   isCurrentBuzz(playerId: string): boolean {
@@ -16,7 +17,7 @@ export class TeamListComponent {
   }
 
   hasTeamBuzzed(teamId: string): boolean {
-    return this.previousRoundList.some(round => round.buzzList.some(buzz => buzz.teamId === teamId));
+    return this.currentRound && this.currentRound.buzzList.some(buzz => buzz.teamId === teamId);
   }
 
   getPlayerScore(playerId: string): number {
