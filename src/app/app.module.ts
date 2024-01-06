@@ -22,6 +22,7 @@ import { GameConfigComponent } from './game/components/game-config/game-config.c
 import { GameProctorComponent } from './game/components/game-proctor/game-proctor.component';
 import { GameBuzzerComponent } from './game/components/game-buzzer/game-buzzer.component';
 import { TeamListComponent } from './game/components/team-list/team-list.component';
+import {MatCheckboxModule} from "@angular/material/checkbox";
 
 @NgModule({
   declarations: [
@@ -48,7 +49,8 @@ import { TeamListComponent } from './game/components/team-list/team-list.compone
         MatDividerModule,
         MatSelectModule,
         MatListModule,
-        MatSidenavModule
+        MatSidenavModule,
+        MatCheckboxModule
     ],
   providers: [],
   bootstrap: [AppComponent]

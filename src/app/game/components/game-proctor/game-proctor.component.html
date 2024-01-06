@@ -1,5 +1,10 @@
 <div class="game-proctor-container">
   <mat-card *ngIf="gameSessionObs | async as gameSession" class="game-proctor">
+
+    <div class="auto-timer-checkbox">
+      <mat-checkbox [(ngModel)]="isAutoTimerActive">Auto Timer Activated</mat-checkbox>
+    </div>
+
     <mat-card-title>
       Round {{ gameSession.currentMatch.currentRound.roundNumber }}
     </mat-card-title>
@@ -41,10 +46,18 @@
         </button>
 
         <!-- Right/Wrong Buttons -->
-        <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_ANSWER" class="right-wrong-buttons">
+        <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_ANSWER"
+             class="right-wrong-buttons">
           <button mat-raised-button id="right-btn" (click)="gameStateService.sendAnswerCorrect()">Right</button>
           <button mat-raised-button id="wrong-btn" (click)="gameStateService.sendAnswerIncorrect()">Wrong</button>
         </div>
+
+        <!-- Timer Display -->
+        <div *ngIf="isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ"
+             class="timer-display">
+          <p>Time remaining: {{ countdown }}</p>
+        </div>
+
 
       </div>
 

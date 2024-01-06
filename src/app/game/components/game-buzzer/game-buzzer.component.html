@@ -42,6 +42,11 @@
         </button>
       </div>
 
+      <!-- Timer Display -->
+      <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ" class="timer-display">
+        <p>Time remaining: {{ countdown }}</p>
+      </div>
+
       <!-- Round completed. Show question and answer -->
       <div *ngIf="gameSession.currentMatch.currentRound.roundState === 'COMPLETED'" class="round-completed-info">
         <h3>Round Completed</h3>
