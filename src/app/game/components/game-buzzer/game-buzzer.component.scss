@@ -79,6 +79,27 @@
         }
       }
     }
+
+    .round-completed-info {
+      text-align: center; // Center the text
+      background-color: #e7f3fe; // Light blue background for distinction
+      border: 1px solid #b3d4fc; // Border to match the background
+      border-radius: 8px; // Rounded corners
+      padding: 1em; // Padding around the text
+      margin: 1em 0; // Margin above and below the block
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); // Subtle shadow
+
+      h3 {
+        color: #0056b3; // Dark blue color for the heading
+        margin-bottom: 0.5em; // Space below the heading
+      }
+
+      p {
+        font-size: 1em; // Standard font size
+        color: #333; // Dark text for readability
+        margin: 0.5em 0; // Margin around paragraphs for spacing
+      }
+    }
   }
 }
 

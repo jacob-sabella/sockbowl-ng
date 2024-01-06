@@ -3,14 +3,13 @@ import {BehaviorSubject, Observable} from 'rxjs';
 import {filter, tap} from 'rxjs/operators';
 import {GameMessageService} from './game-message.service';
 import {
-  AnswerCorrect,
-  AnswerIncorrect,
-  CorrectAnswer,
+  AdvanceRound,
+  AnswerOutcome,
+  AnswerUpdate,
   FinishedReading,
   GameSession,
   GameSessionUpdate,
   GameStartedMessage,
-  IncorrectAnswer,
   MatchPacketUpdate,
   MatchState,
   Player, PlayerBuzzed,
@@ -123,26 +122,10 @@ export class GameStateService {
       .subscribe();
 
     // Subscribe to CorrectAnswer message and update the current round for the new state
-    this.gameMessageService.gameEventObservables["CorrectAnswer"]
+    this.gameMessageService.gameEventObservables["AnswerUpdate"]
       .pipe(
         filter(msg => !!msg),
-        tap((msg: CorrectAnswer) => {
-
-          // Update the current round to the new round
-          this.gameSessionState.currentMatch.currentRound = msg.currentRound;
-          this.gameSessionState.currentMatch.previousRounds = msg.previousRounds;
-
-          // Emit the updated game session state
-          this.gameSessionSubject.next(this.gameSessionState);
-        })
-      )
-      .subscribe();
-
-    // Subscribe to IncorrectAnswer message and update the current round for the new state
-    this.gameMessageService.gameEventObservables["IncorrectAnswer"]
-      .pipe(
-        filter(msg => !!msg),
-        tap((msg: IncorrectAnswer) => {
+        tap((msg: AnswerUpdate) => {
 
           // Update the current round to the new round
           this.gameSessionState.currentMatch.currentRound = msg.currentRound;
@@ -227,19 +210,19 @@ export class GameStateService {
   }
 
   /**
-   * Sends an AnswerCorrect message.
+   * Sends an AnswerOutcome message with correct set to true.
    */
   public sendAnswerCorrect(): void {
-    const answerCorrect = new AnswerCorrect({});
-    this.gameMessageService.sendMessage(`/app/game/answer-correct`, answerCorrect);
+    const answerCorrect = new AnswerOutcome({correct: true});
+    this.gameMessageService.sendMessage(`/app/game/answer-outcome`, answerCorrect);
   }
 
   /**
-   * Sends an AnswerIncorrect message.
+   * Sends an AnswerOutcome message with correct set to false.
    */
   public sendAnswerIncorrect(): void {
-    const answerIncorrect = new AnswerIncorrect({});
-    this.gameMessageService.sendMessage(`/app/game/answer-incorrect`, answerIncorrect);
+    const answerIncorrect = new AnswerOutcome({correct: false});
+    this.gameMessageService.sendMessage(`/app/game/answer-outcome`, answerIncorrect);
   }
 
   /**
@@ -264,6 +247,14 @@ export class GameStateService {
   public sendTimeoutRound(): void {
     const timeoutRound = new TimeoutRound({});
     this.gameMessageService.sendMessage(`/app/game/timeout-round`, timeoutRound);
+  }
+
+  /**
+   * Sends a AdvanceRound message.
+   */
+  public sendAdvanceRound(): void {
+    const advanceRound = new AdvanceRound({});
+    this.gameMessageService.sendMessage(`/app/game/advance-round`, advanceRound);
   }
 
 

@@ -42,6 +42,14 @@
         </button>
       </div>
 
+      <!-- Round completed. Show question and answer -->
+      <div *ngIf="gameSession.currentMatch.currentRound.roundState === 'COMPLETED'" class="round-completed-info">
+        <h3>Round Completed</h3>
+        <p><strong>Question:</strong> {{ gameSession.currentMatch.currentRound.question }}</p>
+        <p><strong>Answer:</strong> {{ gameSession.currentMatch.currentRound.answer }}</p>
+      </div>
+
+
       <!-- Team list component: Displays a list of teams with their respective scores and buzz statuses -->
       <app-team-list [teams]="gameSession.teamList"
                      [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
