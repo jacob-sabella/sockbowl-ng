@@ -578,6 +578,7 @@ export enum JoinStatus {
 export enum MatchState {
   CONFIG = "CONFIG",
   IN_GAME = "IN_GAME",
+  COMPLETED = "COMPLETED"
 }
 
 export enum PlayerMode {
