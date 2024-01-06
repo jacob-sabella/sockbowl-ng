@@ -43,4 +43,8 @@ export class GameCanvasComponent {
     return this.gameStateService.getMatchState() == MatchState.IN_GAME && this.gameStateService.isSelfOnAnyTeam();
   }
 
+  shouldShowMatchSummaryComponent(): boolean {
+    return this.gameStateService.getMatchState() == MatchState.COMPLETED;
+  }
+
 }

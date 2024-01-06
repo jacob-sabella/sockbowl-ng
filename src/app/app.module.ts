@@ -23,6 +23,8 @@ import { GameProctorComponent } from './game/components/game-proctor/game-procto
 import { GameBuzzerComponent } from './game/components/game-buzzer/game-buzzer.component';
 import { TeamListComponent } from './game/components/team-list/team-list.component';
 import {MatCheckboxModule} from "@angular/material/checkbox";
+import { MatchSummaryComponent } from './game/components/match-summary/match-summary.component';
+import {MatExpansionModule} from "@angular/material/expansion";
 
 @NgModule({
   declarations: [
@@ -33,7 +35,8 @@ import {MatCheckboxModule} from "@angular/material/checkbox";
     GameConfigComponent,
     GameProctorComponent,
     GameBuzzerComponent,
-    TeamListComponent
+    TeamListComponent,
+    MatchSummaryComponent
   ],
     imports: [
         BrowserModule,
@@ -50,7 +53,8 @@ import {MatCheckboxModule} from "@angular/material/checkbox";
         MatSelectModule,
         MatListModule,
         MatSidenavModule,
-        MatCheckboxModule
+        MatCheckboxModule,
+        MatExpansionModule
     ],
   providers: [],
   bootstrap: [AppComponent]

@@ -16,5 +16,10 @@
     <app-game-buzzer></app-game-buzzer>
   </div>
 
+  <!-- Match summary component -->
+  <div *ngIf="shouldShowMatchSummaryComponent()">
+    <app-match-summary></app-match-summary>
+  </div>
+
 
 </div>
