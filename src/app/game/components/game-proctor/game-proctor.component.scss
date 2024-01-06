@@ -7,7 +7,7 @@
 
   .game-proctor {
     width: 100%;
-    max-width: 960px; // or whatever maximum width you prefer
+    max-width: 960px;
     margin: auto;
 
     mat-card-title {
@@ -69,6 +69,7 @@
     #finished-reading-btn {
       background-color: #4CAF50; // Green color
       color: white;
+
       &:hover {
         background-color: darken(#4CAF50, 10%);
       }
@@ -77,14 +78,16 @@
     #timeout-btn {
       background-color: #FFEB3B; // Yellow color
       color: black;
+
       &:hover {
         background-color: darken(#FFEB3B, 10%);
       }
     }
 
     #advance-round-btn {
-      background-color: #007bff; // Web-friendly blue color
+      background-color: #007bff; // Blue color
       color: white;
+
       &:hover {
         background-color: darken(#007bff, 10%);
       }
@@ -103,6 +106,7 @@
         margin-right: 0.5em; // Add space to the right of the "Right" button
         background-color: #2196F3; // Blue color for 'Right'
         color: white;
+
         &:hover {
           background-color: darken(#2196F3, 10%);
         }
@@ -112,10 +116,28 @@
         margin-left: 0.5em; // Add space to the left of the "Wrong" button
         background-color: #F44336; // Red color for 'Wrong'
         color: white;
+
         &:hover {
           background-color: darken(#F44336, 10%);
         }
       }
     }
+  }
+
+  .auto-timer-checkbox {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+
+  .timer-display {
+    text-align: center;
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-top: 0.75em;
+    padding: 0.75em;
+    background-color: #ffeb3b; // Yellow background
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 }
