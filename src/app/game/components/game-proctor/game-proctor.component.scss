@@ -61,7 +61,7 @@
     flex-direction: column;
     margin: 1em 0;
 
-    #finished-reading-btn, #timeout-btn {
+    #finished-reading-btn, #timeout-btn, #advance-round-btn {
       width: 100%;
       margin-bottom: 1em;
     }
@@ -81,6 +81,15 @@
         background-color: darken(#FFEB3B, 10%);
       }
     }
+
+    #advance-round-btn {
+      background-color: #007bff; // Web-friendly blue color
+      color: white;
+      &:hover {
+        background-color: darken(#007bff, 10%);
+      }
+    }
+
 
     .right-wrong-buttons {
       display: flex;

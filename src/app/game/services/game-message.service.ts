@@ -1,13 +1,7 @@
 import {GameWebSocketService} from "./game-web-socket.service";
 import {BehaviorSubject, Observable} from "rxjs";
 import {Injectable} from "@angular/core";
-import {
-  CorrectAnswer,
-  GameSessionUpdate,
-  GameStartedMessage, IncorrectAnswer, MatchPacketUpdate, PlayerBuzzed,
-  PlayerRosterUpdate, ProcessError, RoundUpdate, SockbowlInMessage,
-  SockbowlOutMessage, UpdatePlayerTeam
-} from "../models/sockbowl/sockbowl-interfaces";
+import {SockbowlInMessage} from "../models/sockbowl/sockbowl-interfaces";
 
 /**
  * GameMessageService
@@ -40,8 +34,7 @@ export class GameMessageService {
       'GameStartedMessage',
       'MatchPacketUpdate',
       'ProcessError',
-      'CorrectAnswer',
-      'IncorrectAnswer',
+      'AnswerUpdate',
       'RoundUpdate',
       'PlayerBuzzed'
     ];

@@ -288,17 +288,12 @@ export class UpdatePlayerTeam extends SockbowlInMessage {
   }
 }
 
-export class AnswerCorrect extends SockbowlInMessage {
+export class AnswerOutcome extends SockbowlInMessage {
+  correct: boolean;
 
-  constructor(data: AnswerCorrect) {
+  constructor(data: AnswerOutcome) {
     super(data);
-  }
-}
-
-export class AnswerIncorrect extends SockbowlInMessage {
-
-  constructor(data: AnswerIncorrect) {
-    super(data);
+    this.correct = data.correct;
   }
 }
 
@@ -319,6 +314,13 @@ export class PlayerIncomingBuzz extends SockbowlInMessage {
 export class TimeoutRound extends SockbowlInMessage {
 
   constructor(data: TimeoutRound) {
+    super(data);
+  }
+}
+
+export class AdvanceRound extends SockbowlInMessage {
+
+  constructor(data: AdvanceRound) {
     super(data);
   }
 }
@@ -371,43 +373,18 @@ export class ProcessError extends SockbowlOutMessage {
   }
 }
 
-export class CorrectAnswer extends SockbowlOutMessage {
+export class AnswerUpdate extends SockbowlOutMessage {
   currentRound: Round;
+  correct: boolean;
+  playerId: string;
   previousRounds: Round[];
 
-  constructor(data: CorrectAnswer) {
+  constructor(data: AnswerUpdate) {
     super(data);
     this.currentRound = data.currentRound;
+    this.correct = data.correct;
+    this.playerId = data.playerId;
     this.previousRounds = data.previousRounds;
-  }
-}
-
-export class FullContextTossupUpdate extends SockbowlOutMessage {
-  packetTossup: PacketTossup;
-
-  constructor(data: FullContextTossupUpdate) {
-    super(data);
-    this.packetTossup = data.packetTossup;
-  }
-}
-
-export class IncorrectAnswer extends SockbowlOutMessage {
-  currentRound: Round;
-  previousRounds: Round[];
-
-  constructor(data: IncorrectAnswer) {
-    super(data);
-    this.currentRound = data.currentRound;
-    this.previousRounds = data.previousRounds;
-  }
-}
-
-export class LimitedContextTossupUpdate extends SockbowlOutMessage {
-  tossupNumber: number;
-
-  constructor(data: LimitedContextTossupUpdate) {
-    super(data);
-    this.tossupNumber = data.tossupNumber;
   }
 }
 
