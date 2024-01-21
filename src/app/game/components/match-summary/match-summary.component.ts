@@ -103,4 +103,7 @@ export class MatchSummaryComponent implements OnInit {
     return '';
   }
 
+  endMatch(): void {
+    this.gameStateService.endMatch();
+  }
 }

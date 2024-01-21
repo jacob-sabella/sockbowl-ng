@@ -332,6 +332,12 @@ export class StartMatch extends SockbowlInMessage {
   }
 }
 
+export class EndMatch extends SockbowlInMessage {
+
+  constructor(data: EndMatch) {
+    super(data);
+  }
+}
 export class SockbowlOutMessage {
   messageContentType: string;
   messageType: MessageTypes;

@@ -39,6 +39,7 @@ export class GameProctorComponent implements OnInit, OnDestroy {
 
   startTimer(): void {
     const countdownTime = 6; // seconds
+
     this.countdown = countdownTime;
 
     this.countdownSubscription = timer(0, 1000).pipe(

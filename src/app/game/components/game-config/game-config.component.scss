@@ -1,82 +1,136 @@
 .game-session {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   height: 100vh;
-  padding: 1em; // Add padding around the entire game session
+  padding: 1em;
 
-  .sidenav {
-    width: 300px; // Fixed width for sidenav
-    padding: 1em; // Inner padding for sidenav
+  .game-config-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1em;
+
+    > * {
+      flex: 1;
+      padding: 1em;
+      &:not(:last-child) {
+        margin-right: 1em;
+      }
+    }
   }
 
-  .game-settings,
-  .packet-info,
-  .start-match {
-    margin-bottom: 1em; // Consistent margin for all cards in sidenav
+  .game-settings{
+    max-width: 30%;
+    background-color: #fff0f5;
+  }
+
+  .packet-info {
+    max-width: 30%;
+    background-color: #fff0f5;
   }
 
   .proctor-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    margin-left: auto;
+    margin-right: auto;
     padding: 1em;
-    margin-bottom: 1em;
+    max-width: 30%;
+    min-width: 30%;
+    text-align: center; // Center the text
+    margin-bottom: 2.5em;
+    background-color: #f5f5dc;
+    justify-content: center;
 
     .proctor-info {
       display: flex;
-      align-items: center;
-
-      mat-icon {
-        margin-right: 10px;
-      }
+      flex-direction: column; // Stack icon and name vertically
+      align-items: center; // Center-align the icon and name
+      justify-content: center;
+      margin: auto; // Center the proctor-info within the card
     }
   }
 
   .teams-section {
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin: 1em 0; // Top and bottom margin for the team section
-  }
+    flex-direction: row;
+    justify-content: center; // Evenly space out team cards
+    margin-bottom: 2.5em;
 
-  .team-card {
-    width: calc(50% - 40px); // Half width minus gap
-    padding: 1em;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; // Align items to top and bottom
+    .team-card {
+      flex: none; // Don't stretch team cards to fill the space
+      width: calc(35% - 1em); // Half the container width minus the gap
+      // Margin around each team card for spacing
+      margin: 0.5em 1em 0.5em 1em;
+      text-align: center; // Center-align the text inside the team card
+      background-color: #e6e6fa;
+      padding: 1em;
 
-    .team-players {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
+      .team-players {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); // create a responsive grid with a minimum column width of 100px
+        gap: 10px; // space between grid items
+        justify-items: center; // center items horizontally in their grid cell
+        align-items: center; // center items vertically in their grid cell
+        margin-bottom: 1em; // add space for the join button below the grid
 
-      .player-icon {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        .player-icon {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center; // center items vertically in the player icon
+        }
+      }
+
+      .join-team {
+        display: block; // make the join button a block element to fill the card width
+        width: 100%; // make the join button full width
+        margin-top: 10px; // space between the player grid and the join button
       }
     }
-
-    .join-team {
-      align-self: center;
-      margin-top: 1em; // Margin on top of the join team button
-    }
-  }
-
-  mat-sidenav-content {
-    padding: 1em; // Padding inside the main content
-  }
-
-  mat-sidenav-container {
-    width: 100%;
   }
 
   .spectators {
+    text-align: center;
     padding: 1em;
-    margin-top: 1em;
+    margin-bottom: 1em;
+    background-color: #fff0f5;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 50%;
+    min-width: 50%;
+  }
+
+  @media (max-width: 768px) {
+    .game-config-row,
+    .proctor-card,
+    .teams-section,
+    .spectators {
+      flex-direction: column;
+    }
+
+    .proctor-card{
+      min-width: 100%;
+    }
+
+    .team-card {
+      width: 100% !important; // Adjust team card to full width on mobile
+      margin: 0.5em 0; // Adjust margins for mobile
+
+      // Adjust the grid inside the team card for mobile
+      .team-players {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); // Use auto-fit for mobile responsiveness
+        gap: 1em; // Adjust gap for better spacing on mobile
+      }
+
+      .join-team {
+        width: auto; // Let the join button size itself based on its content
+        margin-top: 1em; // Add margin above the join button
+      }
+    }
+
+    .game-settings, .packet-info, .start-match, .proctor-card, .spectators {
+      flex: none; // Reset flex settings for mobile
+      padding: 1em; // Adjust padding for mobile
+      max-width: 100%;
+      min-width: 100%;
+    }
   }
 }
