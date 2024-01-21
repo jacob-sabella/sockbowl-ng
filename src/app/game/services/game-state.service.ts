@@ -5,7 +5,7 @@ import {GameMessageService} from './game-message.service';
 import {
   AdvanceRound,
   AnswerOutcome,
-  AnswerUpdate,
+  AnswerUpdate, EndMatch,
   FinishedReading,
   GameSession,
   GameSessionUpdate,
@@ -201,12 +201,18 @@ export class GameStateService {
     this.gameMessageService.sendMessage("/app/game/config/set-match-packet", setMatchPacket);
   }
 
-  /**
-   * Starts the match
-   */
+
   public startMatch(): void {
     let startMatch: StartMatch = new StartMatch({});
     this.gameMessageService.sendMessage("/app/game/progression/start-match", startMatch);
+  }
+
+  /**
+   * Ends the match
+   */
+  public endMatch(): void {
+    let endMatch: EndMatch = new EndMatch({});
+    this.gameMessageService.sendMessage("/app/game/progression/end-match", endMatch);
   }
 
   /**

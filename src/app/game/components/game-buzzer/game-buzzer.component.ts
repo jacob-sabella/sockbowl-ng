@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, OnDestroy, OnInit} from '@angular/core';
 import {Observable, Subscription, timer} from 'rxjs';
 import {take, map} from 'rxjs/operators';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
@@ -9,7 +9,7 @@ import {GameStateService} from '../../services/game-state.service';
   templateUrl: './game-buzzer.component.html',
   styleUrls: ['./game-buzzer.component.scss']
 })
-export class GameBuzzerComponent {
+export class GameBuzzerComponent implements OnInit, OnDestroy {
 
   protected readonly RoundState = RoundState;
 
@@ -37,20 +37,32 @@ export class GameBuzzerComponent {
     });
   }
 
+  ngOnDestroy(): void {
+    this.stopTimer();
+  }
+
   startTimer(): void {
+
+    // Check if a timer is already running, if so, stop it
+    if (this.countdownSubscription) {
+      this.countdownSubscription.unsubscribe();
+    }
+
     const countdownTime = 6; // seconds
     this.countdown = countdownTime;
 
-    this.countdownSubscription = timer(0, 1000).pipe(
-      take(countdownTime + 1),
-      map(() => --this.countdown)
-    ).subscribe(val => {
-      if (val === 0) {
-        console.log('Timer up');
-        // Add any additional functionality here if needed when the timer is up
-        this.stopTimer();
-      }
-    });
+      this.countdownSubscription = timer(0, 1000).pipe(
+        take(countdownTime + 1),
+        map(() => --this.countdown)
+      ).subscribe(val => {
+        if (val === 0) {
+          console.log('Timer up');
+          // Add any additional functionality here if needed when the timer is up
+          this.stopTimer();
+        }
+      });
+
+
   }
 
   stopTimer(): void {
