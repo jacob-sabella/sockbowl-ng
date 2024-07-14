@@ -17,10 +17,11 @@
     </div>
 
     <!-- Create Game Form -->
-    <form *ngIf="showCreateForm" class="form-container" (ngSubmit)="submitCreateGame()" #createForm="ngForm">
+    <div *ngIf="showCreateForm" class="form-container">
+
       <mat-form-field>
         <mat-label>Proctor Type</mat-label>
-        <mat-select [(ngModel)]="createGameRequest.gameSettings.proctorType" name="proctorType" >
+        <mat-select [(ngModel)]="createGameRequest.gameSettings.proctorType">
           <mat-option *ngFor="let proctorType of ProctorTypes | keyvalue" [value]="proctorType.key">
             {{proctorType.value}}
           </mat-option>
@@ -29,7 +30,7 @@
 
       <mat-form-field>
         <mat-label>Game Mode</mat-label>
-        <mat-select [(ngModel)]="createGameRequest.gameSettings.gameMode" name="gameMode" >
+        <mat-select [(ngModel)]="createGameRequest.gameSettings.gameMode">
           <mat-option *ngFor="let gameMode of GameModes | keyvalue" [value]="gameMode.key">
             {{gameMode.value}}
           </mat-option>
@@ -39,15 +40,29 @@
       <!-- Player Name -->
       <mat-form-field>
         <mat-label>Your name</mat-label>
-        <input matInput [(ngModel)]="joinGameRequest.name" name="playerName" #playerName="ngModel" required>
-        <mat-error *ngIf="playerName.invalid && playerName.touched">
-          Your name is required.
-        </mat-error>
+        <input matInput [(ngModel)]="joinGameRequest.name">
       </mat-form-field>
 
-      <button mat-raised-button color="accent" type="submit" [disabled]="!createForm.valid">Create</button>
-    </form>
+      <button mat-raised-button color="accent" (click)="submitCreateGame()">Create</button>
+    </div>
 
+    <!-- Join Game Form -->
+    <div *ngIf="showJoinForm" class="form-container">
+      <!-- Join Code -->
+      <mat-form-field>
+        <mat-label>Join Code</mat-label>
+        <input matInput [(ngModel)]="joinGameRequest.joinCode">
+      </mat-form-field>
+
+      <!-- Player Name -->
+      <mat-form-field>
+        <mat-label>Name</mat-label>
+        <input matInput [(ngModel)]="joinGameRequest.name">
+      </mat-form-field>
+      
+      <!-- Submit Button -->
+      <button mat-raised-button color="accent" (click)="submitJoinGame()">Join</button>
+    </div>
 
   </mat-card>
 </div>

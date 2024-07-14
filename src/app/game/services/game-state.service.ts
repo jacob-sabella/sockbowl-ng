@@ -193,7 +193,7 @@ export class GameStateService {
    * Sets the match packet to the specified packet ID.
    * @param packetId The ID of the packet to set.
    */
-  public setMatchPacket(packetId: number): void {
+  public setMatchPacket(packetId: String): void {
     let setMatchPacket: SetMatchPacket = new SetMatchPacket({
       packetId: packetId
     });

@@ -88,7 +88,7 @@ export class EventPacket {
 }
 
 export class Packet {
-  id: number;
+  id: String;
   name: string;
   tossups: PacketTossup[];
   bonuses: PacketBonus[];
@@ -260,7 +260,7 @@ export class GetGameState extends SockbowlInMessage {
 }
 
 export class SetMatchPacket extends SockbowlInMessage {
-  packetId: number;
+  packetId: String;
 
   constructor(data: SetMatchPacket) {
     super(data);
@@ -349,7 +349,7 @@ export class SockbowlOutMessage {
 }
 
 export class MatchPacketUpdate extends SockbowlOutMessage {
-  packetId: number;
+  packetId: string;
   packetName: string;
 
   constructor(data: MatchPacketUpdate) {

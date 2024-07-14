@@ -1,8 +1,5 @@
 <div *ngIf="gameSessionObs | async as gameSession" xmlns="http://www.w3.org/1999/html" class="game-session">
-
-  <!-- Game Config Row -->
   <div class="game-config-row">
-
     <!-- Game Settings Section -->
     <mat-card *ngIf="gameSession.gameSettings" class="game-settings">
       <mat-card-title>Game Settings</mat-card-title>
@@ -10,7 +7,7 @@
         <p>Proctor Type: {{ gameSession.gameSettings.proctorType }}</p>
         <p>Game Mode: {{ gameSession.gameSettings.gameMode }}</p>
         <p>Join Code: {{gameSession.joinCode}}</p>
-        <button mat-raised-button (click)="startMatch()">Start Match</button>
+        <button mat-raised-button color="primary" (click)="startMatch()">Start Match</button>
       </mat-card-content>
     </mat-card>
 
@@ -23,17 +20,12 @@
           <p>Packet Name: {{ gameSession.currentMatch.packet.name }}</p>
         </div>
 
-        <!-- Number Input for Packet ID -->
-        <input type="number" [(ngModel)]="packetId" placeholder="Enter Packet ID">
-        <br>
-        <!-- Button to Set Packet -->
-        <button mat-raised-button (click)="setPacket()">Set Packet</button>
+        <!-- Button to Open Packet Search Modal -->
+        <button mat-raised-button color="primary" (click)="openPacketSearch()">Search Packet</button>
       </mat-card-content>
     </mat-card>
-
   </div>
 
-  <!-- Proctor Information -->
   <mat-card class="proctor-card">
     <mat-card-title>Proctor</mat-card-title>
     <mat-card-content>
@@ -41,7 +33,7 @@
         <mat-icon>face</mat-icon>
         <p>{{ gameStateService.getProctor()?.name }}</p>
       </div>
-      <button mat-raised-button *ngIf="canBecomeProctor()" (click)="becomeProctor()">Become Proctor</button>
+      <button mat-raised-button color="primary" *ngIf="canBecomeProctor()" (click)="becomeProctor()">Become Proctor</button>
     </mat-card-content>
   </mat-card>
 
@@ -57,7 +49,7 @@
               <div>{{ player.name }}</div>
             </div>
           </div>
-          <button mat-raised-button *ngIf="!gameStateService.isSelfOnTeam(team.teamId)" (click)="joinTeam(team)"
+          <button mat-raised-button color="primary" *ngIf="!gameStateService.isSelfOnTeam(team.teamId)" (click)="joinTeam(team)"
                   class="join-team">Join Team
           </button>
         </mat-card-content>
@@ -65,7 +57,6 @@
     </div>
   </div>
 
-  <!-- Players without Teams -->
   <mat-card class="spectators">
     <mat-card-title>Spectators</mat-card-title>
     <mat-card-content>
@@ -77,11 +68,10 @@
           </mat-list-item>
         </ng-container>
       </mat-list>
-      <button mat-raised-button *ngIf="gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()"
+      <button mat-raised-button color="primary" *ngIf="gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()"
               (click)="switchToSpectate()">
         Spectate
       </button>
     </mat-card-content>
   </mat-card>
-
 </div>

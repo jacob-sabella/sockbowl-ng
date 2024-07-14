@@ -13,7 +13,7 @@ import {environment} from "../../../environments/environment";
 })
 export class GameSessionService {
 
-  private baseUrl: string = environment.apiUrl;
+  private baseUrl: string = environment.sockbowlGameApiUrl;
 
   constructor(private http: HttpClient) { }
 

@@ -8,24 +8,36 @@
     display: flex;
     justify-content: center;
     margin-bottom: 1em;
+    flex-direction: row;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+    }
 
     > * {
       flex: 1;
       padding: 1em;
+
       &:not(:last-child) {
         margin-right: 1em;
+
+        @media (max-width: 768px) {
+          margin-right: 0;
+          margin-bottom: 1em;
+        }
       }
     }
   }
 
-  .game-settings{
+  .game-settings, .packet-info, .start-match, .proctor-card, .spectators {
     max-width: 30%;
+    min-width: 30%;
     background-color: #fff0f5;
-  }
 
-  .packet-info {
-    max-width: 30%;
-    background-color: #fff0f5;
+    @media (max-width: 768px) {
+      max-width: 100%;
+      min-width: 100%;
+    }
   }
 
   .proctor-card {
@@ -34,55 +46,73 @@
     padding: 1em;
     max-width: 30%;
     min-width: 30%;
-    text-align: center; // Center the text
+    text-align: center;
     margin-bottom: 2.5em;
     background-color: #f5f5dc;
     justify-content: center;
 
     .proctor-info {
       display: flex;
-      flex-direction: column; // Stack icon and name vertically
-      align-items: center; // Center-align the icon and name
+      flex-direction: column;
+      align-items: center;
       justify-content: center;
-      margin: auto; // Center the proctor-info within the card
+      margin: auto;
     }
   }
 
   .teams-section {
     display: flex;
     flex-direction: row;
-    justify-content: center; // Evenly space out team cards
+    justify-content: center;
     margin-bottom: 2.5em;
 
+    @media (max-width: 768px) {
+      flex-direction: column;
+    }
+
     .team-card {
-      flex: none; // Don't stretch team cards to fill the space
-      width: calc(35% - 1em); // Half the container width minus the gap
-      // Margin around each team card for spacing
-      margin: 0.5em 1em 0.5em 1em;
-      text-align: center; // Center-align the text inside the team card
+      flex: none;
+      width: calc(35% - 1em);
+      margin: 0.5em 1em;
+      text-align: center;
       background-color: #e6e6fa;
       padding: 1em;
 
+      @media (max-width: 768px) {
+        width: 100%;
+        margin: 0.5em 0;
+
+        .team-players {
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 1em;
+        }
+
+        .join-team {
+          width: auto;
+          margin-top: 1em;
+        }
+      }
+
       .team-players {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); // create a responsive grid with a minimum column width of 100px
-        gap: 10px; // space between grid items
-        justify-items: center; // center items horizontally in their grid cell
-        align-items: center; // center items vertically in their grid cell
-        margin-bottom: 1em; // add space for the join button below the grid
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+        justify-items: center;
+        align-items: center;
+        margin-bottom: 1em;
 
         .player-icon {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center; // center items vertically in the player icon
+          justify-content: center;
         }
       }
 
       .join-team {
-        display: block; // make the join button a block element to fill the card width
-        width: 100%; // make the join button full width
-        margin-top: 10px; // space between the player grid and the join button
+        display: block;
+        width: 100%;
+        margin-top: 10px;
       }
     }
   }
@@ -96,41 +126,19 @@
     margin-right: auto;
     max-width: 50%;
     min-width: 50%;
-  }
 
-  @media (max-width: 768px) {
-    .game-config-row,
-    .proctor-card,
-    .teams-section,
-    .spectators {
-      flex-direction: column;
-    }
-
-    .proctor-card{
-      min-width: 100%;
-    }
-
-    .team-card {
-      width: 100% !important; // Adjust team card to full width on mobile
-      margin: 0.5em 0; // Adjust margins for mobile
-
-      // Adjust the grid inside the team card for mobile
-      .team-players {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); // Use auto-fit for mobile responsiveness
-        gap: 1em; // Adjust gap for better spacing on mobile
-      }
-
-      .join-team {
-        width: auto; // Let the join button size itself based on its content
-        margin-top: 1em; // Add margin above the join button
-      }
-    }
-
-    .game-settings, .packet-info, .start-match, .proctor-card, .spectators {
-      flex: none; // Reset flex settings for mobile
-      padding: 1em; // Adjust padding for mobile
+    @media (max-width: 768px) {
       max-width: 100%;
       min-width: 100%;
+    }
+  }
+
+  .search-results {
+    max-height: 200px;
+    overflow-y: auto;
+
+    .selected {
+      background-color: #d3d3d3;
     }
   }
 }

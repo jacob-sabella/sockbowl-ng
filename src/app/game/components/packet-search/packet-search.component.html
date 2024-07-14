@@ -1,0 +1,17 @@
+<h2 mat-dialog-title>Search Packet by Name</h2>
+<mat-dialog-content>
+  <mat-form-field class="full-width">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput type="text" [(ngModel)]="searchQuery" placeholder="Search Packet by Name" (input)="searchPackets()">
+  </mat-form-field>
+  <div *ngIf="searchResults.length" class="search-results">
+    <mat-list>
+      <mat-list-item *ngFor="let packet of searchResults" (click)="selectPacket(packet)" [class.selected]="packet.id === selectedPacketId">
+        {{ packet.name }}
+      </mat-list-item>
+    </mat-list>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-stroked-button (click)="close()">Close</button>
+</mat-dialog-actions>

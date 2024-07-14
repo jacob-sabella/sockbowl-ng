@@ -25,6 +25,8 @@ import { TeamListComponent } from './game/components/team-list/team-list.compone
 import {MatCheckboxModule} from "@angular/material/checkbox";
 import { MatchSummaryComponent } from './game/components/match-summary/match-summary.component';
 import {MatExpansionModule} from "@angular/material/expansion";
+import { PacketSearchComponent } from './game/components/packet-search/packet-search.component';
+import {MatDialogModule} from "@angular/material/dialog";
 
 @NgModule({
   declarations: [
@@ -36,26 +38,28 @@ import {MatExpansionModule} from "@angular/material/expansion";
     GameProctorComponent,
     GameBuzzerComponent,
     TeamListComponent,
-    MatchSummaryComponent
+    MatchSummaryComponent,
+    PacketSearchComponent
   ],
-    imports: [
-        BrowserModule,
-        AppRoutingModule,
-        BrowserAnimationsModule,
-        MatButtonModule,
-        MatInputModule,
-        FormsModule,
-        HttpClientModule,
-        MatIconModule,
-        MatToolbarModule,
-        MatCardModule,
-        MatDividerModule,
-        MatSelectModule,
-        MatListModule,
-        MatSidenavModule,
-        MatCheckboxModule,
-        MatExpansionModule
-    ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    BrowserAnimationsModule,
+    MatButtonModule,
+    MatInputModule,
+    FormsModule,
+    HttpClientModule,
+    MatIconModule,
+    MatToolbarModule,
+    MatCardModule,
+    MatDividerModule,
+    MatSelectModule,
+    MatListModule,
+    MatSidenavModule,
+    MatCheckboxModule,
+    MatExpansionModule,
+    MatDialogModule
+  ],
   providers: [],
   bootstrap: [AppComponent]
 })

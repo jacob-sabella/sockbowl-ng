@@ -1,0 +1,27 @@
+.full-width {
+  width: 100%;
+}
+
+.search-results {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 10px;
+
+  mat-list-item {
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+
+    &.selected {
+      background-color: rgba(0, 0, 0, 0.08);
+      font-weight: bold;
+    }
+  }
+}
+
+mat-dialog-actions {
+  margin-top: 20px;
+}
