@@ -535,6 +535,8 @@ export class Round {
   buzzList: Buzz[];
   question: string;
   answer: string;
+  category: string;
+  subcategory: string;
   proctorFinishedReading: boolean;
 
   constructor(data: Round) {
@@ -545,6 +547,8 @@ export class Round {
     this.question = data.question;
     this.answer = data.answer;
     this.proctorFinishedReading = data.proctorFinishedReading;
+    this.category = data.category;
+    this.subcategory = data.category;
   }
 }
 
