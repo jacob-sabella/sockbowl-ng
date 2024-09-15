@@ -26,8 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run lint
+      - name: Run Angular lint
         run: npm run lint
 
       - name: Build Angular project
-        run: npm run build
+        run: npm run build --if-present
