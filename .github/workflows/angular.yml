@@ -50,10 +50,10 @@ jobs:
       - name: Build and tag Docker image
         run: |
           BRANCH_NAME=$(echo "${GITHUB_REF##*/}")
-          docker build -t ghcr.io/${{ github.repository }}/sockbowl-ng:${BRANCH_NAME} .
+          docker build -t ghcr.io/${{ github.repository }}:${BRANCH_NAME} .
 
       - name: Push Docker image
         run: |
           BRANCH_NAME=$(echo "${GITHUB_REF##*/}")
-          docker push ghcr.io/${{ github.repository }}/sockbowl-ng:${BRANCH_NAME}
+          docker push ghcr.io/${{ github.repository }}:${BRANCH_NAME}
 
