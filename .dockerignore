@@ -1,0 +1,41 @@
+# Node modules
+node_modules
+
+# Editor directories and files
+.idea
+*.sublime-workspace
+*.sublime-project
+.vscode
+
+# Git and version control
+.git
+.gitignore
+.svn
+.cvsignore
+
+# Log files
+*.log
+
+# Environment files
+.env
+.env.local
+.env.example
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Other common directories not needed in Docker build
+tmp
+temp
+uploads
+cache
+
+# Specific files that are not needed
+npm-debug.log
+yarn-error.log
+README.md
+LICENSE
+.dockerignore
+Dockerfile
+*.md

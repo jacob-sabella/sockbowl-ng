@@ -1,0 +1,110 @@
+.match-summary-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1em;
+  height: calc(100vh - 40px);
+
+  .match-summary {
+    width: 100%;
+    max-width: 960px;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    padding: 1em;
+    box-sizing: border-box;
+    background-color: #fff; // White background
+    border-radius: 8px; // Rounded corners
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); // Subtle shadow for depth
+
+    .winning-team-announcement {
+      text-align: center;
+      font-size: 1.2em;
+      font-weight: bold;
+      margin: 1em 0;
+      padding: 0.5em;
+      background-color: #ffeb3b; // Choose a color that stands out
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .new-match-button {
+      margin-top: 1.5em;
+      margin-bottom: 1.5em;
+      width: 100%;
+      padding: 1.5em;
+      font-size: 1em;
+    }
+
+    h2 {
+      text-align: center;
+      color: #0056b3; // Dark blue color for the heading
+      margin-bottom: 1em;
+    }
+
+
+    mat-card {
+      margin-bottom: 1em;
+      padding: 1em;
+      background-color: #f0f0f0; // Light background to make it stand out
+      border-radius: 8px; // Rounded corners for visual appeal
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); // Subtle shadow
+
+      p {
+        font-size: 1em;
+        color: #333; // Dark text for readability
+        margin: 0.5em 0; // Margin around paragraphs for spacing
+      }
+    }
+
+    mat-accordion {
+      width: 100%;
+
+      mat-expansion-panel {
+        .mat-expansion-panel-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          .team-answer-info {
+            margin-left: auto; // Align to the right
+            font-style: italic;
+            opacity: 80%;
+          }
+        }
+
+        &.correct {
+          .mat-expansion-panel-header {
+            background-color: #d4edda; // Light green for correct answers
+          }
+        }
+        &.incorrect {
+          .mat-expansion-panel-header {
+            background-color: #f8d7da; // Light red for incorrect answers
+          }
+        }
+        &.unanswered {
+          .mat-expansion-panel-header {
+            background-color: #f0f0f0; // Gray for unanswered
+          }
+        }
+      }
+
+      mat-card {
+
+        margin-top: 1.2em;
+        &.correct {
+          background-color: #d4edda; // Light green for correct answers
+        }
+
+        &.incorrect {
+          background-color: #f8d7da; // Light red for incorrect answers
+        }
+
+        &.unanswered {
+          background-color: #f0f0f0; // Gray for unanswered
+        }
+
+      }
+    }
+  }
+}

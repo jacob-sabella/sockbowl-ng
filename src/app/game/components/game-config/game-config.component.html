@@ -1,0 +1,207 @@
+<div class="page" *ngIf="gameSessionObs | async as gameSession">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero__content">
+      <h1 class="hero__title">
+        <mat-icon class="hero__logo">sports_esports</mat-icon>
+        Sockbowl
+      </h1>
+
+      <div class="hero__meta">
+        <mat-chip-set aria-label="Game meta">
+          <mat-chip>
+            <mat-icon>account_circle</mat-icon>
+            Proctor:
+            <span class="chip-value">{{ gameSession.gameSettings.proctorType || '—' }}</span>
+          </mat-chip>
+
+          <mat-chip>
+            <mat-icon>tune</mat-icon>
+            Mode:
+            <span class="chip-value">{{ gameSession.gameSettings.gameMode || '—' }}</span>
+          </mat-chip>
+        </mat-chip-set>
+      </div>
+
+      <div class="hero__join">
+        <div class="join-code" matTooltip="Share this code with players">
+          <mat-icon>qr_code_2</mat-icon>
+          <span>{{ gameSession.joinCode }}</span>
+          <button
+            type="button"
+            mat-icon-button
+            aria-label="Copy join code"
+            (click)="copyJoinCode(gameSession.joinCode)"
+          >
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
+
+        <button mat-raised-button color="primary" class="hero__cta" (click)="startMatch()">
+          <mat-icon>play_arrow</mat-icon>
+          Start Game
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GRID -->
+  <section class="grid">
+    <!-- Packet -->
+    <mat-card class="card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>inventory_2</mat-icon>
+          Packet
+        </mat-card-title>
+        <mat-card-subtitle>Choose a packet to use for this match.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <ng-container *ngIf="gameSession.currentMatch.packet; else noPacket">
+          <div class="kv">
+            <div class="kv__row">
+              <span class="kv__key">Packet ID</span>
+              <span class="kv__val code">{{ gameSession.currentMatch.packet.id }}</span>
+            </div>
+            <div class="kv__row">
+              <span class="kv__key">Name</span>
+              <span class="kv__val">{{ gameSession.currentMatch.packet.name }}</span>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #noPacket>
+          <div class="empty-state">
+            <mat-icon>search</mat-icon>
+            <p>No packet selected.</p>
+          </div>
+        </ng-template>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-raised-button color="primary" (click)="openPacketSearch()">
+          <mat-icon>travel_explore</mat-icon>
+          Find a Packet
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Proctor -->
+    <mat-card class="card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>supervisor_account</mat-icon>
+          Proctor
+        </mat-card-title>
+        <mat-card-subtitle>Match runner</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="proctor">
+          <mat-icon class="proctor__avatar">face</mat-icon>
+          <span class="proctor__name">
+            {{ gameStateService.getProctor()?.name || 'No proctor yet' }}
+          </span>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button
+          mat-raised-button
+          color="primary"
+          *ngIf="canBecomeProctor()"
+          (click)="becomeProctor()"
+        >
+          <mat-icon>workspace_premium</mat-icon>
+          Become Proctor
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Teams -->
+    <mat-card class="card card--span2">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>groups</mat-icon>
+          Teams
+        </mat-card-title>
+        <mat-card-subtitle>Join a team or switch to spectating.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="teams">
+          <div
+            class="team"
+            *ngFor="let team of gameSession.teamList; trackBy: trackByTeamId"
+          >
+            <div class="team__header">
+              <h3 class="team__name">
+                {{ team.teamName }}
+                <span class="team__count" matBadge="{{ team.teamPlayers.length || 0 }}" matBadgeOverlap="false"
+                      matBadgeSize="small"></span>
+              </h3>
+            </div>
+
+            <div class="team__players">
+              <div
+                class="player"
+                *ngFor="let player of team.teamPlayers; trackBy: trackByPlayerId"
+              >
+                <mat-icon class="player__avatar">face</mat-icon>
+                <span class="player__name">{{ player.name }}</span>
+              </div>
+            </div>
+
+            <div class="team__actions">
+              <button
+                mat-stroked-button
+                color="primary"
+                *ngIf="!gameStateService.isSelfOnTeam(team.teamId)"
+                (click)="joinTeam(team)"
+              >
+                <mat-icon>login</mat-icon>
+                Join {{ team.teamName }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Spectators -->
+    <mat-card class="card card--span2">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>visibility</mat-icon>
+          Spectators
+        </mat-card-title>
+        <mat-card-subtitle>People watching the match.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-list class="spectators">
+          <mat-list-item
+            *ngFor="let player of gameSession.playerList; trackBy: trackByPlayerId"
+            [style.display]="player.playerMode === PlayerMode.SPECTATOR ? '' : 'none'"
+          >
+            <mat-icon matListItemIcon>face</mat-icon>
+            <div matListItemTitle>{{ player.name }}</div>
+          </mat-list-item>
+        </mat-list>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button
+          mat-raised-button
+          color="primary"
+          *ngIf="gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()"
+          (click)="switchToSpectate()"
+        >
+          <mat-icon>visibility</mat-icon>
+          Spectate
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </section>
+</div>

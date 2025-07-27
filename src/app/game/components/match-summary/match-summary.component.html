@@ -1,0 +1,41 @@
+<div class="match-summary-container">
+  <mat-card *ngIf="gameSessionObs | async as gameSession" class="match-summary">
+    <h2>Match Summary</h2>
+    <div *ngIf="gameSession.currentMatch">
+
+      <!-- Winning Team Announcement -->
+      <div class="winning-team-announcement">
+        {{ getWinningTeamAnnouncement() }}
+      </div>
+
+      <app-team-list [teams]="gameSession.teamList"
+                     [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
+                     [currentRound]="gameSession.currentMatch.currentRound"
+                     [previousRoundList]="gameSession.currentMatch.previousRounds">
+      </app-team-list>
+
+      <!-- New Match Button -->
+      <button mat-raised-button color="primary" (click)="endMatch()" class="new-match-button">
+        New Match
+      </button>
+
+      <mat-accordion>
+        <mat-expansion-panel *ngFor="let round of gameSession.currentMatch.previousRounds"
+                             [ngClass]="{'correct': isCorrectlyAnswered(round), 'incorrect': isIncorrectlyAnswered(round), 'unanswered': isUnanswered(round)}">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              Question {{ round.roundNumber }}
+              <span *ngIf="isCorrectlyAnswered(round)" class="team-answer-info">{{ getTeamAnswerInfo(round) }}</span>
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+          <mat-card>
+            <p>Question: {{ round.question }}</p>
+            <p>Answer: {{ round.answer }}</p>
+            <p *ngIf="isCorrectlyAnswered(round)">Answered Correctly By: {{ getCorrectAnswerPlayerWithTeam(round) }}</p>
+          </mat-card>
+        </mat-expansion-panel>
+      </mat-accordion>
+
+    </div>
+  </mat-card>
+</div>

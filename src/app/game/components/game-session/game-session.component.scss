@@ -1,0 +1,52 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height:90vh;
+  width: 100%;
+
+  .centered-card {
+    width: 75vw;
+    max-width: 30em;
+    padding: 2em;
+    box-shadow: 0 7px 9px rgba(0, 0, 0, 0.2);
+
+    .header-container {
+      display: flex;
+      align-items: center;
+      position: relative;
+      width: 100%;
+      padding-bottom: 2em;
+
+      .centered-title {
+        font-size: 1.25em;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+      }
+    }
+
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2em;
+      align-items: center;
+      padding: 3em 0;
+
+
+      button{
+        width: 10em;
+        min-width: fit-content;
+        height: 3em;
+      }
+
+    }
+
+    .form-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2em;
+    }
+  }
+}

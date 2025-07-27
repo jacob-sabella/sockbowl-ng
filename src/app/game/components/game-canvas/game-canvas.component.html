@@ -1,0 +1,25 @@
+<!-- Game Session Container -->
+<div *ngIf="gameSession$ | async">
+
+  <!-- Config component -->
+  <div *ngIf="shouldShowConfigComponent()">
+    <app-game-config class="game-session"></app-game-config>
+  </div>
+
+  <!-- Proctor component -->
+  <div *ngIf="shouldShowProctorComponent()">
+    <app-game-proctor></app-game-proctor>
+  </div>
+
+  <!-- Buzzer component -->
+  <div *ngIf="shouldShowBuzzerComponent()">
+    <app-game-buzzer></app-game-buzzer>
+  </div>
+
+  <!-- Match summary component -->
+  <div *ngIf="shouldShowMatchSummaryComponent()">
+    <app-match-summary></app-match-summary>
+  </div>
+
+
+</div>

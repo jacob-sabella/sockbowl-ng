@@ -1,0 +1,59 @@
+name: Angular CI with Docker
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Angular CLI
+        run: npm install -g @angular/cli
+
+      - name: Build Angular project
+        run: npm run buildprod
+
+      # Docker steps
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and tag Docker image
+        run: |
+          BRANCH_NAME=$(echo "${GITHUB_REF##*/}")
+          docker build -t ghcr.io/${{ github.repository }}:${BRANCH_NAME} .
+
+      - name: Push Docker image
+        run: |
+          BRANCH_NAME=$(echo "${GITHUB_REF##*/}")
+          docker push ghcr.io/${{ github.repository }}:${BRANCH_NAME}
+

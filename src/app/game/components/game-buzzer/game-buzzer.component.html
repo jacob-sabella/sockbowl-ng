@@ -1,0 +1,66 @@
+<!-- Main container for the game buzzer interface -->
+<div class="game-buzzer-container">
+
+  <!-- Player info card: Shown only if there is an active game session -->
+  <mat-card *ngIf="gameSessionObs | async as gameSession" class="player-info-card">
+    <mat-card-content class="player-info-content">
+      <!-- Display the current player's name -->
+      <div class="player-name">{{ gameStateService.getCurrentPlayer()?.name }}</div>
+      <!-- Display the name of the team to which the current player belongs -->
+      <div class="player-team">{{ gameStateService.getCurrentPlayerTeam()?.teamName }}</div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Buzzer card: Allows players to buzz in during a game -->
+  <mat-card class="game-buzzer">
+    <mat-card-title>
+      <!-- Display the current round number -->
+      Buzz in for Round {{ gameSession.currentMatch.currentRound.roundNumber }}
+    </mat-card-title>
+    <mat-card-content>
+      <!-- Active buzz info: Shown if there's a current buzz -->
+      <div *ngIf="gameSession.currentMatch.currentRound.currentBuzz" class="active-buzz-info">
+        <!-- Display the name of the player and team who have buzzed in -->
+        <p>{{ gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz.playerId) }} (
+          {{ gameStateService.getTeamNameById(gameSession.currentMatch.currentRound.currentBuzz.teamId) }})
+          has buzzed in
+        </p>
+      </div>
+
+      <!-- Buzz button: Allows players to buzz in, visibility and state depend on round conditions -->
+      <div class="buzz-button-container">
+        <button
+          *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ ||
+          gameSession.currentMatch.currentRound.roundState === RoundState.PROCTOR_READING"
+          mat-raised-button
+          id="buzz-button"
+          (click)="gameStateService.sendPlayerIncomingBuzz()"
+          [disabled]="gameStateService.hasCurrentPlayerTeamBuzzed()"
+          class="buzz-button">
+          <!-- Display appropriate text on the buzz button -->
+          {{ getBuzzButtonText() }}
+        </button>
+      </div>
+
+      <!-- Timer Display -->
+      <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ" class="timer-display">
+        <p>Time remaining: {{ countdown }}</p>
+      </div>
+
+      <!-- Round completed. Show question and answer -->
+      <div *ngIf="gameSession.currentMatch.currentRound.roundState === 'COMPLETED'" class="round-completed-info">
+        <h3>Round Completed</h3>
+        <p><strong>Question:</strong> {{ gameSession.currentMatch.currentRound.question }}</p>
+        <p><strong>Answer:</strong> {{ gameSession.currentMatch.currentRound.answer }}</p>
+      </div>
+
+
+      <!-- Team list component: Displays a list of teams with their respective scores and buzz statuses -->
+      <app-team-list [teams]="gameSession.teamList"
+                     [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
+                     [currentRound]="gameSession.currentMatch.currentRound"
+                     [previousRoundList]="gameSession.currentMatch.previousRounds">
+      </app-team-list>
+    </mat-card-content>
+  </mat-card>
+</div>
