@@ -1,27 +1,35 @@
 # SockbowlNg
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 16.2.0.
+SockbowlNg is the frontend client for the Sockbowl platform, built with Angular. It provides a modern, responsive interface for players to join and play quizbowl games in real-time, integrating tightly with backend services via WebSockets and REST APIs.
 
-## Development server
+## Features
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- **Real-Time Game Play:** Connects to Sockbowl Game backend via WebSockets for live game state updates.
+- **Team & Player Management:** View and manage teams and player rosters.
+- **Match Progression:** Visualizes rounds, scores, and answer outcomes.
+- **Question Integration:** Retrieves quiz packets from Sockbowl Questions API.
+- **Responsive UI:** Built with Angular, SCSS, and Material Design.
 
-## Code scaffolding
+## Development
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+- Angular CLI: `ng serve` for local development.
+- Build: `ng build` (output in `dist/`).
+- Unit tests: `ng test`
+- E2E tests: `ng e2e`
+- See [Angular CLI Docs](https://angular.io/cli) for more commands.
 
-## Build
+## Deployment
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+A sample Dockerfile is included for production deployment with Nginx. See `Dockerfile` for details on serving the built frontend.
 
-## Running unit tests
+## Environment
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+- API URLs and WebSocket endpoints configurable via `src/environments/environment.ts`
 
-## Running end-to-end tests
+## License
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+MIT License. See `LICENSE` for details.
 
-## Further help
+---
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+*Created by Jacob Sabella*
