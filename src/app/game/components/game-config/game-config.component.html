@@ -133,8 +133,7 @@
             <div class="team__header">
               <h3 class="team__name">
                 {{ team.teamName }}
-                <span class="team__count" matBadge="{{ team.teamPlayers.length || 0 }}" matBadgeOverlap="false"
-                      matBadgeSize="small"></span>
+                <span class="team__count">{{ team.teamPlayers.length || 0 }}</span>
               </h3>
             </div>
 

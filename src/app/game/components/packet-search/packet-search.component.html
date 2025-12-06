@@ -1,17 +1,103 @@
-<h2 mat-dialog-title>Search Packet by Name</h2>
-<mat-dialog-content>
-  <mat-form-field class="full-width">
-    <mat-icon matPrefix>search</mat-icon>
-    <input matInput type="text" [(ngModel)]="searchQuery" placeholder="Search Packet by Name" (input)="searchPackets()">
-  </mat-form-field>
-  <div *ngIf="searchResults.length" class="search-results">
-    <mat-list>
-      <mat-list-item *ngFor="let packet of searchResults" (click)="selectPacket(packet)" [class.selected]="packet.id === selectedPacketId">
-        {{ packet.name }}
-      </mat-list-item>
-    </mat-list>
-  </div>
-</mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-button mat-stroked-button (click)="close()">Close</button>
-</mat-dialog-actions>
+<div class="packet-search-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon>travel_explore</mat-icon>
+    Search Packets
+  </h2>
+
+  <mat-dialog-content>
+    <div class="search-container">
+      <mat-form-field class="search-field" appearance="outline">
+        <mat-icon matPrefix class="search-icon">search</mat-icon>
+        <input
+          matInput
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Type to search for packets..."
+          (input)="searchPackets()"
+          autocomplete="off"
+        >
+        <button
+          mat-icon-button
+          matSuffix
+          *ngIf="searchQuery"
+          (click)="clearSearch()"
+          aria-label="Clear search"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <div class="search-info" *ngIf="searchQuery && !isSearching">
+        <span *ngIf="searchResults.length > 0">
+          Found {{ searchResults.length }} packet{{ searchResults.length !== 1 ? 's' : '' }}
+        </span>
+        <span *ngIf="searchResults.length === 0 && searchQuery.length >= 2">
+          No packets found
+        </span>
+        <span *ngIf="searchQuery.length < 2" class="hint">
+          Type at least 2 characters to search
+        </span>
+      </div>
+    </div>
+
+    <div class="results-container">
+      <!-- Loading state -->
+      <div *ngIf="isSearching" class="loading-state">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Searching packets...</p>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!searchQuery && !isSearching" class="empty-state">
+        <mat-icon>inventory_2</mat-icon>
+        <p>Search for quiz bowl packets by name</p>
+        <span class="hint">Try searching for a tournament name, year, or difficulty</span>
+      </div>
+
+      <!-- Results list -->
+      <div *ngIf="searchResults.length > 0 && !isSearching" class="search-results">
+        <div
+          class="result-item"
+          *ngFor="let packet of searchResults; let i = index"
+          (click)="selectPacket(packet)"
+          [class.selected]="packet.id === selectedPacketId"
+          [attr.data-index]="i"
+        >
+          <div class="result-content">
+            <mat-icon class="result-icon">description</mat-icon>
+            <div class="result-details">
+              <div class="result-name">{{ packet.name }}</div>
+              <div class="result-meta">
+                <span class="packet-id">ID: {{ packet.id }}</span>
+              </div>
+            </div>
+          </div>
+          <mat-icon class="check-icon" *ngIf="packet.id === selectedPacketId">check_circle</mat-icon>
+        </div>
+      </div>
+
+      <!-- No results state -->
+      <div *ngIf="searchResults.length === 0 && searchQuery && !isSearching && searchQuery.length >= 2" class="no-results">
+        <mat-icon>search_off</mat-icon>
+        <p>No packets found matching "{{ searchQuery }}"</p>
+        <span class="hint">Try a different search term</span>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="close()" class="cancel-btn">
+      Cancel
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      [disabled]="!selectedPacketId"
+      (click)="confirmSelection()"
+      class="select-btn"
+    >
+      <mat-icon>check</mat-icon>
+      Select Packet
+    </button>
+  </mat-dialog-actions>
+</div>

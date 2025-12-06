@@ -9,10 +9,26 @@
       Round {{ gameSession.currentMatch.currentRound.roundNumber }}
     </mat-card-title>
     <mat-card-content>
-      <p>Question: {{ gameSession.currentMatch.currentRound.question }}</p>
-      <p>Category: {{ gameSession.currentMatch.currentRound.category }}</p>
-      <p>Subcategory: {{ gameSession.currentMatch.currentRound.subcategory }}</p>
-      <p>Answer: {{ gameSession.currentMatch.currentRound.answer }}</p>
+      <div class="category-row">
+        <div class="info-section category-section">
+          <span class="info-label">Category:</span>
+          <span class="info-value">{{ gameSession.currentMatch.currentRound.category }}</span>
+        </div>
+        <div class="info-section subcategory-section">
+          <span class="info-label">Subcategory:</span>
+          <span class="info-value">{{ gameSession.currentMatch.currentRound.subcategory }}</span>
+        </div>
+      </div>
+
+      <div class="info-section question-section">
+        <div class="info-label">Question</div>
+        <div class="info-value">{{ gameSession.currentMatch.currentRound.question }}</div>
+      </div>
+
+      <div class="info-section answer-section">
+        <div class="info-label">Answer</div>
+        <div class="info-value">{{ gameSession.currentMatch.currentRound.answer }}</div>
+      </div>
 
       <!-- Buzz Information -->
       <div *ngIf="gameSession.currentMatch.currentRound.currentBuzz" class="active-buzz-info">

@@ -4,7 +4,11 @@
       <b>{{ team.teamName }} - ({{ getTeamScore(team) }})</b>
     </h3>
     <mat-list-item *ngFor="let player of team.teamPlayers"
-                   [ngClass]="{'current-buzz': isCurrentBuzz(player.playerId)}">
+                   [ngClass]="{
+                     'current-buzz': isCurrentBuzz(player.playerId),
+                     'current-player': isCurrentPlayer(player.playerId)
+                   }">
+      <mat-icon *ngIf="isCurrentPlayer(player.playerId)" class="current-player-icon">person</mat-icon>
       {{ player.name }} - ({{ getPlayerScore(player.playerId) }})
     </mat-list-item>
   </mat-list>

@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { Team, Buzz, Round } from '../../models/sockbowl/sockbowl-interfaces';
+import { GameStateService } from '../../services/game-state.service';
 
 @Component({
   selector: 'app-team-list',
@@ -11,6 +12,12 @@ export class TeamListComponent {
   @Input() currentBuzz!: Buzz;
   @Input() currentRound!: Round
   @Input() previousRoundList!: Round[];
+
+  constructor(private gameStateService: GameStateService) {}
+
+  isCurrentPlayer(playerId: string): boolean {
+    return this.gameStateService.getCurrentPlayer()?.playerId === playerId;
+  }
 
   isCurrentBuzz(playerId: string): boolean {
     return this.currentBuzz && this.currentBuzz.playerId === playerId;
