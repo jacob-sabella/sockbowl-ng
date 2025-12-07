@@ -1,11 +1,15 @@
 <div class="packet-search-dialog">
   <h2 mat-dialog-title>
     <mat-icon>travel_explore</mat-icon>
-    Search Packets
+    Find or Generate Packet
   </h2>
 
   <mat-dialog-content>
-    <div class="search-container">
+    <mat-tab-group>
+      <!-- Search Existing Packets Tab -->
+      <mat-tab label="Search Existing">
+        <div class="tab-content">
+          <div class="search-container">
       <mat-form-field class="search-field" appearance="outline">
         <mat-icon matPrefix class="search-icon">search</mat-icon>
         <input
@@ -83,6 +87,113 @@
         <span class="hint">Try a different search term</span>
       </div>
     </div>
+        </div>
+      </mat-tab>
+
+      <!-- Generate New Packet Tab -->
+      <mat-tab label="Generate with AI">
+        <div class="tab-content">
+          <div class="generate-container">
+            <!-- Form - hidden when generating -->
+            <div class="generate-form" *ngIf="!isGenerating">
+              <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
+                <mat-label>Topic</mat-label>
+                <input
+                  matInput
+                  type="text"
+                  [(ngModel)]="generateTopic"
+                  placeholder="e.g., Ancient Rome, Organic Chemistry, Jazz Music"
+                >
+              </mat-form-field>
+
+              <mat-form-field class="context-field" appearance="outline" floatLabel="always">
+                <mat-label>Context (Optional)</mat-label>
+                <textarea
+                  matInput
+                  [(ngModel)]="generateContext"
+                  placeholder="e.g., Focus on the Roman Republic, Include chemical reactions, 1920s-1940s era"
+                  rows="3"
+                ></textarea>
+              </mat-form-field>
+
+              <button
+                mat-raised-button
+                color="accent"
+                [disabled]="!generateTopic"
+                (click)="generateAIPacket()"
+                class="generate-btn"
+              >
+                <mat-icon>auto_awesome</mat-icon>
+                Generate Packet
+              </button>
+            </div>
+
+            <!-- Generating state -->
+            <div *ngIf="isGenerating" class="generating-state">
+              <mat-spinner diameter="50"></mat-spinner>
+              <p>Generating packet with AI...</p>
+              <span class="hint">This may take a minute</span>
+            </div>
+
+            <!-- Generated packet preview -->
+            <div *ngIf="generatedPacket && !isGenerating" class="generated-packet">
+              <div class="packet-preview">
+                <mat-icon class="success-icon">check_circle</mat-icon>
+                <h3>{{ generatedPacket.name }}</h3>
+                <div class="packet-details">
+                  <span class="detail-item">
+                    <mat-icon>quiz</mat-icon>
+                    {{ generatedPacket.tossups.length || 0 }} Tossups
+                  </span>
+                  <span class="detail-item" *ngIf="generatedPacket.difficulty">
+                    <mat-icon>signal_cellular_alt</mat-icon>
+                    {{ generatedPacket.difficulty }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Tossups Preview -->
+              <div class="tossups-preview">
+                <h4 class="preview-title">
+                  <mat-icon>visibility</mat-icon>
+                  Preview Questions
+                </h4>
+                <mat-accordion class="tossup-accordion">
+                  <mat-expansion-panel *ngFor="let tossup of generatedPacket.tossups; let i = index">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>
+                        <span class="tossup-number">Question {{ i + 1 }}</span>
+                        <span class="tossup-category" *ngIf="tossup.tossup?.subcategory">
+                          {{ tossup.tossup.subcategory.category.name }} - {{ tossup.tossup.subcategory.name }}
+                        </span>
+                      </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <div class="tossup-content">
+                      <div class="content-section">
+                        <div class="section-label">
+                          <mat-icon>quiz</mat-icon>
+                          Question
+                        </div>
+                        <div class="section-text">{{ tossup.tossup.question }}</div>
+                      </div>
+
+                      <div class="content-section">
+                        <div class="section-label">
+                          <mat-icon>lightbulb</mat-icon>
+                          Answer
+                        </div>
+                        <div class="section-text answer-text">{{ tossup.tossup.answer }}</div>
+                      </div>
+                    </div>
+                  </mat-expansion-panel>
+                </mat-accordion>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
@@ -92,12 +203,12 @@
     <button
       mat-raised-button
       color="primary"
-      [disabled]="!selectedPacketId"
+      [disabled]="!selectedPacketId && !generatedPacket"
       (click)="confirmSelection()"
       class="select-btn"
     >
       <mat-icon>check</mat-icon>
-      Select Packet
+      Use Packet
     </button>
   </mat-dialog-actions>
 </div>

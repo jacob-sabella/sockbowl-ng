@@ -11,11 +11,18 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   styleUrls: ['./packet-search.component.scss']
 })
 export class PacketSearchComponent implements OnInit {
+  // Search tab properties
   searchQuery: string = "";
   searchResults: Packet[] = [];
   selectedPacketId: String = "";
   isSearching: boolean = false;
   private searchSubject = new Subject<string>();
+
+  // Generate tab properties
+  generateTopic: string = "";
+  generateContext: string = "";
+  isGenerating: boolean = false;
+  generatedPacket: Packet | null = null;
 
   constructor(
     private dialogRef: MatDialogRef<PacketSearchComponent>,
@@ -61,7 +68,33 @@ export class PacketSearchComponent implements OnInit {
     this.selectedPacketId = packet.id;
   }
 
+  generateAIPacket(): void {
+    if (!this.generateTopic) {
+      return;
+    }
+
+    this.isGenerating = true;
+    this.sockbowlQuestionsService.generatePacket(this.generateTopic, this.generateContext).subscribe({
+      next: (packet) => {
+        this.generatedPacket = packet;
+        this.isGenerating = false;
+      },
+      error: (error) => {
+        console.error('Generation error:', error);
+        this.isGenerating = false;
+        // TODO: Show error message to user
+      }
+    });
+  }
+
   confirmSelection(): void {
+    // Prioritize generated packet if it exists
+    if (this.generatedPacket) {
+      this.dialogRef.close(this.generatedPacket);
+      return;
+    }
+
+    // Otherwise use selected packet from search
     const selectedPacket = this.searchResults.find(p => p.id === this.selectedPacketId);
     if (selectedPacket) {
       this.dialogRef.close(selectedPacket);

@@ -38,4 +38,21 @@ export class SockbowlQuestionsService {
       map(response => response.data.searchPacketsByName)
     );
   }
+
+  /**
+   * Generate a packet using AI.
+   *
+   * @param topic Main topic for the packet
+   * @param additionalContext Additional context or constraints
+   * @return Observable of generated Packet
+   */
+  generatePacket(topic: string, additionalContext: string = ''): Observable<Packet> {
+    const url = `${environment.sockbowlQuestionsApiUrl}api/packets/generate`;
+    const params: any = { topic };
+    if (additionalContext) {
+      params.additionalContext = additionalContext;
+    }
+
+    return this.http.get<Packet>(url, { params });
+  }
 }

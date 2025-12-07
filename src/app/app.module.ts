@@ -32,6 +32,7 @@ import {MatChipsModule} from "@angular/material/chips";
 import {MatSnackBarModule} from "@angular/material/snack-bar";
 import {MatTooltipModule} from "@angular/material/tooltip";
 import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
+import {MatTabsModule} from "@angular/material/tabs";
 
 @NgModule({
   declarations: [
@@ -69,6 +70,7 @@ import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
     MatSnackBarModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatTabsModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

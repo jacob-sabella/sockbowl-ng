@@ -145,6 +145,10 @@
           font-size: 6rem;
           opacity: 0.3;
           pointer-events: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
         }
 
         &::after {
