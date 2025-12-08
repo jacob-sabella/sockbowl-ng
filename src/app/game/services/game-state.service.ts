@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {BehaviorSubject, Observable} from 'rxjs';
+import {ReplaySubject, Observable} from 'rxjs';
 import {filter, tap} from 'rxjs/operators';
 import {GameMessageService} from './game-message.service';
 import {
@@ -38,8 +38,8 @@ export class GameStateService {
   // Initialize the GameSession state
   private gameSessionState: GameSession = {} as GameSession;
 
-  // Create a BehaviorSubject to hold the current state
-  private gameSessionSubject: BehaviorSubject<GameSession> = new BehaviorSubject(this.gameSessionState);
+  // Create a ReplaySubject to hold the current state (only emits after first update)
+  private gameSessionSubject: ReplaySubject<GameSession> = new ReplaySubject(1);
 
   // Expose the current state as an Observable
   public gameSession$: Observable<GameSession> = this.gameSessionSubject.asObservable();
