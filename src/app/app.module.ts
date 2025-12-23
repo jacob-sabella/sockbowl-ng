@@ -8,8 +8,10 @@ import { GameSessionComponent } from './game/components/game-session/game-sessio
 import {MatButtonModule} from "@angular/material/button";
 import {MatInputModule} from "@angular/material/input";
 import {FormsModule} from "@angular/forms";
-import {HttpClientModule} from "@angular/common/http";
+import {HTTP_INTERCEPTORS, HttpClientModule} from "@angular/common/http";
 import {MatIconModule} from "@angular/material/icon";
+import { OAuthModule } from 'angular-oauth2-oidc';
+import { AuthInterceptor } from './core/auth/auth.interceptor';
 import { NavbarComponent } from './structure/components/navbar/navbar.component';
 import {MatToolbarModule} from "@angular/material/toolbar";
 import {MatCardModule} from "@angular/material/card";
@@ -33,6 +35,7 @@ import {MatSnackBarModule} from "@angular/material/snack-bar";
 import {MatTooltipModule} from "@angular/material/tooltip";
 import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
 import {MatTabsModule} from "@angular/material/tabs";
+import { ProfileComponent } from './structure/components/profile/profile.component';
 
 @NgModule({
   declarations: [
@@ -45,7 +48,8 @@ import {MatTabsModule} from "@angular/material/tabs";
     GameBuzzerComponent,
     TeamListComponent,
     MatchSummaryComponent,
-    PacketSearchComponent
+    PacketSearchComponent,
+    ProfileComponent
   ],
   imports: [
     BrowserModule,
@@ -71,8 +75,17 @@ import {MatTabsModule} from "@angular/material/tabs";
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatTabsModule,
+    // OAuth2/OIDC Module
+    OAuthModule.forRoot(),
   ],
-  providers: [],
+  providers: [
+    // HTTP Interceptor for adding JWT tokens
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AuthInterceptor,
+      multi: true
+    }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

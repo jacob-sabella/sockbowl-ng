@@ -8,6 +8,8 @@ import {
   PlayerMode,
   ProctorType
 } from "../../models/sockbowl/sockbowl-interfaces";
+import {AuthService} from "../../../core/auth/auth.service";
+import {environment} from "../../../../environments/environment";
 
 
 @Component({
@@ -32,7 +34,11 @@ export class GameSessionComponent {
   GameModes = GameMode;
   PlayerModes = PlayerMode;
 
-  constructor(private gameSessionService: GameSessionService, private router: Router) {
+  constructor(
+    private gameSessionService: GameSessionService,
+    private router: Router,
+    private authService: AuthService
+  ) {
   }
 
   onCreateGame(): void {
@@ -65,17 +71,33 @@ export class GameSessionComponent {
   }
 
   submitJoinGame(): void {
-    this.gameSessionService.joinGame(this.joinGameRequest).subscribe(response => {
+    // Check if auth is enabled and user is authenticated
+    const isAuthenticated = environment.authEnabled && this.authService.isAuthenticated();
+
+    // Choose the appropriate join method based on authentication status
+    const joinObservable = isAuthenticated
+      ? this.gameSessionService.joinGameAuthenticated(this.joinGameRequest)
+      : this.gameSessionService.joinGame(this.joinGameRequest);
+
+    joinObservable.subscribe(response => {
       console.log("Join game response");
       console.log(response);
 
-      this.router.navigate(
-        ["/game", {
-          "gameSessionId": response.gameSessionId, "playerSecret": response.playerSecret,
-          "playerSessionId": response.playerSessionId
-        }]
-      ).then(r => console.log(r));
+      // Build navigation parameters
+      const navigationParams: any = {
+        "gameSessionId": response.gameSessionId,
+        "playerSecret": response.playerSecret,
+        "playerSessionId": response.playerSessionId
+      };
 
+      // Add userId and accessToken if authenticated
+      if (isAuthenticated) {
+        navigationParams["userId"] = response.userId;
+        navigationParams["accessToken"] = this.authService.getAccessToken();
+      }
+
+      this.router.navigate(["/game", navigationParams])
+        .then(r => console.log(r));
     });
   }
 

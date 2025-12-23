@@ -23,9 +23,16 @@ export class GameSessionService {
     return this.http.post<GameSessionIdentifiers>(url, request);
   }
 
-  // Method to join a game session
+  // Method to join a game session (guest mode)
   joinGame(request: JoinGameRequest): Observable<JoinGameResponse> {
     const url = `${this.baseUrl}/join-game-session-by-code`;
+    return this.http.post<JoinGameResponse>(url, request);
+  }
+
+  // Method to join a game session as authenticated user
+  // Requires JWT Bearer token in Authorization header (added automatically by AuthInterceptor)
+  joinGameAuthenticated(request: JoinGameRequest): Observable<JoinGameResponse> {
+    const url = `${this.baseUrl}/join-game-session-authenticated`;
     return this.http.post<JoinGameResponse>(url, request);
   }
 }

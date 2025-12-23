@@ -1,0 +1,309 @@
+.profile-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 64px);
+}
+
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+
+  p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+  }
+
+  mat-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+// User Info Card
+.profile-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+
+  mat-card-header {
+    margin-bottom: 1rem;
+  }
+
+  .profile-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      .value {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+// Stats Grid
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+
+  .stat-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border-color: var(--accent-primary);
+    }
+
+    mat-card-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      text-align: center;
+
+      .stat-icon {
+        font-size: 3rem;
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 1rem;
+      }
+
+      .stat-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .stat-label {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .stat-percentage {
+        font-size: 0.875rem;
+        color: var(--accent-primary);
+        margin-top: 0.5rem;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+// Game History
+.history-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+
+  mat-card-header {
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.5rem;
+    }
+  }
+
+  .no-history {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+
+    mat-icon {
+      font-size: 4rem;
+      width: 4rem;
+      height: 4rem;
+      opacity: 0.5;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+    }
+  }
+
+  .history-list {
+    mat-list {
+      padding: 0;
+    }
+
+    .history-item {
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 1rem 0;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background: rgba(99, 102, 241, 0.05);
+      }
+
+      mat-icon {
+        color: var(--accent-primary);
+      }
+
+      .game-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 0.5rem;
+
+        .team-name {
+          font-weight: 600;
+          color: var(--text-primary);
+          font-size: 1.1rem;
+        }
+
+        .game-date {
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+        }
+      }
+
+      .game-details {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+
+        .game-id {
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+          font-family: monospace;
+        }
+
+        .score {
+          color: var(--accent-primary);
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+
+        .score-pending {
+          color: var(--text-secondary);
+          font-style: italic;
+          font-size: 0.875rem;
+        }
+      }
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-subtle);
+
+      .page-info {
+        color: var(--text-secondary);
+        font-weight: 500;
+        min-width: 120px;
+        text-align: center;
+      }
+
+      button {
+        color: var(--accent-primary);
+
+        &:disabled {
+          color: var(--text-secondary);
+          opacity: 0.5;
+        }
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 1rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+
+    .stat-card mat-card-content {
+      padding: 1.5rem 0.75rem;
+
+      .stat-icon {
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+
+      .stat-value {
+        font-size: 2rem;
+      }
+
+      .stat-label {
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  .history-item {
+    .game-info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+  }
+}

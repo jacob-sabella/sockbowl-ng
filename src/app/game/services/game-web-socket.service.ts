@@ -25,6 +25,7 @@ export class GameWebSocketService {
   private gameSessionId!: string;
   private playerSecret!: string;
   private playerSessionId!: string;
+  private accessToken?: string; // JWT token for authenticated users
 
   constructor() {
   }
@@ -32,15 +33,21 @@ export class GameWebSocketService {
   /**
    * Initializes the WebSocket connection and sets up the event listeners.
    *
+   * Supports two authentication modes:
+   * - Guest mode: uses playerSecret header
+   * - Authenticated mode: uses Authorization Bearer token
+   *
    * @param gameSessionId - The ID of the game session
-   * @param playerSecret - The secret key for the player
+   * @param playerSecret - The secret key for the player (guest mode)
    * @param playerSessionId - The ID of the player session
+   * @param accessToken - Optional JWT access token for authenticated users
    */
-  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string) {
+  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string, accessToken?: string) {
 
     this.gameSessionId = gameSessionId;
     this.playerSecret = playerSecret;
     this.playerSessionId = playerSessionId;
+    this.accessToken = accessToken;
 
     // Initialize the Stomp.js client with connection details
     this.stompClient = new Client({
@@ -63,13 +70,23 @@ export class GameWebSocketService {
         });
 
         // Publish an initial message to get the game configuration
+        const headers: any = {
+          gameSessionId: gameSessionId,
+          playerSessionId: playerSessionId
+        };
+
+        // Add authentication headers based on mode
+        if (this.accessToken) {
+          // Authenticated mode: use JWT Bearer token
+          headers['Authorization'] = `Bearer ${this.accessToken}`;
+        } else {
+          // Guest mode: use playerSecret
+          headers['playerSecret'] = playerSecret;
+        }
+
         this.stompClient.publish({
           destination: '/app/game/config/get-game',
-          headers: {
-            gameSessionId: gameSessionId,
-            playerSecret: playerSecret,
-            playerSessionId: playerSessionId
-          }
+          headers: headers
         });
       },
     });
@@ -80,14 +97,25 @@ export class GameWebSocketService {
 
   public sendMessage(path: string, value: SockbowlInMessage){
     console.log(JSON.stringify(value))
+
+    const headers: any = {
+      gameSessionId: this.gameSessionId,
+      playerSessionId: this.playerSessionId
+    };
+
+    // Add authentication headers based on mode
+    if (this.accessToken) {
+      // Authenticated mode: use JWT Bearer token
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    } else {
+      // Guest mode: use playerSecret
+      headers['playerSecret'] = this.playerSecret;
+    }
+
     this.stompClient.publish({
       destination: path,
       body: JSON.stringify(value),
-      headers: {
-        gameSessionId: this.gameSessionId,
-        playerSecret: this.playerSecret,
-        playerSessionId: this.playerSessionId
-      }
+      headers: headers
     })
   }
 }

@@ -23,10 +23,11 @@ export class GameCanvasComponent {
       let gameSessionId: string = params.get("gameSessionId") || '';
       let playerSecret: string = params.get("playerSecret") || '';
       let playerSessionId: string = params.get("playerSessionId") || '';
+      let accessToken: string | undefined = params.get("accessToken") || undefined;
 
-      console.log(gameSessionId, playerSecret, playerSessionId);
+      console.log(gameSessionId, playerSecret, playerSessionId, accessToken);
 
-      this.gameStateService.initialize(gameSessionId, playerSecret, playerSessionId);
+      this.gameStateService.initialize(gameSessionId, playerSecret, playerSessionId, accessToken);
     });
   }
 

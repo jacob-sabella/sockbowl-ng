@@ -222,12 +222,14 @@ export class JoinGameResponse {
   gameSessionId: string;
   playerSecret: string;
   playerSessionId: string;
+  userId?: string;
 
   constructor(data: JoinGameResponse) {
     this.joinStatus = data.joinStatus;
     this.gameSessionId = data.gameSessionId;
     this.playerSecret = data.playerSecret;
     this.playerSessionId = data.playerSessionId;
+    this.userId = data.userId;
   }
 }
 

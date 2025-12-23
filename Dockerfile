@@ -1,6 +1,9 @@
 # Use official nginx image as the base image
 FROM nginx:latest
 
+# Install envsubst (part of gettext-base package)
+RUN apt-get update && apt-get install -y gettext-base && rm -rf /var/lib/apt/lists/*
+
 # Set working directory to nginx asset directory
 WORKDIR /usr/share/nginx/html
 
@@ -8,8 +11,11 @@ WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
 
 # Copy static assets from your local Angular build
-# Replace /path/to/your/local/angular/dist/sockbowl-ng with the path to your built Angular app
 COPY ./dist/sockbowl-ng .
+
+# Copy the entrypoint script
+COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Create a custom Nginx config file
 RUN echo 'server {' \
@@ -29,5 +35,6 @@ RUN echo 'server {' \
 # Expose port 80
 EXPOSE 80
 
-# Containers run nginx with global directives and daemon off
-ENTRYPOINT ["nginx", "-g", "daemon off;"]
+# Use custom entrypoint that generates config.js from environment variables
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

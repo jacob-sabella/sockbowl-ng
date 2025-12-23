@@ -23,7 +23,16 @@
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets",
+              "src/silent-refresh.html",
+              {
+                "glob": "config.template.js",
+                "input": "src/assets",
+                "output": "/assets"
+              }
+            ],
             "styles": [
               "@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.scss"
@@ -87,7 +96,7 @@
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": ["src/favicon.ico", "src/assets", "src/silent-refresh.html"],
             "styles": [
               "@angular/material/prebuilt-themes/pink-bluegrey.css",
               "src/styles.scss"

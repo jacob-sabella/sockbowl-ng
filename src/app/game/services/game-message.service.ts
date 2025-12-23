@@ -54,10 +54,11 @@ export class GameMessageService {
    * @param gameSessionId
    * @param playerSecret
    * @param playerSessionId
+   * @param accessToken Optional JWT access token for authenticated users
    */
-  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string) {
+  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string, accessToken?: string) {
 
-    this.gameWebSocketService.initialize(gameSessionId, playerSecret, playerSessionId)
+    this.gameWebSocketService.initialize(gameSessionId, playerSecret, playerSessionId, accessToken)
 
     // Subscribe to the WebSocket message observable exposed by GameWebSocketService
     this.gameWebSocketService.messageObservable$.subscribe({

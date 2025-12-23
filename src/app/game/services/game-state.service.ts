@@ -47,9 +47,9 @@ export class GameStateService {
   constructor(private gameMessageService: GameMessageService) {
   }
 
-  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string) {
+  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string, accessToken?: string) {
     this._playerSessionId = playerSessionId;
-    this.gameMessageService.initialize(gameSessionId, playerSecret, playerSessionId);
+    this.gameMessageService.initialize(gameSessionId, playerSecret, playerSessionId, accessToken);
     this.subscribeToGameMessages();
   }
 
