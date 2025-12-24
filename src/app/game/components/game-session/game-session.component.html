@@ -37,10 +37,10 @@
         </mat-select>
       </mat-form-field>
 
-      <!-- Player Name -->
-      <mat-form-field>
+      <!-- Player Name (only for guests) -->
+      <mat-form-field *ngIf="!isAuthenticated">
         <mat-label>Your name</mat-label>
-        <input matInput [(ngModel)]="joinGameRequest.name">
+        <input matInput [(ngModel)]="joinGameRequest.name" required>
       </mat-form-field>
 
       <button mat-raised-button color="accent" (click)="submitCreateGame()">Create</button>
@@ -54,12 +54,12 @@
         <input matInput [(ngModel)]="joinGameRequest.joinCode">
       </mat-form-field>
 
-      <!-- Player Name -->
-      <mat-form-field>
+      <!-- Player Name (only for guests) -->
+      <mat-form-field *ngIf="!isAuthenticated">
         <mat-label>Name</mat-label>
-        <input matInput [(ngModel)]="joinGameRequest.name">
+        <input matInput [(ngModel)]="joinGameRequest.name" required>
       </mat-form-field>
-      
+
       <!-- Submit Button -->
       <button mat-raised-button color="accent" (click)="submitJoinGame()">Join</button>
     </div>

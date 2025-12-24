@@ -2,6 +2,7 @@
 declare global {
   interface Window {
     __env?: {
+      apiBaseUrl: string;
       sockbowlGameApiUrl: string;
       sockbowlQuestionsApiUrl: string;
       wsUrl: string;
@@ -21,6 +22,7 @@ declare global {
 
 // Use runtime config if available, otherwise use production defaults
 const runtimeConfig = window.__env || {
+  apiBaseUrl: 'http://localhost:7000',
   sockbowlGameApiUrl: 'http://localhost:7000/api/v1/session',
   sockbowlQuestionsApiUrl: 'http://localhost:7009/',
   wsUrl: 'ws://localhost:7000/sockbowl-game',

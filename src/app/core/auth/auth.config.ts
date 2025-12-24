@@ -23,6 +23,12 @@ export const authConfig: AuthConfig = {
   // OAuth2 response type (authorization code flow)
   responseType: environment.keycloak.responseType,
 
+  // Enable OIDC mode
+  oidc: true,
+
+  // Explicitly request access token
+  requestAccessToken: true,
+
   // Disable HTTPS requirement for local development
   requireHttps: environment.keycloak.requireHttps,
 
@@ -41,4 +47,7 @@ export const authConfig: AuthConfig = {
   silentRefreshRedirectUri: window.location.origin + '/silent-refresh.html',
   useSilentRefresh: true,
   silentRefreshTimeout: 5000,
+
+  // PKCE (enabled by default for code flow, but making it explicit)
+  disablePKCE: false,
 };

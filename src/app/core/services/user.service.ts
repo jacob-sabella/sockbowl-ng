@@ -12,7 +12,7 @@ import {
   providedIn: 'root'
 })
 export class UserService {
-  private baseUrl: string = environment.sockbowlGameApiUrl;
+  private baseUrl: string = environment.apiBaseUrl || 'http://localhost:7000';
 
   constructor(private http: HttpClient) {}
 

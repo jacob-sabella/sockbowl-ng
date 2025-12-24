@@ -113,7 +113,19 @@ export class ProfileComponent implements OnInit {
   }
 
   formatDate(dateString: string): string {
+    if (!dateString) {
+      return 'Not available';
+    }
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    if (isNaN(date.getTime())) {
+      return 'Not available';
+    }
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 }

@@ -42,6 +42,19 @@
     margin-bottom: 1rem;
   }
 
+  ::ng-deep mat-card-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  ::ng-deep mat-card-subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    margin-top: 0.25rem;
+  }
+
   .profile-icon {
     font-size: 3rem;
     width: 3rem;
@@ -114,7 +127,7 @@
       }
 
       .stat-value {
-        font-size: 2.5rem;
+        font-size: 1.5rem;
         font-weight: 800;
         color: var(--text-primary);
         margin-bottom: 0.5rem;

@@ -39,19 +39,17 @@ export class AuthService {
    */
   private configure(): void {
     this.oauthService.configure(authConfig);
-    this.oauthService.setupAutomaticSilentRefresh();
-
-    // Load discovery document and try to login
-    this.oauthService.loadDiscoveryDocumentAndTryLogin().then(() => {
-      if (this.oauthService.hasValidAccessToken()) {
-        this.isAuthenticatedSubject.next(true);
-        this.updateUserProfile();
-      }
-    });
 
     // Listen to token events
     this.oauthService.events
       .pipe(filter((e: OAuthEvent) => e.type === 'token_received'))
+      .subscribe(() => {
+        this.isAuthenticatedSubject.next(true);
+        this.updateUserProfile();
+      });
+
+    this.oauthService.events
+      .pipe(filter((e: OAuthEvent) => e.type === 'token_refreshed'))
       .subscribe(() => {
         this.isAuthenticatedSubject.next(true);
         this.updateUserProfile();
@@ -63,6 +61,26 @@ export class AuthService {
         this.isAuthenticatedSubject.next(false);
         this.userProfileSubject.next(null);
       });
+
+    // Load discovery document and try to login
+    this.oauthService.loadDiscoveryDocument().then(() => {
+      return this.oauthService.tryLoginCodeFlow();
+    }).then(() => {
+      if (this.oauthService.hasValidAccessToken()) {
+        this.isAuthenticatedSubject.next(true);
+        this.updateUserProfile();
+
+        // Clean up URL if we just processed a callback
+        if (window.location.href.includes('code=')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      // Setup automatic silent refresh AFTER handling the callback
+      this.oauthService.setupAutomaticSilentRefresh();
+    }).catch(error => {
+      console.error('[AuthService] Authentication error:', error);
+    });
   }
 
   /**
@@ -130,12 +148,13 @@ export class AuthService {
   private updateUserProfile(): void {
     const claims = this.getIdentityClaims();
     if (claims) {
-      this.userProfileSubject.next({
+      const profile = {
         sub: claims['sub'],
         email: claims['email'],
-        name: claims['name'] || claims['preferred_username'],
+        name: claims['name'] || claims['preferred_username'] || claims['email'] || 'User',
         preferredUsername: claims['preferred_username'],
-      });
+      };
+      this.userProfileSubject.next(profile);
     }
   }
 

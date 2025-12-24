@@ -8,7 +8,7 @@ window.__env = {
   keycloak: {
     issuer: '${APP_PROTOCOL}://${APP_HOST}:${KEYCLOAK_PORT}/realms/sockbowl',
     clientId: 'sockbowl-game',
-    redirectUri: window.location.origin,
+    redirectUri: window.location.origin + '/game-session',
     scope: 'openid profile email',
     responseType: 'code',
     showDebugInformation: ${AUTH_ENABLED} === false,

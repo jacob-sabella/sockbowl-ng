@@ -37,8 +37,12 @@ export class GameSessionComponent {
   constructor(
     private gameSessionService: GameSessionService,
     private router: Router,
-    private authService: AuthService
+    public authService: AuthService
   ) {
+  }
+
+  get isAuthenticated(): boolean {
+    return environment.authEnabled && this.authService.isAuthenticated();
   }
 
   onCreateGame(): void {
