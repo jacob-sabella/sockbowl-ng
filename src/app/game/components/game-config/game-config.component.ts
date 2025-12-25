@@ -10,6 +10,7 @@ import {
 } from '../../models/sockbowl/sockbowl-interfaces';
 import { Observable } from 'rxjs';
 import { GameStateService } from '../../services/game-state.service';
+import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
 
 @Component({
@@ -31,6 +32,7 @@ export class GameConfigComponent implements OnInit {
 
   constructor(
     public gameStateService: GameStateService,
+    private sockbowlQuestionsService: SockbowlQuestionsService,
     private dialog: MatDialog,
     private snack: MatSnackBar
   ) {
@@ -40,6 +42,27 @@ export class GameConfigComponent implements OnInit {
   ngOnInit(): void {
     this.gameSessionObs.subscribe((gameSession) => {
       this.gameSession = gameSession;
+
+      // Fetch full packet data with bonuses if packet is set
+      if (gameSession.currentMatch?.packet?.id) {
+        const packetId = gameSession.currentMatch.packet.id.toString();
+
+        // Fetch full packet details including bonuses
+        this.sockbowlQuestionsService.getPacketById(packetId).subscribe(
+          (packet) => {
+            if (packet) {
+              this.selectedPacket = packet;
+              this.selectedPacketId = packet.id;
+            }
+          },
+          (error) => {
+            console.error('Error fetching packet details:', error);
+            // Fallback to basic packet from session
+            this.selectedPacket = gameSession.currentMatch.packet;
+            this.selectedPacketId = gameSession.currentMatch.packet.id;
+          }
+        );
+      }
     });
   }
 

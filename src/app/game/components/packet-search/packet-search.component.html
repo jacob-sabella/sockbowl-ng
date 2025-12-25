@@ -145,6 +145,10 @@
                     <mat-icon>quiz</mat-icon>
                     {{ generatedPacket.tossups.length || 0 }} Tossups
                   </span>
+                  <span class="detail-item" *ngIf="generatedPacket.bonuses && generatedPacket.bonuses.length > 0">
+                    <mat-icon>extension</mat-icon>
+                    {{ generatedPacket.bonuses.length }} Bonuses
+                  </span>
                   <span class="detail-item" *ngIf="generatedPacket.difficulty">
                     <mat-icon>signal_cellular_alt</mat-icon>
                     {{ generatedPacket.difficulty }}
@@ -156,13 +160,13 @@
               <div class="tossups-preview">
                 <h4 class="preview-title">
                   <mat-icon>visibility</mat-icon>
-                  Preview Questions
+                  Preview Tossups
                 </h4>
                 <mat-accordion class="tossup-accordion">
                   <mat-expansion-panel *ngFor="let tossup of generatedPacket.tossups; let i = index">
                     <mat-expansion-panel-header>
                       <mat-panel-title>
-                        <span class="tossup-number">Question {{ i + 1 }}</span>
+                        <span class="tossup-number">Tossup {{ i + 1 }}</span>
                         <span class="tossup-category" *ngIf="tossup.tossup?.subcategory">
                           {{ tossup.tossup.subcategory.category.name }} - {{ tossup.tossup.subcategory.name }}
                         </span>
@@ -184,6 +188,47 @@
                           Answer
                         </div>
                         <div class="section-text answer-text">{{ tossup.tossup.answer }}</div>
+                      </div>
+                    </div>
+                  </mat-expansion-panel>
+                </mat-accordion>
+              </div>
+
+              <!-- Bonuses Preview -->
+              <div class="bonuses-preview" *ngIf="generatedPacket.bonuses && generatedPacket.bonuses.length > 0">
+                <h4 class="preview-title">
+                  <mat-icon>visibility</mat-icon>
+                  Preview Bonuses
+                </h4>
+                <mat-accordion class="bonus-accordion">
+                  <mat-expansion-panel *ngFor="let bonusRel of generatedPacket.bonuses; let i = index">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>
+                        <span class="bonus-number">Bonus {{ i + 1 }}</span>
+                        <span class="bonus-category" *ngIf="bonusRel.bonus?.subcategory">
+                          {{ bonusRel.bonus.subcategory.category.name }} - {{ bonusRel.bonus.subcategory.name }}
+                        </span>
+                      </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <div class="bonus-content">
+                      <div class="content-section" *ngIf="bonusRel.bonus?.preamble">
+                        <div class="section-label">
+                          <mat-icon>description</mat-icon>
+                          Preamble
+                        </div>
+                        <div class="section-text">{{ bonusRel.bonus.preamble }}</div>
+                      </div>
+
+                      <div class="content-section" *ngFor="let part of bonusRel.bonus?.bonusParts; let partIdx = index">
+                        <div class="section-label">
+                          <mat-icon>{{ ['looks_one', 'looks_two', 'looks_3'][partIdx] || 'circle' }}</mat-icon>
+                          Part {{ partIdx + 1 }}
+                        </div>
+                        <div class="section-text">
+                          <strong>Q:</strong> {{ part?.question }}<br>
+                          <strong>A:</strong> <span class="answer-text">{{ part?.answer }}</span>
+                        </div>
                       </div>
                     </div>
                   </mat-expansion-panel>

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Packet } from '../models/sockbowl/sockbowl-interfaces';
 import {environment} from "../../../environments/environment";
-import {map} from "rxjs/operators";
+import {map, timeout} from "rxjs/operators";
 
 @Injectable({
   providedIn: 'root'
@@ -43,6 +43,53 @@ export class SockbowlQuestionsService {
   }
 
   /**
+   * Get a packet by ID with full details including bonuses.
+   *
+   * @param id Packet ID
+   * @return Observable of Packet
+   */
+  getPacketById(id: string): Observable<Packet | null> {
+    const query = `
+      query ($id: ID!) {
+        getPacketById(id: $id) {
+          id
+          name
+          bonuses {
+            order
+            bonus {
+              id
+              preamble
+              bonusParts {
+                order
+                bonusPart {
+                  id
+                  question
+                  answer
+                }
+              }
+            }
+          }
+          tossups {
+            order
+            tossup {
+              id
+              question
+              answer
+            }
+          }
+        }
+      }
+    `;
+
+    return this.http.post<{ data: { getPacketById: Packet | null } }>(this.graphqlUrl, {
+      query,
+      variables: { id }
+    }).pipe(
+      map(response => response.data.getPacketById)
+    );
+  }
+
+  /**
    * Generate a packet using AI.
    *
    * @param topic Main topic for the packet
@@ -56,6 +103,9 @@ export class SockbowlQuestionsService {
       params.additionalContext = additionalContext;
     }
 
-    return this.http.get<Packet>(url, { params });
+    // Set timeout to 5 minutes (300000ms) for AI generation with bonuses
+    return this.http.get<Packet>(url, { params }).pipe(
+      timeout(300000)
+    );
   }
 }
