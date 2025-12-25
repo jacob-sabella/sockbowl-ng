@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../../core/auth/auth.service';
+import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
@@ -13,7 +14,7 @@ export class NavbarComponent implements OnInit {
   userProfile$!: Observable<any>;
   authEnabled = environment.authEnabled;
 
-  constructor(public authService: AuthService) {}
+  constructor(public authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
     if (this.authEnabled) {
@@ -28,5 +29,9 @@ export class NavbarComponent implements OnInit {
 
   logout(): void {
     this.authService.logout();
+  }
+
+  isInGame(): boolean {
+    return this.router.url.startsWith('/game');
   }
 }

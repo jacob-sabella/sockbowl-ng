@@ -16,6 +16,11 @@
     <app-game-buzzer></app-game-buzzer>
   </div>
 
+  <!-- Spectator component -->
+  <div *ngIf="shouldShowSpectatorComponent()">
+    <app-game-spectator></app-game-spectator>
+  </div>
+
   <!-- Match summary component -->
   <div *ngIf="shouldShowMatchSummaryComponent()">
     <app-match-summary></app-match-summary>

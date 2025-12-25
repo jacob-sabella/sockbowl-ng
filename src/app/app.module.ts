@@ -23,6 +23,7 @@ import {MatSidenavModule} from "@angular/material/sidenav";
 import { GameConfigComponent } from './game/components/game-config/game-config.component';
 import { GameProctorComponent } from './game/components/game-proctor/game-proctor.component';
 import { GameBuzzerComponent } from './game/components/game-buzzer/game-buzzer.component';
+import { GameSpectatorComponent } from './game/components/game-spectator/game-spectator.component';
 import { TeamListComponent } from './game/components/team-list/team-list.component';
 import {MatCheckboxModule} from "@angular/material/checkbox";
 import { MatchSummaryComponent } from './game/components/match-summary/match-summary.component';
@@ -46,6 +47,7 @@ import { ProfileComponent } from './structure/components/profile/profile.compone
     GameConfigComponent,
     GameProctorComponent,
     GameBuzzerComponent,
+    GameSpectatorComponent,
     TeamListComponent,
     MatchSummaryComponent,
     PacketSearchComponent,

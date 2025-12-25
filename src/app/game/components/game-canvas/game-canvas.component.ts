@@ -44,6 +44,10 @@ export class GameCanvasComponent {
     return this.gameStateService.getMatchState() == MatchState.IN_GAME && this.gameStateService.isSelfOnAnyTeam();
   }
 
+  shouldShowSpectatorComponent(): boolean {
+    return this.gameStateService.getMatchState() == MatchState.IN_GAME && this.gameStateService.isSelfSpectator();
+  }
+
   shouldShowMatchSummaryComponent(): boolean {
     return this.gameStateService.getMatchState() == MatchState.COMPLETED;
   }

@@ -323,6 +323,15 @@ export class GameStateService {
   }
 
   /**
+   * Checks if the current player is a spectator.
+   * @returns true if the current player is in SPECTATOR mode; otherwise false.
+   */
+  public isSelfSpectator(): boolean {
+    const currentPlayer = this.getCurrentPlayer();
+    return currentPlayer?.playerMode === PlayerMode.SPECTATOR;
+  }
+
+  /**
    * Get state of current match
    */
   public getMatchState(): MatchState {
