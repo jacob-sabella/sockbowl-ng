@@ -33,6 +33,16 @@ export class BonusPart {
   }
 }
 
+export class BonusPartAnswer {
+  partIndex: number;
+  correct: boolean;
+
+  constructor(data: BonusPartAnswer) {
+    this.partIndex = data.partIndex;
+    this.correct = data.correct;
+  }
+}
+
 export class Category {
   id: number;
   name: string;
@@ -340,6 +350,27 @@ export class EndMatch extends SockbowlInMessage {
     super(data);
   }
 }
+
+export class BonusPartOutcome extends SockbowlInMessage {
+  partIndex: number;
+  correct: boolean;
+
+  constructor(data: BonusPartOutcome) {
+    super(data);
+    this.partIndex = data.partIndex;
+    this.correct = data.correct;
+  }
+}
+
+export class UpdateGameSettings extends SockbowlInMessage {
+  gameSettings: GameSettings;
+
+  constructor(data: UpdateGameSettings) {
+    super(data);
+    this.gameSettings = data.gameSettings;
+  }
+}
+
 export class SockbowlOutMessage {
   messageContentType: string;
   messageType: MessageTypes;
@@ -420,6 +451,21 @@ export class RoundUpdate extends SockbowlOutMessage {
   }
 }
 
+export class BonusUpdate extends SockbowlOutMessage {
+  currentRound: Round;
+  previousRounds: Round[];
+  partIndex: number;
+  correct: boolean;
+
+  constructor(data: BonusUpdate) {
+    super(data);
+    this.currentRound = data.currentRound;
+    this.previousRounds = data.previousRounds;
+    this.partIndex = data.partIndex;
+    this.correct = data.correct;
+  }
+}
+
 export class GameSessionUpdate extends SockbowlOutMessage {
   gameSession: GameSession;
 
@@ -473,10 +519,12 @@ export class GameSession {
 export class GameSettings {
   proctorType: ProctorType;
   gameMode: GameMode;
+  bonusesEnabled: boolean;
 
   constructor(data: GameSettings) {
     this.proctorType = data.proctorType;
     this.gameMode = data.gameMode;
+    this.bonusesEnabled = data.bonusesEnabled;
   }
 }
 
@@ -540,6 +588,12 @@ export class Round {
   category: string;
   subcategory: string;
   proctorFinishedReading: boolean;
+  // Bonus-related fields
+  associatedBonus: Bonus;
+  currentBonus: Bonus;
+  bonusPartAnswers: BonusPartAnswer[];
+  currentBonusPartIndex: number;
+  bonusEligibleTeamId: string;
 
   constructor(data: Round) {
     this.roundState = data.roundState;
@@ -551,6 +605,11 @@ export class Round {
     this.proctorFinishedReading = data.proctorFinishedReading;
     this.category = data.category;
     this.subcategory = data.category;
+    this.associatedBonus = data.associatedBonus;
+    this.currentBonus = data.currentBonus;
+    this.bonusPartAnswers = data.bonusPartAnswers;
+    this.currentBonusPartIndex = data.currentBonusPartIndex;
+    this.bonusEligibleTeamId = data.bonusEligibleTeamId;
   }
 }
 
@@ -615,5 +674,7 @@ export enum RoundState {
   PROCTOR_READING = "PROCTOR_READING",
   AWAITING_BUZZ = "AWAITING_BUZZ",
   AWAITING_ANSWER = "AWAITING_ANSWER",
+  AWAITING_BONUS_ANSWER = "AWAITING_BONUS_ANSWER",
+  BONUS_COMPLETED = "BONUS_COMPLETED",
   COMPLETED = "COMPLETED",
 }

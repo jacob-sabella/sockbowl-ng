@@ -60,5 +60,14 @@ export class GameProctorComponent implements OnInit, OnDestroy {
     }
   }
 
+  sendBonusPartOutcome(partIndex: number, correct: boolean): void {
+    this.gameStateService.sendBonusPartOutcome(partIndex, correct);
+  }
+
+  getBonusEligibleTeamName(): string {
+    const teamId = this.gameSession?.currentMatch?.currentRound?.bonusEligibleTeamId;
+    return teamId ? (this.gameStateService.getTeamNameById(teamId) || '') : '';
+  }
+
   protected readonly RoundState = RoundState;
 }

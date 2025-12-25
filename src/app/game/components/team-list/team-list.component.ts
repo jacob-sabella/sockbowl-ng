@@ -41,7 +41,33 @@ export class TeamListComponent {
     return score;
   }
 
+  getTeamBonusScore(teamId: string): number {
+    let score = 0;
+
+    // Calculate bonus points from previous rounds
+    if (this.previousRoundList) {
+      this.previousRoundList.forEach(round => {
+        if (round.bonusEligibleTeamId === teamId && round.bonusPartAnswers) {
+          score += round.bonusPartAnswers.filter(answer => answer.correct).length * 10;
+        }
+      });
+    }
+
+    // Add bonus points from current round
+    if (this.currentRound && this.currentRound.bonusEligibleTeamId === teamId && this.currentRound.bonusPartAnswers) {
+      score += this.currentRound.bonusPartAnswers.filter(answer => answer.correct).length * 10;
+    }
+
+    return score;
+  }
+
   getTeamScore(team: Team): number {
-    return team.teamPlayers.reduce((total, player) => total + this.getPlayerScore(player.playerId), 0);
+    // Sum of all player tossup points
+    const tossupScore = team.teamPlayers.reduce((total, player) => total + this.getPlayerScore(player.playerId), 0);
+
+    // Add team bonus points
+    const bonusScore = this.getTeamBonusScore(team.teamId);
+
+    return tossupScore + bonusScore;
   }
 }

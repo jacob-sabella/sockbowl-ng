@@ -39,11 +39,36 @@
     line-height: 1.5 !important;
     height: auto !important;
     letter-spacing: 0.02em;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem;
 
     b {
       font-weight: 700;
       color: #f0f4ff !important;
       text-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .score-breakdown {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #a78bfa;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(139, 92, 246, 0.15);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      width: fit-content;
+
+      .bonus-icon {
+        font-size: 1rem !important;
+        width: 1rem !important;
+        height: 1rem !important;
+        line-height: 1rem !important;
+        color: #a78bfa;
+      }
     }
   }
 

@@ -74,6 +74,14 @@
                 </div>
                 <div class="detail-content correct-player">{{ getCorrectAnswerPlayerWithTeam(round) }}</div>
               </div>
+
+              <div class="detail-item bonus-item" *ngIf="hasBonus(round)">
+                <div class="detail-label">
+                  <mat-icon>stars</mat-icon>
+                  Bonus
+                </div>
+                <div class="detail-content bonus-info">{{ getRoundBonusInfo(round) }}</div>
+              </div>
             </div>
           </mat-expansion-panel>
         </mat-accordion>

@@ -70,6 +70,63 @@
           <button mat-raised-button id="wrong-btn" (click)="gameStateService.sendAnswerIncorrect()">Wrong</button>
         </div>
 
+        <!-- Bonus judging -->
+        <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BONUS_ANSWER ||
+                    gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED"
+             class="bonus-section">
+          <div class="bonus-header">
+            <h3>Bonus for {{ getBonusEligibleTeamName() }}</h3>
+            <div class="bonus-score">
+              {{ gameStateService.getCurrentRoundBonusPoints() }} / 30 points
+            </div>
+          </div>
+
+          <!-- Preamble -->
+          <div class="bonus-preamble" *ngIf="gameSession.currentMatch.currentRound.currentBonus?.preamble">
+            {{ gameSession.currentMatch.currentRound.currentBonus.preamble }}
+          </div>
+
+          <!-- All 3 parts -->
+          <div *ngFor="let part of gameSession.currentMatch.currentRound.currentBonus?.bonusParts; let i = index"
+               class="bonus-part"
+               [class.answered]="i < (gameSession.currentMatch.currentRound.bonusPartAnswers?.length || 0)">
+            <div class="part-header">
+              <span class="part-label">Part {{ i + 1 }}</span>
+              <span *ngIf="i < (gameSession.currentMatch.currentRound.bonusPartAnswers?.length || 0)"
+                    class="part-result"
+                    [class.correct]="gameSession.currentMatch.currentRound.bonusPartAnswers[i].correct">
+                {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i].correct ? '✓ Right (10 pts)' : '✗ Wrong (0 pts)' }}
+              </span>
+            </div>
+
+            <div class="part-content">
+              <div class="part-question">
+                <strong>Q:</strong> {{ part.question }}
+              </div>
+              <div class="part-answer">
+                <strong>A:</strong> {{ part.answer }}
+              </div>
+            </div>
+
+            <!-- Buttons for current part -->
+            <div *ngIf="i === gameSession.currentMatch.currentRound.currentBonusPartIndex"
+                 class="part-actions">
+              <button mat-raised-button
+                      color="primary"
+                      (click)="sendBonusPartOutcome(i, true)">
+                <mat-icon>check_circle</mat-icon>
+                Right (10 pts)
+              </button>
+              <button mat-raised-button
+                      color="warn"
+                      (click)="sendBonusPartOutcome(i, false)">
+                <mat-icon>cancel</mat-icon>
+                Wrong (0 pts)
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Timer Display -->
         <div *ngIf="isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ"
              class="timer-display">

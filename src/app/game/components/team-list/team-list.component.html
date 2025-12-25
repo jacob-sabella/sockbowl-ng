@@ -2,6 +2,10 @@
   <mat-list *ngFor="let team of teams" class="team-list" [ngClass]="{'buzzed': hasTeamBuzzed(team.teamId)}">
     <h3 mat-subheader>
       <b>{{ team.teamName }} - ({{ getTeamScore(team) }})</b>
+      <span class="score-breakdown" *ngIf="getTeamBonusScore(team.teamId) > 0">
+        <mat-icon class="bonus-icon">stars</mat-icon>
+        +{{ getTeamBonusScore(team.teamId) }} bonus
+      </span>
     </h3>
     <mat-list-item *ngFor="let player of team.teamPlayers"
                    [ngClass]="{

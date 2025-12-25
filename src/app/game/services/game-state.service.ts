@@ -5,14 +5,19 @@ import {GameMessageService} from './game-message.service';
 import {
   AdvanceRound,
   AnswerOutcome,
-  AnswerUpdate, EndMatch,
+  AnswerUpdate,
+  BonusPartOutcome,
+  BonusUpdate,
+  EndMatch,
   FinishedReading,
   GameSession,
   GameSessionUpdate,
+  GameSettings,
   GameStartedMessage,
   MatchPacketUpdate,
   MatchState,
-  Player, PlayerBuzzed,
+  Player,
+  PlayerBuzzed,
   PlayerIncomingBuzz,
   PlayerMode,
   PlayerRosterUpdate,
@@ -20,8 +25,10 @@ import {
   RoundUpdate,
   SetMatchPacket,
   SetProctor,
-  StartMatch, Team,
+  StartMatch,
+  Team,
   TimeoutRound,
+  UpdateGameSettings,
   UpdatePlayerTeam
 } from '../models/sockbowl/sockbowl-interfaces';
 
@@ -163,6 +170,21 @@ export class GameStateService {
       )
       .subscribe();
 
+    // Subscribe to BonusUpdate messages
+    this.gameMessageService.gameEventObservables["BonusUpdate"]
+      .pipe(
+        filter(msg => !!msg),
+        tap((msg: BonusUpdate) => {
+          // Update the current round with bonus information
+          this.gameSessionState.currentMatch.currentRound = msg.currentRound;
+          this.gameSessionState.currentMatch.previousRounds = msg.previousRounds;
+
+          // Emit the updated game session state
+          this.gameSessionSubject.next(this.gameSessionState);
+        })
+      )
+      .subscribe();
+
   }
 
   /**
@@ -261,6 +283,43 @@ export class GameStateService {
   public sendAdvanceRound(): void {
     const advanceRound = new AdvanceRound({});
     this.gameMessageService.sendMessage(`/app/game/advance-round`, advanceRound);
+  }
+
+  /**
+   * Sends a BonusPartOutcome message.
+   * @param partIndex Which bonus part (0, 1, or 2)
+   * @param correct Whether the answer was correct
+   */
+  public sendBonusPartOutcome(partIndex: number, correct: boolean): void {
+    const bonusPartOutcome = new BonusPartOutcome({
+      partIndex: partIndex,
+      correct: correct
+    });
+    this.gameMessageService.sendMessage(`/app/game/bonus-part-outcome`, bonusPartOutcome);
+  }
+
+  /**
+   * Updates game settings including bonuses enabled flag.
+   * @param gameSettings The updated game settings
+   */
+  public updateGameSettings(gameSettings: GameSettings): void {
+    const updateGameSettings = new UpdateGameSettings({
+      gameSettings: gameSettings
+    });
+    this.gameMessageService.sendMessage(`/app/game/config/update-game-settings`, updateGameSettings);
+  }
+
+  /**
+   * Calculates total bonus points for current round.
+   * @returns Total bonus points earned (0-30)
+   */
+  public getCurrentRoundBonusPoints(): number {
+    const round = this.gameSessionState?.currentMatch?.currentRound;
+    if (!round || !round.bonusPartAnswers) return 0;
+
+    return round.bonusPartAnswers
+      .filter(answer => answer.correct)
+      .length * 10;
   }
 
 

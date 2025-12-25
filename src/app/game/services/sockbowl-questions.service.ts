@@ -26,6 +26,9 @@ export class SockbowlQuestionsService {
         searchPacketsByName(name: $name) {
           id
           name
+          bonuses {
+            id
+          }
         }
       }
     `;

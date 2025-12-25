@@ -3,6 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   GameSession,
+  GameSettings,
   Packet,
   PlayerMode,
   Team
@@ -21,6 +22,8 @@ export class GameConfigComponent implements OnInit {
   gameSession!: GameSession;
   packetId: String = '';
   selectedPacketId: String = '';
+  bonusesEnabled: boolean = false;
+  selectedPacket: Packet | null = null;
 
   protected readonly PlayerMode = PlayerMode;
 
@@ -87,10 +90,46 @@ export class GameConfigComponent implements OnInit {
       if (result) {
         this.packetId = result.id;
         this.selectedPacketId = result.id;
+        this.selectedPacket = result;  // Store full packet for bonus info
         this.gameStateService.setMatchPacket(this.packetId);
         this.snack.open('Packet selected.', 'OK', { duration: 2000 });
+
+        // Reset bonuses if packet doesn't have any
+        if (!this.hasPacketBonuses() && this.bonusesEnabled) {
+          this.bonusesEnabled = false;
+          this.toggleBonuses();
+        }
       }
     });
+  }
+
+  /* ─── Bonuses ───────────────────────────────────────────────────────────── */
+
+  /**
+   * Check if selected packet has bonuses
+   */
+  hasPacketBonuses(): boolean {
+    return !!(this.selectedPacket?.bonuses?.length);
+  }
+
+  /**
+   * Toggle bonuses enabled setting
+   */
+  toggleBonuses(): void {
+    const updatedSettings = new GameSettings({
+      proctorType: this.gameSession.gameSettings.proctorType,
+      gameMode: this.gameSession.gameSettings.gameMode,
+      bonusesEnabled: this.bonusesEnabled
+    });
+
+    this.gameStateService.updateGameSettings(updatedSettings);
+  }
+
+  /**
+   * Get bonus count for display
+   */
+  getBonusCount(): number {
+    return this.selectedPacket?.bonuses?.length || 0;
   }
 
   /* ─── Progression ──────────────────────────────────────────────────────── */

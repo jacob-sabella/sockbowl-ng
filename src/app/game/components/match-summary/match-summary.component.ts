@@ -37,12 +37,39 @@ export class MatchSummaryComponent implements OnInit {
     return score;
   }
 
+  calculateTeamBonusScore(teamId: string): number {
+    let score = 0;
+    this.gameSession.currentMatch.previousRounds.forEach(round => {
+      if (round.bonusEligibleTeamId === teamId && round.bonusPartAnswers) {
+        score += round.bonusPartAnswers.filter(answer => answer.correct).length * 10;
+      }
+    });
+    return score;
+  }
+
   calculateTeamScore(team: Team): number {
     let teamScore = 0;
+    // Sum tossup points
     team.teamPlayers.forEach(player => {
       teamScore += this.calculatePlayerScore(player);
     });
+    // Add bonus points
+    teamScore += this.calculateTeamBonusScore(team.teamId);
     return teamScore;
+  }
+
+  getRoundBonusInfo(round: Round): string {
+    if (!round.bonusEligibleTeamId || !round.bonusPartAnswers || round.bonusPartAnswers.length === 0) {
+      return '';
+    }
+    const correctCount = round.bonusPartAnswers.filter(answer => answer.correct).length;
+    const totalPoints = correctCount * 10;
+    const bonusTeam = this.gameSession.teamList.find(team => team.teamId === round.bonusEligibleTeamId);
+    return bonusTeam ? `Bonus: ${bonusTeam.teamName} (${correctCount}/3, ${totalPoints} pts)` : '';
+  }
+
+  hasBonus(round: Round): boolean {
+    return !!(round.bonusEligibleTeamId && round.bonusPartAnswers && round.bonusPartAnswers.length > 0);
   }
   isCorrectlyAnswered(round: Round): boolean {
     return round.buzzList.some(buzz => buzz.correct);

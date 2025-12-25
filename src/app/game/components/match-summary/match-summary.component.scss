@@ -310,6 +310,22 @@
         color: var(--success);
         font-weight: 600;
       }
+
+      &.bonus-info {
+        display: inline-block;
+        background: rgba(139, 92, 246, 0.15);
+        border-color: rgba(139, 92, 246, 0.4);
+        color: #a78bfa;
+        font-weight: 600;
+      }
+    }
+
+    &.bonus-item {
+      .detail-label {
+        mat-icon {
+          color: #a78bfa;
+        }
+      }
     }
   }
 }
