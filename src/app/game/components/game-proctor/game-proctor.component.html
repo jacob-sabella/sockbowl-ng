@@ -125,10 +125,10 @@
                 </div>
                 <div class="part-content">
                   <div class="part-question">
-                    <strong>Q:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.question"></span>
+                    <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || part?.question"></span>
                   </div>
                   <div class="part-answer">
-                    <strong>A:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.answer"></span>
+                    <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || part?.answer"></span>
                   </div>
                 </div>
               </div>
@@ -214,10 +214,10 @@
               </div>
               <div class="part-content">
                 <div class="part-question">
-                  <strong>Q:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.question"></span>
+                  <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || part?.question"></span>
                 </div>
                 <div class="part-answer">
-                  <strong>A:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.answer"></span>
+                  <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || part?.answer"></span>
                 </div>
               </div>
             </div>

@@ -129,9 +129,10 @@ export class SockbowlQuestionsService {
       params.additionalContext = additionalContext;
     }
 
-    // Set timeout to 5 minutes (300000ms) for AI generation with bonuses
+    // Set timeout to 11 minutes (660000ms) for AI generation with bonuses
+    // Server-side timeout is 10 minutes, so we give it extra buffer
     return this.http.get<any>(url, { params }).pipe(
-      timeout(300000),
+      timeout(660000),
       map(packet => {
         // Transform nested REST API relationship structure to flat Angular model structure
         // (same transformation as GraphQL response)

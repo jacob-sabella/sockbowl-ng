@@ -39,14 +39,14 @@ export const authConfig: AuthConfig = {
   skipIssuerCheck: false,
   strictDiscoveryDocumentValidation: false,
 
-  // Session checks
-  sessionChecksEnabled: true,
+  // Session checks - disabled to avoid interfering with long-running requests (e.g., AI generation)
+  sessionChecksEnabled: false,
   clearHashAfterLogin: true,
 
   // Silent refresh
   silentRefreshRedirectUri: window.location.origin + '/silent-refresh.html',
   useSilentRefresh: true,
-  silentRefreshTimeout: 5000,
+  silentRefreshTimeout: 600000, // 10 minutes to avoid interfering with long AI generation requests
 
   // PKCE (enabled by default for code flow, but making it explicit)
   disablePKCE: false,

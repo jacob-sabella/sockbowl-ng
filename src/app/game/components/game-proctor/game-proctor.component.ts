@@ -113,7 +113,9 @@ export class GameProctorComponent implements OnInit, OnDestroy {
 
     const currentPart = bonus.bonusParts[partIndex];
     console.log('[GameProctorComponent] Returning part:', currentPart);
-    return currentPart;
+
+    // Handle nested structure: if part has bonusPart property, return that, otherwise return the part itself
+    return currentPart?.bonusPart || currentPart;
   }
 
   sendBonusPartOutcome(partIndex: number, correct: boolean): void {
