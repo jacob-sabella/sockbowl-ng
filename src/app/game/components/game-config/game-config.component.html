@@ -32,7 +32,7 @@
           </button>
         </div>
 
-        <button mat-raised-button color="primary" class="hero__cta" (click)="startMatch()">
+        <button mat-raised-button color="primary" class="hero__cta" (click)="startMatch()" *ngIf="gameStateService.isSelfProctor()">
           <mat-icon>play_arrow</mat-icon>
           Start Game
         </button>
@@ -92,7 +92,7 @@
       </mat-card-content>
 
       <mat-card-actions align="end">
-        <button mat-raised-button color="primary" (click)="openPacketSearch()">
+        <button mat-raised-button color="primary" (click)="openPacketSearch()" *ngIf="gameStateService.isSelfProctor()">
           <mat-icon>travel_explore</mat-icon>
           Find a Packet
         </button>

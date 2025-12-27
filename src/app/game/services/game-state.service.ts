@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {ReplaySubject, Observable} from 'rxjs';
 import {filter, tap} from 'rxjs/operators';
+import {MatSnackBar} from '@angular/material/snack-bar';
 import {GameMessageService} from './game-message.service';
 import {
   AdvanceRound,
@@ -54,7 +55,10 @@ export class GameStateService {
   // Expose the current state as an Observable
   public gameSession$: Observable<GameSession> = this.gameSessionSubject.asObservable();
 
-  constructor(private gameMessageService: GameMessageService) {
+  constructor(
+    private gameMessageService: GameMessageService,
+    private snackBar: MatSnackBar
+  ) {
   }
 
   public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string, accessToken?: string) {
@@ -121,12 +125,19 @@ export class GameStateService {
       )
       .subscribe();
 
-    // Subscribe to ProcessError and output error to console log
+    // Subscribe to ProcessError and show error toast
     this.gameMessageService.gameEventObservables["ProcessError"]
       .pipe(
         filter(msg => !!msg),
         tap((msg: ProcessError) => {
-          console.log(msg)
+          console.error('ProcessError:', msg);
+          // Show error message in toast
+          this.snackBar.open(msg.error, 'Dismiss', {
+            duration: 5000,
+            panelClass: ['error-snackbar'],
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
         })
       )
       .subscribe();

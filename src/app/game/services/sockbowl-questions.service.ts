@@ -81,11 +81,37 @@ export class SockbowlQuestionsService {
       }
     `;
 
-    return this.http.post<{ data: { getPacketById: Packet | null } }>(this.graphqlUrl, {
+    return this.http.post<{ data: { getPacketById: any | null } }>(this.graphqlUrl, {
       query,
       variables: { id }
     }).pipe(
-      map(response => response.data.getPacketById)
+      map(response => {
+        const packet = response.data.getPacketById;
+        if (!packet) return null;
+
+        // Transform nested GraphQL relationship structure to flat Angular model structure
+        return {
+          ...packet,
+          bonuses: packet.bonuses?.map((containsBonus: any) => ({
+            order: containsBonus.order,
+            bonus: {
+              ...containsBonus.bonus,
+              bonusParts: containsBonus.bonus.bonusParts
+                ?.map((hasBonusPart: any) => hasBonusPart.bonusPart)
+                .sort((a: any, b: any) => {
+                  // Sort by the order field if available
+                  const orderA = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === a.id)?.order || 0;
+                  const orderB = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === b.id)?.order || 0;
+                  return orderA - orderB;
+                })
+            }
+          })) || [],
+          tossups: packet.tossups?.map((containsTossup: any) => ({
+            order: containsTossup.order,
+            tossup: containsTossup.tossup
+          })) || []
+        };
+      })
     );
   }
 
@@ -104,8 +130,33 @@ export class SockbowlQuestionsService {
     }
 
     // Set timeout to 5 minutes (300000ms) for AI generation with bonuses
-    return this.http.get<Packet>(url, { params }).pipe(
-      timeout(300000)
+    return this.http.get<any>(url, { params }).pipe(
+      timeout(300000),
+      map(packet => {
+        // Transform nested REST API relationship structure to flat Angular model structure
+        // (same transformation as GraphQL response)
+        return {
+          ...packet,
+          bonuses: packet.bonuses?.map((containsBonus: any) => ({
+            order: containsBonus.order,
+            bonus: {
+              ...containsBonus.bonus,
+              bonusParts: containsBonus.bonus.bonusParts
+                ?.map((hasBonusPart: any) => hasBonusPart.bonusPart)
+                .sort((a: any, b: any) => {
+                  // Sort by the order field if available
+                  const orderA = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === a.id)?.order || 0;
+                  const orderB = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === b.id)?.order || 0;
+                  return orderA - orderB;
+                })
+            }
+          })) || [],
+          tossups: packet.tossups?.map((containsTossup: any) => ({
+            order: containsTossup.order,
+            tossup: containsTossup.tossup
+          })) || []
+        };
+      })
     );
   }
 }
