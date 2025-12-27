@@ -26,6 +26,7 @@ import { GameBuzzerComponent } from './game/components/game-buzzer/game-buzzer.c
 import { GameSpectatorComponent } from './game/components/game-spectator/game-spectator.component';
 import { TeamListComponent } from './game/components/team-list/team-list.component';
 import {MatCheckboxModule} from "@angular/material/checkbox";
+import {MatSlideToggleModule} from "@angular/material/slide-toggle";
 import { MatchSummaryComponent } from './game/components/match-summary/match-summary.component';
 import {MatExpansionModule} from "@angular/material/expansion";
 import { PacketSearchComponent } from './game/components/packet-search/packet-search.component';
@@ -69,6 +70,7 @@ import { ProfileComponent } from './structure/components/profile/profile.compone
     MatListModule,
     MatSidenavModule,
     MatCheckboxModule,
+    MatSlideToggleModule,
     MatExpansionModule,
     MatDialogModule,
     MatBadgeModule,
