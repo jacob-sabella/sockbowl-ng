@@ -69,6 +69,9 @@ export class GameMessageService {
           // Parse the incoming WebSocket message and create a SockbowlOutMessage object
           const sockbowlOutMessage = JSON.parse(message.body);
 
+          // Transform bonus data structure if present
+          this.transformBonusData(sockbowlOutMessage);
+
           // Publish the new message to the corresponding BehaviorSubject
           this.gameEventSubjects[sockbowlOutMessage.messageContentType].next(sockbowlOutMessage);
         }
@@ -78,6 +81,59 @@ export class GameMessageService {
         console.error('Error receiving message from websocket', error);
       }
     });
+  }
+
+  /**
+   * Transforms nested bonus data structure from backend to flat structure expected by frontend.
+   * Modifies the message object in place.
+   */
+  private transformBonusData(message: any): void {
+    // Transform bonuses in currentRound if present
+    if (message.currentRound) {
+      if (message.currentRound.currentBonus) {
+        message.currentRound.currentBonus = this.flattenBonus(message.currentRound.currentBonus);
+      }
+      if (message.currentRound.associatedBonus) {
+        message.currentRound.associatedBonus = this.flattenBonus(message.currentRound.associatedBonus);
+      }
+    }
+
+    // Transform bonuses in previousRounds if present
+    if (message.previousRounds && Array.isArray(message.previousRounds)) {
+      message.previousRounds.forEach((round: any) => {
+        if (round.currentBonus) {
+          round.currentBonus = this.flattenBonus(round.currentBonus);
+        }
+        if (round.associatedBonus) {
+          round.associatedBonus = this.flattenBonus(round.associatedBonus);
+        }
+      });
+    }
+  }
+
+  /**
+   * Flattens a single bonus object by extracting bonusPart from HasBonusPart wrappers
+   */
+  private flattenBonus(bonus: any): any {
+    if (!bonus || !bonus.bonusParts) {
+      return bonus;
+    }
+
+    return {
+      ...bonus,
+      bonusParts: bonus.bonusParts
+        .map((hasBonusPart: any) => hasBonusPart.bonusPart || hasBonusPart)
+        .sort((a: any, b: any) => {
+          // Sort by order if available (from the parent HasBonusPart)
+          const orderA = bonus.bonusParts.find((hp: any) =>
+            (hp.bonusPart?.id || hp.id) === (a.id)
+          )?.order || 0;
+          const orderB = bonus.bonusParts.find((hp: any) =>
+            (hp.bonusPart?.id || hp.id) === (b.id)
+          )?.order || 0;
+          return orderA - orderB;
+        })
+    };
   }
 
   public sendMessage(path: string, value: SockbowlInMessage){
