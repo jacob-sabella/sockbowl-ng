@@ -337,6 +337,27 @@ export class AdvanceRound extends SockbowlInMessage {
   }
 }
 
+export class FinishedReadingBonusPreamble extends SockbowlInMessage {
+
+  constructor(data: FinishedReadingBonusPreamble) {
+    super(data);
+  }
+}
+
+export class FinishedReadingBonusPart extends SockbowlInMessage {
+
+  constructor(data: FinishedReadingBonusPart) {
+    super(data);
+  }
+}
+
+export class TimeoutBonusPart extends SockbowlInMessage {
+
+  constructor(data: TimeoutBonusPart) {
+    super(data);
+  }
+}
+
 export class StartMatch extends SockbowlInMessage {
 
   constructor(data: StartMatch) {
@@ -594,6 +615,8 @@ export class Round {
   bonusPartAnswers: BonusPartAnswer[];
   currentBonusPartIndex: number;
   bonusEligibleTeamId: string;
+  proctorFinishedReadingBonusPreamble: boolean;
+  proctorFinishedReadingCurrentPart: boolean;
 
   constructor(data: Round) {
     this.roundState = data.roundState;
@@ -610,6 +633,8 @@ export class Round {
     this.bonusPartAnswers = data.bonusPartAnswers;
     this.currentBonusPartIndex = data.currentBonusPartIndex;
     this.bonusEligibleTeamId = data.bonusEligibleTeamId;
+    this.proctorFinishedReadingBonusPreamble = data.proctorFinishedReadingBonusPreamble;
+    this.proctorFinishedReadingCurrentPart = data.proctorFinishedReadingCurrentPart;
   }
 }
 
@@ -674,7 +699,9 @@ export enum RoundState {
   PROCTOR_READING = "PROCTOR_READING",
   AWAITING_BUZZ = "AWAITING_BUZZ",
   AWAITING_ANSWER = "AWAITING_ANSWER",
-  AWAITING_BONUS_ANSWER = "AWAITING_BONUS_ANSWER",
+  BONUS_READING_PREAMBLE = "BONUS_READING_PREAMBLE",
+  BONUS_READING_PART = "BONUS_READING_PART",
+  BONUS_AWAITING_ANSWER = "BONUS_AWAITING_ANSWER",
   BONUS_COMPLETED = "BONUS_COMPLETED",
   COMPLETED = "COMPLETED",
 }

@@ -15,6 +15,8 @@ export class GameProctorComponent implements OnInit, OnDestroy {
   gameSession!: GameSession;
   countdownSubscription!: Subscription;
   countdown!: number;
+  bonusCountdown!: number;
+  bonusTimerSubscription!: Subscription;
   isAutoTimerActive: boolean = true;
 
   constructor(public gameStateService: GameStateService) {
@@ -25,16 +27,25 @@ export class GameProctorComponent implements OnInit, OnDestroy {
     this.gameSessionObs.subscribe(gameSession => {
       this.gameSession = gameSession;
 
+      // Handle tossup timer
       if (this.isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
         this.startTimer();
       } else {
         this.stopTimer();
+      }
+
+      // Handle bonus timer
+      if (this.isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
+        this.startBonusTimer();
+      } else {
+        this.stopBonusTimer();
       }
     });
   }
 
   ngOnDestroy(): void {
     this.stopTimer();
+    this.stopBonusTimer();
   }
 
   startTimer(): void {
@@ -61,6 +72,43 @@ export class GameProctorComponent implements OnInit, OnDestroy {
     if (this.countdownSubscription) {
       this.countdownSubscription.unsubscribe();
     }
+  }
+
+  startBonusTimer(): void {
+    // Stop any existing timer first to prevent overlapping subscriptions
+    this.stopBonusTimer();
+
+    const countdownTime = 5; // seconds
+
+    this.bonusCountdown = countdownTime;
+
+    this.bonusTimerSubscription = timer(0, 1000).pipe(
+      take(countdownTime + 1),
+      map(() => --this.bonusCountdown)
+    ).subscribe(val => {
+      if (val === 0) {
+        console.log('Bonus timer up');
+        this.gameStateService.sendTimeoutBonusPart();
+        this.stopBonusTimer();
+      }
+    });
+  }
+
+  stopBonusTimer(): void {
+    if (this.bonusTimerSubscription) {
+      this.bonusTimerSubscription.unsubscribe();
+    }
+  }
+
+  getCurrentBonusPart(): any {
+    const bonus = this.gameSession?.currentMatch?.currentRound?.currentBonus;
+    const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex;
+
+    if (!bonus || !bonus.bonusParts || partIndex === undefined) {
+      return null;
+    }
+
+    return bonus.bonusParts[partIndex];
   }
 
   sendBonusPartOutcome(partIndex: number, correct: boolean): void {

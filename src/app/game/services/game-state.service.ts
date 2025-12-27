@@ -10,6 +10,8 @@ import {
   BonusUpdate,
   EndMatch,
   FinishedReading,
+  FinishedReadingBonusPart,
+  FinishedReadingBonusPreamble,
   GameSession,
   GameSessionUpdate,
   GameSettings,
@@ -27,6 +29,7 @@ import {
   SetProctor,
   StartMatch,
   Team,
+  TimeoutBonusPart,
   TimeoutRound,
   UpdateGameSettings,
   UpdatePlayerTeam
@@ -283,6 +286,30 @@ export class GameStateService {
   public sendAdvanceRound(): void {
     const advanceRound = new AdvanceRound({});
     this.gameMessageService.sendMessage(`/app/game/advance-round`, advanceRound);
+  }
+
+  /**
+   * Sends a FinishedReadingBonusPreamble message.
+   */
+  public sendFinishedReadingBonusPreamble(): void {
+    const finishedReadingBonusPreamble = new FinishedReadingBonusPreamble({});
+    this.gameMessageService.sendMessage(`/app/game/finished-reading-bonus-preamble`, finishedReadingBonusPreamble);
+  }
+
+  /**
+   * Sends a FinishedReadingBonusPart message.
+   */
+  public sendFinishedReadingBonusPart(): void {
+    const finishedReadingBonusPart = new FinishedReadingBonusPart({});
+    this.gameMessageService.sendMessage(`/app/game/finished-reading-bonus-part`, finishedReadingBonusPart);
+  }
+
+  /**
+   * Sends a TimeoutBonusPart message.
+   */
+  public sendTimeoutBonusPart(): void {
+    const timeoutBonusPart = new TimeoutBonusPart({});
+    this.gameMessageService.sendMessage(`/app/game/timeout-bonus-part`, timeoutBonusPart);
   }
 
   /**
