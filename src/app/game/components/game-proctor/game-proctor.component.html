@@ -70,7 +70,7 @@
           <button mat-raised-button id="wrong-btn" (click)="gameStateService.sendAnswerIncorrect()">Wrong</button>
         </div>
 
-        <!-- Bonus judging - NEW FLOW -->
+        <!-- Bonus judging  -->
         <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PREAMBLE ||
                     gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PART ||
                     gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER ||
@@ -125,10 +125,10 @@
                 </div>
                 <div class="part-content">
                   <div class="part-question">
-                    <strong>Q:</strong> <span [innerHTML]="part.question"></span>
+                    <strong>Q:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.question"></span>
                   </div>
                   <div class="part-answer">
-                    <strong>A:</strong> <span [innerHTML]="part.answer"></span>
+                    <strong>A:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.answer"></span>
                   </div>
                 </div>
               </div>
@@ -214,10 +214,10 @@
               </div>
               <div class="part-content">
                 <div class="part-question">
-                  <strong>Q:</strong> <span [innerHTML]="part.question"></span>
+                  <strong>Q:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.question"></span>
                 </div>
                 <div class="part-answer">
-                  <strong>A:</strong> <span [innerHTML]="part.answer"></span>
+                  <strong>A:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, i)?.answer"></span>
                 </div>
               </div>
             </div>
