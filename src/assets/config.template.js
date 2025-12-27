@@ -6,7 +6,7 @@ window.__env = {
   sockbowlQuestionsApiUrl:
     "${APP_PROTOCOL}://${APP_HOST}:${SOCKBOWL_QUESTIONS_PORT}/",
   wsUrl: "${WS_PROTOCOL}://${APP_HOST}:${SOCKBOWL_GAME_PORT}/sockbowl-game",
-  authEnabled: true,
+  authEnabled: "${AUTH_ENABLED}" === "true",
   keycloak: {
     issuer: "${APP_PROTOCOL}://${APP_HOST}:${KEYCLOAK_PORT}/realms/sockbowl",
     clientId: "sockbowl-game",

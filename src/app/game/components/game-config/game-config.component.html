@@ -64,6 +64,23 @@
               <span class="kv__val">{{ gameSession.currentMatch.packet.name }}</span>
             </div>
           </div>
+
+          <!-- Bonus Settings -->
+          <div *ngIf="hasPacketBonuses()" class="bonus-settings">
+            <mat-divider></mat-divider>
+            <p class="bonus-info">
+              <mat-icon class="info-icon">info</mat-icon>
+              This packet contains <strong>{{ getBonusCount() }}</strong> bonus questions.
+              Each bonus has 3 parts worth 10 points each.
+            </p>
+            <mat-slide-toggle
+              [(ngModel)]="bonusesEnabled"
+              (change)="toggleBonuses()"
+              color="primary"
+              class="bonus-toggle">
+              Enable Bonuses
+            </mat-slide-toggle>
+          </div>
         </ng-container>
 
         <ng-template #noPacket>
@@ -80,41 +97,6 @@
           Find a Packet
         </button>
       </mat-card-actions>
-    </mat-card>
-
-    <!-- Bonus Settings -->
-    <mat-card class="card">
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>stars</mat-icon>
-          Bonus Questions
-        </mat-card-title>
-        <mat-card-subtitle>Enable bonuses for this match</mat-card-subtitle>
-      </mat-card-header>
-
-      <mat-card-content>
-        <div *ngIf="hasPacketBonuses(); else noBonuses">
-          <p class="bonus-info">
-            <mat-icon class="info-icon">info</mat-icon>
-            This packet contains <strong>{{ getBonusCount() }}</strong> bonus questions.
-            Each bonus has 3 parts worth 10 points each.
-          </p>
-          <mat-slide-toggle
-            [(ngModel)]="bonusesEnabled"
-            (change)="toggleBonuses()"
-            color="primary"
-            class="bonus-toggle">
-            Enable Bonuses
-          </mat-slide-toggle>
-        </div>
-
-        <ng-template #noBonuses>
-          <div class="empty-state">
-            <mat-icon>info</mat-icon>
-            <p>Selected packet does not contain bonus questions.</p>
-          </div>
-        </ng-template>
-      </mat-card-content>
     </mat-card>
 
     <!-- Proctor -->

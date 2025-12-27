@@ -557,7 +557,16 @@ mat-card-actions {
   }
 }
 
-/* ===== BONUS INFO ===== */
+/* ===== BONUS SETTINGS ===== */
+.bonus-settings {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+
+  mat-divider {
+    margin-bottom: 1.25rem;
+  }
+}
+
 .bonus-info {
   display: flex;
   align-items: flex-start;

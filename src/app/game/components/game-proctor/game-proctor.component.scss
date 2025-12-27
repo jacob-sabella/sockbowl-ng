@@ -1,7 +1,7 @@
 .game-proctor-container {
-  height: 100vh;
+  min-height: 100vh;
   max-height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
   background: var(--bg-primary);
   padding: 2rem;
   display: flex;
