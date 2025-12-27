@@ -101,10 +101,10 @@
 
             <div class="part-content">
               <div class="part-question">
-                <strong>Q:</strong> {{ part.question }}
+                <strong>Q:</strong> {{ part.bonusPart?.question || part.question }}
               </div>
               <div class="part-answer">
-                <strong>A:</strong> {{ part.answer }}
+                <strong>A:</strong> {{ part.bonusPart?.answer || part.answer }}
               </div>
             </div>
 

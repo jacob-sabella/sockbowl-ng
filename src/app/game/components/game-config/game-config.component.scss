@@ -582,6 +582,10 @@ mat-card-actions {
 .bonus-toggle {
   display: block;
   margin-left: 0.5rem;
+
+  ::ng-deep .mdc-label {
+    color: var(--text-primary) !important;
+  }
 }
 
 /* ===== RESPONSIVE TWEAKS ===== */
