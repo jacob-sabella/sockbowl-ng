@@ -100,15 +100,20 @@ export class GameProctorComponent implements OnInit, OnDestroy {
     }
   }
 
-  getCurrentBonusPart(): any {
-    const bonus = this.gameSession?.currentMatch?.currentRound?.currentBonus;
-    const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex;
+  getCurrentBonusPart(bonus: any, partIndex: number): any {
+    console.log('[GameProctorComponent] getCurrentBonusPart called');
+    console.log('[GameProctorComponent] bonus:', bonus);
+    console.log('[GameProctorComponent] partIndex:', partIndex);
+    console.log('[GameProctorComponent] bonusParts:', bonus?.bonusParts);
 
-    if (!bonus || !bonus.bonusParts || partIndex === undefined) {
+    if (!bonus || !bonus.bonusParts || partIndex === undefined || partIndex === null) {
+      console.log('[GameProctorComponent] Returning null - missing data');
       return null;
     }
 
-    return bonus.bonusParts[partIndex];
+    const currentPart = bonus.bonusParts[partIndex];
+    console.log('[GameProctorComponent] Returning part:', currentPart);
+    return currentPart;
   }
 
   sendBonusPartOutcome(partIndex: number, correct: boolean): void {

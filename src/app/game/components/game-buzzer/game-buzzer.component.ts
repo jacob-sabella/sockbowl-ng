@@ -111,15 +111,18 @@ export class GameBuzzerComponent implements OnInit, OnDestroy {
     return this.gameStateService.hasCurrentPlayerTeamBuzzed() ? 'Team already buzzed' : 'Buzz!';
   }
 
-  getCurrentBonusPart(): any {
-    const bonus = this.gameSession?.currentMatch?.currentRound?.currentBonus;
-    const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex;
+  getCurrentBonusPart(bonus: any, partIndex: number): any {
+    console.log('[GameBuzzerComponent] getCurrentBonusPart called');
+    console.log('[GameBuzzerComponent] bonus:', bonus);
+    console.log('[GameBuzzerComponent] partIndex:', partIndex);
 
-    if (!bonus || !bonus.bonusParts || partIndex === undefined) {
+    if (!bonus || !bonus.bonusParts || partIndex === undefined || partIndex === null) {
       return null;
     }
 
-    return bonus.bonusParts[partIndex];
+    const currentPart = bonus.bonusParts[partIndex];
+    console.log('[GameBuzzerComponent] Returning part:', currentPart);
+    return currentPart;
   }
 
   getBonusEligibleTeamName(): string {

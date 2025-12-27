@@ -146,10 +146,10 @@
 
               <div class="part-content">
                 <div class="part-question">
-                  <strong>Q:</strong> <span [innerHTML]="getCurrentBonusPart()?.question"></span>
+                  <strong>Q:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, gameSession.currentMatch.currentRound.currentBonusPartIndex)?.question"></span>
                 </div>
                 <div class="part-answer">
-                  <strong>A:</strong> <span [innerHTML]="getCurrentBonusPart()?.answer"></span>
+                  <strong>A:</strong> <span [innerHTML]="getCurrentBonusPart(gameSession.currentMatch.currentRound.currentBonus, gameSession.currentMatch.currentRound.currentBonusPartIndex)?.answer"></span>
                 </div>
               </div>
 
