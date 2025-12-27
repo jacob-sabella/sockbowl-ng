@@ -22,12 +22,12 @@
 
       <div class="info-section question-section">
         <div class="info-label">Question</div>
-        <div class="info-value">{{ gameSession.currentMatch.currentRound.question }}</div>
+        <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.question"></div>
       </div>
 
       <div class="info-section answer-section">
         <div class="info-label">Answer</div>
-        <div class="info-value">{{ gameSession.currentMatch.currentRound.answer }}</div>
+        <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.answer"></div>
       </div>
 
       <!-- Buzz Information -->
@@ -89,8 +89,7 @@
           <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PREAMBLE">
             <div class="bonus-preamble-section">
               <h4>Preamble</h4>
-              <div class="bonus-preamble">
-                {{ gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)' }}
+              <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
               </div>
             </div>
 
@@ -109,8 +108,7 @@
             <!-- Show preamble (read-only) -->
             <div class="bonus-preamble-section completed">
               <h4>Preamble ✓</h4>
-              <div class="bonus-preamble">
-                {{ gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)' }}
+              <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
               </div>
             </div>
 
@@ -127,10 +125,10 @@
                 </div>
                 <div class="part-content">
                   <div class="part-question">
-                    <strong>Q:</strong> {{ part.question }}
+                    <strong>Q:</strong> <span [innerHTML]="part.question"></span>
                   </div>
                   <div class="part-answer">
-                    <strong>A:</strong> {{ part.answer }}
+                    <strong>A:</strong> <span [innerHTML]="part.answer"></span>
                   </div>
                 </div>
               </div>
@@ -148,10 +146,10 @@
 
               <div class="part-content">
                 <div class="part-question">
-                  <strong>Q:</strong> {{ getCurrentBonusPart()?.question }}
+                  <strong>Q:</strong> <span [innerHTML]="getCurrentBonusPart()?.question"></span>
                 </div>
                 <div class="part-answer">
-                  <strong>A:</strong> {{ getCurrentBonusPart()?.answer }}
+                  <strong>A:</strong> <span [innerHTML]="getCurrentBonusPart()?.answer"></span>
                 </div>
               </div>
 
@@ -200,8 +198,7 @@
           <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED">
             <div class="bonus-preamble-section completed">
               <h4>Preamble ✓</h4>
-              <div class="bonus-preamble">
-                {{ gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)' }}
+              <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
               </div>
             </div>
 
@@ -217,10 +214,10 @@
               </div>
               <div class="part-content">
                 <div class="part-question">
-                  <strong>Q:</strong> {{ part.question }}
+                  <strong>Q:</strong> <span [innerHTML]="part.question"></span>
                 </div>
                 <div class="part-answer">
-                  <strong>A:</strong> {{ part.answer }}
+                  <strong>A:</strong> <span [innerHTML]="part.answer"></span>
                 </div>
               </div>
             </div>

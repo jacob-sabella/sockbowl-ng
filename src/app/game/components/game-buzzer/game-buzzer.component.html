@@ -47,11 +47,99 @@
         <p>Time remaining: {{ countdown }}</p>
       </div>
 
+      <!-- Bonus Display -->
+      <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PREAMBLE ||
+                  gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PART ||
+                  gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER ||
+                  gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED"
+           class="bonus-section">
+
+        <div class="bonus-header">
+          <h3>Bonus for {{ getBonusEligibleTeamName() }}</h3>
+          <div class="bonus-score">
+            {{ gameStateService.getCurrentRoundBonusPoints() }} / 30 points
+          </div>
+        </div>
+
+        <!-- PREAMBLE PHASE -->
+        <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PREAMBLE">
+          <div class="bonus-preamble-section">
+            <h4>Preamble</h4>
+            <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
+            </div>
+          </div>
+        </div>
+
+        <!-- PART READING/ANSWER PHASE -->
+        <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PART ||
+                    gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER">
+
+          <!-- Show preamble (read-only) -->
+          <div class="bonus-preamble-section completed">
+            <h4>Preamble</h4>
+            <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
+            </div>
+          </div>
+
+          <!-- Show current part -->
+          <div class="bonus-part current">
+            <div class="part-header">
+              <span class="part-label">Part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }}</span>
+              <span *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER"
+                    class="timer-badge">
+                ⏱ {{ bonusCountdown }}s
+              </span>
+            </div>
+
+            <div class="part-content">
+              <div class="part-question">
+                <strong>Question:</strong> <span [innerHTML]="getCurrentBonusPart()?.question"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timer Display for bonus -->
+          <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER"
+               class="timer-display">
+            <p>Bonus time remaining: {{ bonusCountdown }}</p>
+          </div>
+        </div>
+
+        <!-- BONUS COMPLETED PHASE -->
+        <div *ngIf="gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED">
+          <div class="bonus-preamble-section completed">
+            <h4>Preamble</h4>
+            <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
+            </div>
+          </div>
+
+          <!-- Show all answered parts with results -->
+          <div *ngFor="let part of gameSession.currentMatch.currentRound.currentBonus?.bonusParts; let i = index"
+               class="bonus-part completed">
+            <div class="part-header">
+              <span class="part-label">Part {{ i + 1 }}</span>
+              <span class="part-result"
+                    [class.correct]="gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct">
+                {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct ? '✓ Right (10 pts)' : '✗ Wrong (0 pts)' }}
+              </span>
+            </div>
+            <div class="part-content">
+              <div class="part-question">
+                <strong>Q:</strong> <span [innerHTML]="part.question"></span>
+              </div>
+              <div class="part-answer">
+                <strong>A:</strong> <span [innerHTML]="part.answer"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Round completed. Show question and answer -->
       <div *ngIf="gameSession.currentMatch.currentRound.roundState === 'COMPLETED'" class="round-completed-info">
         <h3>Round Completed</h3>
-        <p><strong>Question:</strong> {{ gameSession.currentMatch.currentRound.question }}</p>
-        <p><strong>Answer:</strong> {{ gameSession.currentMatch.currentRound.answer }}</p>
+        <p><strong>Question:</strong> <span [innerHTML]="gameSession.currentMatch.currentRound.question"></span></p>
+        <p><strong>Answer:</strong> <span [innerHTML]="gameSession.currentMatch.currentRound.answer"></span></p>
       </div>
 
 

@@ -119,7 +119,9 @@ export class GameMessageService {
       return bonus;
     }
 
-    return {
+    console.log('[GameMessageService] Flattening bonus, original bonusParts:', bonus.bonusParts);
+
+    const flattened = {
       ...bonus,
       bonusParts: bonus.bonusParts
         .map((hasBonusPart: any) => hasBonusPart.bonusPart || hasBonusPart)
@@ -134,6 +136,9 @@ export class GameMessageService {
           return orderA - orderB;
         })
     };
+
+    console.log('[GameMessageService] Flattened bonusParts:', flattened.bonusParts);
+    return flattened;
   }
 
   public sendMessage(path: string, value: SockbowlInMessage){

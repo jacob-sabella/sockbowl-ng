@@ -17,6 +17,8 @@ export class GameBuzzerComponent implements OnInit, OnDestroy {
   gameSession!: GameSession;
   countdownSubscription!: Subscription;
   countdown!: number;
+  bonusCountdown!: number;
+  bonusTimerSubscription!: Subscription;
 
   constructor(public gameStateService: GameStateService) {
     this.gameSessionObs = this.gameStateService.gameSession$;
@@ -29,16 +31,25 @@ export class GameBuzzerComponent implements OnInit, OnDestroy {
     this.gameSessionObs.subscribe(gameSession => {
       this.gameSession = gameSession;
 
+      // Handle tossup timer
       if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
         this.startTimer();
       } else {
         this.stopTimer();
+      }
+
+      // Handle bonus timer
+      if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
+        this.startBonusTimer();
+      } else {
+        this.stopBonusTimer();
       }
     });
   }
 
   ngOnDestroy(): void {
     this.stopTimer();
+    this.stopBonusTimer();
   }
 
   startTimer(): void {
@@ -71,8 +82,49 @@ export class GameBuzzerComponent implements OnInit, OnDestroy {
     }
   }
 
+  startBonusTimer(): void {
+    // Stop any existing timer first to prevent overlapping subscriptions
+    this.stopBonusTimer();
+
+    const countdownTime = 5; // seconds
+
+    this.bonusCountdown = countdownTime;
+
+    this.bonusTimerSubscription = timer(0, 1000).pipe(
+      take(countdownTime + 1),
+      map(() => --this.bonusCountdown)
+    ).subscribe(val => {
+      if (val === 0) {
+        console.log('Bonus timer up');
+        this.stopBonusTimer();
+      }
+    });
+  }
+
+  stopBonusTimer(): void {
+    if (this.bonusTimerSubscription) {
+      this.bonusTimerSubscription.unsubscribe();
+    }
+  }
+
   getBuzzButtonText(): string {
     return this.gameStateService.hasCurrentPlayerTeamBuzzed() ? 'Team already buzzed' : 'Buzz!';
+  }
+
+  getCurrentBonusPart(): any {
+    const bonus = this.gameSession?.currentMatch?.currentRound?.currentBonus;
+    const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex;
+
+    if (!bonus || !bonus.bonusParts || partIndex === undefined) {
+      return null;
+    }
+
+    return bonus.bonusParts[partIndex];
+  }
+
+  getBonusEligibleTeamName(): string {
+    const teamId = this.gameSession?.currentMatch?.currentRound?.bonusEligibleTeamId;
+    return teamId ? (this.gameStateService.getTeamNameById(teamId) || '') : '';
   }
 
 }
