@@ -8,7 +8,7 @@ import { GameSessionComponent } from './game/components/game-session/game-sessio
 import {MatButtonModule} from "@angular/material/button";
 import {MatInputModule} from "@angular/material/input";
 import {FormsModule} from "@angular/forms";
-import {HTTP_INTERCEPTORS, HttpClientModule} from "@angular/common/http";
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
 import {MatIconModule} from "@angular/material/icon";
 import { OAuthModule } from 'angular-oauth2-oidc';
 import { AuthInterceptor } from './core/auth/auth.interceptor';
@@ -41,59 +41,53 @@ import {MatMenuModule} from "@angular/material/menu";
 import { ProfileComponent } from './structure/components/profile/profile.component';
 import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
 
-@NgModule({
-  declarations: [
-    AppComponent,
-    GameSessionComponent,
-    NavbarComponent,
-    GameCanvasComponent,
-    GameConfigComponent,
-    GameProctorComponent,
-    GameBuzzerComponent,
-    GameSpectatorComponent,
-    TeamListComponent,
-    MatchSummaryComponent,
-    PacketSearchComponent,
-    ProfileComponent,
-    ThemeSelectorComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    BrowserAnimationsModule,
-    MatButtonModule,
-    MatInputModule,
-    FormsModule,
-    HttpClientModule,
-    MatIconModule,
-    MatToolbarModule,
-    MatCardModule,
-    MatDividerModule,
-    MatSelectModule,
-    MatListModule,
-    MatSidenavModule,
-    MatCheckboxModule,
-    MatSlideToggleModule,
-    MatExpansionModule,
-    MatDialogModule,
-    MatBadgeModule,
-    MatChipsModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    MatTabsModule,
-    MatMenuModule,
-    // OAuth2/OIDC Module
-    OAuthModule.forRoot(),
-  ],
-  providers: [
-    // HTTP Interceptor for adding JWT tokens
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: AuthInterceptor,
-      multi: true
-    }
-  ],
-  bootstrap: [AppComponent]
-})
+@NgModule({ declarations: [
+        AppComponent,
+        GameSessionComponent,
+        NavbarComponent,
+        GameCanvasComponent,
+        GameConfigComponent,
+        GameProctorComponent,
+        GameBuzzerComponent,
+        GameSpectatorComponent,
+        TeamListComponent,
+        MatchSummaryComponent,
+        PacketSearchComponent,
+        ProfileComponent,
+        ThemeSelectorComponent
+    ],
+    bootstrap: [AppComponent], imports: [BrowserModule,
+        AppRoutingModule,
+        BrowserAnimationsModule,
+        MatButtonModule,
+        MatInputModule,
+        FormsModule,
+        MatIconModule,
+        MatToolbarModule,
+        MatCardModule,
+        MatDividerModule,
+        MatSelectModule,
+        MatListModule,
+        MatSidenavModule,
+        MatCheckboxModule,
+        MatSlideToggleModule,
+        MatExpansionModule,
+        MatDialogModule,
+        MatBadgeModule,
+        MatChipsModule,
+        MatSnackBarModule,
+        MatTooltipModule,
+        MatProgressSpinnerModule,
+        MatTabsModule,
+        MatMenuModule,
+        // OAuth2/OIDC Module
+        OAuthModule.forRoot()], providers: [
+        // HTTP Interceptor for adding JWT tokens
+        {
+            provide: HTTP_INTERCEPTORS,
+            useClass: AuthInterceptor,
+            multi: true
+        },
+        provideHttpClient(withInterceptorsFromDi())
+    ] })
 export class AppModule { }
