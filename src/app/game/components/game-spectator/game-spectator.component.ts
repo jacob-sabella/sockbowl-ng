@@ -4,9 +4,10 @@ import { GameSession, Round, RoundState, Team } from '../../models/sockbowl/sock
 import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'app-game-spectator',
-  templateUrl: './game-spectator.component.html',
-  styleUrls: ['./game-spectator.component.scss']
+    selector: 'app-game-spectator',
+    templateUrl: './game-spectator.component.html',
+    styleUrls: ['./game-spectator.component.scss'],
+    standalone: false
 })
 export class GameSpectatorComponent implements OnInit, OnDestroy {
   gameSession: GameSession | null = null;

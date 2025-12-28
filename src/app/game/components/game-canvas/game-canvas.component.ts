@@ -5,9 +5,10 @@ import {Observable} from "rxjs";
 import {GameSession, MatchState} from "../../models/sockbowl/sockbowl-interfaces";
 
 @Component({
-  selector: 'app-game-canvas',
-  templateUrl: './game-canvas.component.html',
-  styleUrls: ['./game-canvas.component.scss']
+    selector: 'app-game-canvas',
+    templateUrl: './game-canvas.component.html',
+    styleUrls: ['./game-canvas.component.scss'],
+    standalone: false
 })
 export class GameCanvasComponent {
 

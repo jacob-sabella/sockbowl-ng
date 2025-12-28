@@ -3,9 +3,10 @@ import { Team, Buzz, Round } from '../../models/sockbowl/sockbowl-interfaces';
 import { GameStateService } from '../../services/game-state.service';
 
 @Component({
-  selector: 'app-team-list',
-  templateUrl: './team-list.component.html',
-  styleUrls: ['./team-list.component.scss']
+    selector: 'app-team-list',
+    templateUrl: './team-list.component.html',
+    styleUrls: ['./team-list.component.scss'],
+    standalone: false
 })
 export class TeamListComponent {
   @Input() teams!: Team[];

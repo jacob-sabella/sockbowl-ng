@@ -14,9 +14,10 @@ import { SockbowlQuestionsService } from '../../services/sockbowl-questions.serv
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
 
 @Component({
-  selector: 'app-game-config',
-  templateUrl: './game-config.component.html',
-  styleUrls: ['./game-config.component.scss']
+    selector: 'app-game-config',
+    templateUrl: './game-config.component.html',
+    styleUrls: ['./game-config.component.scss'],
+    standalone: false
 })
 export class GameConfigComponent implements OnInit {
   gameSessionObs!: Observable<GameSession>;

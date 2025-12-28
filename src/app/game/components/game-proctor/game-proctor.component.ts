@@ -5,9 +5,10 @@ import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces
 import {GameStateService} from '../../services/game-state.service';
 
 @Component({
-  selector: 'app-game-proctor',
-  templateUrl: './game-proctor.component.html',
-  styleUrls: ['./game-proctor.component.scss']
+    selector: 'app-game-proctor',
+    templateUrl: './game-proctor.component.html',
+    styleUrls: ['./game-proctor.component.scss'],
+    standalone: false
 })
 export class GameProctorComponent implements OnInit, OnDestroy {
 

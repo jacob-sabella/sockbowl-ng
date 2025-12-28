@@ -6,9 +6,10 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-packet-search',
-  templateUrl: './packet-search.component.html',
-  styleUrls: ['./packet-search.component.scss']
+    selector: 'app-packet-search',
+    templateUrl: './packet-search.component.html',
+    styleUrls: ['./packet-search.component.scss'],
+    standalone: false
 })
 export class PacketSearchComponent implements OnInit {
   // Search tab properties

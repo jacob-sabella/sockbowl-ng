@@ -15,9 +15,10 @@ interface ThemeOption {
  * Displays current theme with appropriate icon and allows switching between all available themes.
  */
 @Component({
-  selector: 'app-theme-selector',
-  templateUrl: './theme-selector.component.html',
-  styleUrls: ['./theme-selector.component.scss']
+    selector: 'app-theme-selector',
+    templateUrl: './theme-selector.component.html',
+    styleUrls: ['./theme-selector.component.scss'],
+    standalone: false
 })
 export class ThemeSelectorComponent {
   theme$: Observable<Theme>;

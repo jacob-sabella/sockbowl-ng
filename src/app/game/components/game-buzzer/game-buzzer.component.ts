@@ -5,9 +5,10 @@ import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces
 import {GameStateService} from '../../services/game-state.service';
 
 @Component({
-  selector: 'app-game-buzzer',
-  templateUrl: './game-buzzer.component.html',
-  styleUrls: ['./game-buzzer.component.scss']
+    selector: 'app-game-buzzer',
+    templateUrl: './game-buzzer.component.html',
+    styleUrls: ['./game-buzzer.component.scss'],
+    standalone: false
 })
 export class GameBuzzerComponent implements OnInit, OnDestroy {
 

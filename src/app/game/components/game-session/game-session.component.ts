@@ -13,9 +13,10 @@ import {environment} from "../../../../environments/environment";
 
 
 @Component({
-  selector: 'app-game-session',
-  templateUrl: './game-session.component.html',
-  styleUrls: ['./game-session.component.scss']
+    selector: 'app-game-session',
+    templateUrl: './game-session.component.html',
+    styleUrls: ['./game-session.component.scss'],
+    standalone: false
 })
 export class GameSessionComponent {
   showCreateForm = false;

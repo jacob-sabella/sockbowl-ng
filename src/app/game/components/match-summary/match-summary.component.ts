@@ -4,9 +4,10 @@ import {GameSession, Player, Round, Team} from "../../models/sockbowl/sockbowl-i
 import {GameStateService} from "../../services/game-state.service";
 
 @Component({
-  selector: 'app-match-summary',
-  templateUrl: './match-summary.component.html',
-  styleUrls: ['./match-summary.component.scss']
+    selector: 'app-match-summary',
+    templateUrl: './match-summary.component.html',
+    styleUrls: ['./match-summary.component.scss'],
+    standalone: false
 })
 export class MatchSummaryComponent implements OnInit {
 
