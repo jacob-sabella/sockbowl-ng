@@ -1,0 +1,47 @@
+/**
+ * Light Theme
+ *
+ * Clean light theme for daytime use with excellent readability.
+ */
+
+body.theme-light {
+  /* Background colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --bg-elevated: #ffffff;
+
+  /* Surface colors */
+  --surface: #ffffff;
+  --surface-hover: #f3f4f6;
+  --surface-active: #e5e7eb;
+
+  /* Text colors */
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+
+  /* Accent colors - slightly darker for better contrast on light bg */
+  --accent-primary: #4f46e5;
+  --accent-primary-hover: #6366f1;
+  --accent-secondary: #7c3aed;
+  --accent-tertiary: #0891b2;
+
+  /* Status colors */
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
+
+  /* Border colors */
+  --border-subtle: rgba(229, 231, 235, 0.8);
+  --border-medium: rgba(209, 213, 219, 1);
+  --border-strong: rgba(156, 163, 175, 1);
+
+  /* Glow effects - lighter opacity for light theme */
+  --glow-primary: rgba(79, 70, 229, 0.2);
+  --glow-secondary: rgba(124, 58, 237, 0.15);
+
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}

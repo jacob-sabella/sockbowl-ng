@@ -1,0 +1,132 @@
+/**
+ * Typography
+ *
+ * Base typography styles and font definitions.
+ */
+
+// Base body typography
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Headings
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+}
+
+h1 {
+  font-size: var(--text-4xl);
+}
+
+h2 {
+  font-size: var(--text-3xl);
+}
+
+h3 {
+  font-size: var(--text-2xl);
+}
+
+h4 {
+  font-size: var(--text-xl);
+}
+
+h5 {
+  font-size: var(--text-lg);
+}
+
+h6 {
+  font-size: var(--text-base);
+}
+
+// Paragraphs
+p {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+}
+
+// Links
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--accent-primary-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+// Code
+code, pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+code {
+  padding: 0.125rem 0.25rem;
+  background: var(--surface);
+  border-radius: 4px;
+  color: var(--accent-primary);
+}
+
+pre {
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+
+  code {
+    padding: 0;
+    background: none;
+  }
+}
+
+// Lists
+ul, ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+  color: var(--text-secondary);
+}
+
+// Strong and emphasis
+strong, b {
+  font-weight: var(--font-semibold);
+}
+
+em, i {
+  font-style: italic;
+}
+
+// Small text
+small {
+  font-size: var(--text-sm);
+}
+
+// Blockquote
+blockquote {
+  margin: 0 0 1rem;
+  padding-left: 1rem;
+  border-left: 4px solid var(--accent-primary);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+// HR
+hr {
+  margin: 1.5rem 0;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+}

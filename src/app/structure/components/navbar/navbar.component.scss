@@ -62,6 +62,12 @@
   text-transform: uppercase;
 }
 
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .navbar__auth {
   display: flex;
   align-items: center;

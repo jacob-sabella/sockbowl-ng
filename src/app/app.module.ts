@@ -37,7 +37,9 @@ import {MatSnackBarModule} from "@angular/material/snack-bar";
 import {MatTooltipModule} from "@angular/material/tooltip";
 import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
 import {MatTabsModule} from "@angular/material/tabs";
+import {MatMenuModule} from "@angular/material/menu";
 import { ProfileComponent } from './structure/components/profile/profile.component';
+import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
 
 @NgModule({
   declarations: [
@@ -52,7 +54,8 @@ import { ProfileComponent } from './structure/components/profile/profile.compone
     TeamListComponent,
     MatchSummaryComponent,
     PacketSearchComponent,
-    ProfileComponent
+    ProfileComponent,
+    ThemeSelectorComponent
   ],
   imports: [
     BrowserModule,
@@ -79,6 +82,7 @@ import { ProfileComponent } from './structure/components/profile/profile.compone
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatTabsModule,
+    MatMenuModule,
     // OAuth2/OIDC Module
     OAuthModule.forRoot(),
   ],

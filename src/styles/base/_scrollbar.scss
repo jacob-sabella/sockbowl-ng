@@ -1,0 +1,72 @@
+/**
+ * Custom Scrollbar Styles
+ *
+ * Provides custom scrollbar styling for webkit browsers.
+ */
+
+// Global scrollbar styles
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-hover);
+  border-radius: 10px;
+  border: 3px solid var(--bg-secondary);
+  transition: background var(--transition-base);
+
+  &:hover {
+    background: var(--surface-active);
+  }
+
+  &:active {
+    background: var(--accent-primary);
+  }
+}
+
+// Firefox scrollbar
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover) var(--bg-secondary);
+}
+
+// Thin scrollbar variant
+.scrollbar-thin {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border: 2px solid var(--bg-secondary);
+  }
+}
+
+// Hidden scrollbar (but still scrollable)
+.scrollbar-hidden {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+
+  &::-webkit-scrollbar {
+    display: none;           /* Chrome, Safari, Opera */
+  }
+}
+
+// Primary-colored scrollbar
+.scrollbar-primary {
+  &::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+
+    &:hover {
+      background: var(--accent-primary-hover);
+    }
+  }
+
+  scrollbar-color: var(--accent-primary) var(--bg-secondary);
+}

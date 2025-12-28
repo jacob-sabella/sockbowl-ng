@@ -1,0 +1,114 @@
+/**
+ * Theme Base Template
+ *
+ * This file documents all required CSS variables for creating a new theme.
+ * Copy this template and replace the values to create a custom theme.
+ *
+ * Usage:
+ * 1. Copy this file to a new file (e.g., _my-theme.scss)
+ * 2. Replace 'theme-name' with your theme's name
+ * 3. Replace all color values
+ * 4. Import in styles.scss
+ * 5. Add to ThemeService type definition
+ * 6. Add to ThemeSelectorComponent options
+ */
+
+/*
+body.theme-name {
+  // ====================
+  // Background Colors
+  // ====================
+  // Primary: Main background color (darkest/lightest depending on theme)
+  --bg-primary: #000000;
+
+  // Secondary: Slightly elevated background
+  --bg-secondary: #111111;
+
+  // Tertiary: More elevated background
+  --bg-tertiary: #222222;
+
+  // Elevated: Highest elevation background (cards, modals)
+  --bg-elevated: #333333;
+
+  // ====================
+  // Surface Colors
+  // ====================
+  // Base surface color for cards, panels
+  --surface: #333333;
+
+  // Hover state for interactive surfaces
+  --surface-hover: #444444;
+
+  // Active/pressed state for interactive surfaces
+  --surface-active: #555555;
+
+  // ====================
+  // Text Colors
+  // ====================
+  // Primary: Main text color (highest contrast)
+  --text-primary: #ffffff;
+
+  // Secondary: Less prominent text
+  --text-secondary: #cccccc;
+
+  // Muted: Least prominent text (hints, placeholders)
+  --text-muted: #999999;
+
+  // ====================
+  // Accent Colors
+  // ====================
+  // Primary accent: Main brand color for buttons, links
+  --accent-primary: #0066ff;
+
+  // Primary hover state
+  --accent-primary-hover: #3385ff;
+
+  // Secondary accent: Complementary accent color
+  --accent-secondary: #6600ff;
+
+  // Tertiary accent: Additional accent for variety
+  --accent-tertiary: #00ccff;
+
+  // ====================
+  // Status Colors
+  // ====================
+  // Success: Positive actions, confirmations
+  --success: #00cc66;
+
+  // Warning: Caution, non-critical alerts
+  --warning: #ff9900;
+
+  // Error: Errors, destructive actions
+  --error: #ff3333;
+
+  // Info: Informational messages
+  --info: #0099ff;
+
+  // ====================
+  // Border Colors
+  // ====================
+  // Subtle: Barely visible borders
+  --border-subtle: rgba(255, 255, 255, 0.1);
+
+  // Medium: Normal borders
+  --border-medium: rgba(255, 255, 255, 0.2);
+
+  // Strong: Prominent borders
+  --border-strong: rgba(255, 255, 255, 0.3);
+
+  // ====================
+  // Glow Effects
+  // ====================
+  // Primary glow: For accent-primary elements
+  --glow-primary: rgba(0, 102, 255, 0.3);
+
+  // Secondary glow: For accent-secondary elements
+  --glow-secondary: rgba(102, 0, 255, 0.2);
+
+  // ====================
+  // Shadow Color
+  // ====================
+  // Used with shadow size variables from _variables.scss
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+*/

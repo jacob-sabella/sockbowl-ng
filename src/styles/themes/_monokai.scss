@@ -1,0 +1,47 @@
+/**
+ * Monokai Theme
+ *
+ * Vibrant dark theme inspired by Sublime Text's Monokai color scheme.
+ */
+
+body.theme-monokai {
+  /* Background colors */
+  --bg-primary: #272822;
+  --bg-secondary: #3E3D32;
+  --bg-tertiary: #49483E;
+  --bg-elevated: #3E3D32;
+
+  /* Surface colors */
+  --surface: #3E3D32;
+  --surface-hover: #49483E;
+  --surface-active: #5A5A4E;
+
+  /* Text colors */
+  --text-primary: #F8F8F2;
+  --text-secondary: #CFCFC2;
+  --text-muted: #9D9D8E;
+
+  /* Accent colors - Monokai vibrant */
+  --accent-primary: #66D9EF;
+  --accent-primary-hover: #7FE3F7;
+  --accent-secondary: #AE81FF;
+  --accent-tertiary: #F92672;
+
+  /* Status colors */
+  --success: #A6E22E;
+  --warning: #FD971F;
+  --error: #F92672;
+  --info: #66D9EF;
+
+  /* Border colors */
+  --border-subtle: rgba(73, 72, 62, 0.3);
+  --border-medium: rgba(73, 72, 62, 0.5);
+  --border-strong: rgba(73, 72, 62, 0.7);
+
+  /* Glow effects */
+  --glow-primary: rgba(102, 217, 239, 0.3);
+  --glow-secondary: rgba(174, 129, 255, 0.25);
+
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.5);
+}

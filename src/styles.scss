@@ -1,45 +1,39 @@
-/* You can add global styles to this file, and also import other style files */
+/*
+ * Global Styles
+ *
+ * Main entry point for all application styles.
+ * Imports are organized by dependency order.
+ */
 
-/* ===== DARK THEME VARIABLES ===== */
-:root {
-  /* Background colors */
-  --bg-primary: #0a0e1a;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1a2234;
-  --bg-elevated: #1f2937;
+/* ===== ABSTRACTS (Variables, Mixins, Functions) ===== */
+@import 'styles/abstracts/variables';
+@import 'styles/abstracts/breakpoints';
+@import 'styles/abstracts/mixins';
 
-  /* Surface colors */
-  --surface: #1f2937;
-  --surface-hover: #374151;
-  --surface-active: #4b5563;
+/* ===== BASE (Reset, Typography, etc.) ===== */
+@import 'styles/base/typography';
+@import 'styles/base/scrollbar';
 
-  /* Text colors */
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-muted: #9ca3af;
+/* ===== THEMES ===== */
+// All available themes
+@import 'styles/themes/dark';
+@import 'styles/themes/light';
+@import 'styles/themes/nord';
+@import 'styles/themes/monokai';
+@import 'styles/themes/catppuccin';
+@import 'styles/themes/dracula';
+@import 'styles/themes/solarized-dark';
+@import 'styles/themes/solarized-light';
 
-  /* Accent colors - vibrant but not harsh */
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #818cf8;
-  --accent-secondary: #8b5cf6;
-  --accent-tertiary: #06b6d4;
+/* ===== UTILITIES ===== */
+@import 'styles/utilities/animations';
+@import 'styles/utilities/helpers';
+@import 'styles/utilities/shadows';
 
-  /* Status colors */
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --info: #3b82f6;
+/* ===== VENDOR OVERRIDES ===== */
+@import 'styles/vendors/material-overrides';
 
-  /* Border colors */
-  --border-subtle: rgba(75, 85, 99, 0.3);
-  --border-medium: rgba(107, 114, 128, 0.5);
-  --border-strong: rgba(156, 163, 175, 0.6);
-
-  /* Glow effects */
-  --glow-primary: rgba(99, 102, 241, 0.4);
-  --glow-secondary: rgba(139, 92, 246, 0.3);
-}
-
+/* ===== BASE HTML ELEMENTS ===== */
 html, body {
   height: 100%;
   margin: 0;
@@ -48,210 +42,6 @@ html, body {
 
 body {
   margin: 0;
-  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* ===== SCROLLBAR STYLING ===== */
-::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--surface-hover);
-  border-radius: 6px;
-  border: 2px solid var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--surface-active);
-}
-
-/* ===== MATERIAL OVERRIDES FOR DARK THEME ===== */
-.mat-mdc-card {
-  background: var(--surface) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border-subtle) !important;
-}
-
-.mat-mdc-dialog-container {
-  background: var(--bg-elevated) !important;
-  color: var(--text-primary) !important;
-
-  .mdc-dialog__surface {
-    background-color: var(--bg-elevated) !important;
-  }
-
-  .mat-mdc-dialog-title {
-    color: var(--text-primary) !important;
-  }
-
-  .mat-mdc-dialog-content {
-    color: var(--text-primary) !important;
-  }
-}
-
-.cdk-overlay-pane {
-  .mat-mdc-dialog-container {
-    background: var(--bg-elevated) !important;
-  }
-}
-
-.cdk-overlay-dark-backdrop {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-.cdk-overlay-backdrop {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-.mat-mdc-form-field {
-  .mat-mdc-text-field-wrapper {
-    background: var(--bg-secondary) !important;
-  }
-
-  .mat-mdc-form-field-focus-overlay {
-    background-color: transparent !important;
-  }
-
-  label {
-    color: var(--text-secondary) !important;
-  }
-
-  input {
-    color: var(--text-primary) !important;
-  }
-}
-
-.mat-mdc-option {
-  background: var(--bg-elevated) !important;
-  color: var(--text-primary) !important;
-
-  &:hover {
-    background: var(--surface-hover) !important;
-  }
-
-  &.mdc-list-item--selected {
-    background: rgba(99, 102, 241, 0.15) !important;
-    color: var(--text-primary) !important;
-  }
-
-  .mdc-list-item__primary-text {
-    color: var(--text-primary) !important;
-  }
-}
-
-.mat-mdc-select {
-  color: var(--text-primary) !important;
-
-  .mat-mdc-select-value {
-    color: var(--text-primary) !important;
-  }
-
-  .mat-mdc-select-value-text {
-    color: var(--text-primary) !important;
-  }
-
-  .mat-mdc-select-arrow {
-    color: var(--text-secondary) !important;
-  }
-}
-
-.mat-mdc-select-panel {
-  background: var(--bg-elevated) !important;
-  border: 1px solid var(--border-medium);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-}
-
-.mat-mdc-list-item {
-  color: var(--text-primary) !important;
-
-  .mdc-list-item__content {
-    color: var(--text-primary) !important;
-  }
-
-  .mdc-list-item__primary-text {
-    color: var(--text-primary) !important;
-  }
-}
-
-.mat-mdc-list {
-  background: transparent !important;
-  color: var(--text-primary) !important;
-}
-
-.mat-mdc-subheader {
-  color: var(--text-primary) !important;
-  background: transparent !important;
-}
-
-.mat-mdc-chip {
-  background-color: rgba(99, 102, 241, 0.1) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border-medium) !important;
-
-  &:hover {
-    background-color: rgba(99, 102, 241, 0.15) !important;
-  }
-
-  .mat-mdc-chip-action-label {
-    color: var(--text-primary) !important;
-  }
-}
-
-.mat-mdc-chip-set {
-  .mat-mdc-chip {
-    --mdc-chip-container-shape-radius: 8px;
-  }
-}
-
-/* ===== MATERIAL ICON FIX ===== */
-mat-icon {
-  overflow: visible !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  &.mat-icon {
-    overflow: visible !important;
-  }
-}
-
-/* ===== UTILITY CLASSES ===== */
-.text-gradient {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.glow-effect {
-  box-shadow: 0 0 20px var(--glow-primary), 0 0 40px var(--glow-secondary);
-}
-
-/* ===== ERROR SNACKBAR ===== */
-.error-snackbar {
-  .mdc-snackbar__surface {
-    background-color: var(--error) !important;
-    border: 1px solid rgba(220, 38, 38, 0.5) !important;
-    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4) !important;
-  }
-
-  .mdc-snackbar__label {
-    color: white !important;
-    font-weight: 500 !important;
-  }
-
-  .mat-mdc-snack-bar-action {
-    color: white !important;
-    border-color: white !important;
-  }
 }

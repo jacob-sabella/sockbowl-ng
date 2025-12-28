@@ -1,0 +1,48 @@
+/**
+ * Solarized Dark Theme
+ *
+ * Precision colors for machines and people.
+ * https://ethanschoonover.com/solarized/
+ */
+
+body.theme-solarized-dark {
+  /* Background colors */
+  --bg-primary: #002b36;
+  --bg-secondary: #073642;
+  --bg-tertiary: #0d4451;
+  --bg-elevated: #073642;
+
+  /* Surface colors */
+  --surface: #073642;
+  --surface-hover: #0d4451;
+  --surface-active: #165261;
+
+  /* Text colors */
+  --text-primary: #fdf6e3;
+  --text-secondary: #93a1a1;
+  --text-muted: #586e75;
+
+  /* Accent colors */
+  --accent-primary: #268bd2;
+  --accent-primary-hover: #3fa5f5;
+  --accent-secondary: #6c71c4;
+  --accent-tertiary: #2aa198;
+
+  /* Status colors */
+  --success: #859900;
+  --warning: #b58900;
+  --error: #dc322f;
+  --info: #268bd2;
+
+  /* Border colors */
+  --border-subtle: rgba(7, 54, 66, 0.3);
+  --border-medium: rgba(13, 68, 81, 0.5);
+  --border-strong: rgba(22, 82, 97, 0.7);
+
+  /* Glow effects */
+  --glow-primary: rgba(38, 139, 210, 0.3);
+  --glow-secondary: rgba(108, 113, 196, 0.25);
+
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.6);
+}

@@ -1,0 +1,48 @@
+/**
+ * Dracula Theme
+ *
+ * Dark theme with vibrant purple accent.
+ * https://draculatheme.com/
+ */
+
+body.theme-dracula {
+  /* Background colors */
+  --bg-primary: #282a36;
+  --bg-secondary: #21222c;
+  --bg-tertiary: #191a21;
+  --bg-elevated: #21222c;
+
+  /* Surface colors */
+  --surface: #21222c;
+  --surface-hover: #44475a;
+  --surface-active: #6272a4;
+
+  /* Text colors */
+  --text-primary: #f8f8f2;
+  --text-secondary: #bfbfbf;
+  --text-muted: #6272a4;
+
+  /* Accent colors */
+  --accent-primary: #bd93f9;
+  --accent-primary-hover: #d4bfff;
+  --accent-secondary: #ff79c6;
+  --accent-tertiary: #8be9fd;
+
+  /* Status colors */
+  --success: #50fa7b;
+  --warning: #ffb86c;
+  --error: #ff5555;
+  --info: #8be9fd;
+
+  /* Border colors */
+  --border-subtle: rgba(68, 71, 90, 0.3);
+  --border-medium: rgba(68, 71, 90, 0.5);
+  --border-strong: rgba(98, 114, 164, 0.6);
+
+  /* Glow effects */
+  --glow-primary: rgba(189, 147, 249, 0.3);
+  --glow-secondary: rgba(255, 121, 198, 0.25);
+
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.5);
+}

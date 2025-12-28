@@ -1,0 +1,29 @@
+/**
+ * Shadow Utilities
+ *
+ * Shadow utility classes using CSS variables.
+ */
+
+.shadow-sm {
+  box-shadow: var(--shadow-sm) var(--shadow-color);
+}
+
+.shadow-md {
+  box-shadow: var(--shadow-md) var(--shadow-color);
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg) var(--shadow-color);
+}
+
+.shadow-xl {
+  box-shadow: var(--shadow-xl) var(--shadow-color);
+}
+
+.shadow-2xl {
+  box-shadow: var(--shadow-2xl) var(--shadow-color);
+}
+
+.shadow-none {
+  box-shadow: none !important;
+}

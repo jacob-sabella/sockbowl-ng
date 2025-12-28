@@ -1,0 +1,48 @@
+/**
+ * Nord Theme
+ *
+ * An arctic, north-bluish color palette.
+ * https://www.nordtheme.com/
+ */
+
+body.theme-nord {
+  /* Background colors - Polar Night */
+  --bg-primary: #2E3440;
+  --bg-secondary: #3B4252;
+  --bg-tertiary: #434C5E;
+  --bg-elevated: #3B4252;
+
+  /* Surface colors */
+  --surface: #3B4252;
+  --surface-hover: #434C5E;
+  --surface-active: #4C566A;
+
+  /* Text colors - Snow Storm */
+  --text-primary: #ECEFF4;
+  --text-secondary: #E5E9F0;
+  --text-muted: #D8DEE9;
+
+  /* Accent colors - Frost */
+  --accent-primary: #88C0D0;
+  --accent-primary-hover: #8FBCBB;
+  --accent-secondary: #81A1C1;
+  --accent-tertiary: #5E81AC;
+
+  /* Status colors - Aurora */
+  --success: #A3BE8C;
+  --warning: #EBCB8B;
+  --error: #BF616A;
+  --info: #5E81AC;
+
+  /* Border colors */
+  --border-subtle: rgba(76, 86, 106, 0.3);
+  --border-medium: rgba(76, 86, 106, 0.5);
+  --border-strong: rgba(76, 86, 106, 0.7);
+
+  /* Glow effects */
+  --glow-primary: rgba(136, 192, 208, 0.3);
+  --glow-secondary: rgba(129, 161, 193, 0.25);
+
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.4);
+}

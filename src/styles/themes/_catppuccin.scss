@@ -1,0 +1,48 @@
+/**
+ * Catppuccin Theme (Mocha Variant)
+ *
+ * Soothing pastel theme for the high-spirited.
+ * https://catppuccin.com/
+ */
+
+body.theme-catppuccin {
+  /* Background colors */
+  --bg-primary: #1e1e2e;
+  --bg-secondary: #181825;
+  --bg-tertiary: #11111b;
+  --bg-elevated: #181825;
+
+  /* Surface colors */
+  --surface: #181825;
+  --surface-hover: #313244;
+  --surface-active: #45475a;
+
+  /* Text colors */
+  --text-primary: #cdd6f4;
+  --text-secondary: #bac2de;
+  --text-muted: #a6adc8;
+
+  /* Accent colors */
+  --accent-primary: #89b4fa;
+  --accent-primary-hover: #a6c9ff;
+  --accent-secondary: #cba6f7;
+  --accent-tertiary: #89dceb;
+
+  /* Status colors */
+  --success: #a6e3a1;
+  --warning: #fab387;
+  --error: #f38ba8;
+  --info: #89b4fa;
+
+  /* Border colors */
+  --border-subtle: rgba(49, 50, 68, 0.3);
+  --border-medium: rgba(49, 50, 68, 0.5);
+  --border-strong: rgba(69, 71, 90, 0.7);
+
+  /* Glow effects */
+  --glow-primary: rgba(137, 180, 250, 0.3);
+  --glow-secondary: rgba(203, 166, 247, 0.25);
+
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.4);
+}

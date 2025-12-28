@@ -1,0 +1,47 @@
+/**
+ * Dark Theme
+ *
+ * The default dark theme with deep blue-gray backgrounds and indigo accents.
+ */
+
+body.theme-dark {
+  /* Background colors */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2234;
+  --bg-elevated: #1f2937;
+
+  /* Surface colors */
+  --surface: #1f2937;
+  --surface-hover: #374151;
+  --surface-active: #4b5563;
+
+  /* Text colors */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+
+  /* Accent colors - vibrant but not harsh */
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #818cf8;
+  --accent-secondary: #8b5cf6;
+  --accent-tertiary: #06b6d4;
+
+  /* Status colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+
+  /* Border colors */
+  --border-subtle: rgba(75, 85, 99, 0.3);
+  --border-medium: rgba(107, 114, 128, 0.5);
+  --border-strong: rgba(156, 163, 175, 0.6);
+
+  /* Glow effects */
+  --glow-primary: rgba(99, 102, 241, 0.4);
+  --glow-secondary: rgba(139, 92, 246, 0.3);
+
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}

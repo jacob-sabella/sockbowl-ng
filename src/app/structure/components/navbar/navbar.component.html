@@ -5,8 +5,13 @@
       <span class="navbar__title">Sockbowl</span>
     </div>
 
-    <!-- Authentication UI (only visible when auth is enabled) -->
-    <div class="navbar__auth" *ngIf="authEnabled">
+    <!-- Right side actions: theme selector + auth -->
+    <div class="navbar__actions">
+      <!-- Theme Selector -->
+      <app-theme-selector></app-theme-selector>
+
+      <!-- Authentication UI (only visible when auth is enabled) -->
+      <div class="navbar__auth" *ngIf="authEnabled">
       <!-- Not authenticated -->
       <div *ngIf="!(isAuthenticated$ | async) && !isInGame()" class="navbar__auth-guest">
         <span class="navbar__guest-label">Playing as Guest</span>
@@ -31,6 +36,7 @@
           Logout
         </button>
       </div>
+    </div>
     </div>
   </div>
 </mat-toolbar>

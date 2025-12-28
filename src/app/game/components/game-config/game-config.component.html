@@ -1,41 +1,40 @@
 <div class="page" *ngIf="gameSessionObs | async as gameSession">
   <!-- HERO -->
   <section class="hero">
-    <div class="hero__content">
-      <div class="hero__meta">
-        <mat-chip-set aria-label="Game meta">
-          <mat-chip>
-            <mat-icon>account_circle</mat-icon>
-            Proctor:
-            <span class="chip-value">{{ gameSession.gameSettings.proctorType || '—' }}</span>
-          </mat-chip>
+    <div class="hero__card">
+      <div class="hero__info">
+        <div class="info-item">
+          <mat-icon>account_circle</mat-icon>
+          <span class="info-label">Proctor:</span>
+          <span class="info-value">{{ gameSession.gameSettings.proctorType || '—' }}</span>
+        </div>
 
-          <mat-chip>
-            <mat-icon>tune</mat-icon>
-            Mode:
-            <span class="chip-value">{{ gameSession.gameSettings.gameMode || '—' }}</span>
-          </mat-chip>
-        </mat-chip-set>
-      </div>
+        <div class="info-item">
+          <mat-icon>tune</mat-icon>
+          <span class="info-label">Mode:</span>
+          <span class="info-value">{{ gameSession.gameSettings.gameMode || '—' }}</span>
+        </div>
 
-      <div class="hero__join">
-        <div class="join-code" matTooltip="Share this code with players">
+        <div class="info-item" *ngIf="gameStateService.getCurrentPlayer()">
+          <mat-icon>person</mat-icon>
+          <span class="info-label">Player:</span>
+          <span class="info-value">{{ gameStateService.getCurrentPlayer()?.name }}</span>
+        </div>
+
+        <div class="info-item join-item">
           <mat-icon>qr_code_2</mat-icon>
-          <span>{{ gameSession.joinCode }}</span>
+          <span class="info-label">Code:</span>
+          <span class="info-value code-value">{{ gameSession.joinCode }}</span>
           <button
             type="button"
             mat-icon-button
             aria-label="Copy join code"
             (click)="copyJoinCode(gameSession.joinCode)"
+            class="copy-btn"
           >
             <mat-icon>content_copy</mat-icon>
           </button>
         </div>
-
-        <button mat-raised-button color="primary" class="hero__cta" (click)="startMatch()" *ngIf="gameStateService.isSelfProctor()">
-          <mat-icon>play_arrow</mat-icon>
-          Start Game
-        </button>
       </div>
     </div>
   </section>
@@ -127,6 +126,17 @@
         >
           <mat-icon>workspace_premium</mat-icon>
           Become Proctor
+        </button>
+
+        <button
+          mat-raised-button
+          color="primary"
+          *ngIf="gameStateService.isSelfProctor()"
+          (click)="startMatch()"
+          class="start-game-btn"
+        >
+          <mat-icon>play_arrow</mat-icon>
+          Start Game
         </button>
       </mat-card-actions>
     </mat-card>
