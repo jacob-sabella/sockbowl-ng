@@ -117,6 +117,87 @@
             <!-- Form - hidden when generating -->
             @if (!isGenerating) {
               <div class="generate-form">
+                <!-- Validation Error Banner -->
+                @if (validationError) {
+                  <div class="validation-error">
+                    <mat-icon>error</mat-icon>
+                    <span>{{ validationError }}</span>
+                  </div>
+                }
+
+                <!-- API Key Field -->
+                <mat-form-field class="api-key-field" appearance="outline" floatLabel="always">
+                  <mat-label>OpenAI API Key</mat-label>
+                  <input
+                    matInput
+                    [type]="showApiKey ? 'text' : 'password'"
+                    [(ngModel)]="apiKey"
+                    (ngModelChange)="onApiKeyChange()"
+                    (blur)="onApiKeyBlur()"
+                    placeholder="sk-..."
+                    required
+                    autocomplete="off"
+                    >
+                  <button
+                    mat-icon-button
+                    matSuffix
+                    (click)="toggleApiKeyVisibility()"
+                    [attr.aria-label]="'Hide API key'"
+                    type="button"
+                    >
+                    <mat-icon>{{ showApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                  <mat-hint>Your OpenAI API key (never shared or stored on server)</mat-hint>
+                </mat-form-field>
+
+                <!-- Remember API Key Checkbox -->
+                @if (apiKey) {
+                  <mat-checkbox
+                    class="remember-checkbox"
+                    [(ngModel)]="rememberApiKey"
+                    (change)="onRememberChange()"
+                    >
+                    Remember API key (stored locally in browser)
+                  </mat-checkbox>
+                }
+
+                <!-- Model Dropdown -->
+                <mat-form-field class="model-field" appearance="outline" floatLabel="always">
+                  <mat-label>Model</mat-label>
+                  <mat-select
+                    [(ngModel)]="selectedModel"
+                    (ngModelChange)="updateParameterVisibility()"
+                    [disabled]="isLoadingModels || availableModels.length === 0"
+                    required
+                    >
+                    @for (model of availableModels; track model) {
+                      <mat-option [value]="model">{{ model }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (isLoadingModels) {
+                    <mat-spinner matSuffix diameter="20"></mat-spinner>
+                  }
+                  @if (modelLoadError) {
+                    <mat-hint class="error-hint">{{ modelLoadError }}</mat-hint>
+                  }
+                  @if (!isLoadingModels && !modelLoadError && availableModels.length === 0 && apiKey) {
+                    <mat-hint>
+                      <button
+                        mat-button
+                        color="primary"
+                        (click)="fetchAvailableModels()"
+                        type="button"
+                        class="fetch-models-btn"
+                        >
+                        Fetch Models
+                      </button>
+                    </mat-hint>
+                  }
+                  @if (!apiKey) {
+                    <mat-hint>Enter API key first to load models</mat-hint>
+                  }
+                </mat-form-field>
+
                 <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
                   <mat-label>Topic</mat-label>
                   <input
@@ -124,6 +205,7 @@
                     type="text"
                     [(ngModel)]="generateTopic"
                     placeholder="e.g., Ancient Rome, Organic Chemistry, Jazz Music"
+                    required
                     >
                 </mat-form-field>
                 <mat-form-field class="context-field" appearance="outline" floatLabel="always">
@@ -135,10 +217,112 @@
                     rows="3"
                   ></textarea>
                 </mat-form-field>
+
+                <mat-form-field class="question-count-field" appearance="outline" floatLabel="always">
+                  <mat-label>Number of Questions</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    [(ngModel)]="questionCount"
+                    placeholder="5"
+                    min="1"
+                    max="30"
+                    required
+                    >
+                  <mat-hint>Number of tossups to generate (1-30). Default: 5</mat-hint>
+                </mat-form-field>
+
+                <mat-checkbox
+                  class="generate-bonuses-checkbox"
+                  [(ngModel)]="generateBonuses"
+                  >
+                  Generate bonuses ({{ questionCount }} bonuses will be generated alongside tossups)
+                </mat-checkbox>
+
+                <!-- Advanced LLM Parameters -->
+                <mat-expansion-panel class="advanced-options">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <mat-icon>tune</mat-icon>
+                      Advanced Options (LLM Parameters)
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
+
+                  <div class="advanced-options-content">
+                    <!-- Temperature -->
+                    @if (supportsTemperature) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Temperature</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="temperature"
+                          placeholder="1.0"
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          >
+                        <mat-hint>Controls randomness (0.0 = deterministic, 2.0 = creative). Default: 1.0</mat-hint>
+                      </mat-form-field>
+                    }
+
+                    <!-- Top P -->
+                    @if (supportsTopP) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Top P</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="topP"
+                          placeholder="1.0"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          >
+                        <mat-hint>Nucleus sampling for diversity (0.0 = focused, 1.0 = diverse). Default: 1.0</mat-hint>
+                      </mat-form-field>
+                    }
+
+                    <!-- Frequency Penalty -->
+                    @if (supportsFrequencyPenalty) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Frequency Penalty</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="frequencyPenalty"
+                          placeholder="0.0"
+                          min="-2"
+                          max="2"
+                          step="0.1"
+                          >
+                        <mat-hint>Penalizes repetition (-2.0 to 2.0). Positive = less repetition. Default: 0.0</mat-hint>
+                      </mat-form-field>
+                    }
+
+                    <!-- Presence Penalty -->
+                    @if (supportsPresencePenalty) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Presence Penalty</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="presencePenalty"
+                          placeholder="0.0"
+                          min="-2"
+                          max="2"
+                          step="0.1"
+                          >
+                        <mat-hint>Penalizes token reuse (-2.0 to 2.0). Positive = new topics. Default: 0.0</mat-hint>
+                      </mat-form-field>
+                    }
+                  </div>
+                </mat-expansion-panel>
+
                 <button
                   mat-raised-button
                   color="accent"
-                  [disabled]="!generateTopic"
+                  [disabled]="!generateTopic || !apiKey || !selectedModel"
                   (click)="generateAIPacket()"
                   class="generate-btn"
                   >

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Packet } from '../models/sockbowl/sockbowl-interfaces';
 import {environment} from "../../../environments/environment";
@@ -120,18 +120,63 @@ export class SockbowlQuestionsService {
    *
    * @param topic Main topic for the packet
    * @param additionalContext Additional context or constraints
+   * @param apiKey User-provided OpenAI API key
+   * @param model User-provided OpenAI model
+   * @param questionCount Number of tossups/bonuses to generate (1-30, default 5)
+   * @param generateBonuses Whether to generate bonuses (default true)
+   * @param temperature Controls randomness (0.0-2.0, default 1.0)
+   * @param topP Controls diversity via nucleus sampling (0.0-1.0, default 1.0)
+   * @param frequencyPenalty Penalizes token frequency (-2.0 to 2.0, default 0.0)
+   * @param presencePenalty Penalizes token presence (-2.0 to 2.0, default 0.0)
    * @return Observable of generated Packet
    */
-  generatePacket(topic: string, additionalContext: string = ''): Observable<Packet> {
+  generatePacket(
+    topic: string,
+    additionalContext: string = '',
+    apiKey: string,
+    model: string,
+    questionCount: number = 5,
+    generateBonuses: boolean = true,
+    temperature?: number,
+    topP?: number,
+    frequencyPenalty?: number,
+    presencePenalty?: number
+  ): Observable<Packet> {
     const url = `${environment.sockbowlQuestionsApiUrl}api/packets/generate`;
     const params: any = { topic };
     if (additionalContext) {
       params.additionalContext = additionalContext;
     }
+    if (questionCount !== undefined && questionCount !== null) {
+      params.questionCount = questionCount;
+    }
+    if (generateBonuses !== undefined && generateBonuses !== null) {
+      params.generateBonuses = generateBonuses;
+    }
+
+    // Build headers with API key, model, and optional LLM parameters
+    let headers = new HttpHeaders({
+      'X-API-Key': apiKey,
+      'X-Model': model
+    });
+
+    // Add optional LLM parameters if provided
+    if (temperature !== undefined) {
+      headers = headers.set('X-Temperature', temperature.toString());
+    }
+    if (topP !== undefined) {
+      headers = headers.set('X-Top-P', topP.toString());
+    }
+    if (frequencyPenalty !== undefined) {
+      headers = headers.set('X-Frequency-Penalty', frequencyPenalty.toString());
+    }
+    if (presencePenalty !== undefined) {
+      headers = headers.set('X-Presence-Penalty', presencePenalty.toString());
+    }
 
     // Set timeout to 11 minutes (660000ms) for AI generation with bonuses
     // Server-side timeout is 10 minutes, so we give it extra buffer
-    return this.http.get<any>(url, { params }).pipe(
+    return this.http.get<any>(url, { params, headers }).pipe(
       timeout(660000),
       map(packet => {
         // Transform nested REST API relationship structure to flat Angular model structure
