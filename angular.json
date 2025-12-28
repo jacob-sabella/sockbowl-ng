@@ -27,6 +27,9 @@
               "src/favicon.ico",
               "src/assets",
               "src/silent-refresh.html",
+              "src/cast-receiver.html",
+              "src/cast-receiver.js",
+              "src/cast-receiver.css",
               {
                 "glob": "config.template.js",
                 "input": "src/assets",
@@ -96,7 +99,7 @@
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
-            "assets": ["src/favicon.ico", "src/assets", "src/silent-refresh.html"],
+            "assets": ["src/favicon.ico", "src/assets", "src/silent-refresh.html", "src/cast-receiver.html", "src/cast-receiver.js", "src/cast-receiver.css"],
             "styles": [
               "@angular/material/prebuilt-themes/pink-bluegrey.css",
               "src/styles.scss"

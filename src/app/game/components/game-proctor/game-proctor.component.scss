@@ -184,6 +184,59 @@
   }
 }
 
+/* Cast Controls */
+.cast-controls {
+  position: absolute;
+  top: 1.5rem;
+  right: 18rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    right: 2rem;
+    top: 4rem;
+  }
+}
+
+.cast-button {
+  color: var(--text-secondary) !important;
+  transition: all 0.2s ease;
+
+  mat-icon {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  &:hover {
+    color: var(--accent-primary) !important;
+    background: color-mix(in srgb, var(--accent-primary) 10%, transparent) !important;
+    transform: scale(1.05);
+  }
+
+  &.cast-button--connected {
+    color: var(--accent-primary) !important;
+    animation: pulse 2s ease-in-out infinite;
+
+    &:hover {
+      animation: none;
+      transform: scale(1.05);
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.95);
+  }
+}
+
 .active-buzz-info {
   text-align: center;
   font-weight: 600;

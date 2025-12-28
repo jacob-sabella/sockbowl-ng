@@ -3,6 +3,9 @@ import {Observable, Subscription, timer} from 'rxjs';
 import {take, map} from 'rxjs/operators';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
+import {PresentationConnectionService} from '../../services/presentation-connection.service';
+import {CastStateService} from '../../services/cast-state.service';
+import {PresentationConnectionState} from '../../models/cast-interfaces';
 
 @Component({
     selector: 'app-game-proctor',
@@ -20,8 +23,18 @@ export class GameProctorComponent implements OnInit, OnDestroy {
   bonusTimerSubscription!: Subscription;
   isAutoTimerActive: boolean = true;
 
-  constructor(public gameStateService: GameStateService) {
+  // Cast-related observables
+  castAvailable$: Observable<boolean>;
+  castConnectionState$: Observable<PresentationConnectionState>;
+
+  constructor(
+    public gameStateService: GameStateService,
+    private presentationConnectionService: PresentationConnectionService,
+    private castStateService: CastStateService // Injecting initializes state subscription
+  ) {
     this.gameSessionObs = this.gameStateService.gameSession$;
+    this.castAvailable$ = this.presentationConnectionService.isAvailable$;
+    this.castConnectionState$ = this.presentationConnectionService.connectionState$;
   }
 
   ngOnInit(): void {
@@ -128,5 +141,21 @@ export class GameProctorComponent implements OnInit, OnDestroy {
     return teamId ? (this.gameStateService.getTeamNameById(teamId) || '') : '';
   }
 
+  /**
+   * Initiates casting to a presentation device.
+   * Opens the browser's device picker for the user to select a cast target.
+   */
+  startCasting(): void {
+    this.presentationConnectionService.startPresentation();
+  }
+
+  /**
+   * Stops the active casting session.
+   */
+  stopCasting(): void {
+    this.presentationConnectionService.stopPresentation();
+  }
+
   protected readonly RoundState = RoundState;
+  protected readonly PresentationConnectionState = PresentationConnectionState;
 }

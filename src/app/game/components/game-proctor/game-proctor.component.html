@@ -4,6 +4,32 @@
       <div class="auto-timer-checkbox">
         <mat-checkbox [(ngModel)]="isAutoTimerActive">Auto Timer Activated</mat-checkbox>
       </div>
+
+      <!-- Cast Controls -->
+      @if (castAvailable$ | async) {
+        <div class="cast-controls">
+          @if ((castConnectionState$ | async) === PresentationConnectionState.DISCONNECTED) {
+            <button
+              mat-icon-button
+              (click)="startCasting()"
+              matTooltip="Cast to TV"
+              class="cast-button">
+              <mat-icon>cast</mat-icon>
+            </button>
+          }
+          @if ((castConnectionState$ | async) === PresentationConnectionState.CONNECTED) {
+            <button
+              mat-icon-button
+              color="primary"
+              (click)="stopCasting()"
+              matTooltip="Stop casting"
+              class="cast-button cast-button--connected">
+              <mat-icon>cast_connected</mat-icon>
+            </button>
+          }
+        </div>
+      }
+
       <mat-card-title>
         Round {{ gameSession.currentMatch.currentRound.roundNumber }}
       </mat-card-title>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sockbowl Cast Receiver</title>
+  <link href="cast-receiver.css" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- CONFIG VIEW (shown when match is in config stage) -->
+    <div id="config-view" class="hidden">
+      <div class="config-header">
+        <h1 class="app-title">Sockbowl</h1>
+        <div class="subtitle">Quiz Bowl Match</div>
+      </div>
+
+      <div class="join-code-section">
+        <div class="section-label">Join Code</div>
+        <div id="config-join-code" class="join-code-display">----</div>
+      </div>
+
+      <div class="config-info-grid">
+        <div class="config-info-item">
+          <div class="info-label">Proctor</div>
+          <div id="config-proctor" class="info-value">---</div>
+        </div>
+        <div class="config-info-item">
+          <div class="info-label">Game Mode</div>
+          <div id="config-game-mode" class="info-value">---</div>
+        </div>
+        <div class="config-info-item">
+          <div class="info-label">Packet</div>
+          <div id="config-packet" class="info-value">---</div>
+        </div>
+      </div>
+
+      <div class="teams-section">
+        <div class="section-label">Teams</div>
+        <div id="config-teams" class="teams-grid"></div>
+      </div>
+
+      <div class="waiting-message">Waiting for match to start...</div>
+    </div>
+
+    <!-- MATCH VIEW (shown when match is active) -->
+    <div id="match-view" class="hidden">
+      <!-- Round and Category Header -->
+      <div id="header">
+        <div id="round-info">Round 1</div>
+        <div id="category-info">Category</div>
+      </div>
+
+      <!-- Question Container (hidden during PROCTOR_READING) -->
+      <div id="question-container" class="hidden">
+        <div class="section-label">Question</div>
+        <div id="question-text" class="content-text"></div>
+      </div>
+
+      <!-- Buzz Status (shows who buzzed and correctness) -->
+      <div id="buzz-status"></div>
+
+      <!-- Answer Container (shown when round COMPLETED) -->
+      <div id="answer-container" class="hidden">
+        <div class="section-label">Answer</div>
+        <div id="answer-text" class="content-text"></div>
+      </div>
+
+      <!-- Team Scoreboard -->
+      <div id="scoreboard"></div>
+    </div>
+
+    <!-- Connection Status Indicator -->
+    <div id="status" class="connecting">
+      <div class="status-icon">⏳</div>
+      <div class="status-text">Waiting for connection...</div>
+    </div>
+  </div>
+
+  <script src="cast-receiver.js"></script>
+</body>
+</html>

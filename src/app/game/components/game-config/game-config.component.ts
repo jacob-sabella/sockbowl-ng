@@ -12,6 +12,9 @@ import { Observable } from 'rxjs';
 import { GameStateService } from '../../services/game-state.service';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
+import { PresentationConnectionService } from '../../services/presentation-connection.service';
+import { CastStateService } from '../../services/cast-state.service';
+import { PresentationConnectionState } from '../../models/cast-interfaces';
 
 @Component({
     selector: 'app-game-config',
@@ -27,7 +30,12 @@ export class GameConfigComponent implements OnInit {
   bonusesEnabled: boolean = false;
   selectedPacket: Packet | null = null;
 
+  // Cast-related observables
+  castAvailable$: Observable<boolean>;
+  castConnectionState$: Observable<PresentationConnectionState>;
+
   protected readonly PlayerMode = PlayerMode;
+  protected readonly PresentationConnectionState = PresentationConnectionState;
 
   @ViewChild('packetSearchModal') packetSearchModal!: TemplateRef<any>;
 
@@ -35,9 +43,13 @@ export class GameConfigComponent implements OnInit {
     public gameStateService: GameStateService,
     private sockbowlQuestionsService: SockbowlQuestionsService,
     private dialog: MatDialog,
-    private snack: MatSnackBar
+    private snack: MatSnackBar,
+    private presentationConnectionService: PresentationConnectionService,
+    private castStateService: CastStateService // Injecting initializes state subscription
   ) {
     this.gameSessionObs = this.gameStateService.gameSession$;
+    this.castAvailable$ = this.presentationConnectionService.isAvailable$;
+    this.castConnectionState$ = this.presentationConnectionService.connectionState$;
   }
 
   ngOnInit(): void {
@@ -177,5 +189,22 @@ export class GameConfigComponent implements OnInit {
 
   trackByPlayerId(_: number, p: { playerId: string }) {
     return p.playerId;
+  }
+
+  /* ─── Casting ──────────────────────────────────────────────────────────── */
+
+  /**
+   * Initiates casting to a presentation device.
+   * Opens the browser's device picker for the user to select a cast target.
+   */
+  startCasting(): void {
+    this.presentationConnectionService.startPresentation();
+  }
+
+  /**
+   * Stops the active casting session.
+   */
+  stopCasting(): void {
+    this.presentationConnectionService.stopPresentation();
   }
 }

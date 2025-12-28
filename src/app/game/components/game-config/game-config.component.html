@@ -34,6 +34,33 @@
               >
               <mat-icon>content_copy</mat-icon>
             </button>
+
+            <!-- Cast Button (only show if available and user is proctor) -->
+            @if ((castAvailable$ | async) && gameStateService.isSelfProctor()) {
+              @if ((castConnectionState$ | async) === PresentationConnectionState.DISCONNECTED) {
+                <button
+                  type="button"
+                  mat-icon-button
+                  aria-label="Cast to TV"
+                  (click)="startCasting()"
+                  matTooltip="Cast to TV"
+                  class="copy-btn cast-btn">
+                  <mat-icon>cast</mat-icon>
+                </button>
+              }
+              @if ((castConnectionState$ | async) === PresentationConnectionState.CONNECTED) {
+                <button
+                  type="button"
+                  mat-icon-button
+                  color="primary"
+                  aria-label="Stop casting"
+                  (click)="stopCasting()"
+                  matTooltip="Stop casting"
+                  class="copy-btn cast-btn cast-btn--connected">
+                  <mat-icon>cast_connected</mat-icon>
+                </button>
+              }
+            }
           </div>
         </div>
       </div>
