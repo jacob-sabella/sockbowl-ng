@@ -2,67 +2,77 @@
   <mat-card class="centered-card">
 
     <!-- Back button -->
-    <div *ngIf="showCreateForm || showJoinForm" class="header-container">
-      <button mat-icon-button (click)="onGoBack()"><mat-icon>arrow_back</mat-icon></button>
-      <span class="centered-title">
-        {{ showCreateForm ? 'New Game' : 'Join Game' }}
-      </span>
-    </div>
+    @if (showCreateForm || showJoinForm) {
+      <div class="header-container">
+        <button mat-icon-button (click)="onGoBack()"><mat-icon>arrow_back</mat-icon></button>
+        <span class="centered-title">
+          {{ showCreateForm ? 'New Game' : 'Join Game' }}
+        </span>
+      </div>
+    }
 
     <!-- Buttons -->
-    <div *ngIf="!showCreateForm && !showJoinForm" class="button-container">
-      <h1 class="mat-display-1">Let's get started!</h1>
-      <button mat-raised-button color="accent" (click)="onCreateGame()">Create Game</button>
-      <button mat-raised-button color="accent" (click)="onJoinGame()">Join Game</button>
-    </div>
+    @if (!showCreateForm && !showJoinForm) {
+      <div class="button-container">
+        <h1 class="mat-display-1">Let's get started!</h1>
+        <button mat-raised-button color="accent" (click)="onCreateGame()">Create Game</button>
+        <button mat-raised-button color="accent" (click)="onJoinGame()">Join Game</button>
+      </div>
+    }
 
     <!-- Create Game Form -->
-    <div *ngIf="showCreateForm" class="form-container">
-
-      <mat-form-field>
-        <mat-label>Proctor Type</mat-label>
-        <mat-select [(ngModel)]="createGameRequest.gameSettings.proctorType">
-          <mat-option *ngFor="let proctorType of ProctorTypes | keyvalue" [value]="proctorType.key">
-            {{proctorType.value}}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field>
-        <mat-label>Game Mode</mat-label>
-        <mat-select [(ngModel)]="createGameRequest.gameSettings.gameMode">
-          <mat-option *ngFor="let gameMode of GameModes | keyvalue" [value]="gameMode.key">
-            {{gameMode.value}}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <!-- Player Name (only for guests) -->
-      <mat-form-field *ngIf="!isAuthenticated">
-        <mat-label>Your name</mat-label>
-        <input matInput [(ngModel)]="joinGameRequest.name" required>
-      </mat-form-field>
-
-      <button mat-raised-button color="accent" (click)="submitCreateGame()">Create</button>
-    </div>
+    @if (showCreateForm) {
+      <div class="form-container">
+        <mat-form-field>
+          <mat-label>Proctor Type</mat-label>
+          <mat-select [(ngModel)]="createGameRequest.gameSettings.proctorType">
+            @for (proctorType of ProctorTypes | keyvalue; track proctorType) {
+              <mat-option [value]="proctorType.key">
+                {{proctorType.value}}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Game Mode</mat-label>
+          <mat-select [(ngModel)]="createGameRequest.gameSettings.gameMode">
+            @for (gameMode of GameModes | keyvalue; track gameMode) {
+              <mat-option [value]="gameMode.key">
+                {{gameMode.value}}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <!-- Player Name (only for guests) -->
+        @if (!isAuthenticated) {
+          <mat-form-field>
+            <mat-label>Your name</mat-label>
+            <input matInput [(ngModel)]="joinGameRequest.name" required>
+          </mat-form-field>
+        }
+        <button mat-raised-button color="accent" (click)="submitCreateGame()">Create</button>
+      </div>
+    }
 
     <!-- Join Game Form -->
-    <div *ngIf="showJoinForm" class="form-container">
-      <!-- Join Code -->
-      <mat-form-field>
-        <mat-label>Join Code</mat-label>
-        <input matInput [(ngModel)]="joinGameRequest.joinCode">
-      </mat-form-field>
-
-      <!-- Player Name (only for guests) -->
-      <mat-form-field *ngIf="!isAuthenticated">
-        <mat-label>Name</mat-label>
-        <input matInput [(ngModel)]="joinGameRequest.name" required>
-      </mat-form-field>
-
-      <!-- Submit Button -->
-      <button mat-raised-button color="accent" (click)="submitJoinGame()">Join</button>
-    </div>
+    @if (showJoinForm) {
+      <div class="form-container">
+        <!-- Join Code -->
+        <mat-form-field>
+          <mat-label>Join Code</mat-label>
+          <input matInput [(ngModel)]="joinGameRequest.joinCode">
+        </mat-form-field>
+        <!-- Player Name (only for guests) -->
+        @if (!isAuthenticated) {
+          <mat-form-field>
+            <mat-label>Name</mat-label>
+            <input matInput [(ngModel)]="joinGameRequest.name" required>
+          </mat-form-field>
+        }
+        <!-- Submit Button -->
+        <button mat-raised-button color="accent" (click)="submitJoinGame()">Join</button>
+      </div>
+    }
 
   </mat-card>
 </div>

@@ -1,145 +1,163 @@
-<div class="spectator-container" *ngIf="gameSession">
-  <!-- Header -->
-  <div class="spectator-header">
-    <mat-icon class="spectator-icon">visibility</mat-icon>
-    <h1 class="spectator-title">Spectator Mode</h1>
-  </div>
-
-  <!-- Teams Section -->
-  <div class="teams-section">
-    <h2>
-      <mat-icon>groups</mat-icon>
-      Teams
-    </h2>
-    <div class="teams-grid">
-      <mat-card *ngFor="let team of teams" class="team-card">
-        <mat-card-header>
-          <mat-card-title>{{ team.teamName }}</mat-card-title>
-          <mat-card-subtitle>Score: {{ getTeamScore(team) }}</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <mat-list class="player-list">
-            <mat-list-item *ngFor="let player of team.teamPlayers">
-              <mat-icon matListItemIcon>person</mat-icon>
-              <div matListItemTitle>{{ player.name }}</div>
-            </mat-list-item>
-          </mat-list>
-        </mat-card-content>
-      </mat-card>
+@if (gameSession) {
+  <div class="spectator-container">
+    <!-- Header -->
+    <div class="spectator-header">
+      <mat-icon class="spectator-icon">visibility</mat-icon>
+      <h1 class="spectator-title">Spectator Mode</h1>
     </div>
+    <!-- Teams Section -->
+    <div class="teams-section">
+      <h2>
+        <mat-icon>groups</mat-icon>
+        Teams
+      </h2>
+      <div class="teams-grid">
+        @for (team of teams; track team) {
+          <mat-card class="team-card">
+            <mat-card-header>
+              <mat-card-title>{{ team.teamName }}</mat-card-title>
+              <mat-card-subtitle>Score: {{ getTeamScore(team) }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-list class="player-list">
+                @for (player of team.teamPlayers; track player) {
+                  <mat-list-item>
+                    <mat-icon matListItemIcon>person</mat-icon>
+                    <div matListItemTitle>{{ player.name }}</div>
+                  </mat-list-item>
+                }
+              </mat-list>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    </div>
+    <!-- Current Round Section -->
+    @if (currentRound) {
+      <div class="current-round-section">
+        <h2>
+          <mat-icon>article</mat-icon>
+          Current Round ({{ currentRound.roundNumber }})
+        </h2>
+        <mat-card class="current-round-card">
+          <mat-card-header>
+            <mat-card-title>{{ currentRound.category }}</mat-card-title>
+            @if (currentRound.subcategory) {
+              <mat-card-subtitle>{{ currentRound.subcategory }}</mat-card-subtitle>
+            }
+          </mat-card-header>
+          <mat-card-content>
+            <!-- Question Text -->
+            <div class="question-text">
+              <p>{{ currentRound.question || 'Waiting for question...' }}</p>
+            </div>
+            <!-- Answer (only shown when revealed) -->
+            @if (isAnswerVisible()) {
+              <div class="answer-section">
+                <div class="answer-revealed">
+                  <mat-icon>check_circle</mat-icon>
+                  <strong>Answer:</strong> {{ currentRound.answer }}
+                </div>
+              </div>
+            }
+            <!-- Answer Hidden Message -->
+            @if (!isAnswerVisible()) {
+              <div class="answer-hidden">
+                <mat-icon>visibility_off</mat-icon>
+                <em>Answer hidden until revealed</em>
+              </div>
+            }
+            <!-- Buzz Status -->
+            @if (hasBuzzes(currentRound)) {
+              <div class="buzz-status">
+                <mat-chip-set>
+                  @for (buzz of currentRound.buzzList; track buzz) {
+                    <mat-chip>
+                      <mat-icon>notifications</mat-icon>
+                      {{ getTeamName(buzz.teamId) }} buzzed
+                    </mat-chip>
+                  }
+                </mat-chip-set>
+              </div>
+            }
+            <!-- Round State Indicator -->
+            <div class="round-state">
+              <mat-chip [class.reading]="currentRound.roundState === RoundState.PROCTOR_READING"
+                [class.awaiting-buzz]="currentRound.roundState === RoundState.AWAITING_BUZZ"
+                [class.awaiting-answer]="currentRound.roundState === RoundState.AWAITING_ANSWER">
+                {{ currentRound.roundState }}
+              </mat-chip>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+    <!-- Previous Rounds Section -->
+    @if (previousRounds && previousRounds.length > 0) {
+      <div class="previous-rounds-section">
+        <h2>
+          <mat-icon>history</mat-icon>
+          Previous Rounds
+        </h2>
+        <mat-accordion class="previous-rounds-accordion">
+          @for (round of previousRounds; track round; let i = $index) {
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  Round {{ round.roundNumber }}: {{ round.category }}
+                </mat-panel-title>
+                <mat-panel-description>
+                  {{ getRoundOutcome(round) }}
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+              <div class="previous-round-content">
+                <!-- Subcategory -->
+                @if (round.subcategory) {
+                  <div class="subcategory">
+                    <strong>Subcategory:</strong> {{ round.subcategory }}
+                  </div>
+                }
+                <!-- Question -->
+                <div class="question">
+                  <strong>Question:</strong>
+                  <p>{{ round.question }}</p>
+                </div>
+                <!-- Answer -->
+                <div class="answer">
+                  <strong>Answer:</strong>
+                  <p>{{ round.answer }}</p>
+                </div>
+                <!-- Buzz Log -->
+                @if (hasBuzzes(round)) {
+                  <div class="buzz-log">
+                    <strong>Buzzes:</strong>
+                    <mat-list>
+                      @for (buzz of round.buzzList; track buzz) {
+                        <mat-list-item>
+                          <mat-icon matListItemIcon
+                            [class.correct]="buzz.correct"
+                            [class.incorrect]="!buzz.correct">
+                            {{ buzz.correct ? 'check_circle' : 'cancel' }}
+                          </mat-icon>
+                          <div matListItemTitle>{{ getTeamName(buzz.teamId) }}</div>
+                          <div matListItemLine>{{ buzz.correct ? 'Correct' : 'Incorrect' }}</div>
+                        </mat-list-item>
+                      }
+                    </mat-list>
+                  </div>
+                }
+              </div>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+      </div>
+    }
+    <!-- No Previous Rounds Message -->
+    @if (!previousRounds || previousRounds.length === 0) {
+      <div class="no-previous-rounds">
+        <mat-icon>info</mat-icon>
+        <p>No previous rounds yet</p>
+      </div>
+    }
   </div>
-
-  <!-- Current Round Section -->
-  <div class="current-round-section" *ngIf="currentRound">
-    <h2>
-      <mat-icon>article</mat-icon>
-      Current Round ({{ currentRound.roundNumber }})
-    </h2>
-    <mat-card class="current-round-card">
-      <mat-card-header>
-        <mat-card-title>{{ currentRound.category }}</mat-card-title>
-        <mat-card-subtitle *ngIf="currentRound.subcategory">{{ currentRound.subcategory }}</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <!-- Question Text -->
-        <div class="question-text">
-          <p>{{ currentRound.question || 'Waiting for question...' }}</p>
-        </div>
-
-        <!-- Answer (only shown when revealed) -->
-        <div class="answer-section" *ngIf="isAnswerVisible()">
-          <div class="answer-revealed">
-            <mat-icon>check_circle</mat-icon>
-            <strong>Answer:</strong> {{ currentRound.answer }}
-          </div>
-        </div>
-
-        <!-- Answer Hidden Message -->
-        <div class="answer-hidden" *ngIf="!isAnswerVisible()">
-          <mat-icon>visibility_off</mat-icon>
-          <em>Answer hidden until revealed</em>
-        </div>
-
-        <!-- Buzz Status -->
-        <div class="buzz-status" *ngIf="hasBuzzes(currentRound)">
-          <mat-chip-set>
-            <mat-chip *ngFor="let buzz of currentRound.buzzList">
-              <mat-icon>notifications</mat-icon>
-              {{ getTeamName(buzz.teamId) }} buzzed
-            </mat-chip>
-          </mat-chip-set>
-        </div>
-
-        <!-- Round State Indicator -->
-        <div class="round-state">
-          <mat-chip [class.reading]="currentRound.roundState === RoundState.PROCTOR_READING"
-                    [class.awaiting-buzz]="currentRound.roundState === RoundState.AWAITING_BUZZ"
-                    [class.awaiting-answer]="currentRound.roundState === RoundState.AWAITING_ANSWER">
-            {{ currentRound.roundState }}
-          </mat-chip>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Previous Rounds Section -->
-  <div class="previous-rounds-section" *ngIf="previousRounds && previousRounds.length > 0">
-    <h2>
-      <mat-icon>history</mat-icon>
-      Previous Rounds
-    </h2>
-    <mat-accordion class="previous-rounds-accordion">
-      <mat-expansion-panel *ngFor="let round of previousRounds; let i = index">
-        <mat-expansion-panel-header>
-          <mat-panel-title>
-            Round {{ round.roundNumber }}: {{ round.category }}
-          </mat-panel-title>
-          <mat-panel-description>
-            {{ getRoundOutcome(round) }}
-          </mat-panel-description>
-        </mat-expansion-panel-header>
-
-        <div class="previous-round-content">
-          <!-- Subcategory -->
-          <div class="subcategory" *ngIf="round.subcategory">
-            <strong>Subcategory:</strong> {{ round.subcategory }}
-          </div>
-
-          <!-- Question -->
-          <div class="question">
-            <strong>Question:</strong>
-            <p>{{ round.question }}</p>
-          </div>
-
-          <!-- Answer -->
-          <div class="answer">
-            <strong>Answer:</strong>
-            <p>{{ round.answer }}</p>
-          </div>
-
-          <!-- Buzz Log -->
-          <div class="buzz-log" *ngIf="hasBuzzes(round)">
-            <strong>Buzzes:</strong>
-            <mat-list>
-              <mat-list-item *ngFor="let buzz of round.buzzList">
-                <mat-icon matListItemIcon
-                          [class.correct]="buzz.correct"
-                          [class.incorrect]="!buzz.correct">
-                  {{ buzz.correct ? 'check_circle' : 'cancel' }}
-                </mat-icon>
-                <div matListItemTitle>{{ getTeamName(buzz.teamId) }}</div>
-                <div matListItemLine>{{ buzz.correct ? 'Correct' : 'Incorrect' }}</div>
-              </mat-list-item>
-            </mat-list>
-          </div>
-        </div>
-      </mat-expansion-panel>
-    </mat-accordion>
-  </div>
-
-  <!-- No Previous Rounds Message -->
-  <div class="no-previous-rounds" *ngIf="!previousRounds || previousRounds.length === 0">
-    <mat-icon>info</mat-icon>
-    <p>No previous rounds yet</p>
-  </div>
-</div>
+}

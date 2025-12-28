@@ -1,18 +1,18 @@
-<ng-container *ngIf="theme$ | async as currentTheme">
+@if (theme$ | async; as currentTheme) {
   <button mat-icon-button
-          [matMenuTriggerFor]="themeMenu"
-          class="theme-toggle"
-          [attr.aria-label]="'Theme selector'">
+    [matMenuTriggerFor]="themeMenu"
+    class="theme-toggle"
+    [attr.aria-label]="'Theme selector'">
     <mat-icon>{{ getCurrentIcon(currentTheme) }}</mat-icon>
   </button>
-
   <mat-menu #themeMenu="matMenu" class="theme-menu">
-    <button mat-menu-item
-            *ngFor="let themeOption of allThemes"
-            (click)="setTheme(themeOption.value)"
-            [class.active]="isActive(themeOption.value, currentTheme)">
-      <mat-icon>{{ themeOption.icon }}</mat-icon>
-      <span class="theme-label">{{ themeOption.label }}</span>
-    </button>
+    @for (themeOption of allThemes; track themeOption) {
+      <button mat-menu-item
+        (click)="setTheme(themeOption.value)"
+        [class.active]="isActive(themeOption.value, currentTheme)">
+        <mat-icon>{{ themeOption.icon }}</mat-icon>
+        <span class="theme-label">{{ themeOption.label }}</span>
+      </button>
+    }
   </mat-menu>
-</ng-container>
+}

@@ -10,83 +10,103 @@
       <mat-tab label="Search Existing">
         <div class="tab-content">
           <div class="search-container">
-      <mat-form-field class="search-field" appearance="outline">
-        <mat-icon matPrefix class="search-icon">search</mat-icon>
-        <input
-          matInput
-          type="text"
-          [(ngModel)]="searchQuery"
-          placeholder="Type to search for packets..."
-          (input)="searchPackets()"
-          autocomplete="off"
-        >
-        <button
-          mat-icon-button
-          matSuffix
-          *ngIf="searchQuery"
-          (click)="clearSearch()"
-          aria-label="Clear search"
-        >
-          <mat-icon>close</mat-icon>
-        </button>
-      </mat-form-field>
+            <mat-form-field class="search-field" appearance="outline">
+              <mat-icon matPrefix class="search-icon">search</mat-icon>
+              <input
+                matInput
+                type="text"
+                [(ngModel)]="searchQuery"
+                placeholder="Type to search for packets..."
+                (input)="searchPackets()"
+                autocomplete="off"
+                >
+              @if (searchQuery) {
+                <button
+                  mat-icon-button
+                  matSuffix
+                  (click)="clearSearch()"
+                  aria-label="Clear search"
+                  >
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </mat-form-field>
 
-      <div class="search-info" *ngIf="searchQuery && !isSearching">
-        <span *ngIf="searchResults.length > 0">
-          Found {{ searchResults.length }} packet{{ searchResults.length !== 1 ? 's' : '' }}
-        </span>
-        <span *ngIf="searchResults.length === 0 && searchQuery.length >= 2">
-          No packets found
-        </span>
-        <span *ngIf="searchQuery.length < 2" class="hint">
-          Type at least 2 characters to search
-        </span>
-      </div>
-    </div>
-
-    <div class="results-container">
-      <!-- Loading state -->
-      <div *ngIf="isSearching" class="loading-state">
-        <mat-spinner diameter="40"></mat-spinner>
-        <p>Searching packets...</p>
-      </div>
-
-      <!-- Empty state -->
-      <div *ngIf="!searchQuery && !isSearching" class="empty-state">
-        <mat-icon>inventory_2</mat-icon>
-        <p>Search for quiz bowl packets by name</p>
-        <span class="hint">Try searching for a tournament name, year, or difficulty</span>
-      </div>
-
-      <!-- Results list -->
-      <div *ngIf="searchResults.length > 0 && !isSearching" class="search-results">
-        <div
-          class="result-item"
-          *ngFor="let packet of searchResults; let i = index"
-          (click)="selectPacket(packet)"
-          [class.selected]="packet.id === selectedPacketId"
-          [attr.data-index]="i"
-        >
-          <div class="result-content">
-            <mat-icon class="result-icon">description</mat-icon>
-            <div class="result-details">
-              <div class="result-name">{{ packet.name }}</div>
-              <div class="result-meta">
-                <span class="packet-id">ID: {{ packet.id }}</span>
+            @if (searchQuery && !isSearching) {
+              <div class="search-info">
+                @if (searchResults.length > 0) {
+                  <span>
+                    Found {{ searchResults.length }} packet{{ searchResults.length !== 1 ? 's' : '' }}
+                  </span>
+                }
+                @if (searchResults.length === 0 && searchQuery.length >= 2) {
+                  <span>
+                    No packets found
+                  </span>
+                }
+                @if (searchQuery.length < 2) {
+                  <span class="hint">
+                    Type at least 2 characters to search
+                  </span>
+                }
               </div>
-            </div>
+            }
           </div>
-          <mat-icon class="check-icon" *ngIf="packet.id === selectedPacketId">check_circle</mat-icon>
-        </div>
-      </div>
 
-      <!-- No results state -->
-      <div *ngIf="searchResults.length === 0 && searchQuery && !isSearching && searchQuery.length >= 2" class="no-results">
-        <mat-icon>search_off</mat-icon>
-        <p>No packets found matching "{{ searchQuery }}"</p>
-        <span class="hint">Try a different search term</span>
-      </div>
-    </div>
+          <div class="results-container">
+            <!-- Loading state -->
+            @if (isSearching) {
+              <div class="loading-state">
+                <mat-spinner diameter="40"></mat-spinner>
+                <p>Searching packets...</p>
+              </div>
+            }
+
+            <!-- Empty state -->
+            @if (!searchQuery && !isSearching) {
+              <div class="empty-state">
+                <mat-icon>inventory_2</mat-icon>
+                <p>Search for quiz bowl packets by name</p>
+                <span class="hint">Try searching for a tournament name, year, or difficulty</span>
+              </div>
+            }
+
+            <!-- Results list -->
+            @if (searchResults.length > 0 && !isSearching) {
+              <div class="search-results">
+                @for (packet of searchResults; track packet; let i = $index) {
+                  <div
+                    class="result-item"
+                    (click)="selectPacket(packet)"
+                    [class.selected]="packet.id === selectedPacketId"
+                    [attr.data-index]="i"
+                    >
+                    <div class="result-content">
+                      <mat-icon class="result-icon">description</mat-icon>
+                      <div class="result-details">
+                        <div class="result-name">{{ packet.name }}</div>
+                        <div class="result-meta">
+                          <span class="packet-id">ID: {{ packet.id }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    @if (packet.id === selectedPacketId) {
+                      <mat-icon class="check-icon">check_circle</mat-icon>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- No results state -->
+            @if (searchResults.length === 0 && searchQuery && !isSearching && searchQuery.length >= 2) {
+              <div class="no-results">
+                <mat-icon>search_off</mat-icon>
+                <p>No packets found matching "{{ searchQuery }}"</p>
+                <span class="hint">Try a different search term</span>
+              </div>
+            }
+          </div>
         </div>
       </mat-tab>
 
@@ -95,146 +115,162 @@
         <div class="tab-content">
           <div class="generate-container">
             <!-- Form - hidden when generating -->
-            <div class="generate-form" *ngIf="!isGenerating">
-              <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
-                <mat-label>Topic</mat-label>
-                <input
-                  matInput
-                  type="text"
-                  [(ngModel)]="generateTopic"
-                  placeholder="e.g., Ancient Rome, Organic Chemistry, Jazz Music"
-                >
-              </mat-form-field>
-
-              <mat-form-field class="context-field" appearance="outline" floatLabel="always">
-                <mat-label>Context (Optional)</mat-label>
-                <textarea
-                  matInput
-                  [(ngModel)]="generateContext"
-                  placeholder="e.g., Focus on the Roman Republic, Include chemical reactions, 1920s-1940s era"
-                  rows="3"
-                ></textarea>
-              </mat-form-field>
-
-              <button
-                mat-raised-button
-                color="accent"
-                [disabled]="!generateTopic"
-                (click)="generateAIPacket()"
-                class="generate-btn"
-              >
-                <mat-icon>auto_awesome</mat-icon>
-                Generate Packet
-              </button>
-            </div>
+            @if (!isGenerating) {
+              <div class="generate-form">
+                <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
+                  <mat-label>Topic</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="generateTopic"
+                    placeholder="e.g., Ancient Rome, Organic Chemistry, Jazz Music"
+                    >
+                </mat-form-field>
+                <mat-form-field class="context-field" appearance="outline" floatLabel="always">
+                  <mat-label>Context (Optional)</mat-label>
+                  <textarea
+                    matInput
+                    [(ngModel)]="generateContext"
+                    placeholder="e.g., Focus on the Roman Republic, Include chemical reactions, 1920s-1940s era"
+                    rows="3"
+                  ></textarea>
+                </mat-form-field>
+                <button
+                  mat-raised-button
+                  color="accent"
+                  [disabled]="!generateTopic"
+                  (click)="generateAIPacket()"
+                  class="generate-btn"
+                  >
+                  <mat-icon>auto_awesome</mat-icon>
+                  Generate Packet
+                </button>
+              </div>
+            }
 
             <!-- Generating state -->
-            <div *ngIf="isGenerating" class="generating-state">
-              <mat-spinner diameter="50"></mat-spinner>
-              <p>Generating packet with AI...</p>
-              <span class="hint">This may take a minute</span>
-            </div>
+            @if (isGenerating) {
+              <div class="generating-state">
+                <mat-spinner diameter="50"></mat-spinner>
+                <p>Generating packet with AI...</p>
+                <span class="hint">This may take a minute</span>
+              </div>
+            }
 
             <!-- Generated packet preview -->
-            <div *ngIf="generatedPacket && !isGenerating" class="generated-packet">
-              <div class="packet-preview">
-                <mat-icon class="success-icon">check_circle</mat-icon>
-                <h3>{{ generatedPacket.name }}</h3>
-                <div class="packet-details">
-                  <span class="detail-item">
-                    <mat-icon>quiz</mat-icon>
-                    {{ generatedPacket.tossups.length || 0 }} Tossups
-                  </span>
-                  <span class="detail-item" *ngIf="generatedPacket.bonuses && generatedPacket.bonuses.length > 0">
-                    <mat-icon>extension</mat-icon>
-                    {{ generatedPacket.bonuses.length }} Bonuses
-                  </span>
-                  <span class="detail-item" *ngIf="generatedPacket.difficulty">
-                    <mat-icon>signal_cellular_alt</mat-icon>
-                    {{ generatedPacket.difficulty }}
-                  </span>
+            @if (generatedPacket && !isGenerating) {
+              <div class="generated-packet">
+                <div class="packet-preview">
+                  <mat-icon class="success-icon">check_circle</mat-icon>
+                  <h3>{{ generatedPacket.name }}</h3>
+                  <div class="packet-details">
+                    <span class="detail-item">
+                      <mat-icon>quiz</mat-icon>
+                      {{ generatedPacket.tossups.length || 0 }} Tossups
+                    </span>
+                    @if (generatedPacket.bonuses && generatedPacket.bonuses.length > 0) {
+                      <span class="detail-item">
+                        <mat-icon>extension</mat-icon>
+                        {{ generatedPacket.bonuses.length }} Bonuses
+                      </span>
+                    }
+                    @if (generatedPacket.difficulty) {
+                      <span class="detail-item">
+                        <mat-icon>signal_cellular_alt</mat-icon>
+                        {{ generatedPacket.difficulty }}
+                      </span>
+                    }
+                  </div>
                 </div>
+                <!-- Tossups Preview -->
+                <div class="tossups-preview">
+                  <h4 class="preview-title">
+                    <mat-icon>visibility</mat-icon>
+                    Preview Tossups
+                  </h4>
+                  <mat-accordion class="tossup-accordion">
+                    @for (tossup of generatedPacket.tossups; track tossup; let i = $index) {
+                      <mat-expansion-panel>
+                        <mat-expansion-panel-header>
+                          <mat-panel-title>
+                            <span class="tossup-number">Tossup {{ i + 1 }}</span>
+                            @if (tossup.tossup?.subcategory) {
+                              <span class="tossup-category">
+                                {{ tossup.tossup.subcategory.category.name }} - {{ tossup.tossup.subcategory.name }}
+                              </span>
+                            }
+                          </mat-panel-title>
+                        </mat-expansion-panel-header>
+                        <div class="tossup-content">
+                          <div class="content-section">
+                            <div class="section-label">
+                              <mat-icon>quiz</mat-icon>
+                              Question
+                            </div>
+                            <div class="section-text">{{ tossup.tossup.question }}</div>
+                          </div>
+                          <div class="content-section">
+                            <div class="section-label">
+                              <mat-icon>lightbulb</mat-icon>
+                              Answer
+                            </div>
+                            <div class="section-text answer-text">{{ tossup.tossup.answer }}</div>
+                          </div>
+                        </div>
+                      </mat-expansion-panel>
+                    }
+                  </mat-accordion>
+                </div>
+                <!-- Bonuses Preview -->
+                @if (generatedPacket.bonuses && generatedPacket.bonuses.length > 0) {
+                  <div class="bonuses-preview">
+                    <h4 class="preview-title">
+                      <mat-icon>visibility</mat-icon>
+                      Preview Bonuses
+                    </h4>
+                    <mat-accordion class="bonus-accordion">
+                      @for (bonusRel of generatedPacket.bonuses; track bonusRel; let i = $index) {
+                        <mat-expansion-panel>
+                          <mat-expansion-panel-header>
+                            <mat-panel-title>
+                              <span class="bonus-number">Bonus {{ i + 1 }}</span>
+                              @if (bonusRel.bonus?.subcategory) {
+                                <span class="bonus-category">
+                                  {{ bonusRel.bonus.subcategory.category.name }} - {{ bonusRel.bonus.subcategory.name }}
+                                </span>
+                              }
+                            </mat-panel-title>
+                          </mat-expansion-panel-header>
+                          <div class="bonus-content">
+                            @if (bonusRel.bonus?.preamble) {
+                              <div class="content-section">
+                                <div class="section-label">
+                                  <mat-icon>description</mat-icon>
+                                  Preamble
+                                </div>
+                                <div class="section-text">{{ bonusRel.bonus.preamble }}</div>
+                              </div>
+                            }
+                            @for (part of bonusRel.bonus?.bonusParts; track part; let partIdx = $index) {
+                              <div class="content-section">
+                                <div class="section-label">
+                                  <mat-icon>{{ ['looks_one', 'looks_two', 'looks_3'][partIdx] || 'circle' }}</mat-icon>
+                                  Part {{ partIdx + 1 }}
+                                </div>
+                                <div class="section-text">
+                                  <strong>Q:</strong> {{ part?.question }}<br>
+                                  <strong>A:</strong> <span class="answer-text">{{ part?.answer }}</span>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </mat-expansion-panel>
+                      }
+                    </mat-accordion>
+                  </div>
+                }
               </div>
-
-              <!-- Tossups Preview -->
-              <div class="tossups-preview">
-                <h4 class="preview-title">
-                  <mat-icon>visibility</mat-icon>
-                  Preview Tossups
-                </h4>
-                <mat-accordion class="tossup-accordion">
-                  <mat-expansion-panel *ngFor="let tossup of generatedPacket.tossups; let i = index">
-                    <mat-expansion-panel-header>
-                      <mat-panel-title>
-                        <span class="tossup-number">Tossup {{ i + 1 }}</span>
-                        <span class="tossup-category" *ngIf="tossup.tossup?.subcategory">
-                          {{ tossup.tossup.subcategory.category.name }} - {{ tossup.tossup.subcategory.name }}
-                        </span>
-                      </mat-panel-title>
-                    </mat-expansion-panel-header>
-
-                    <div class="tossup-content">
-                      <div class="content-section">
-                        <div class="section-label">
-                          <mat-icon>quiz</mat-icon>
-                          Question
-                        </div>
-                        <div class="section-text">{{ tossup.tossup.question }}</div>
-                      </div>
-
-                      <div class="content-section">
-                        <div class="section-label">
-                          <mat-icon>lightbulb</mat-icon>
-                          Answer
-                        </div>
-                        <div class="section-text answer-text">{{ tossup.tossup.answer }}</div>
-                      </div>
-                    </div>
-                  </mat-expansion-panel>
-                </mat-accordion>
-              </div>
-
-              <!-- Bonuses Preview -->
-              <div class="bonuses-preview" *ngIf="generatedPacket.bonuses && generatedPacket.bonuses.length > 0">
-                <h4 class="preview-title">
-                  <mat-icon>visibility</mat-icon>
-                  Preview Bonuses
-                </h4>
-                <mat-accordion class="bonus-accordion">
-                  <mat-expansion-panel *ngFor="let bonusRel of generatedPacket.bonuses; let i = index">
-                    <mat-expansion-panel-header>
-                      <mat-panel-title>
-                        <span class="bonus-number">Bonus {{ i + 1 }}</span>
-                        <span class="bonus-category" *ngIf="bonusRel.bonus?.subcategory">
-                          {{ bonusRel.bonus.subcategory.category.name }} - {{ bonusRel.bonus.subcategory.name }}
-                        </span>
-                      </mat-panel-title>
-                    </mat-expansion-panel-header>
-
-                    <div class="bonus-content">
-                      <div class="content-section" *ngIf="bonusRel.bonus?.preamble">
-                        <div class="section-label">
-                          <mat-icon>description</mat-icon>
-                          Preamble
-                        </div>
-                        <div class="section-text">{{ bonusRel.bonus.preamble }}</div>
-                      </div>
-
-                      <div class="content-section" *ngFor="let part of bonusRel.bonus?.bonusParts; let partIdx = index">
-                        <div class="section-label">
-                          <mat-icon>{{ ['looks_one', 'looks_two', 'looks_3'][partIdx] || 'circle' }}</mat-icon>
-                          Part {{ partIdx + 1 }}
-                        </div>
-                        <div class="section-text">
-                          <strong>Q:</strong> {{ part?.question }}<br>
-                          <strong>A:</strong> <span class="answer-text">{{ part?.answer }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </mat-expansion-panel>
-                </mat-accordion>
-              </div>
-            </div>
+            }
           </div>
         </div>
       </mat-tab>
@@ -251,7 +287,7 @@
       [disabled]="!selectedPacketId && !generatedPacket"
       (click)="confirmSelection()"
       class="select-btn"
-    >
+      >
       <mat-icon>check</mat-icon>
       Use Packet
     </button>

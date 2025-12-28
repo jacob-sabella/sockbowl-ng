@@ -1,30 +1,35 @@
 <!-- Game Session Container -->
-<div *ngIf="gameSession$ | async">
-
-  <!-- Config component -->
-  <div *ngIf="shouldShowConfigComponent()">
-    <app-game-config class="game-session"></app-game-config>
+@if (gameSession$ | async) {
+  <div>
+    <!-- Config component -->
+    @if (shouldShowConfigComponent()) {
+      <div>
+        <app-game-config class="game-session"></app-game-config>
+      </div>
+    }
+    <!-- Proctor component -->
+    @if (shouldShowProctorComponent()) {
+      <div>
+        <app-game-proctor></app-game-proctor>
+      </div>
+    }
+    <!-- Buzzer component -->
+    @if (shouldShowBuzzerComponent()) {
+      <div>
+        <app-game-buzzer></app-game-buzzer>
+      </div>
+    }
+    <!-- Spectator component -->
+    @if (shouldShowSpectatorComponent()) {
+      <div>
+        <app-game-spectator></app-game-spectator>
+      </div>
+    }
+    <!-- Match summary component -->
+    @if (shouldShowMatchSummaryComponent()) {
+      <div>
+        <app-match-summary></app-match-summary>
+      </div>
+    }
   </div>
-
-  <!-- Proctor component -->
-  <div *ngIf="shouldShowProctorComponent()">
-    <app-game-proctor></app-game-proctor>
-  </div>
-
-  <!-- Buzzer component -->
-  <div *ngIf="shouldShowBuzzerComponent()">
-    <app-game-buzzer></app-game-buzzer>
-  </div>
-
-  <!-- Spectator component -->
-  <div *ngIf="shouldShowSpectatorComponent()">
-    <app-game-spectator></app-game-spectator>
-  </div>
-
-  <!-- Match summary component -->
-  <div *ngIf="shouldShowMatchSummaryComponent()">
-    <app-match-summary></app-match-summary>
-  </div>
-
-
-</div>
+}

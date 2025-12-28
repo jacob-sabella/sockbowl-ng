@@ -1,92 +1,92 @@
 <div class="match-summary-container">
-  <div *ngIf="gameSessionObs | async as gameSession" class="match-summary">
-
-    <!-- Header -->
-    <div class="summary-header">
-      <mat-icon>emoji_events</mat-icon>
-      <h2>Match Summary</h2>
-    </div>
-
-    <div *ngIf="gameSession.currentMatch">
-
-      <!-- Winning Team Announcement -->
-      <div class="winning-announcement">
-        <mat-icon class="trophy-icon">emoji_events</mat-icon>
-        <h3>{{ getWinningTeamAnnouncement() }}</h3>
+  @if (gameSessionObs | async; as gameSession) {
+    <div class="match-summary">
+      <!-- Header -->
+      <div class="summary-header">
+        <mat-icon>emoji_events</mat-icon>
+        <h2>Match Summary</h2>
       </div>
-
-      <!-- Team Scores -->
-      <app-team-list [teams]="gameSession.teamList"
-                     [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
-                     [currentRound]="gameSession.currentMatch.currentRound"
-                     [previousRoundList]="gameSession.currentMatch.previousRounds">
-      </app-team-list>
-
-      <!-- New Match Button -->
-      <button mat-raised-button (click)="endMatch()" class="new-match-button">
-        <mat-icon>refresh</mat-icon>
-        Start New Match
-      </button>
-
-      <!-- Round History -->
-      <div class="round-history-section">
-        <h3 class="section-title">
-          <mat-icon>history</mat-icon>
-          Round History
-        </h3>
-
-        <mat-accordion class="round-accordion">
-          <mat-expansion-panel *ngFor="let round of gameSession.currentMatch.previousRounds"
-                               [ngClass]="{'correct': isCorrectlyAnswered(round), 'incorrect': isIncorrectlyAnswered(round), 'unanswered': isUnanswered(round)}">
-            <mat-expansion-panel-header>
-              <mat-panel-title>
-                <div class="round-title">
-                  <mat-icon class="status-icon">
-                    {{ isCorrectlyAnswered(round) ? 'check_circle' : (isIncorrectlyAnswered(round) ? 'cancel' : 'radio_button_unchecked') }}
-                  </mat-icon>
-                  <span class="round-number">Question {{ round.roundNumber }}</span>
-                  <span *ngIf="isCorrectlyAnswered(round)" class="team-answer-info">{{ getTeamAnswerInfo(round) }}</span>
-                </div>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-
-            <div class="round-details">
-              <div class="detail-item">
-                <div class="detail-label">
-                  <mat-icon>quiz</mat-icon>
-                  Question
-                </div>
-                <div class="detail-content">{{ round.question }}</div>
-              </div>
-
-              <div class="detail-item">
-                <div class="detail-label">
-                  <mat-icon>lightbulb</mat-icon>
-                  Answer
-                </div>
-                <div class="detail-content answer">{{ round.answer }}</div>
-              </div>
-
-              <div class="detail-item" *ngIf="isCorrectlyAnswered(round)">
-                <div class="detail-label">
-                  <mat-icon>person</mat-icon>
-                  Answered By
-                </div>
-                <div class="detail-content correct-player">{{ getCorrectAnswerPlayerWithTeam(round) }}</div>
-              </div>
-
-              <div class="detail-item bonus-item" *ngIf="hasBonus(round)">
-                <div class="detail-label">
-                  <mat-icon>stars</mat-icon>
-                  Bonus
-                </div>
-                <div class="detail-content bonus-info">{{ getRoundBonusInfo(round) }}</div>
-              </div>
-            </div>
-          </mat-expansion-panel>
-        </mat-accordion>
-      </div>
-
+      @if (gameSession.currentMatch) {
+        <div>
+          <!-- Winning Team Announcement -->
+          <div class="winning-announcement">
+            <mat-icon class="trophy-icon">emoji_events</mat-icon>
+            <h3>{{ getWinningTeamAnnouncement() }}</h3>
+          </div>
+          <!-- Team Scores -->
+          <app-team-list [teams]="gameSession.teamList"
+            [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
+            [currentRound]="gameSession.currentMatch.currentRound"
+            [previousRoundList]="gameSession.currentMatch.previousRounds">
+          </app-team-list>
+          <!-- New Match Button -->
+          <button mat-raised-button (click)="endMatch()" class="new-match-button">
+            <mat-icon>refresh</mat-icon>
+            Start New Match
+          </button>
+          <!-- Round History -->
+          <div class="round-history-section">
+            <h3 class="section-title">
+              <mat-icon>history</mat-icon>
+              Round History
+            </h3>
+            <mat-accordion class="round-accordion">
+              @for (round of gameSession.currentMatch.previousRounds; track round) {
+                <mat-expansion-panel
+                  [ngClass]="{'correct': isCorrectlyAnswered(round), 'incorrect': isIncorrectlyAnswered(round), 'unanswered': isUnanswered(round)}">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <div class="round-title">
+                        <mat-icon class="status-icon">
+                          {{ isCorrectlyAnswered(round) ? 'check_circle' : (isIncorrectlyAnswered(round) ? 'cancel' : 'radio_button_unchecked') }}
+                        </mat-icon>
+                        <span class="round-number">Question {{ round.roundNumber }}</span>
+                        @if (isCorrectlyAnswered(round)) {
+                          <span class="team-answer-info">{{ getTeamAnswerInfo(round) }}</span>
+                        }
+                      </div>
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
+                  <div class="round-details">
+                    <div class="detail-item">
+                      <div class="detail-label">
+                        <mat-icon>quiz</mat-icon>
+                        Question
+                      </div>
+                      <div class="detail-content">{{ round.question }}</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">
+                        <mat-icon>lightbulb</mat-icon>
+                        Answer
+                      </div>
+                      <div class="detail-content answer">{{ round.answer }}</div>
+                    </div>
+                    @if (isCorrectlyAnswered(round)) {
+                      <div class="detail-item">
+                        <div class="detail-label">
+                          <mat-icon>person</mat-icon>
+                          Answered By
+                        </div>
+                        <div class="detail-content correct-player">{{ getCorrectAnswerPlayerWithTeam(round) }}</div>
+                      </div>
+                    }
+                    @if (hasBonus(round)) {
+                      <div class="detail-item bonus-item">
+                        <div class="detail-label">
+                          <mat-icon>stars</mat-icon>
+                          Bonus
+                        </div>
+                        <div class="detail-content bonus-info">{{ getRoundBonusInfo(round) }}</div>
+                      </div>
+                    }
+                  </div>
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+          </div>
+        </div>
+      }
     </div>
-  </div>
+  }
 </div>

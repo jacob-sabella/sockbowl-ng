@@ -11,32 +11,37 @@
       <app-theme-selector></app-theme-selector>
 
       <!-- Authentication UI (only visible when auth is enabled) -->
-      <div class="navbar__auth" *ngIf="authEnabled">
-      <!-- Not authenticated -->
-      <div *ngIf="!(isAuthenticated$ | async) && !isInGame()" class="navbar__auth-guest">
-        <span class="navbar__guest-label">Playing as Guest</span>
-        <button mat-raised-button color="primary" (click)="login()">
-          <mat-icon>login</mat-icon>
-          Sign In
-        </button>
-      </div>
-
-      <!-- Authenticated -->
-      <div *ngIf="isAuthenticated$ | async" class="navbar__auth-user">
-        <span class="navbar__user-name">
-          <mat-icon>account_circle</mat-icon>
-          {{ (userProfile$ | async)?.name || 'User' }}
-        </span>
-        <button mat-button [routerLink]="['/profile']">
-          <mat-icon>person</mat-icon>
-          Profile
-        </button>
-        <button mat-button (click)="logout()">
-          <mat-icon>logout</mat-icon>
-          Logout
-        </button>
-      </div>
-    </div>
+      @if (authEnabled) {
+        <div class="navbar__auth">
+          <!-- Not authenticated -->
+          @if (!(isAuthenticated$ | async) && !isInGame()) {
+            <div class="navbar__auth-guest">
+              <span class="navbar__guest-label">Playing as Guest</span>
+              <button mat-raised-button color="primary" (click)="login()">
+                <mat-icon>login</mat-icon>
+                Sign In
+              </button>
+            </div>
+          }
+          <!-- Authenticated -->
+          @if (isAuthenticated$ | async) {
+            <div class="navbar__auth-user">
+              <span class="navbar__user-name">
+                <mat-icon>account_circle</mat-icon>
+                {{ (userProfile$ | async)?.name || 'User' }}
+              </span>
+              <button mat-button [routerLink]="['/profile']">
+                <mat-icon>person</mat-icon>
+                Profile
+              </button>
+              <button mat-button (click)="logout()">
+                <mat-icon>logout</mat-icon>
+                Logout
+              </button>
+            </div>
+          }
+        </div>
+      }
     </div>
   </div>
 </mat-toolbar>
