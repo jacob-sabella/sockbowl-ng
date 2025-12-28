@@ -1,7 +1,7 @@
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, Inject, DOCUMENT } from '@angular/core';
 import { BehaviorSubject, Observable, fromEvent } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { DOCUMENT } from '@angular/common';
+
 
 /**
  * Available theme options
