@@ -234,7 +234,8 @@
   --container: min(1200px, 100%);
   --gutter: clamp(1rem, 3vw, 2rem);
 
-  width: var(--container);
+  width: 100%;
+  max-width: var(--container);
   margin-inline: auto;
   margin-top: clamp(1.5rem, 2.5vw, 2.5rem);
   padding-inline: var(--gutter);
@@ -243,6 +244,7 @@
   grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
   gap: var(--gutter);
   align-items: start;
+  justify-content: center;
 }
 
 .grid > * { min-width: 0; }
@@ -638,6 +640,7 @@ mat-card-actions {
   gap: 0.75rem;
   padding: 1rem;
   background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
+  border: 1px solid var(--border-subtle);
   border-radius: 0.5rem;
   margin-bottom: 1rem;
   line-height: 1.6;
