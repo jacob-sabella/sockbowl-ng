@@ -84,7 +84,8 @@
   background: var(--surface);
   border: 1px solid var(--border-medium);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
   box-shadow:
     0 4px 20px var(--shadow-color),
     0 0 40px var(--glow-primary);
