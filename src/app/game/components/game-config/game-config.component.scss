@@ -18,7 +18,7 @@
   width: 100%;
   display: grid;
   place-items: center;
-  padding: clamp(1.5rem, 5vw, 3rem) clamp(0.75rem, 3vw, 1rem);
+  padding: 2rem 1rem;
   background: linear-gradient(
       160deg,
       color-mix(in srgb, var(--accent-primary) 15%, transparent) 0%,
@@ -68,13 +68,13 @@
   background: var(--surface);
   border: 1px solid var(--border-medium);
   border-radius: 16px;
-  padding: clamp(1rem, 3vw, 1.5rem);
+  padding: 1.5rem;
   box-shadow: 0 4px 20px var(--shadow-color), 0 0 40px var(--glow-primary);
   backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: clamp(1rem, 3vw, 2rem);
+  gap: 1.5rem;
   position: relative;
   z-index: 1;
   transition: all 0.3s ease;
@@ -98,7 +98,7 @@
 .hero__info {
   display: flex;
   align-items: center;
-  gap: clamp(1rem, 3vw, 2rem);
+  gap: 1.5rem;
   flex: 1;
   flex-wrap: wrap;
 
@@ -232,17 +232,15 @@
 /* ===== TWO-COLUMN PAGE GRID ===== */
 .grid {
   --container: min(1200px, 100%);
-  --gutter: clamp(1rem, 3vw, 2rem);
 
   width: 100%;
   max-width: var(--container);
-  margin-inline: auto;
-  margin-top: clamp(1.5rem, 2.5vw, 2.5rem);
-  padding-inline: var(--gutter);
+  margin: 2rem auto 0;
+  padding: 0 1.5rem;
 
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
-  gap: var(--gutter);
+  gap: 1.5rem;
   align-items: start;
   justify-content: center;
 }
@@ -252,7 +250,8 @@
 @media (max-width: 768px) {
   .grid {
     grid-template-columns: 1fr;
-    padding-inline: 1rem;
+    padding: 0 1rem;
+    gap: 1.25rem;
   }
 }
 
@@ -635,8 +634,8 @@ mat-card-actions {
 }
 
 .bonus-info {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto 1fr;
   gap: 0.75rem;
   padding: 1rem;
   background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
@@ -649,7 +648,7 @@ mat-card-actions {
   .info-icon {
     color: var(--accent-primary);
     flex-shrink: 0;
-    margin-top: 0.125rem;
+    margin-top: 0.25rem;
   }
 
   strong {
