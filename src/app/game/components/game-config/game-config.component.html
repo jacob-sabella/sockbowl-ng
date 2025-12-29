@@ -94,8 +94,10 @@
                 <mat-divider></mat-divider>
                 <p class="bonus-info">
                   <mat-icon class="info-icon">info</mat-icon>
-                  This packet contains <strong>{{ getBonusCount() }}</strong> bonus questions.
-                  Each bonus has 3 parts worth 10 points each.
+                  <span>
+                    This packet contains <strong>{{ getBonusCount() }}</strong> bonus questions.
+                    Each bonus has 3 parts worth 10 points each.
+                  </span>
                 </p>
                 <mat-slide-toggle
                   [(ngModel)]="bonusesEnabled"

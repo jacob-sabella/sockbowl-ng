@@ -20,10 +20,10 @@
   place-items: center;
   padding: 2rem 1rem;
   background: linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--accent-primary) 15%, transparent) 0%,
-      color-mix(in srgb, var(--accent-secondary) 10%, transparent) 40%,
-      transparent 70%
+    160deg,
+    color-mix(in srgb, var(--accent-primary) 15%, transparent) 0%,
+    color-mix(in srgb, var(--accent-secondary) 10%, transparent) 40%,
+    transparent 70%
   );
   border-bottom: 1px solid var(--border-subtle);
   position: relative;
@@ -31,25 +31,41 @@
 
   /* Animated gradient orb */
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: -100px;
     right: -100px;
     width: 300px;
     height: 300px;
-    background: radial-gradient(circle, var(--glow-primary) 0%, transparent 70%);
+    background: radial-gradient(
+      circle,
+      var(--glow-primary) 0%,
+      transparent 70%
+    );
     border-radius: 50%;
     animation: float 6s ease-in-out infinite;
   }
 
   @keyframes float {
-    0%, 100% { transform: translateY(0) translateX(0); }
-    50% { transform: translateY(-20px) translateX(20px); }
+    0%,
+    100% {
+      transform: translateY(0) translateX(0);
+    }
+    50% {
+      transform: translateY(-20px) translateX(20px);
+    }
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(0.95); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(0.95);
+    }
   }
 
   @media (max-width: 768px) {
@@ -69,7 +85,9 @@
   border: 1px solid var(--border-medium);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px var(--shadow-color), 0 0 40px var(--glow-primary);
+  box-shadow:
+    0 4px 20px var(--shadow-color),
+    0 0 40px var(--glow-primary);
   backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
@@ -81,7 +99,9 @@
 
   &:hover {
     border-color: var(--accent-primary);
-    box-shadow: 0 6px 30px var(--shadow-color), 0 0 60px var(--glow-primary);
+    box-shadow:
+      0 6px 30px var(--shadow-color),
+      0 0 60px var(--glow-primary);
   }
 
   @media (max-width: 768px) {
@@ -142,7 +162,9 @@
     flex-wrap: wrap;
 
     .code-value {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
       font-size: clamp(0.95rem, 2.5vw, 1.1rem);
       font-weight: 700;
       letter-spacing: 0.05em;
@@ -208,7 +230,11 @@
 }
 
 .start-game-btn {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--accent-primary) 0%,
+    var(--accent-secondary) 100%
+  ) !important;
   color: white !important;
   border: none !important;
   box-shadow:
@@ -236,7 +262,6 @@
   width: 100%;
   max-width: var(--container);
   margin: 2rem auto 0;
-  padding: 0 1.5rem;
 
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
@@ -245,7 +270,9 @@
   justify-content: center;
 }
 
-.grid > * { min-width: 0; }
+.grid > * {
+  min-width: 0;
+}
 
 @media (max-width: 768px) {
   .grid {
@@ -273,13 +300,17 @@
   overflow: hidden;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(
+      90deg,
+      var(--accent-primary),
+      var(--accent-secondary)
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -360,7 +391,11 @@ mat-card-actions {
     padding: 0 1.5rem;
 
     &[color="primary"] {
-      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%) !important;
+      background: linear-gradient(
+        135deg,
+        var(--accent-primary) 0%,
+        var(--accent-secondary) 100%
+      ) !important;
       color: white !important;
       border: none !important;
       box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
@@ -404,7 +439,8 @@ mat-card-actions {
     font-weight: 600;
 
     &.code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       background: rgba(99, 102, 241, 0.1);
       padding: 0.25rem 0.5rem;
       border-radius: 6px;
@@ -519,7 +555,11 @@ mat-card-actions {
     height: 28px;
     padding: 0 0.5rem;
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    background: linear-gradient(
+      135deg,
+      var(--accent-primary) 0%,
+      var(--accent-secondary) 100%
+    );
     color: white;
     font-size: 0.85rem;
     font-weight: 700;
@@ -545,7 +585,11 @@ mat-card-actions {
       transition: all 0.2s ease;
 
       &:hover {
-        background: color-mix(in srgb, var(--accent-primary) 10%, transparent) !important;
+        background: color-mix(
+          in srgb,
+          var(--accent-primary) 10%,
+          transparent
+        ) !important;
         border-color: var(--accent-primary-hover) !important;
         color: var(--accent-primary-hover) !important;
       }
@@ -667,8 +711,12 @@ mat-card-actions {
 
 /* ===== RESPONSIVE TWEAKS ===== */
 @media (max-width: 640px) {
-  .hero__content { text-align: left; }
-  .card { min-height: 0; }
+  .hero__content {
+    text-align: left;
+  }
+  .card {
+    min-height: 0;
+  }
 
   mat-card-actions {
     button {
