@@ -18,7 +18,8 @@
   width: 100%;
   display: grid;
   place-items: center;
-  padding: 2rem 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
   background: linear-gradient(
     160deg,
     color-mix(in srgb, var(--accent-primary) 15%, transparent) 0%,
