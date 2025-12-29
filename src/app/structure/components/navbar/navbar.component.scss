@@ -75,6 +75,28 @@
   flex-shrink: 0;
 }
 
+.navbar__social {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  a {
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: var(--accent-primary);
+      background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+    }
+
+    mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+}
+
 .navbar__auth {
   display: flex;
   align-items: center;

@@ -10,6 +10,16 @@
       <!-- Theme Selector -->
       <app-theme-selector></app-theme-selector>
 
+      <!-- Social Links -->
+      <div class="navbar__social">
+        <a mat-icon-button href="https://github.com/jacob-sabella/sockbowl-game" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+          <mat-icon svgIcon="github"></mat-icon>
+        </a>
+        <a mat-icon-button href="https://discord.gg/k2XB9Fsh4f" target="_blank" rel="noopener noreferrer" aria-label="Discord">
+          <mat-icon svgIcon="discord"></mat-icon>
+        </a>
+      </div>
+
       <!-- Authentication UI (only visible when auth is enabled) -->
       @if (authEnabled) {
         <div class="navbar__auth">
