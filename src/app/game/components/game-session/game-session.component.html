@@ -24,16 +24,6 @@
     @if (showCreateForm) {
       <div class="form-container">
         <mat-form-field>
-          <mat-label>Proctor Type</mat-label>
-          <mat-select [(ngModel)]="createGameRequest.gameSettings.proctorType">
-            @for (proctorType of ProctorTypes | keyvalue; track proctorType) {
-              <mat-option [value]="proctorType.key">
-                {{proctorType.value}}
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field>
           <mat-label>Game Mode</mat-label>
           <mat-select [(ngModel)]="createGameRequest.gameSettings.gameMode">
             @for (gameMode of GameModes | keyvalue; track gameMode) {
