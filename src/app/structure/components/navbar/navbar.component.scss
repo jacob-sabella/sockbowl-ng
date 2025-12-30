@@ -17,6 +17,8 @@
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -24,7 +26,8 @@
   gap: 0.5rem;
 
   @media (max-width: 768px) {
-    padding: 0 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 
