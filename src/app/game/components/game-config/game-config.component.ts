@@ -72,8 +72,9 @@ export class GameConfigComponent implements OnInit {
         this.autoTimerEnabled = gameSession.gameSettings.timerSettings.autoTimerEnabled;
       }
 
-      // Fetch full packet data with bonuses if packet is set
-      if (gameSession.currentMatch?.packet?.id) {
+      // Fetch full packet data with bonuses if packet is set AND we don't already have it
+      if (gameSession.currentMatch?.packet?.id &&
+          this.selectedPacketId !== gameSession.currentMatch.packet.id.toString()) {
         const packetId = gameSession.currentMatch.packet.id.toString();
 
         // Fetch full packet details including bonuses
