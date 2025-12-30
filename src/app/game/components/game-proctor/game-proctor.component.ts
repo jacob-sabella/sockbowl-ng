@@ -1,6 +1,5 @@
-import {Component, OnInit, OnDestroy} from '@angular/core';
-import {Observable, Subscription, timer} from 'rxjs';
-import {take, map} from 'rxjs/operators';
+import {Component, OnInit} from '@angular/core';
+import {Observable} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
 import {PresentationConnectionService} from '../../services/presentation-connection.service';
@@ -13,15 +12,10 @@ import {PresentationConnectionState} from '../../models/cast-interfaces';
     styleUrls: ['./game-proctor.component.scss'],
     standalone: false
 })
-export class GameProctorComponent implements OnInit, OnDestroy {
+export class GameProctorComponent implements OnInit {
 
   gameSessionObs!: Observable<GameSession>;
   gameSession!: GameSession;
-  countdownSubscription!: Subscription;
-  countdown!: number;
-  bonusCountdown!: number;
-  bonusTimerSubscription!: Subscription;
-  isAutoTimerActive: boolean = true;
 
   // Cast-related observables
   castAvailable$: Observable<boolean>;
@@ -40,78 +34,28 @@ export class GameProctorComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.gameSessionObs.subscribe(gameSession => {
       this.gameSession = gameSession;
-
-      // Handle tossup timer
-      if (this.isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
-        this.startTimer();
-      } else {
-        this.stopTimer();
-      }
-
-      // Handle bonus timer
-      if (this.isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
-        this.startBonusTimer();
-      } else {
-        this.stopBonusTimer();
-      }
     });
   }
 
-  ngOnDestroy(): void {
-    this.stopTimer();
-    this.stopBonusTimer();
+  /**
+   * Gets the tossup timer display value from server.
+   */
+  getTossupTimerDisplay(): number | null {
+    return this.gameSession?.currentMatch?.currentRound?.remainingTossupTimerSeconds ?? null;
   }
 
-  startTimer(): void {
-    // Stop any existing timer first to prevent overlapping subscriptions
-    this.stopTimer();
-
-    const countdownTime = 5; // seconds
-
-    this.countdown = countdownTime;
-
-    this.countdownSubscription = timer(0, 1000).pipe(
-      take(countdownTime + 1),
-      map(() => --this.countdown)
-    ).subscribe(val => {
-      if (val === 0) {
-        console.log('Timer up');
-        this.gameStateService.sendTimeoutRound()
-        this.stopTimer();
-      }
-    });
+  /**
+   * Gets the bonus timer display value from server.
+   */
+  getBonusTimerDisplay(): number | null {
+    return this.gameSession?.currentMatch?.currentRound?.remainingBonusTimerSeconds ?? null;
   }
 
-  stopTimer(): void {
-    if (this.countdownSubscription) {
-      this.countdownSubscription.unsubscribe();
-    }
-  }
-
-  startBonusTimer(): void {
-    // Stop any existing timer first to prevent overlapping subscriptions
-    this.stopBonusTimer();
-
-    const countdownTime = 5; // seconds
-
-    this.bonusCountdown = countdownTime;
-
-    this.bonusTimerSubscription = timer(0, 1000).pipe(
-      take(countdownTime + 1),
-      map(() => --this.bonusCountdown)
-    ).subscribe(val => {
-      if (val === 0) {
-        console.log('Bonus timer up');
-        this.gameStateService.sendTimeoutBonusPart();
-        this.stopBonusTimer();
-      }
-    });
-  }
-
-  stopBonusTimer(): void {
-    if (this.bonusTimerSubscription) {
-      this.bonusTimerSubscription.unsubscribe();
-    }
+  /**
+   * Checks if auto-timer is enabled in game settings.
+   */
+  isAutoTimerEnabled(): boolean {
+    return this.gameSession?.gameSettings?.timerSettings?.autoTimerEnabled ?? true;
   }
 
   getCurrentBonusPart(bonus: any, partIndex: number): any {

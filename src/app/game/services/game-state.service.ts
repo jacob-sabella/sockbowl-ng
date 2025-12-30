@@ -32,6 +32,7 @@ import {
   Team,
   TimeoutBonusPart,
   TimeoutRound,
+  TimerUpdate,
   UpdateGameSettings,
   UpdatePlayerTeam
 } from '../models/sockbowl/sockbowl-interfaces';
@@ -194,6 +195,26 @@ export class GameStateService {
           this.gameSessionState.currentMatch.previousRounds = msg.previousRounds;
 
           // Emit the updated game session state
+          this.gameSessionSubject.next(this.gameSessionState);
+        })
+      )
+      .subscribe();
+
+    // Subscribe to TimerUpdate messages
+    this.gameMessageService.gameEventObservables["TimerUpdate"]
+      .pipe(
+        filter(msg => !!msg),
+        tap((msg: TimerUpdate) => {
+          // Update the timer state in the current round
+          if (msg.timerType === 'TOSSUP') {
+            this.gameSessionState.currentMatch.currentRound.remainingTossupTimerSeconds =
+              msg.remainingSeconds;
+          } else if (msg.timerType === 'BONUS') {
+            this.gameSessionState.currentMatch.currentRound.remainingBonusTimerSeconds =
+              msg.remainingSeconds;
+          }
+
+          // Emit updated state
           this.gameSessionSubject.next(this.gameSessionState);
         })
       )

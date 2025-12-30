@@ -124,6 +124,60 @@
           }
         </mat-card-actions>
       </mat-card>
+      <!-- Timer Settings -->
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>timer</mat-icon>
+            Timer Settings
+          </mat-card-title>
+          <mat-card-subtitle>
+            @if (gameStateService.isSelfProctor()) {
+              Configure timer durations and behavior.
+            } @else {
+              Current timer configuration (read-only).
+            }
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="timer-settings">
+            <mat-form-field appearance="outline" class="timer-field">
+              <mat-label>Tossup Timer (seconds)</mat-label>
+              <input
+                matInput
+                type="number"
+                [(ngModel)]="tossupTimerSeconds"
+                (ngModelChange)="updateTimerSettings()"
+                [disabled]="!gameStateService.isSelfProctor()"
+                min="1"
+                max="60"
+                step="1"
+                >
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="timer-field">
+              <mat-label>Bonus Timer (seconds)</mat-label>
+              <input
+                matInput
+                type="number"
+                [(ngModel)]="bonusTimerSeconds"
+                (ngModelChange)="updateTimerSettings()"
+                [disabled]="!gameStateService.isSelfProctor()"
+                min="1"
+                max="60"
+                step="1"
+                >
+            </mat-form-field>
+            <mat-slide-toggle
+              [(ngModel)]="autoTimerEnabled"
+              (ngModelChange)="updateTimerSettings()"
+              [disabled]="!gameStateService.isSelfProctor()"
+              color="primary"
+              class="auto-timer-toggle">
+              Auto-Timeout When Timer Expires
+            </mat-slide-toggle>
+          </div>
+        </mat-card-content>
+      </mat-card>
       <!-- Proctor -->
       <mat-card class="card">
         <mat-card-header>

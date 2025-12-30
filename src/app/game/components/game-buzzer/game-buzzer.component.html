@@ -48,9 +48,9 @@
       </div>
 
       <!-- Timer Display -->
-      @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
+      @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ && getTossupTimerDisplay()) {
         <div class="timer-display">
-          <p>Time remaining: {{ countdown }}</p>
+          <p>Time remaining: {{ getTossupTimerDisplay() }}s</p>
         </div>
       }
 
@@ -68,10 +68,10 @@
               Current Bonus Score: {{ gameStateService.getCurrentRoundBonusPoints() }} / 30 points
             </div>
             <!-- Timer Display during answer phase -->
-            @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
+            @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay()) {
               <div
                 class="timer-display">
-                <p class="bonus-timer">⏱ Time remaining: {{ bonusCountdown }}s</p>
+                <p class="bonus-timer">⏱ Time remaining: {{ getBonusTimerDisplay() }}s</p>
               </div>
             }
             <!-- Status message based on phase -->

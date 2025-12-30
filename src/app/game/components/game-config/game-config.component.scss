@@ -85,8 +85,7 @@
   background: var(--surface);
   border: 1px solid var(--border-medium);
   border-radius: 16px;
-  padding-bottom: 1rem;
-  padding-top: 1rem;
+  padding: 1rem 1.5rem;
   box-shadow:
     0 4px 20px var(--shadow-color),
     0 0 40px var(--glow-primary);
@@ -111,8 +110,12 @@
     align-items: flex-start;
   }
 
+  @media (max-width: 768px) {
+    padding: 1rem 1.25rem;
+  }
+
   @media (max-width: 640px) {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     gap: 1rem;
   }
 }
@@ -257,7 +260,7 @@
   }
 }
 
-/* ===== TWO-COLUMN PAGE GRID ===== */
+/* ===== MASONRY LAYOUT ===== */
 .grid {
   --container: min(1200px, 100%);
 
@@ -265,21 +268,32 @@
   max-width: var(--container);
   margin: 2rem auto 0;
 
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
-  gap: 1.5rem;
-  align-items: start;
-  justify-content: center;
+  column-count: 3;
+  column-gap: 1.5rem;
 }
 
 .grid > * {
   min-width: 0;
 }
 
-@media (max-width: 768px) {
+/* Card layout within masonry columns */
+.card {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 900px) {
   .grid {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
+    column-count: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    column-count: 1;
   }
 }
 
@@ -329,13 +343,7 @@
   }
 }
 
-.card--span2 {
-  grid-column: span 2;
-
-  @media (max-width: 900px) {
-    grid-column: span 1;
-  }
-}
+/* Removed card--span2 - all cards are now equal width in the grid */
 
 /* Card Headers */
 mat-card-header {
@@ -707,6 +715,56 @@ mat-card-actions {
 
   ::ng-deep .mdc-label {
     color: var(--text-primary) !important;
+  }
+}
+
+/* ===== TIMER SETTINGS ===== */
+.timer-settings {
+  display: grid;
+  gap: 1rem;
+
+  .timer-field {
+    width: 100%;
+
+    ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        background: var(--bg-secondary);
+      }
+
+      input {
+        color: var(--text-primary);
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
+      // Style disabled state
+      &.mdc-text-field--disabled {
+        .mat-mdc-text-field-wrapper {
+          background: color-mix(in srgb, var(--bg-secondary) 50%, var(--bg-primary));
+        }
+      }
+    }
+  }
+
+  .auto-timer-toggle {
+    display: block;
+
+    ::ng-deep .mdc-label {
+      color: var(--text-primary) !important;
+      font-weight: 500;
+    }
+
+    // Style disabled toggle
+    &.mat-mdc-slide-toggle-disabled {
+      opacity: 0.6;
+
+      ::ng-deep .mdc-label {
+        cursor: not-allowed;
+      }
+    }
   }
 }
 

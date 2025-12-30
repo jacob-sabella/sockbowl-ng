@@ -1,9 +1,7 @@
 <div class="game-proctor-container">
   @if (gameSessionObs | async; as gameSession) {
     <mat-card class="game-proctor">
-      <div class="auto-timer-checkbox">
-        <mat-checkbox [(ngModel)]="isAutoTimerActive">Auto Timer Activated</mat-checkbox>
-      </div>
+      <!-- Auto-timer setting moved to game configuration -->
 
       <!-- Cast Controls -->
       @if (castAvailable$ | async) {
@@ -166,10 +164,10 @@
                   <div class="bonus-part current">
                     <div class="part-header">
                       <span class="part-label">Part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }}</span>
-                      @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
+                      @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay()) {
                         <span
                           class="timer-badge">
-                          ⏱ {{ bonusCountdown }}s
+                          ⏱ {{ getBonusTimerDisplay() }}s
                         </span>
                       }
                     </div>
@@ -217,11 +215,20 @@
                       </div>
                     }
                     <!-- Timer Display -->
-                    @if (isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
+                    @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay()) {
                       <div
                         class="timer-display">
-                        <p>Bonus time remaining: {{ bonusCountdown }}</p>
+                        <p>Bonus time remaining: {{ getBonusTimerDisplay() }}s</p>
                       </div>
+                    }
+                    <!-- Manual timeout button when auto-timer disabled -->
+                    @if (!isAutoTimerEnabled() && gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
+                      <button
+                        mat-raised-button
+                        color="warn"
+                        (click)="gameStateService.sendTimeoutBonusPart()">
+                        Manual Bonus Timeout
+                      </button>
                     }
                   </div>
                 </div>
@@ -260,11 +267,20 @@
             </div>
           }
           <!-- Timer Display -->
-          @if (isAutoTimerActive && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
+          @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ && getTossupTimerDisplay()) {
             <div
               class="timer-display">
-              <p>Time remaining: {{ countdown }}</p>
+              <p>Time remaining: {{ getTossupTimerDisplay() }}s</p>
             </div>
+          }
+          <!-- Manual timeout button when auto-timer disabled -->
+          @if (!isAutoTimerEnabled() && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
+            <button
+              mat-raised-button
+              color="warn"
+              (click)="gameStateService.sendTimeoutRound()">
+              Manual Timeout
+            </button>
           }
         </div>
         <app-team-list [teams]="gameSession.teamList"

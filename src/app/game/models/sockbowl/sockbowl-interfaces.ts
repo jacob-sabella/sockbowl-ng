@@ -250,7 +250,7 @@ export class MessageQueues {
 }
 
 export class SockbowlInMessage {
-  constructor(data: SockbowlInMessage) {
+  constructor(data?: Partial<SockbowlInMessage>) {
 
   }
 }
@@ -324,9 +324,11 @@ export class PlayerIncomingBuzz extends SockbowlInMessage {
 }
 
 export class TimeoutRound extends SockbowlInMessage {
+  autoTimeout?: boolean;
 
-  constructor(data: TimeoutRound) {
+  constructor(data?: Partial<TimeoutRound>) {
     super(data);
+    this.autoTimeout = data?.autoTimeout ?? false;
   }
 }
 
@@ -352,9 +354,11 @@ export class FinishedReadingBonusPart extends SockbowlInMessage {
 }
 
 export class TimeoutBonusPart extends SockbowlInMessage {
+  autoTimeout?: boolean;
 
-  constructor(data: TimeoutBonusPart) {
+  constructor(data?: Partial<TimeoutBonusPart>) {
     super(data);
+    this.autoTimeout = data?.autoTimeout ?? false;
   }
 }
 
@@ -503,6 +507,17 @@ export class GameStartedMessage extends SockbowlOutMessage {
   }
 }
 
+export class TimerUpdate extends SockbowlOutMessage {
+  timerType: string;
+  remainingSeconds: number;
+
+  constructor(data: TimerUpdate) {
+    super(data);
+    this.timerType = data.timerType;
+    this.remainingSeconds = data.remainingSeconds;
+  }
+}
+
 export class Buzz {
   playerId: string;
   teamId: string;
@@ -537,15 +552,29 @@ export class GameSession {
   }
 }
 
+export class TimerSettings {
+  tossupTimerSeconds: number;
+  bonusTimerSeconds: number;
+  autoTimerEnabled: boolean;
+
+  constructor(data?: Partial<TimerSettings>) {
+    this.tossupTimerSeconds = data?.tossupTimerSeconds ?? 5;
+    this.bonusTimerSeconds = data?.bonusTimerSeconds ?? 5;
+    this.autoTimerEnabled = data?.autoTimerEnabled ?? true;
+  }
+}
+
 export class GameSettings {
   proctorType: ProctorType;
   gameMode: GameMode;
   bonusesEnabled: boolean;
+  timerSettings: TimerSettings;
 
   constructor(data: GameSettings) {
     this.proctorType = data.proctorType;
     this.gameMode = data.gameMode;
     this.bonusesEnabled = data.bonusesEnabled;
+    this.timerSettings = data.timerSettings || new TimerSettings();
   }
 }
 
@@ -617,6 +646,10 @@ export class Round {
   bonusEligibleTeamId: string;
   proctorFinishedReadingBonusPreamble: boolean;
   proctorFinishedReadingCurrentPart: boolean;
+  // Timer fields
+  remainingTossupTimerSeconds?: number;
+  remainingBonusTimerSeconds?: number;
+  timerStartedAtMillis?: number;
 
   constructor(data: Round) {
     this.roundState = data.roundState;
@@ -635,6 +668,9 @@ export class Round {
     this.bonusEligibleTeamId = data.bonusEligibleTeamId;
     this.proctorFinishedReadingBonusPreamble = data.proctorFinishedReadingBonusPreamble;
     this.proctorFinishedReadingCurrentPart = data.proctorFinishedReadingCurrentPart;
+    this.remainingTossupTimerSeconds = data.remainingTossupTimerSeconds;
+    this.remainingBonusTimerSeconds = data.remainingBonusTimerSeconds;
+    this.timerStartedAtMillis = data.timerStartedAtMillis;
   }
 }
 

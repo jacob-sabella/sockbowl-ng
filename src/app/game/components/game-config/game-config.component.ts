@@ -6,10 +6,13 @@ import {
   GameSettings,
   Packet,
   PlayerMode,
-  Team
+  ProcessError,
+  Team,
+  TimerSettings
 } from '../../models/sockbowl/sockbowl-interfaces';
 import { Observable } from 'rxjs';
 import { GameStateService } from '../../services/game-state.service';
+import { GameMessageService } from '../../services/game-message.service';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
@@ -30,6 +33,11 @@ export class GameConfigComponent implements OnInit {
   bonusesEnabled: boolean = false;
   selectedPacket: Packet | null = null;
 
+  // Timer settings
+  tossupTimerSeconds: number = 5;
+  bonusTimerSeconds: number = 5;
+  autoTimerEnabled: boolean = true;
+
   // Cast-related observables
   castAvailable$: Observable<boolean>;
   castConnectionState$: Observable<PresentationConnectionState>;
@@ -41,6 +49,7 @@ export class GameConfigComponent implements OnInit {
 
   constructor(
     public gameStateService: GameStateService,
+    private gameMessageService: GameMessageService,
     private sockbowlQuestionsService: SockbowlQuestionsService,
     private dialog: MatDialog,
     private snack: MatSnackBar,
@@ -55,6 +64,13 @@ export class GameConfigComponent implements OnInit {
   ngOnInit(): void {
     this.gameSessionObs.subscribe((gameSession) => {
       this.gameSession = gameSession;
+
+      // Initialize timer settings from game session
+      if (gameSession.gameSettings?.timerSettings) {
+        this.tossupTimerSeconds = gameSession.gameSettings.timerSettings.tossupTimerSeconds;
+        this.bonusTimerSeconds = gameSession.gameSettings.timerSettings.bonusTimerSeconds;
+        this.autoTimerEnabled = gameSession.gameSettings.timerSettings.autoTimerEnabled;
+      }
 
       // Fetch full packet data with bonuses if packet is set
       if (gameSession.currentMatch?.packet?.id) {
@@ -75,6 +91,13 @@ export class GameConfigComponent implements OnInit {
             this.selectedPacketId = gameSession.currentMatch.packet.id;
           }
         );
+      }
+    });
+
+    // Subscribe to ProcessError messages to show error toasts
+    this.gameMessageService.gameEventObservables['ProcessError']?.subscribe((error: ProcessError) => {
+      if (error?.error) {
+        this.snack.open(error.error, 'Dismiss', { duration: 5000 });
       }
     });
   }
@@ -155,7 +178,8 @@ export class GameConfigComponent implements OnInit {
     const updatedSettings = new GameSettings({
       proctorType: this.gameSession.gameSettings.proctorType,
       gameMode: this.gameSession.gameSettings.gameMode,
-      bonusesEnabled: this.bonusesEnabled
+      bonusesEnabled: this.bonusesEnabled,
+      timerSettings: this.gameSession.gameSettings.timerSettings
     });
 
     this.gameStateService.updateGameSettings(updatedSettings);
@@ -166,6 +190,32 @@ export class GameConfigComponent implements OnInit {
    */
   getBonusCount(): number {
     return this.selectedPacket?.bonuses?.length || 0;
+  }
+
+  /* ─── Timer Settings ────────────────────────────────────────────────────── */
+
+  /**
+   * Update timer settings in game state (only if current player is proctor)
+   */
+  updateTimerSettings(): void {
+    // Only proctor can update settings
+    if (!this.gameStateService.isSelfProctor()) {
+      return;
+    }
+
+    const updatedSettings = new GameSettings({
+      proctorType: this.gameSession.gameSettings.proctorType,
+      gameMode: this.gameSession.gameSettings.gameMode,
+      bonusesEnabled: this.gameSession.gameSettings.bonusesEnabled,
+      timerSettings: {
+        tossupTimerSeconds: this.tossupTimerSeconds,
+        bonusTimerSeconds: this.bonusTimerSeconds,
+        autoTimerEnabled: this.autoTimerEnabled
+      }
+    });
+
+    this.gameStateService.updateGameSettings(updatedSettings);
+    // Toast only shown on error (via ProcessError subscription)
   }
 
   /* ─── Progression ──────────────────────────────────────────────────────── */
