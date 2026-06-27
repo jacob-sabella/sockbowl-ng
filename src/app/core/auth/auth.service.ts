@@ -136,6 +136,51 @@ export class AuthService {
   }
 
   /**
+   * Decode the access token payload (where Keycloak realm roles live).
+   * Returns null if there is no valid token.
+   */
+  private getAccessTokenPayload(): any {
+    const token = this.getAccessToken();
+    if (!token) {
+      return null;
+    }
+    try {
+      const payload = token.split('.')[1];
+      const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(decodeURIComponent(escape(window.atob(normalized))));
+    } catch (e) {
+      console.error('[AuthService] Failed to decode access token', e);
+      return null;
+    }
+  }
+
+  /**
+   * Realm roles carried in the access token (realm_access.roles).
+   */
+  public getRoles(): string[] {
+    if (!environment.authEnabled) {
+      return [];
+    }
+    const payload = this.getAccessTokenPayload();
+    const roles = payload?.realm_access?.roles;
+    return Array.isArray(roles) ? roles : [];
+  }
+
+  /**
+   * Whether the current user holds the given realm role.
+   */
+  public hasRole(role: string): boolean {
+    return this.getRoles().includes(role);
+  }
+
+  /**
+   * Whether the current user is an administrator.
+   */
+  public isAdmin(): boolean {
+    return this.hasRole('admin');
+  }
+
+  /**
    * Get user profile from ID token
    */
   public getUserProfile(): any {
@@ -148,11 +193,14 @@ export class AuthService {
   private updateUserProfile(): void {
     const claims = this.getIdentityClaims();
     if (claims) {
+      const roles = this.getRoles();
       const profile = {
         sub: claims['sub'],
         email: claims['email'],
         name: claims['name'] || claims['preferred_username'] || claims['email'] || 'User',
         preferredUsername: claims['preferred_username'],
+        roles,
+        isAdmin: roles.includes('admin'),
       };
       this.userProfileSubject.next(profile);
     }

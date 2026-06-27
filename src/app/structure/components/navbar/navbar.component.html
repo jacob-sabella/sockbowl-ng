@@ -44,6 +44,12 @@
                 <mat-icon>person</mat-icon>
                 Profile
               </button>
+              @if ((userProfile$ | async)?.isAdmin) {
+                <button mat-button [routerLink]="['/admin/bans']">
+                  <mat-icon>gavel</mat-icon>
+                  Admin
+                </button>
+              }
               <button mat-button (click)="logout()">
                 <mat-icon>logout</mat-icon>
                 Logout

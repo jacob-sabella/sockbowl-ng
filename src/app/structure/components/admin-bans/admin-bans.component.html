@@ -1,0 +1,64 @@
+<div class="admin-bans">
+  <h1 class="admin-bans__title">
+    <mat-icon>gavel</mat-icon>
+    Ban Management
+  </h1>
+
+  <!-- Add ban form -->
+  <mat-card class="admin-bans__card">
+    <mat-card-header>
+      <mat-card-title>Ban a user</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form class="admin-bans__form" (ngSubmit)="addBan()">
+        <mat-form-field appearance="outline" class="admin-bans__field">
+          <mat-label>Keycloak user ID (sub)</mat-label>
+          <input matInput name="bannedKeycloakId" [(ngModel)]="newBan.bannedKeycloakId" required />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="admin-bans__field">
+          <mat-label>Reason</mat-label>
+          <input matInput name="reason" [(ngModel)]="newBan.reason" />
+        </mat-form-field>
+
+        <button mat-raised-button color="warn" type="submit" [disabled]="submitting">
+          <mat-icon>block</mat-icon>
+          Ban user
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Ban list -->
+  <mat-card class="admin-bans__card">
+    <mat-card-header>
+      <mat-card-title>Active bans</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (loading) {
+        <div class="admin-bans__status">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+      } @else if (error) {
+        <p class="admin-bans__error">{{ error }}</p>
+      } @else if (bans.length === 0) {
+        <p class="admin-bans__empty">No active bans.</p>
+      } @else {
+        <div class="admin-bans__list">
+          @for (ban of bans; track ban.id) {
+            <div class="admin-bans__item">
+              <div class="admin-bans__item-info">
+                <span class="admin-bans__item-id">{{ ban.bannedKeycloakId }}</span>
+                <span class="admin-bans__item-reason">{{ ban.reason || 'No reason given' }}</span>
+                <span class="admin-bans__item-meta">Expires: {{ formatDate(ban.expiresAt) }}</span>
+              </div>
+              <button mat-icon-button color="warn" aria-label="Remove ban" (click)="removeBan(ban)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -46,6 +46,15 @@ export class GameSessionComponent {
     return environment.authEnabled && this.authService.isAuthenticated();
   }
 
+  /**
+   * Display name for the signed-in user, shown in the lobby instead of the
+   * guest name input.
+   */
+  get currentUsername(): string {
+    const profile = this.authService.getUserProfile();
+    return profile?.preferredUsername || profile?.name || 'Player';
+  }
+
   onCreateGame(): void {
     this.showCreateForm = true;
     this.showJoinForm = false;

@@ -40,6 +40,7 @@ import {MatTabsModule} from "@angular/material/tabs";
 import {MatMenuModule} from "@angular/material/menu";
 import { ProfileComponent } from './structure/components/profile/profile.component';
 import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
+import { AdminBansComponent } from './structure/components/admin-bans/admin-bans.component';
 
 @NgModule({ declarations: [
         AppComponent,
@@ -54,7 +55,8 @@ import { ThemeSelectorComponent } from './structure/components/theme-selector/th
         MatchSummaryComponent,
         PacketSearchComponent,
         ProfileComponent,
-        ThemeSelectorComponent
+        ThemeSelectorComponent,
+        AdminBansComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         AppRoutingModule,

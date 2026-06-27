@@ -1,0 +1,84 @@
+.admin-bans {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.4rem;
+    margin: 0;
+  }
+
+  &__card {
+    width: 100%;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__field {
+    width: 100%;
+  }
+
+  &__status {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  &__error {
+    color: var(--mat-sys-error, #b00020);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(127, 127, 127, 0.08);
+  }
+
+  &__item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__item-id {
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  &__item-reason {
+    font-size: 0.9rem;
+    opacity: 0.85;
+  }
+
+  &__item-meta {
+    font-size: 0.8rem;
+    opacity: 0.7;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-bans {
+    padding: 8px;
+  }
+}

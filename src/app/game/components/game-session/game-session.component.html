@@ -39,6 +39,11 @@
             <mat-label>Your name</mat-label>
             <input matInput [(ngModel)]="joinGameRequest.name" required>
           </mat-form-field>
+        } @else {
+          <p class="signed-in-as">
+            <mat-icon>account_circle</mat-icon>
+            Signed in as <strong>{{ currentUsername }}</strong>
+          </p>
         }
         <button mat-raised-button color="accent" (click)="submitCreateGame()">Create</button>
       </div>
@@ -58,6 +63,11 @@
             <mat-label>Name</mat-label>
             <input matInput [(ngModel)]="joinGameRequest.name" required>
           </mat-form-field>
+        } @else {
+          <p class="signed-in-as">
+            <mat-icon>account_circle</mat-icon>
+            Signed in as <strong>{{ currentUsername }}</strong>
+          </p>
         }
         <!-- Submit Button -->
         <button mat-raised-button color="accent" (click)="submitJoinGame()">Join</button>
