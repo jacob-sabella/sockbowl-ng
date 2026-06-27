@@ -150,10 +150,10 @@
                           </div>
                           <div class="part-content">
                             <div class="part-question">
-                              <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || part?.question"></span>
+                              <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || $any(part)?.question"></span>
                             </div>
                             <div class="part-answer">
-                              <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || part?.answer"></span>
+                              <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || $any(part)?.answer"></span>
                             </div>
                           </div>
                         </div>
@@ -254,10 +254,10 @@
                       </div>
                       <div class="part-content">
                         <div class="part-question">
-                          <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || part?.question"></span>
+                          <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || $any(part)?.question"></span>
                         </div>
                         <div class="part-answer">
-                          <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || part?.answer"></span>
+                          <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || $any(part)?.answer"></span>
                         </div>
                       </div>
                     </div>

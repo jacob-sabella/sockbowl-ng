@@ -3,7 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { OpenAiModelService } from '../../services/openai-model.service';
-import { Packet } from '../../models/sockbowl/sockbowl-interfaces';
+import { Packet } from '../../models/sockbowl/packet-types.generated';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 

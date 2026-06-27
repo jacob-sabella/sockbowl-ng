@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Packet } from '../models/sockbowl/sockbowl-interfaces';
+import { Packet } from '../models/sockbowl/packet-types.generated';
 import {environment} from "../../../environments/environment";
 import {map, timeout} from "rxjs/operators";
 
@@ -81,37 +81,11 @@ export class SockbowlQuestionsService {
       }
     `;
 
-    return this.http.post<{ data: { getPacketById: any | null } }>(this.graphqlUrl, {
+    return this.http.post<{ data: { getPacketById: Packet | null } }>(this.graphqlUrl, {
       query,
       variables: { id }
     }).pipe(
-      map(response => {
-        const packet = response.data.getPacketById;
-        if (!packet) return null;
-
-        // Transform nested GraphQL relationship structure to flat Angular model structure
-        return {
-          ...packet,
-          bonuses: packet.bonuses?.map((containsBonus: any) => ({
-            order: containsBonus.order,
-            bonus: {
-              ...containsBonus.bonus,
-              bonusParts: containsBonus.bonus.bonusParts
-                ?.map((hasBonusPart: any) => hasBonusPart.bonusPart)
-                .sort((a: any, b: any) => {
-                  // Sort by the order field if available
-                  const orderA = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === a.id)?.order || 0;
-                  const orderB = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === b.id)?.order || 0;
-                  return orderA - orderB;
-                })
-            }
-          })) || [],
-          tossups: packet.tossups?.map((containsTossup: any) => ({
-            order: containsTossup.order,
-            tossup: containsTossup.tossup
-          })) || []
-        };
-      })
+      map(response => sortPacketRelationships(response.data.getPacketById))
     );
   }
 
@@ -176,33 +150,29 @@ export class SockbowlQuestionsService {
 
     // Set timeout to 11 minutes (660000ms) for AI generation with bonuses
     // Server-side timeout is 10 minutes, so we give it extra buffer
-    return this.http.get<any>(url, { params, headers }).pipe(
+    return this.http.get<Packet>(url, { params, headers }).pipe(
       timeout(660000),
-      map(packet => {
-        // Transform nested REST API relationship structure to flat Angular model structure
-        // (same transformation as GraphQL response)
-        return {
-          ...packet,
-          bonuses: packet.bonuses?.map((containsBonus: any) => ({
-            order: containsBonus.order,
-            bonus: {
-              ...containsBonus.bonus,
-              bonusParts: containsBonus.bonus.bonusParts
-                ?.map((hasBonusPart: any) => hasBonusPart.bonusPart)
-                .sort((a: any, b: any) => {
-                  // Sort by the order field if available
-                  const orderA = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === a.id)?.order || 0;
-                  const orderB = containsBonus.bonus.bonusParts.find((hp: any) => hp.bonusPart.id === b.id)?.order || 0;
-                  return orderA - orderB;
-                })
-            }
-          })) || [],
-          tossups: packet.tossups?.map((containsTossup: any) => ({
-            order: containsTossup.order,
-            tossup: containsTossup.tossup
-          })) || []
-        };
-      })
+      // Returns the packet in the canonical GraphQL relationship shape
+      // (tossups: ContainsTossup[], bonuses: ContainsBonus[] with nested
+      // HasBonusPart wrappers), matching the generated packet types.
+      map(packet => sortPacketRelationships(packet) as Packet)
     );
   }
+}
+
+/**
+ * Sorts a packet's nested bonus parts by their relationship order, in place,
+ * preserving the canonical GraphQL relationship wrappers. Returns the packet
+ * unchanged (or null) so it can be dropped straight into an rxjs map.
+ */
+function sortPacketRelationships(packet: Packet | null): Packet | null {
+  if (!packet) {
+    return null;
+  }
+  packet.bonuses?.forEach(containsBonus => {
+    containsBonus?.bonus?.bonusParts?.sort(
+      (a, b) => (a?.order ?? 0) - (b?.order ?? 0)
+    );
+  });
+  return packet;
 }

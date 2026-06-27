@@ -1,37 +1,17 @@
 /* tslint:disable */
 /* eslint-disable */
 
-// Generated using typescript-generator version 3.2.1263 on 2023-10-14 13:31:21.
+// Gameplay / message types for the live game (sourced from the game backend).
+//
+// The PACKET domain types (Packet, Bonus, Tossup, BonusPart, Difficulty,
+// Subcategory, Category, Event and the Contains*/HasBonusPart/UsesPacketAtRound
+// relationship types) are the single source of truth in sockbowl-questions and
+// are generated from its GraphQL schema into ./packet-types.generated.ts.
+// They are imported (and re-exported) here for the gameplay types that embed
+// them; do NOT re-declare them by hand.
+import { Bonus, Packet } from './packet-types.generated';
 
-export class Bonus {
-  id: number;
-  subcategoryId: number;
-  preamble: string;
-  bonusParts: BonusPart[];
-  subcategory: Subcategory;
-
-  constructor(data: Bonus) {
-    this.id = data.id;
-    this.subcategoryId = data.subcategoryId;
-    this.preamble = data.preamble;
-    this.bonusParts = data.bonusParts;
-    this.subcategory = data.subcategory;
-  }
-}
-
-export class BonusPart {
-  bonusId: number;
-  question: string;
-  answer: string;
-  number: number;
-
-  constructor(data: BonusPart) {
-    this.bonusId = data.bonusId;
-    this.question = data.question;
-    this.answer = data.answer;
-    this.number = data.number;
-  }
-}
+export { Bonus, Packet };
 
 export class BonusPartAnswer {
   partIndex: number;
@@ -40,138 +20,6 @@ export class BonusPartAnswer {
   constructor(data: BonusPartAnswer) {
     this.partIndex = data.partIndex;
     this.correct = data.correct;
-  }
-}
-
-export class Category {
-  id: number;
-  name: string;
-
-  constructor(data: Category) {
-    this.id = data.id;
-    this.name = data.name;
-  }
-}
-
-export class Difficulty {
-  id: number;
-  name: string;
-
-  constructor(data: Difficulty) {
-    this.id = data.id;
-    this.name = data.name;
-  }
-}
-
-export class Event {
-  id: number;
-  name: string;
-  year: number;
-  location: string;
-  imported: boolean;
-  eventPackets: EventPacket[];
-
-  constructor(data: Event) {
-    this.id = data.id;
-    this.name = data.name;
-    this.year = data.year;
-    this.location = data.location;
-    this.imported = data.imported;
-    this.eventPackets = data.eventPackets;
-  }
-}
-
-export class EventPacket {
-  eventId: number;
-  packetId: number;
-  round: number;
-  event: Event;
-  packet: Packet;
-
-  constructor(data: EventPacket) {
-    this.eventId = data.eventId;
-    this.packetId = data.packetId;
-    this.round = data.round;
-    this.event = data.event;
-    this.packet = data.packet;
-  }
-}
-
-export class Packet {
-  id: String;
-  name: string;
-  tossups: PacketTossup[];
-  bonuses: PacketBonus[];
-  difficulty: Difficulty;
-
-  constructor(data: Packet) {
-    this.id = data.id;
-    this.name = data.name;
-    this.tossups = data.tossups;
-    this.bonuses = data.bonuses;
-    this.difficulty = data.difficulty;
-  }
-}
-
-export class PacketBonus {
-  packetId: number;
-  bonusId: number;
-  number: number;
-  packet: Packet;
-  bonus: Bonus;
-
-  constructor(data: PacketBonus) {
-    this.packetId = data.packetId;
-    this.bonusId = data.bonusId;
-    this.number = data.number;
-    this.packet = data.packet;
-    this.bonus = data.bonus;
-  }
-}
-
-export class PacketTossup {
-  packetId: number;
-  tossupId: number;
-  number: number;
-  packet: Packet;
-  tossup: Tossup;
-
-  constructor(data: PacketTossup) {
-    this.packetId = data.packetId;
-    this.tossupId = data.tossupId;
-    this.number = data.number;
-    this.packet = data.packet;
-    this.tossup = data.tossup;
-  }
-}
-
-export class Subcategory {
-  id: number;
-  name: string;
-  categoryId: number;
-  category: Category;
-
-  constructor(data: Subcategory) {
-    this.id = data.id;
-    this.name = data.name;
-    this.categoryId = data.categoryId;
-    this.category = data.category;
-  }
-}
-
-export class Tossup {
-  id: number;
-  question: string;
-  subcategoryId: number;
-  answer: string;
-  subcategory: Subcategory;
-
-  constructor(data: Tossup) {
-    this.id = data.id;
-    this.question = data.question;
-    this.subcategoryId = data.subcategoryId;
-    this.answer = data.answer;
-    this.subcategory = data.subcategory;
   }
 }
 
