@@ -6,7 +6,8 @@
   "scripts": {
     "smoke": "tsx scripts/smoke.ts",
     "full-match": "tsx scripts/full-match.ts",
-    "ui": "playwright test"
+    "ui": "playwright test",
+    "audit": "AUDIT=1 playwright test usability"
   },
   "devDependencies": {
     "@stomp/stompjs": "^7.0.0",

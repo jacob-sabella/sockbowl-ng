@@ -225,3 +225,14 @@
     }
   }
 }
+
+/* ---- Narrow-mobile responsiveness (fixes navbar overflow ≤480px) ---- */
+@media (max-width: 600px) {
+  .navbar__social { display: none; }          // drop GitHub/Discord links
+  .navbar__guest-label { display: none; }      // drop "Playing as Guest" text
+  .navbar__content { gap: 0.25rem; }
+}
+@media (max-width: 360px) {
+  .navbar__content { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .navbar__title { display: none; }            // icon-only wordmark on the smallest screens
+}
