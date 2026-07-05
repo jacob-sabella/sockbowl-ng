@@ -789,3 +789,13 @@ mat-card-actions {
     }
   }
 }
+
+/* ============ Sockbowl type roles ============ */
+mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
+.info-label {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+}
+.kv__key { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; }

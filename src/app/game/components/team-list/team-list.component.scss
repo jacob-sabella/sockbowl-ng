@@ -156,3 +156,11 @@
       0 4px 15px color-mix(in srgb, var(--warning) 30%, transparent);
   }
 }
+
+/* ============ Sockbowl type roles ============ */
+.team-list [class*="name"] { font-family: var(--font-display); letter-spacing: -0.01em; font-weight: 600; }
+.team-list [class*="score"], .team-list [class*="points"] {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}

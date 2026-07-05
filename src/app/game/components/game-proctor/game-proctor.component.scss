@@ -642,3 +642,30 @@
   margin-top: 1rem;
   display: block;
 }
+
+/* ============ Sockbowl type roles: the reading surface vs chrome ============ */
+/* Question / answer / bonus text = the academic packet being read → serif */
+.question-section .info-value,
+.answer-section .info-value,
+.bonus-preamble {
+  font-family: var(--font-serif);
+  font-size: 1.18rem;
+  line-height: 1.6;
+  letter-spacing: 0.005em;
+}
+.answer-section .info-value { font-weight: 600; }
+
+/* Labels / bonus headings = competitive chrome → display, eyebrow treatment */
+.info-label {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.bonus-header h3,
+.bonus-preamble-section h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+.bonus-score { font-family: var(--font-display); font-variant-numeric: tabular-nums; }

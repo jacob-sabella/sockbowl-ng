@@ -50,3 +50,11 @@ body {
 /* Sockbowl type roles: display chrome vs the academic reading surface */
 .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
 .font-serif { font-family: var(--font-serif); }
+
+/* Headings across the app speak in the display voice (competitive chrome) */
+h1, h2, h3, h4,
+[mat-dialog-title], .mat-mdc-dialog-title,
+.mat-mdc-card-title {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}

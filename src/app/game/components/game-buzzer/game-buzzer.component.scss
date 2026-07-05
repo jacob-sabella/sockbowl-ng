@@ -359,3 +359,45 @@
   margin-top: 1rem;
   display: block;
 }
+
+/* ===================== Signature: the physical buzzer ===================== */
+.buzz-button {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  /* A raised dome: bright top light, dark base ring, cast glow */
+  box-shadow:
+    0 10px 0 -2px #7f1d1d,
+    0 20px 45px rgba(220, 38, 38, 0.5),
+    inset 0 5px 14px rgba(255, 255, 255, 0.4),
+    inset 0 -12px 22px rgba(0, 0, 0, 0.38) !important;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow:
+      0 10px 0 -2px #7f1d1d,
+      0 24px 60px rgba(239, 68, 68, 0.68),
+      inset 0 5px 14px rgba(255, 255, 255, 0.45),
+      inset 0 -12px 22px rgba(0, 0, 0, 0.32) !important;
+  }
+  /* Slam it down on press — the buzz */
+  &:active:not(:disabled) {
+    transform: translateY(9px) !important;
+    box-shadow:
+      0 2px 0 -2px #7f1d1d,
+      0 6px 16px rgba(220, 38, 38, 0.5),
+      inset 0 3px 10px rgba(0, 0, 0, 0.45) !important;
+  }
+  &:disabled { filter: grayscale(0.35) brightness(0.7); }
+}
+
+/* Idle "ready to buzz" heartbeat, motion-safe */
+@media (prefers-reduced-motion: no-preference) {
+  .buzz-button:not(:disabled) { animation: buzz-ready 2.4s ease-in-out infinite; }
+  @keyframes buzz-ready {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.09); }
+  }
+}

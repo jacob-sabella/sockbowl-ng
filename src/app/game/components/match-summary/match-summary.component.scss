@@ -329,3 +329,9 @@
     }
   }
 }
+
+/* ============ Sockbowl type roles: scoreboard ============ */
+.summary-header h2, .winning-announcement h3, .section-title, .round-title {
+  font-family: var(--font-display); letter-spacing: -0.01em;
+}
+[class*="score"], [class*="points"] { font-variant-numeric: tabular-nums; }
