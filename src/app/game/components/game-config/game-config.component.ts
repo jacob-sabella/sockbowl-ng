@@ -119,6 +119,11 @@ export class GameConfigComponent implements OnInit {
 
   /* ─── Proctor ──────────────────────────────────────────────────────────── */
 
+  /** True once at least one player has joined a team (a match needs players). */
+  hasAnyPlayers(): boolean {
+    return (this.gameSession?.teamList ?? []).some(t => (t.teamPlayers?.length ?? 0) > 0);
+  }
+
   canBecomeProctor(): boolean {
     const proctor = this.gameStateService.getProctor();
     const isProctor =

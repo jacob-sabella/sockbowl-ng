@@ -65,6 +65,39 @@
         </div>
       </div>
     </section>
+
+    <!-- LAUNCH BAR — proctor status + the primary Start Match action -->
+    <section class="launch">
+      <div class="launch__proctor">
+        <mat-icon class="launch__icon">supervisor_account</mat-icon>
+        <div class="launch__meta">
+          <span class="launch__label">Proctor</span>
+          <span class="launch__name">{{ gameStateService.getProctor()?.name || 'No proctor yet' }}</span>
+        </div>
+      </div>
+      <div class="launch__status">
+        <span class="launch__step" [class.done]="!!gameSession.currentMatch.packet">
+          <mat-icon>{{ gameSession.currentMatch.packet ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
+        </span>
+        <span class="launch__step" [class.done]="hasAnyPlayers()">
+          <mat-icon>{{ hasAnyPlayers() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Players
+        </span>
+      </div>
+      <div class="launch__cta">
+        @if (canBecomeProctor()) {
+          <button mat-stroked-button color="primary" (click)="becomeProctor()">
+            <mat-icon>workspace_premium</mat-icon> Become Proctor
+          </button>
+        }
+        @if (gameStateService.isSelfProctor()) {
+          <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
+                  [disabled]="!gameSession.currentMatch.packet">
+            <mat-icon>play_arrow</mat-icon> Start Match
+          </button>
+        }
+      </div>
+    </section>
+
     <!-- GRID -->
     <section class="grid">
       <!-- Packet -->
@@ -177,47 +210,6 @@
             </mat-slide-toggle>
           </div>
         </mat-card-content>
-      </mat-card>
-      <!-- Proctor -->
-      <mat-card class="card">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>supervisor_account</mat-icon>
-            Proctor
-          </mat-card-title>
-          <mat-card-subtitle>Match runner</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="proctor">
-            <mat-icon class="proctor__avatar">face</mat-icon>
-            <span class="proctor__name">
-              {{ gameStateService.getProctor()?.name || 'No proctor yet' }}
-            </span>
-          </div>
-        </mat-card-content>
-        <mat-card-actions align="end">
-          @if (canBecomeProctor()) {
-            <button
-              mat-raised-button
-              color="primary"
-              (click)="becomeProctor()"
-              >
-              <mat-icon>workspace_premium</mat-icon>
-              Become Proctor
-            </button>
-          }
-          @if (gameStateService.isSelfProctor()) {
-            <button
-              mat-raised-button
-              color="primary"
-              (click)="startMatch()"
-              class="start-game-btn"
-              >
-              <mat-icon>play_arrow</mat-icon>
-              Start Game
-            </button>
-          }
-        </mat-card-actions>
       </mat-card>
       <!-- Teams -->
       <mat-card class="card card--span2">
