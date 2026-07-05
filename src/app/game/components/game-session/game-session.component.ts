@@ -25,7 +25,10 @@ export class GameSessionComponent {
   createGameRequest: CreateGameRequest = {
     gameSettings: {
       proctorType: ProctorType.IN_PERSON_PROCTOR,
-      gameMode: GameMode.QUIZ_BOWL_CLASSIC
+      gameMode: GameMode.QUIZ_BOWL_CLASSIC,
+      // Required: the backend's GameSettings.bonusesEnabled is a primitive
+      // boolean and rejects a missing/null value (400). Default it here.
+      bonusesEnabled: true
     }
   } as CreateGameRequest
 
