@@ -5,7 +5,6 @@ import {GameCanvasComponent} from "./game/components/game-canvas/game-canvas.com
 import {ProfileComponent} from "./structure/components/profile/profile.component";
 import {AdminBansComponent} from "./structure/components/admin-bans/admin-bans.component";
 import {AuthGuard} from "./core/auth/auth.guard";
-import {AdminGuard} from "./core/auth/admin.guard";
 import {permissionGuard} from "./core/auth/permission.guard";
 
 const routes: Routes = [
@@ -13,7 +12,7 @@ const routes: Routes = [
   { path: 'game-session', component: GameSessionComponent },
   { path: 'game', component: GameCanvasComponent},
   { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
-  { path: 'admin/bans', component: AdminBansComponent, canActivate: [AdminGuard, permissionGuard('admin:access')] }
+  { path: 'admin/bans', component: AdminBansComponent, canActivate: [permissionGuard('user:ban')] }
 
 ];
 
