@@ -82,6 +82,12 @@ export class GameSessionComponent {
       // Populate the join code from the create game response
       this.joinGameRequest.joinCode = response.joinCode;
 
+      // The backend requires a non-blank player name to join. The create form
+      // doesn't collect one, so default it from the signed-in profile (or 'Host').
+      if (!this.joinGameRequest.name) {
+        this.joinGameRequest.name = this.authService.getUserProfile()?.name || 'Host';
+      }
+
       // Join game with new join game request
       this.submitJoinGame()
     });
