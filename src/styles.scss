@@ -58,3 +58,14 @@ h1, h2, h3, h4,
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
+
+/* Comfortable touch targets: Material buttons default to 36px, below the 40px
+   recommended tap floor. Bump them on mobile so nothing is a tight tap. */
+@media (max-width: 760px) {
+  .mat-mdc-raised-button,
+  .mat-mdc-unelevated-button,
+  .mat-mdc-outlined-button,
+  .mat-mdc-button {
+    min-height: 40px;
+  }
+}

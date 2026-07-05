@@ -218,6 +218,8 @@ const STATIC_SCREENS: Screen[] = [
       await settle(page);
       await page.getByRole('button', { name: /Become Proctor/i }).click().catch(() => {});
       await settle(page);
+      // let any transient toast auto-dismiss before the coverage snapshot
+      await page.waitForSelector('.mat-mdc-snack-bar-label', { state: 'detached', timeout: 6000 }).catch(() => {});
       const errs: string[] = [];
       errs.push(...(await checkOverflow(page)));
       for (const c of [
