@@ -31,7 +31,7 @@ export class SockbowlQuestionsService {
   importQbreaderPacket(setName: string, packetNumber: number): Observable<{ id: string; name: string }> {
     return this.http
       .post<{ id: string; name: string }>(`${this.qbreaderUrl}/import`, { setName, packetNumber })
-      .pipe(timeout(60000));
+      .pipe(timeout(120000));
   }
 
   /** Build a random qbreader packet from category/difficulty filters. */
@@ -40,7 +40,7 @@ export class SockbowlQuestionsService {
   }): Observable<{ id: string; name: string }> {
     return this.http
       .post<{ id: string; name: string }>(`${this.qbreaderUrl}/import-random`, body)
-      .pipe(timeout(60000));
+      .pipe(timeout(120000));
   }
 
   /**
