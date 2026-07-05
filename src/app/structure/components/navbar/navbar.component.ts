@@ -42,7 +42,11 @@ export class NavbarComponent implements OnInit {
   }
 
   isInGame(): boolean {
-    return this.router.url.startsWith('/game');
+    // Active game canvas only ('/game'), NOT the '/game-session' lobby — which
+    // also starts with '/game' and was wrongly hiding the navbar Sign In button
+    // on the landing page (the only place it would ever show).
+    const path = this.router.url.split(/[?#]/)[0];
+    return path === '/game' || path.startsWith('/game/');
   }
 
   private registerCustomIcons(): void {
