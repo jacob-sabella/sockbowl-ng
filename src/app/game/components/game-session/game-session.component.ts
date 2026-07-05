@@ -88,28 +88,19 @@ export class GameSessionComponent {
   }
 
   submitJoinGame(): void {
-    // Check if auth is enabled and user is authenticated
-    const isAuthenticated = environment.authEnabled && this.authService.isAuthenticated();
-
-    // Choose the appropriate join method based on authentication status
-    const joinObservable = isAuthenticated
-      ? this.gameSessionService.joinGameAuthenticated(this.joinGameRequest)
-      : this.gameSessionService.joinGame(this.joinGameRequest);
-
-    joinObservable.subscribe(response => {
-      console.log("Join game response");
-      console.log(response);
-
-      // Build navigation parameters
+    // The backend runs in permissive/guest mode, so always join via the guest
+    // endpoint. The authenticated endpoint (join-game-session-authenticated) is
+    // only exposed when backend auth is enforced and otherwise 404s. Login still
+    // identifies the user in the UI; it just doesn't gate play in this mode.
+    this.gameSessionService.joinGame(this.joinGameRequest).subscribe(response => {
       const navigationParams: any = {
         "gameSessionId": response.gameSessionId,
         "playerSecret": response.playerSecret,
         "playerSessionId": response.playerSessionId
       };
 
-      // Add userId and accessToken if authenticated
-      if (isAuthenticated) {
-        navigationParams["userId"] = response.userId;
+      // Carry the token through when logged in (harmless in guest mode).
+      if (environment.authEnabled && this.authService.isAuthenticated()) {
         navigationParams["accessToken"] = this.authService.getAccessToken();
       }
 
