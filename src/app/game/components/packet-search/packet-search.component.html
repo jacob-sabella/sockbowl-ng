@@ -472,10 +472,16 @@
             </div>
           </div>
 
-          <mat-button-toggle-group class="qb-mode" [(ngModel)]="qbMode" hideSingleSelectionIndicator>
-            <mat-button-toggle value="set"><mat-icon>library_books</mat-icon> Published set</mat-button-toggle>
-            <mat-button-toggle value="random"><mat-icon>shuffle</mat-icon> Random mix</mat-button-toggle>
-          </mat-button-toggle-group>
+          <div class="qb-seg" role="tablist">
+            <button type="button" class="qb-seg-btn" [class.on]="qbMode === 'set'"
+                    (click)="qbMode = 'set'">
+              <mat-icon>library_books</mat-icon> Published set
+            </button>
+            <button type="button" class="qb-seg-btn" [class.on]="qbMode === 'random'"
+                    (click)="qbMode = 'random'">
+              <mat-icon>shuffle</mat-icon> Random mix
+            </button>
+          </div>
 
           @if (qbLoadingSets) {
             <div class="loading-state">
