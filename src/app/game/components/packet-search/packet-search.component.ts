@@ -30,6 +30,35 @@ export class PacketSearchComponent implements OnInit {
   isGenerating: boolean = false;
   generatedPacket: Packet | null = null;
 
+  // qbreader tab properties
+  qbMode: 'set' | 'random' = 'set';
+  qbSets: string[] = [];
+  qbFilteredSets: string[] = [];
+  qbSelectedSet: string = '';
+  qbPacketNumber: number = 1;
+  qbPacketCount: number | null = null;
+  qbLoadingSets: boolean = false;
+  qbImporting: boolean = false;
+  qbLoaded: boolean = false;
+
+  readonly qbCategories: string[] = [
+    'Literature', 'History', 'Science', 'Fine Arts', 'Religion', 'Mythology',
+    'Philosophy', 'Social Science', 'Geography', 'Current Events', 'Other Academic', 'Trash'
+  ];
+  readonly qbDifficultyTiers: { label: string; values: number[] }[] = [
+    { label: 'Middle School', values: [1, 2] },
+    { label: 'Easy HS', values: [3, 4] },
+    { label: 'Regular HS', values: [5] },
+    { label: 'Hard HS', values: [6] },
+    { label: 'College', values: [7, 8] },
+    { label: 'Open', values: [9, 10] }
+  ];
+  qbSelectedCategories: string[] = [];
+  qbSelectedTiers: string[] = ['Regular HS'];
+  qbTossupCount: number = 20;
+  qbBonusCount: number = 20;
+  qbRandomName: string = '';
+
   // API configuration properties
   apiKey: string = '';
   selectedModel: string = '';
@@ -368,6 +397,113 @@ export class PacketSearchComponent implements OnInit {
     if (selectedPacket) {
       this.dialogRef.close(selectedPacket);
     }
+  }
+
+  /* ------------------------------- qbreader ------------------------------- */
+
+  /** Lazily load the set list the first time the qbreader tab is opened. */
+  onTabChange(index: number): void {
+    // The qbreader tab is the third tab (index 2).
+    if (index === 2 && !this.qbLoaded) {
+      this.loadQbSets();
+    }
+  }
+
+  private loadQbSets(): void {
+    this.qbLoaded = true;
+    this.qbLoadingSets = true;
+    this.sockbowlQuestionsService.getQbreaderSets().subscribe({
+      next: (sets) => {
+        this.qbSets = sets;
+        this.qbFilteredSets = sets.slice(0, 60);
+        this.qbLoadingSets = false;
+      },
+      error: () => {
+        this.qbLoadingSets = false;
+        this.qbLoaded = false;
+        this.snackBar.open('Could not reach qbreader. Try again.', 'Close', { duration: 4000 });
+      }
+    });
+  }
+
+  filterQbSets(query: string): void {
+    const q = (query || '').toLowerCase().trim();
+    this.qbFilteredSets = (q
+      ? this.qbSets.filter(s => s.toLowerCase().includes(q))
+      : this.qbSets
+    ).slice(0, 60);
+  }
+
+  onQbSetSelected(setName: string): void {
+    this.qbSelectedSet = setName;
+    this.qbPacketNumber = 1;
+    this.qbPacketCount = null;
+    this.sockbowlQuestionsService.getQbreaderPacketCount(setName).subscribe({
+      next: (count) => (this.qbPacketCount = count),
+      error: () => (this.qbPacketCount = null)
+    });
+  }
+
+  toggleQbCategory(category: string): void {
+    const i = this.qbSelectedCategories.indexOf(category);
+    if (i >= 0) this.qbSelectedCategories.splice(i, 1);
+    else this.qbSelectedCategories.push(category);
+  }
+
+  toggleQbTier(label: string): void {
+    const i = this.qbSelectedTiers.indexOf(label);
+    if (i >= 0) this.qbSelectedTiers.splice(i, 1);
+    else this.qbSelectedTiers.push(label);
+  }
+
+  importQbSet(): void {
+    if (!this.qbSelectedSet || this.qbImporting) return;
+    const number = Math.max(1, Math.min(this.qbPacketNumber || 1, this.qbPacketCount || 999));
+    this.qbImporting = true;
+    this.sockbowlQuestionsService.importQbreaderPacket(this.qbSelectedSet, number).subscribe({
+      next: (res) => this.useImportedPacket(res.id),
+      error: (err) => this.onQbImportError(err)
+    });
+  }
+
+  importQbRandom(): void {
+    if (this.qbImporting) return;
+    const difficulties = this.qbDifficultyTiers
+      .filter(t => this.qbSelectedTiers.includes(t.label))
+      .flatMap(t => t.values);
+    this.qbImporting = true;
+    this.sockbowlQuestionsService.importQbreaderRandom({
+      categories: this.qbSelectedCategories,
+      difficulties,
+      tossupCount: this.qbTossupCount,
+      bonusCount: this.qbBonusCount,
+      name: this.qbRandomName?.trim() || undefined
+    }).subscribe({
+      next: (res) => this.useImportedPacket(res.id),
+      error: (err) => this.onQbImportError(err)
+    });
+  }
+
+  /** Fetch the full imported packet and hand it back to the config screen. */
+  private useImportedPacket(id: string): void {
+    this.sockbowlQuestionsService.getPacketById(id).subscribe({
+      next: (packet) => {
+        this.qbImporting = false;
+        if (packet) {
+          this.snackBar.open('Packet imported.', 'OK', { duration: 2500 });
+          this.dialogRef.close(packet);
+        } else {
+          this.onQbImportError(null);
+        }
+      },
+      error: (err) => this.onQbImportError(err)
+    });
+  }
+
+  private onQbImportError(err: any): void {
+    this.qbImporting = false;
+    console.error('qbreader import error:', err);
+    this.snackBar.open('Import failed — try a different set or packet.', 'Close', { duration: 5000 });
   }
 
   clearSearch(): void {

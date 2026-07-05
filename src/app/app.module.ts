@@ -37,6 +37,8 @@ import {MatSnackBarModule} from "@angular/material/snack-bar";
 import {MatTooltipModule} from "@angular/material/tooltip";
 import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
 import {MatTabsModule} from "@angular/material/tabs";
+import {MatButtonToggleModule} from "@angular/material/button-toggle";
+import {MatAutocompleteModule} from "@angular/material/autocomplete";
 import {MatMenuModule} from "@angular/material/menu";
 import { ProfileComponent } from './structure/components/profile/profile.component';
 import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
@@ -81,6 +83,8 @@ import { AdminBansComponent } from './structure/components/admin-bans/admin-bans
         MatTooltipModule,
         MatProgressSpinnerModule,
         MatTabsModule,
+        MatButtonToggleModule,
+        MatAutocompleteModule,
         MatMenuModule,
         // OAuth2/OIDC Module
         OAuthModule.forRoot()], providers: [

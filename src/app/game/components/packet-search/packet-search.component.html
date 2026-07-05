@@ -5,7 +5,7 @@
   </h2>
 
   <mat-dialog-content>
-    <mat-tab-group>
+    <mat-tab-group (selectedTabChange)="onTabChange($event.index)">
       <!-- Search Existing Packets Tab -->
       <mat-tab label="Search Existing">
         <div class="tab-content">
@@ -460,6 +460,112 @@
         </div>
       </mat-tab>
       }
+
+      <!-- ============================ qbreader ============================ -->
+      <mat-tab label="From qbreader">
+        <div class="tab-content qb-content">
+          <div class="qb-intro">
+            <mat-icon>public</mat-icon>
+            <div>
+              <div class="qb-intro-title">Pull real packets from qbreader</div>
+              <div class="qb-intro-sub">Import a published tournament set, or build a random mix by category and difficulty.</div>
+            </div>
+          </div>
+
+          <mat-button-toggle-group class="qb-mode" [(ngModel)]="qbMode" hideSingleSelectionIndicator>
+            <mat-button-toggle value="set"><mat-icon>library_books</mat-icon> Published set</mat-button-toggle>
+            <mat-button-toggle value="random"><mat-icon>shuffle</mat-icon> Random mix</mat-button-toggle>
+          </mat-button-toggle-group>
+
+          @if (qbLoadingSets) {
+            <div class="loading-state">
+              <mat-spinner diameter="36"></mat-spinner>
+              <span>Loading sets…</span>
+            </div>
+          }
+
+          <!-- Published set -->
+          @if (qbMode === 'set' && !qbLoadingSets) {
+            <div class="qb-form">
+              <mat-form-field appearance="outline" class="qb-set-field">
+                <mat-label>Set</mat-label>
+                <mat-icon matPrefix class="search-icon">search</mat-icon>
+                <input matInput [matAutocomplete]="setAuto" [(ngModel)]="qbSelectedSet"
+                       (ngModelChange)="filterQbSets($event)" placeholder="e.g. 2021 SMH">
+                <mat-autocomplete #setAuto (optionSelected)="onQbSetSelected($event.option.value)">
+                  @for (s of qbFilteredSets; track s) {
+                    <mat-option [value]="s">{{ s }}</mat-option>
+                  }
+                </mat-autocomplete>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="qb-num-field">
+                <mat-label>Packet #</mat-label>
+                <input matInput type="number" min="1" [max]="qbPacketCount || 999" [(ngModel)]="qbPacketNumber">
+                @if (qbPacketCount) { <mat-hint>of {{ qbPacketCount }}</mat-hint> }
+              </mat-form-field>
+            </div>
+
+            <button mat-raised-button color="primary" class="qb-import-btn"
+                    [disabled]="!qbSelectedSet || qbImporting" (click)="importQbSet()">
+              @if (qbImporting) {
+                <mat-spinner diameter="20"></mat-spinner> <span>Importing…</span>
+              } @else {
+                <span class="qb-btn-label"><mat-icon>download</mat-icon> Import &amp; use</span>
+              }
+            </button>
+          }
+
+          <!-- Random mix -->
+          @if (qbMode === 'random' && !qbLoadingSets) {
+            <div class="qb-random">
+              <div class="qb-group">
+                <div class="qb-group-label">Categories <span class="qb-muted">— any if none picked</span></div>
+                <div class="qb-chips">
+                  @for (c of qbCategories; track c) {
+                    <button type="button" class="qb-chip" [class.on]="qbSelectedCategories.includes(c)"
+                            (click)="toggleQbCategory(c)">{{ c }}</button>
+                  }
+                </div>
+              </div>
+
+              <div class="qb-group">
+                <div class="qb-group-label">Difficulty</div>
+                <div class="qb-chips">
+                  @for (t of qbDifficultyTiers; track t.label) {
+                    <button type="button" class="qb-chip" [class.on]="qbSelectedTiers.includes(t.label)"
+                            (click)="toggleQbTier(t.label)">{{ t.label }}</button>
+                  }
+                </div>
+              </div>
+
+              <div class="qb-form">
+                <mat-form-field appearance="outline" class="qb-num-field">
+                  <mat-label>Tossups</mat-label>
+                  <input matInput type="number" min="1" max="30" [(ngModel)]="qbTossupCount">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="qb-num-field">
+                  <mat-label>Bonuses</mat-label>
+                  <input matInput type="number" min="0" max="30" [(ngModel)]="qbBonusCount">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="qb-name-field">
+                  <mat-label>Packet name (optional)</mat-label>
+                  <input matInput [(ngModel)]="qbRandomName" placeholder="Custom mix">
+                </mat-form-field>
+              </div>
+
+              <button mat-raised-button color="primary" class="qb-import-btn"
+                      [disabled]="qbImporting" (click)="importQbRandom()">
+                @if (qbImporting) {
+                  <mat-spinner diameter="20"></mat-spinner> <span>Building…</span>
+                } @else {
+                  <span class="qb-btn-label"><mat-icon>auto_awesome</mat-icon> Build &amp; use</span>
+                }
+              </button>
+            </div>
+          }
+        </div>
+      </mat-tab>
     </mat-tab-group>
   </mat-dialog-content>
 

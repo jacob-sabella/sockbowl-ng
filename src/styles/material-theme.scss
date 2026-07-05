@@ -1,0 +1,75 @@
+// =============================================================================
+// Angular Material M3 Theme  (single source of Material component theming)
+// =============================================================================
+//
+// This is the ONE place Material components get their colour, typography and
+// density. It replaces the old prebuilt `indigo-pink.css`.
+//
+// Palette: a custom, brand-specific M3 tonal palette generated from
+//   primary  #6D5AE6 (electric violet)  – sharp, modern
+//   secondary #F5A524 (amber / buzzer gold) – playful
+//   tertiary #06B6D4 (cyan)             – energetic accent
+// (see ./themes/_theme-colors.scss)
+//
+// theme-type defaults to `color-scheme`, so Material emits `light-dark()`
+// values and follows the CSS `color-scheme` property. We drive that property
+// from the same `body.theme-*` classes that ThemeService toggles, keeping a
+// single dark/light switch for the whole app.
+
+@use '@angular/material' as mat;
+@use 'themes/theme-colors' as brand;
+
+html {
+  // Light + dark are both emitted; the active one is chosen by `color-scheme`.
+  @include mat.theme((
+    color: (
+      primary: brand.$primary-palette,
+      tertiary: brand.$tertiary-palette,
+    ),
+    typography: (
+      brand-family: 'Inter, Roboto, sans-serif',
+      plain-family: 'Inter, Roboto, sans-serif',
+    ),
+    density: 0,
+  ));
+
+  // System-following default before a theme class is applied.
+  color-scheme: light dark;
+
+  // Smooth out the M3 surface defaults so they sit on our token surfaces.
+  --mat-sys-corner-small: var(--radius-sm);
+  --mat-sys-corner-medium: var(--radius-md);
+  --mat-sys-corner-large: var(--radius-lg);
+}
+
+// --- Tie Material's light/dark to the app theme classes -----------------------
+// ThemeService adds exactly one of these to <body>; we map each to a colour
+// scheme so Material components flip in lock-step with the CSS-variable themes.
+body.theme-light,
+body.theme-solarized-light {
+  color-scheme: light;
+}
+
+body.theme-dark,
+body.theme-nord,
+body.theme-monokai,
+body.theme-catppuccin,
+body.theme-dracula,
+body.theme-solarized-dark {
+  color-scheme: dark;
+}
+
+// Make Material's filled buttons / CTAs feel branded by default and ensure
+// comfortable, accessible touch targets everywhere.
+.mat-mdc-raised-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-outlined-button,
+.mat-mdc-button {
+  min-height: 44px;
+  letter-spacing: 0.01em;
+}
+
+.mat-mdc-icon-button {
+  // Keep icon buttons tappable on phones (M3 default can be < 44px).
+  --mdc-icon-button-state-layer-size: 44px;
+}

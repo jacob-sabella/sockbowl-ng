@@ -11,8 +11,37 @@ import {map, timeout} from "rxjs/operators";
 export class SockbowlQuestionsService {
 
   private graphqlUrl: string = environment.sockbowlQuestionsApiUrl + "graphql";
+  private qbreaderUrl: string = environment.sockbowlQuestionsApiUrl + "api/qbreader";
 
   constructor(private http: HttpClient) { }
+
+  /** All qbreader.org set names (e.g. "2021 SMH"). */
+  getQbreaderSets(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.qbreaderUrl}/sets`).pipe(timeout(20000));
+  }
+
+  /** Number of packets in a qbreader set. */
+  getQbreaderPacketCount(setName: string): Observable<number> {
+    return this.http
+      .get<{ numPackets: number }>(`${this.qbreaderUrl}/packet-count`, { params: { setName } })
+      .pipe(timeout(20000), map(r => r.numPackets));
+  }
+
+  /** Import one published packet from a qbreader set; resolves to the new packet id/name. */
+  importQbreaderPacket(setName: string, packetNumber: number): Observable<{ id: string; name: string }> {
+    return this.http
+      .post<{ id: string; name: string }>(`${this.qbreaderUrl}/import`, { setName, packetNumber })
+      .pipe(timeout(60000));
+  }
+
+  /** Build a random qbreader packet from category/difficulty filters. */
+  importQbreaderRandom(body: {
+    categories: string[]; difficulties: number[]; tossupCount: number; bonusCount: number; name?: string;
+  }): Observable<{ id: string; name: string }> {
+    return this.http
+      .post<{ id: string; name: string }>(`${this.qbreaderUrl}/import-random`, body)
+      .pipe(timeout(60000));
+  }
 
   /**
    * Query to search packets by name.
