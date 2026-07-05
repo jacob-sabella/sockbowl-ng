@@ -20,6 +20,13 @@ module.exports = function (config) {
     },
     reporters: ['progress'],
     browsers: ['Chrome'],
+    // Headless, sandbox-free launcher for CI containers.
+    customLaunchers: {
+      ChromeHeadlessCI: {
+        base: 'ChromeHeadless',
+        flags: ['--no-sandbox', '--disable-gpu'],
+      },
+    },
     restartOnFileChange: true,
   });
 };
