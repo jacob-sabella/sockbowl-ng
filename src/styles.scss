@@ -44,4 +44,9 @@ body {
   margin: 0;
   background: var(--bg-primary);
   color: var(--text-primary);
+  font-family: var(--font-body);
 }
+
+/* Sockbowl type roles: display chrome vs the academic reading surface */
+.font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+.font-serif { font-family: var(--font-serif); }

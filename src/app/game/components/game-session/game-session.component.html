@@ -11,12 +11,32 @@
       </div>
     }
 
-    <!-- Buttons -->
+    <!-- Landing hero -->
     @if (!showCreateForm && !showJoinForm) {
-      <div class="button-container">
-        <h1 class="mat-display-1">Let's get started!</h1>
-        <button mat-raised-button color="accent" (click)="onCreateGame()">Create Game</button>
-        <button mat-raised-button color="accent" (click)="onJoinGame()">Join Game</button>
+      <div class="lobby-hero">
+        <span class="lobby-eyebrow">Academic Quiz Bowl</span>
+        <h1 class="lobby-title font-display">Read fast.<br><em>Buzz faster.</em></h1>
+        <p class="lobby-sub">Host a room or jump into one with a code — real packets, live buzzers, tossups&nbsp;&amp;&nbsp;bonuses.</p>
+
+        <div class="lobby-actions">
+          <button class="lobby-action primary" (click)="onCreateGame()">
+            <mat-icon>stadium</mat-icon>
+            <span class="lobby-action-text">
+              <span class="lobby-action-label">Host a match</span>
+              <span class="lobby-action-hint">Open a new room and proctor</span>
+            </span>
+            <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
+          </button>
+
+          <button class="lobby-action" (click)="onJoinGame()">
+            <mat-icon>keyboard</mat-icon>
+            <span class="lobby-action-text">
+              <span class="lobby-action-label">Join with a code</span>
+              <span class="lobby-action-hint">Enter a room's join code</span>
+            </span>
+            <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
+          </button>
+        </div>
       </div>
     }
 
