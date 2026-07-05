@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BanService } from '../../../core/services/ban.service';
 import { Ban, CreateBanRequest } from '../../../core/models/ban-models';
+import { AuthService } from '../../../core/auth/auth.service';
 
 /**
  * Mobile-friendly admin view for managing user bans: list active bans, add a
@@ -27,7 +28,8 @@ export class AdminBansComponent implements OnInit {
 
   constructor(
     private banService: BanService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    public auth: AuthService
   ) {}
 
   ngOnInit(): void {

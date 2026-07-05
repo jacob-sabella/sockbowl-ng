@@ -181,6 +181,18 @@ export class AuthService {
   }
 
   /**
+   * Whether the current user holds the given fine-grained permission (realm role).
+   *
+   * Keycloak expands composite roles into `realm_access.roles`, so a
+   * fine-grained permission like `packet:create` or `user:ban` is just
+   * membership in that same array. Returns false in guest mode (auth
+   * disabled) or when the user has no roles.
+   */
+  public hasPermission(permission: string): boolean {
+    return this.getRoles().includes(permission);
+  }
+
+  /**
    * Get user profile from ID token
    */
   public getUserProfile(): any {

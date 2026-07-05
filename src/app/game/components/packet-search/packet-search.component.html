@@ -111,6 +111,7 @@
       </mat-tab>
 
       <!-- Generate New Packet Tab -->
+      @if (auth.hasPermission('question:generate')) {
       <mat-tab label="Generate with AI">
         <div class="tab-content">
           <div class="generate-container">
@@ -458,6 +459,7 @@
           </div>
         </div>
       </mat-tab>
+      }
     </mat-tab-group>
   </mat-dialog-content>
 

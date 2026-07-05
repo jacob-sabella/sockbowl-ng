@@ -5,29 +5,31 @@
   </h1>
 
   <!-- Add ban form -->
-  <mat-card class="admin-bans__card">
-    <mat-card-header>
-      <mat-card-title>Ban a user</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form class="admin-bans__form" (ngSubmit)="addBan()">
-        <mat-form-field appearance="outline" class="admin-bans__field">
-          <mat-label>Keycloak user ID (sub)</mat-label>
-          <input matInput name="bannedKeycloakId" [(ngModel)]="newBan.bannedKeycloakId" required />
-        </mat-form-field>
+  @if (auth.hasPermission('user:ban')) {
+    <mat-card class="admin-bans__card">
+      <mat-card-header>
+        <mat-card-title>Ban a user</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form class="admin-bans__form" (ngSubmit)="addBan()">
+          <mat-form-field appearance="outline" class="admin-bans__field">
+            <mat-label>Keycloak user ID (sub)</mat-label>
+            <input matInput name="bannedKeycloakId" [(ngModel)]="newBan.bannedKeycloakId" required />
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" class="admin-bans__field">
-          <mat-label>Reason</mat-label>
-          <input matInput name="reason" [(ngModel)]="newBan.reason" />
-        </mat-form-field>
+          <mat-form-field appearance="outline" class="admin-bans__field">
+            <mat-label>Reason</mat-label>
+            <input matInput name="reason" [(ngModel)]="newBan.reason" />
+          </mat-form-field>
 
-        <button mat-raised-button color="warn" type="submit" [disabled]="submitting">
-          <mat-icon>block</mat-icon>
-          Ban user
-        </button>
-      </form>
-    </mat-card-content>
-  </mat-card>
+          <button mat-raised-button color="warn" type="submit" [disabled]="submitting">
+            <mat-icon>block</mat-icon>
+            Ban user
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
 
   <!-- Ban list -->
   <mat-card class="admin-bans__card">
@@ -52,9 +54,11 @@
                 <span class="admin-bans__item-reason">{{ ban.reason || 'No reason given' }}</span>
                 <span class="admin-bans__item-meta">Expires: {{ formatDate(ban.expiresAt) }}</span>
               </div>
-              <button mat-icon-button color="warn" aria-label="Remove ban" (click)="removeBan(ban)">
-                <mat-icon>delete</mat-icon>
-              </button>
+              @if (auth.hasPermission('user:ban')) {
+                <button mat-icon-button color="warn" aria-label="Remove ban" (click)="removeBan(ban)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
             </div>
           }
         </div>

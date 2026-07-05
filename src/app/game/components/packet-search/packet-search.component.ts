@@ -6,6 +6,7 @@ import { OpenAiModelService } from '../../services/openai-model.service';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
     selector: 'app-packet-search',
@@ -77,6 +78,7 @@ export class PacketSearchComponent implements OnInit {
     private sockbowlQuestionsService: SockbowlQuestionsService,
     private openAiModelService: OpenAiModelService,
     private snackBar: MatSnackBar,
+    public auth: AuthService,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {}
 

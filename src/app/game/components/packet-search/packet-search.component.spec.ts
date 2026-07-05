@@ -6,6 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { PacketSearchComponent } from './packet-search.component';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { OpenAiModelService } from '../../services/openai-model.service';
+import { AuthService } from '../../../core/auth/auth.service';
 
 describe('PacketSearchComponent', () => {
   let component: PacketSearchComponent;
@@ -20,6 +21,7 @@ describe('PacketSearchComponent', () => {
         { provide: MatSnackBar, useValue: { open: () => {} } },
         { provide: SockbowlQuestionsService, useValue: {} },
         { provide: OpenAiModelService, useValue: {} },
+        { provide: AuthService, useValue: { hasPermission: () => false } },
       ],
       // Template uses Angular Material elements not declared in this unit test.
       schemas: [NO_ERRORS_SCHEMA]
