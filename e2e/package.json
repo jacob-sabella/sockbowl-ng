@@ -1,0 +1,18 @@
+{
+  "name": "sockbowl-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Sockbowl end-to-end match-emulation harness: headless STOMP bots that fill player/team seats and drive full quizbowl matches, plus Playwright UI capture of the in-game surfaces.",
+  "scripts": {
+    "smoke": "tsx scripts/smoke.ts",
+    "full-match": "tsx scripts/full-match.ts",
+    "ui": "playwright test"
+  },
+  "devDependencies": {
+    "@stomp/stompjs": "^7.0.0",
+    "ws": "^8.18.0",
+    "tsx": "^4.19.0",
+    "@playwright/test": "^1.48.0",
+    "typescript": "^5.6.0"
+  }
+}
