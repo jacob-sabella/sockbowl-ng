@@ -260,8 +260,9 @@ const STATIC_SCREENS: Screen[] = [
       await settle(sPage);
 
       proctor.becomeProctor();
+      await proctor.waitFor((g) => g.playerList?.some((p: any) => p.playerMode === 'PROCTOR'), 12000, 'proctor role');
       proctor.setPacket(packetId);
-      await proctor.waitFor((g) => g.currentMatch?.packet?.id === packetId, 15000, 'packet set');
+      await proctor.waitFor((g) => g.currentMatch?.packet?.id === packetId, 20000, 'packet set');
       proctor.startMatch();
       await proctor.waitFor((g) => g.currentMatch?.matchState === 'IN_GAME', 12000, 'IN_GAME');
       if (proctor.roundState === 'PROCTOR_READING') proctor.finishedReading();
