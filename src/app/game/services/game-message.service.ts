@@ -67,14 +67,9 @@ export class GameMessageService {
       // Whenever a new message is received
       next: (message: any) => {
         if(message != null){
-          // Parse the incoming WebSocket message and create a SockbowlOutMessage object
-          const sockbowlOutMessage = JSON.parse(message.body);
-
-          // Transform bonus data structure if present
-          this.transformBonusData(sockbowlOutMessage);
-
-          // Publish the new message to the corresponding BehaviorSubject
-          this.gameEventSubjects[sockbowlOutMessage.messageContentType].next(sockbowlOutMessage);
+          // Parse the incoming WebSocket message and dispatch it (may be a
+          // SockbowlMultiOutMessage batch, e.g. the initial game state on join).
+          this.dispatchMessage(JSON.parse(message.body));
         }
       },
       // If an error occurs during the subscription
@@ -82,6 +77,36 @@ export class GameMessageService {
         console.error('Error receiving message from websocket', error);
       }
     });
+  }
+
+  /**
+   * Routes a single incoming message to its typed BehaviorSubject. Unwraps
+   * SockbowlMultiOutMessage batches (the backend sends the initial game state
+   * this way on join). Unknown message types are logged and skipped instead of
+   * throwing (which previously left the game canvas blank).
+   */
+  private dispatchMessage(message: any): void {
+    if (message == null) {
+      return;
+    }
+
+    // Batch wrapper: recurse into each inner message.
+    if (message.messageContentType === 'SockbowlMultiOutMessage' && Array.isArray(message.sockbowlOutMessages)) {
+      for (const inner of message.sockbowlOutMessages) {
+        this.dispatchMessage(inner);
+      }
+      return;
+    }
+
+    // Transform bonus data structure if present
+    this.transformBonusData(message);
+
+    const subject = this.gameEventSubjects[message.messageContentType];
+    if (subject) {
+      subject.next(message);
+    } else {
+      console.warn('[GameMessageService] Unhandled message type:', message.messageContentType);
+    }
   }
 
   /**
