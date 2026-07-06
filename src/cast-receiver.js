@@ -307,6 +307,11 @@
     return div.innerHTML;
   }
 
+  // Integration-test hook: drive the receiver UI directly with a CastGameState,
+  // bypassing the live Presentation/Cast transport. Lets us verify rendering
+  // (the "connects but shows nothing" bug class) without a physical device.
+  window.__castRender = updateUI;
+
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeReceiver);
