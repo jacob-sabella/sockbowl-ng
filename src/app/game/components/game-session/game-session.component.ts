@@ -106,21 +106,19 @@ export class GameSessionComponent {
   }
 
   submitJoinGame(): void {
-    // The backend runs in permissive/guest mode, so always join via the guest
-    // endpoint. The authenticated endpoint (join-game-session-authenticated) is
-    // only exposed when backend auth is enforced and otherwise 404s. Login still
-    // identifies the user in the UI; it just doesn't gate play in this mode.
+    // We always join via the guest endpoint (the player is a guest in the game
+    // session; login adds per-account features over HTTP, not in-game identity).
+    // IMPORTANT: do NOT pass the JWT to the game WebSocket — with backend auth
+    // enabled, the session resolver rejects a JWT presented for a guest player
+    // ("Cannot use authentication token for guest player session"), which blanks
+    // the game canvas. Guests authenticate the socket with playerSecret only.
+    // The de-dup HTTP calls still carry the bearer via the auth interceptor.
     this.gameSessionService.joinGame(this.joinGameRequest).subscribe(response => {
       const navigationParams: any = {
         "gameSessionId": response.gameSessionId,
         "playerSecret": response.playerSecret,
         "playerSessionId": response.playerSessionId
       };
-
-      // Carry the token through when logged in (harmless in guest mode).
-      if (environment.authEnabled && this.authService.isAuthenticated()) {
-        navigationParams["accessToken"] = this.authService.getAccessToken();
-      }
 
       this.router.navigate(["/game", navigationParams])
         .then(r => console.log(r));
