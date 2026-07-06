@@ -41,10 +41,6 @@
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-primary);
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 }
 
@@ -56,23 +52,12 @@
   justify-content: center;
   gap: 1rem;
   padding: 2rem;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  background: rgba(99, 102, 241, 0.1);
   border: 2px solid var(--accent-primary);
   border-radius: 16px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
-    animation: pulse 3s ease-in-out infinite;
-  }
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 
   .trophy-icon {
     font-size: 4rem;
@@ -112,16 +97,17 @@
   font-size: 1.125rem !important;
   font-weight: 600 !important;
   border-radius: 12px !important;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
+  background: var(--accent-primary) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease !important;
   min-height: 56px;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.5);
+    filter: brightness(1.06);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   }
 
   mat-icon {

@@ -2,15 +2,12 @@
   background: var(--bg-elevated) !important;
   color: var(--text-primary) !important;
   border-bottom: 1px solid var(--border-subtle);
-  box-shadow:
-    0 4px 20px var(--shadow-color),
-    0 0 40px var(--glow-primary);
+  box-shadow: 0 4px 20px var(--shadow-color);
   padding: 0 !important;
   height: 64px;
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(20px);
 }
 
 .navbar__content {
@@ -53,14 +50,7 @@
   font-size: clamp(1.5rem, 4vw, 2rem);
   width: clamp(1.5rem, 4vw, 2rem);
   height: clamp(1.5rem, 4vw, 2rem);
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary) 0%,
-    var(--accent-secondary) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-primary);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
@@ -71,14 +61,7 @@
   font-size: clamp(1.1rem, 3.5vw, 1.8rem);
   font-weight: 800;
   letter-spacing: 0.05em;
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary) 0%,
-    var(--accent-secondary) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-primary);
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;

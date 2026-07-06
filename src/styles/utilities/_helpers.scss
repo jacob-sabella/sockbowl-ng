@@ -5,11 +5,9 @@
  */
 
 /* ===== TEXT UTILITIES ===== */
+// Solid accent, not gradient-clipped text (an AI-design tell).
 .text-gradient {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-primary);
 }
 
 .text-center {
@@ -25,8 +23,9 @@
 }
 
 /* ===== VISUAL EFFECTS ===== */
+// Clean depth, not a neon glow.
 .glow-effect {
-  box-shadow: 0 0 20px var(--glow-primary), 0 0 40px var(--glow-secondary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 /* ===== DISPLAY UTILITIES ===== */

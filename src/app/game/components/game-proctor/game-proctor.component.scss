@@ -22,7 +22,6 @@
   border-radius: 20px !important;
   box-shadow:
     0 10px 40px rgba(0, 0, 0, 0.3),
-    0 0 60px rgba(99, 102, 241, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   position: relative;
   padding: 1.5rem !important;
@@ -43,7 +42,7 @@
       display: inline-block;
       width: 4px;
       height: 1.75rem;
-      background: linear-gradient(180deg, var(--accent-primary), var(--accent-secondary));
+      background: var(--accent-primary);
       border-radius: 2px;
     }
   }
@@ -311,12 +310,11 @@
   }
 
   #advance-round-btn {
-    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%) !important;
+    background: var(--accent-primary) !important;
     color: white !important;
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
 
     &:hover {
-      box-shadow: 0 6px 30px rgba(99, 102, 241, 0.4);
+      filter: brightness(1.06);
     }
   }
 

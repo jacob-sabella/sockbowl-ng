@@ -23,9 +23,7 @@
   &.buzzed {
     background: color-mix(in srgb, var(--accent-primary) 15%, transparent) !important;
     border-color: color-mix(in srgb, var(--accent-primary) 60%, transparent) !important;
-    box-shadow:
-      0 4px 20px var(--glow-primary),
-      0 0 30px var(--glow-primary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   }
 
   h3[mat-subheader] {
@@ -46,7 +44,6 @@
     b {
       font-weight: 700;
       color: var(--text-primary) !important;
-      text-shadow: 0 0 20px var(--glow-primary);
     }
 
     .score-breakdown {

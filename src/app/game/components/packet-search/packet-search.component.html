@@ -526,7 +526,7 @@
           @if (qbMode === 'random' && !qbLoadingSets) {
             <div class="qb-random">
               <div class="qb-group">
-                <div class="qb-group-label">Categories <span class="qb-muted">— any if none picked</span></div>
+                <div class="qb-group-label">Categories <span class="qb-muted">(any if none picked)</span></div>
                 <div class="qb-chips">
                   @for (c of qbCategories; track c) {
                     <button type="button" class="qb-chip" [class.on]="qbSelectedCategories.includes(c)"
@@ -568,7 +568,7 @@
               @if (qbShowAdvanced) {
                 <div class="qb-advanced">
                   <div class="qb-group">
-                    <div class="qb-group-label">Exact difficulty <span class="qb-muted">— overrides the tiers above</span></div>
+                    <div class="qb-group-label">Exact difficulty <span class="qb-muted">(overrides the tiers above)</span></div>
                     <div class="qb-chips">
                       @for (d of qbAllDifficulties; track d) {
                         <button type="button" class="qb-chip qb-chip--sm" [class.on]="qbIndividualDifficulties.includes(d)"

@@ -28,34 +28,6 @@
   );
   border-bottom: 1px solid var(--border-subtle);
   position: relative;
-  overflow: hidden;
-
-  /* Animated gradient orb */
-  &::before {
-    content: "";
-    position: absolute;
-    top: -100px;
-    right: -100px;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(
-      circle,
-      var(--glow-primary) 0%,
-      transparent 70%
-    );
-    border-radius: 50%;
-    animation: float 6s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0) translateX(0);
-    }
-    50% {
-      transform: translateY(-20px) translateX(20px);
-    }
-  }
 
   @keyframes pulse {
     0%,
@@ -69,14 +41,6 @@
     }
   }
 
-  @media (max-width: 768px) {
-    &::before {
-      width: 150px;
-      height: 150px;
-      top: -50px;
-      right: -50px;
-    }
-  }
 }
 
 .hero__card {
@@ -86,10 +50,7 @@
   border: 1px solid var(--border-medium);
   border-radius: 16px;
   padding: 1rem 1.5rem;
-  box-shadow:
-    0 4px 20px var(--shadow-color),
-    0 0 40px var(--glow-primary);
-  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 20px var(--shadow-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -100,9 +61,7 @@
 
   &:hover {
     border-color: var(--accent-primary);
-    box-shadow:
-      0 6px 30px var(--shadow-color),
-      0 0 60px var(--glow-primary);
+    box-shadow: 0 6px 30px var(--shadow-color);
   }
 
   @media (max-width: 768px) {
@@ -235,24 +194,17 @@
 }
 
 .start-game-btn {
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary) 0%,
-    var(--accent-secondary) 100%
-  ) !important;
+  background: var(--accent-primary) !important;
   color: white !important;
   border: none !important;
-  box-shadow:
-    0 4px 20px rgba(99, 102, 241, 0.4),
-    0 0 40px rgba(139, 92, 246, 0.2) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
   transition: all 0.3s ease !important;
   font-weight: 600 !important;
 
   &:hover {
     transform: translateY(-2px) !important;
-    box-shadow:
-      0 6px 30px rgba(99, 102, 241, 0.6),
-      0 0 60px rgba(139, 92, 246, 0.3) !important;
+    filter: brightness(1.06);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important;
   }
 
   mat-icon {
@@ -289,7 +241,6 @@
   border-radius: 20px !important;
   box-shadow:
     0 10px 40px rgba(0, 0, 0, 0.3),
-    0 0 60px rgba(99, 102, 241, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   padding: clamp(1.5rem, 2.2vw, 2rem);
   display: grid;
@@ -306,11 +257,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(
-      90deg,
-      var(--accent-primary),
-      var(--accent-secondary)
-    );
+    background: var(--accent-primary);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -319,7 +266,6 @@
     border-color: var(--border-medium) !important;
     box-shadow:
       0 15px 50px rgba(0, 0, 0, 0.4),
-      0 0 80px rgba(99, 102, 241, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 
     &::before {
@@ -385,18 +331,15 @@ mat-card-actions {
     padding: 0 1.5rem;
 
     &[color="primary"] {
-      background: linear-gradient(
-        135deg,
-        var(--accent-primary) 0%,
-        var(--accent-secondary) 100%
-      ) !important;
+      background: var(--accent-primary) !important;
       color: white !important;
       border: none !important;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        filter: brightness(1.06);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
       }
     }
 
@@ -521,7 +464,7 @@ mat-card-actions {
   &:hover {
     background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
     border-color: var(--border-medium);
-    box-shadow: 0 4px 20px var(--glow-primary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   }
 
   &__header {
@@ -549,11 +492,7 @@ mat-card-actions {
     height: 28px;
     padding: 0 0.5rem;
     border-radius: 14px;
-    background: linear-gradient(
-      135deg,
-      var(--accent-primary) 0%,
-      var(--accent-secondary) 100%
-    );
+    background: var(--accent-primary);
     color: white;
     font-size: 0.85rem;
     font-weight: 700;
@@ -826,9 +765,11 @@ mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
     padding: 0 1.75rem !important;
     border-radius: 12px !important;
     &:not(:disabled) {
-      background: linear-gradient(120deg, var(--accent-primary), var(--accent-secondary)) !important;
+      background: var(--accent-primary) !important;
       color: #fff !important;
-      box-shadow: 0 6px 20px var(--glow-primary, rgba(99, 102, 241, 0.4));
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+
+      &:hover { filter: brightness(1.06); }
     }
   }
 }

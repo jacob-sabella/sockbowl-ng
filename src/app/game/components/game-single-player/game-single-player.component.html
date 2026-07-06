@@ -16,7 +16,7 @@
       <!-- Reveal: full formatted question + verdict + answer + next -->
       <div class="solo__question font-serif" [innerHTML]="round.question"></div>
       <div class="solo__result" [class.solo__result--correct]="wasCorrect" [class.solo__result--wrong]="!wasCorrect">
-        <span class="solo__verdict">{{ wasCorrect ? 'Correct' : (forwent ? 'No answer — time\'s up' : 'Incorrect') }}</span>
+        <span class="solo__verdict">{{ wasCorrect ? 'Correct' : (forwent ? 'No answer, time\'s up' : 'Incorrect') }}</span>
         <div class="solo__answer">
           <span class="solo__answer-label">Answer</span>
           <span class="solo__answer-text font-serif" [innerHTML]="round.answer"></span>
@@ -48,7 +48,7 @@
           }
         </div>
         @if (readingComplete && buzzSecondsLeft === null) {
-          <p class="solo__hint">Reading complete — buzz to answer.</p>
+          <p class="solo__hint">Reading complete, buzz to answer.</p>
         }
       }
 
