@@ -21,6 +21,12 @@ import {environment} from "../../../../environments/environment";
 export class GameSessionComponent {
   showCreateForm = false;
   showJoinForm = false;
+  showModeSelect = false;
+
+  onNewGame(): void {
+    this.showModeSelect = true;
+    this.showJoinForm = false;
+  }
 
   createGameRequest: CreateGameRequest = {
     gameSettings: {
@@ -69,9 +75,13 @@ export class GameSessionComponent {
   }
 
   onGoBack() {
-    // Reset the visibility flags for the forms
-    this.showCreateForm = false;
-    this.showJoinForm = false;
+    // From a form, step back to the mode picker; from the mode picker, back to the hero.
+    if (this.showCreateForm || this.showJoinForm) {
+      this.showCreateForm = false;
+      this.showJoinForm = false;
+    } else {
+      this.showModeSelect = false;
+    }
   }
 
   /**

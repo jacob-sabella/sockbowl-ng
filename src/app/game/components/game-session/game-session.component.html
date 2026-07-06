@@ -2,28 +2,28 @@
   <mat-card class="centered-card">
 
     <!-- Back button -->
-    @if (showCreateForm || showJoinForm) {
+    @if (showCreateForm || showJoinForm || showModeSelect) {
       <div class="header-container">
         <button mat-icon-button (click)="onGoBack()"><mat-icon>arrow_back</mat-icon></button>
         <span class="centered-title">
-          {{ showCreateForm ? 'New Game' : 'Join Game' }}
+          @if (showJoinForm) { Join Game } @else if (showCreateForm) { New Game } @else { Choose a mode }
         </span>
       </div>
     }
 
     <!-- Landing hero -->
-    @if (!showCreateForm && !showJoinForm) {
+    @if (!showCreateForm && !showJoinForm && !showModeSelect) {
       <div class="lobby-hero">
         <span class="lobby-eyebrow">Academic Quiz Bowl</span>
         <h1 class="lobby-title font-display">Sockbowl</h1>
         <p class="lobby-sub">Host a room or join with a code — real packets, live buzzers, tossups&nbsp;&amp;&nbsp;bonuses.</p>
 
         <div class="lobby-actions">
-          <button class="lobby-action primary" (click)="onCreateGame()">
-            <mat-icon>stadium</mat-icon>
+          <button class="lobby-action primary" (click)="onNewGame()">
+            <mat-icon>add_circle</mat-icon>
             <span class="lobby-action-text">
-              <span class="lobby-action-label">Host a match</span>
-              <span class="lobby-action-hint">Open a new room and proctor</span>
+              <span class="lobby-action-label">New game</span>
+              <span class="lobby-action-hint">Solo, or a room for others to join</span>
             </span>
             <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
           </button>
@@ -36,25 +36,39 @@
             </span>
             <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
           </button>
-
-          <button class="lobby-action" (click)="startSoloGame()">
-            <mat-icon>person</mat-icon>
-            <span class="lobby-action-text">
-              <span class="lobby-action-label">Play solo</span>
-              <span class="lobby-action-hint">Practice vs. the packet — answers auto-judged</span>
-            </span>
-            <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
-          </button>
-
-          <button class="lobby-action" (click)="startAutoProctorGame()">
-            <mat-icon>groups</mat-icon>
-            <span class="lobby-action-text">
-              <span class="lobby-action-label">Auto-judged match</span>
-              <span class="lobby-action-hint">Teams &amp; buzzers, no proctor — answers auto-judged</span>
-            </span>
-            <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
-          </button>
         </div>
+      </div>
+    }
+
+    <!-- Mode picker (after New game) -->
+    @if (showModeSelect && !showCreateForm && !showJoinForm) {
+      <div class="lobby-actions">
+        <button class="lobby-action primary" (click)="startSoloGame()">
+          <mat-icon>person</mat-icon>
+          <span class="lobby-action-text">
+            <span class="lobby-action-label">Solo practice</span>
+            <span class="lobby-action-hint">Just you vs. the packet — answers auto-judged</span>
+          </span>
+          <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
+        </button>
+
+        <button class="lobby-action" (click)="startAutoProctorGame()">
+          <mat-icon>groups</mat-icon>
+          <span class="lobby-action-text">
+            <span class="lobby-action-label">Auto-judged match</span>
+            <span class="lobby-action-hint">Teams &amp; buzzers, no proctor — answers auto-judged</span>
+          </span>
+          <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
+        </button>
+
+        <button class="lobby-action" (click)="onCreateGame()">
+          <mat-icon>stadium</mat-icon>
+          <span class="lobby-action-text">
+            <span class="lobby-action-label">Proctored match</span>
+            <span class="lobby-action-hint">A person reads &amp; judges — classic quiz bowl</span>
+          </span>
+          <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
+        </button>
       </div>
     }
 
