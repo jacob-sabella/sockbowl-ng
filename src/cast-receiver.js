@@ -107,6 +107,11 @@
       return;
     }
 
+    // Mirror the viewer's selected skin (body.theme-<name> drives the tokens).
+    if (state.theme) {
+      document.body.className = 'theme-' + state.theme;
+    }
+
     // Switch between config view and match view
     if (state.isConfigStage) {
       showConfigView(state);

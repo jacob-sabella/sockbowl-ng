@@ -1,0 +1,13 @@
+/* Standalone theme tokens for the cast receiver (a non-Angular page).
+   Compiled from the same theme sources the app uses so the cast board can
+   mirror the viewer's selected skin via a body.theme-<name> class. */
+@import 'styles/abstracts/variables';
+@import 'styles/themes/theme-base';
+@import 'styles/themes/dark';
+@import 'styles/themes/light';
+@import 'styles/themes/nord';
+@import 'styles/themes/monokai';
+@import 'styles/themes/catppuccin';
+@import 'styles/themes/dracula';
+@import 'styles/themes/solarized-dark';
+@import 'styles/themes/solarized-light';

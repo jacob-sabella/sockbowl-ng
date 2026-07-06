@@ -16,6 +16,7 @@ mkdirSync(ART, { recursive: true });
 const CONFIG_STATE = {
   messageType: 'GAME_STATE_UPDATE',
   timestamp: 1,
+  theme: 'dark',
   isConfigStage: true,
   joinCode: 'ABCDEF',
   proctorName: 'Alex',
@@ -68,5 +69,23 @@ test('cast receiver renders config + in-game states', async ({ browser }) => {
   await expect(page.locator('#match-view')).toContainText('Anxiety'); // question rendered
   await page.screenshot({ path: `${ART}/cast-02-ingame.png` });
 
+  await ctx.close();
+});
+
+// The board must mirror whatever skin the viewer picked (body.theme-<name>).
+test('cast receiver mirrors the selected skin', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
+  await page.addStyleTag({ content: '.error-overlay,#error,[class*="error"]{display:none!important}' });
+
+  for (const theme of ['dracula', 'light', 'nord']) {
+    await page.evaluate((s) => (window as any).__castRender(s), { ...INGAME_STATE, theme });
+    await page.waitForTimeout(300);
+    const cls = await page.evaluate(() => document.body.className);
+    expect(cls).toContain(`theme-${theme}`);
+    await page.screenshot({ path: `${ART}/cast-theme-${theme}.png` });
+  }
   await ctx.close();
 });

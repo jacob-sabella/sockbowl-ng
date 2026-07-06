@@ -12,9 +12,9 @@
 }
 
 body {
-  font-family: 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
-  background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
-  color: white;
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   padding: 40px;
   min-height: 100vh;
   overflow-y: auto;
@@ -34,13 +34,13 @@ body {
   align-items: baseline;
   margin-bottom: 30px;
   padding-bottom: 20px;
-  border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 3px solid var(--border-subtle);
 }
 
 #round-info {
   font-size: 2rem;
   font-weight: 700;
-  color: #ffeb3b;
+  color: var(--accent-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -48,7 +48,7 @@ body {
 #category-info {
   font-size: 1.6rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
   text-align: right;
 }
 
@@ -60,17 +60,17 @@ body {
   opacity: 0.8;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #ffeb3b;
+  color: var(--accent-primary);
 }
 
 /* Content Containers */
 #question-container,
 #answer-container {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
   border-radius: 16px;
   padding: 30px;
   margin-bottom: 25px;
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  border: 2px solid var(--surface-hover);
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
@@ -78,7 +78,7 @@ body {
 
 #question-container:hover,
 #answer-container:hover {
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--border-medium);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
@@ -86,20 +86,20 @@ body {
 .content-text {
   font-size: 2.2rem;
   line-height: 1.5;
-  color: white;
+  color: var(--text-primary);
   font-weight: 400;
 }
 
 .content-text strong,
 .content-text b {
   font-weight: 700;
-  color: #ffeb3b;
+  color: var(--accent-primary);
 }
 
 .content-text em,
 .content-text i {
   font-style: italic;
-  color: #81d4fa;
+  color: var(--accent-secondary);
 }
 
 /* Buzz Status */
@@ -139,21 +139,21 @@ body {
 }
 
 .buzz-indicator.correct {
-  background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
-  border-color: #81c784;
-  color: white;
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--text-primary);
 }
 
 .buzz-indicator.incorrect {
-  background: linear-gradient(135deg, #e53935 0%, #ef5350 100%);
-  border-color: #ef5350;
-  color: white;
+  background: var(--error);
+  border-color: var(--error);
+  color: var(--text-primary);
 }
 
 .buzz-indicator.pending {
-  background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%);
-  border-color: #ffb74d;
-  color: white;
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--text-primary);
 }
 
 .buzz-indicator::before {
@@ -185,35 +185,35 @@ body {
 }
 
 .team-score {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-hover);
   border-radius: 12px;
   padding: 25px 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 1.8rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--border-subtle);
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .team-score:hover {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--border-strong);
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .team-name {
   font-weight: 600;
-  color: white;
+  color: var(--text-primary);
   flex: 1;
 }
 
 .team-points {
   font-size: 2.6rem;
   font-weight: 800;
-  color: #ffeb3b;
+  color: var(--accent-primary);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   min-width: 80px;
   text-align: right;
@@ -242,7 +242,7 @@ body {
 .app-title {
   font-size: 4.5rem;
   font-weight: 800;
-  color: #ffeb3b;
+  color: var(--accent-primary);
   text-shadow: 0 4px 16px rgba(255, 235, 59, 0.4);
   letter-spacing: 0.05em;
   margin-bottom: 10px;
@@ -251,7 +251,7 @@ body {
 .subtitle {
   font-size: 2rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
@@ -259,7 +259,7 @@ body {
 .join-code-section {
   text-align: center;
   padding: 40px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
   border-radius: 20px;
   border: 3px solid rgba(255, 235, 59, 0.3);
   backdrop-filter: blur(10px);
@@ -270,7 +270,7 @@ body {
   font-size: 5rem;
   font-weight: 900;
   font-family: 'Courier New', monospace;
-  color: #ffeb3b;
+  color: var(--accent-primary);
   letter-spacing: 0.3em;
   text-shadow: 0 4px 16px rgba(255, 235, 59, 0.5);
   margin-top: 10px;
@@ -285,10 +285,10 @@ body {
 }
 
 .config-info-item {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
   border-radius: 16px;
   padding: 25px 30px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--border-subtle);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   text-align: center;
@@ -297,7 +297,7 @@ body {
 .info-label {
   font-size: 1.2rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 10px;
@@ -306,7 +306,7 @@ body {
 .info-value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
 }
 
 .teams-section {
@@ -322,10 +322,10 @@ body {
 }
 
 .config-team {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
   border-radius: 16px;
   padding: 25px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--border-subtle);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
@@ -333,7 +333,7 @@ body {
 .config-team-name {
   font-size: 2rem;
   font-weight: 700;
-  color: #ffeb3b;
+  color: var(--accent-primary);
   margin-bottom: 15px;
   display: flex;
   align-items: center;
@@ -348,7 +348,7 @@ body {
   height: 32px;
   padding: 0 10px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #ffeb3b 0%, #ffc107 100%);
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #ffc107 100%);
   color: #1a237e;
   font-size: 1rem;
   font-weight: 800;
@@ -368,19 +368,19 @@ body {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   font-size: 1.4rem;
-  color: white;
+  color: var(--text-primary);
 }
 
 .config-player::before {
   content: '●';
-  color: #81d4fa;
+  color: var(--accent-secondary);
   font-size: 0.8rem;
 }
 
 .waiting-message {
   font-size: 1.8rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   text-align: center;
   animation: pulse-opacity 2s ease-in-out infinite;
 }
@@ -409,7 +409,7 @@ body {
   padding: 40px 60px;
   background: rgba(0, 0, 0, 0.8);
   border-radius: 20px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  border: 3px solid var(--border-medium);
   backdrop-filter: blur(20px);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
   z-index: 1000;
@@ -438,7 +438,7 @@ body {
 .status-text {
   font-size: 1.8rem;
   font-weight: 500;
-  color: white;
+  color: var(--text-primary);
 }
 
 /* Responsive Adjustments for Smaller Screens */
@@ -496,3 +496,15 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== App design language: display chrome + serif reading surface ===== */
+.app-title, .section-label, .config-label, .team-name, .score-value,
+.round-number, .category, #config-game-mode, .player-count-badge {
+  font-family: var(--font-display) !important;
+  letter-spacing: -0.005em;
+}
+.section-label, .config-label, .category { text-transform: uppercase; letter-spacing: 0.12em; }
+.score-value, .join-code-display, .player-count-badge { font-variant-numeric: tabular-nums; }
+/* the question/answer are the packet being read -> serif */
+#question-text, #answer-text, .question-text, .answer-text { font-family: var(--font-serif) !important; line-height: 1.5; }

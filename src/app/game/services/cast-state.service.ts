@@ -2,6 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, take } from 'rxjs/operators';
 import { GameStateService } from './game-state.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { PresentationConnectionService } from './presentation-connection.service';
 import { CastGameState, CastBuzzInfo, CastTeamScore, CastTeamRoster, PresentationConnectionState } from '../models/cast-interfaces';
 import { GameSession, Team, RoundState, MatchState } from '../models/sockbowl/sockbowl-interfaces';
@@ -35,10 +36,15 @@ export class CastStateService implements OnDestroy {
   /** Track previous proctor state to detect when user loses proctor role */
   private wasSelfProctor = false;
 
+  /** Latest resolved theme, mirrored onto the cast board. */
+  private currentTheme = 'dark';
+
   constructor(
     private gameStateService: GameStateService,
-    private presentationConnectionService: PresentationConnectionService
+    private presentationConnectionService: PresentationConnectionService,
+    private themeService: ThemeService,
   ) {
+    this.themeService.resolvedTheme$.subscribe(t => (this.currentTheme = t));
     this.initialize();
   }
 
@@ -124,6 +130,7 @@ export class CastStateService implements OnDestroy {
 
       return {
         messageType: 'GAME_STATE_UPDATE',
+        theme: this.currentTheme,
         timestamp: Date.now(),
         isConfigStage: true,
         joinCode: gameSession.joinCode,
@@ -170,6 +177,7 @@ export class CastStateService implements OnDestroy {
 
       return {
         messageType: 'GAME_STATE_UPDATE',
+        theme: this.currentTheme,
         timestamp: Date.now(),
         isConfigStage: false,
         roundNumber: currentRound.roundNumber,

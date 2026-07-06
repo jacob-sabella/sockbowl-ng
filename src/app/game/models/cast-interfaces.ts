@@ -12,6 +12,9 @@ import { RoundState } from './sockbowl/sockbowl-interfaces';
  * needed to display the current game state on a TV screen.
  */
 export interface CastGameState {
+  /** Resolved theme name (e.g. "dark", "dracula") so the cast board mirrors the viewer's skin. */
+  theme?: string;
+
   /** Message type identifier for protocol discrimination */
   messageType: 'GAME_STATE_UPDATE';
 

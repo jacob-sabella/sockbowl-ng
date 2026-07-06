@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "buildprod": "ng build --configuration production",
     "test": "ng test",
-    "codegen": "graphql-codegen"
+    "codegen": "graphql-codegen",
+    "gen:cast-tokens": "sass src/cast-theme-tokens.scss src/cast-theme-tokens.css --style=compressed --no-source-map"
   },
   "private": true,
   "engines": {

@@ -32,6 +32,7 @@
               "src/cast-receiver.html",
               "src/cast-receiver.js",
               "src/cast-receiver.css",
+              "src/cast-theme-tokens.css",
               {
                 "glob": "config.template.js",
                 "input": "src/assets",
@@ -110,7 +111,8 @@
               "src/silent-refresh.html",
               "src/cast-receiver.html",
               "src/cast-receiver.js",
-              "src/cast-receiver.css"
+              "src/cast-receiver.css",
+              "src/cast-theme-tokens.css"
             ],
             "styles": [
               "@angular/material/prebuilt-themes/pink-bluegrey.css",
