@@ -8,7 +8,7 @@ SCHEMA="$DIR/questions-models.schema.json"
 OUT="$DIR/packet-types.generated.ts"
 
 npx --yes quicktype@23 --src-lang schema --lang typescript --just-types --top-level Packet "$SCHEMA" \
-  | sed -E 's/\?:/:/g' > /tmp/packet-types.body.ts
+  | sed -E 's/\?:/:/g' | sed -E '/^=== .* ===$/d' > /tmp/packet-types.body.ts
 
 {
   echo "/* eslint-disable */"

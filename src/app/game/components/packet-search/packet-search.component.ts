@@ -62,6 +62,17 @@ export class PacketSearchComponent implements OnInit {
   qbBonusCount: number = 20;
   qbRandomName: string = '';
 
+  // Advanced qbreader filters (all optional).
+  qbShowAdvanced: boolean = false;
+  readonly qbAllDifficulties: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  qbIndividualDifficulties: number[] = []; // if any selected, overrides the coarse tiers
+  qbSubcategoriesText: string = '';        // comma-separated subcategory names
+  qbMinYear: number | null = null;
+  qbMaxYear: number | null = null;
+  qbStandardOnly: boolean = false;
+  // De-dupe against questions this account has already seen (logged-in only).
+  qbAvoidRepeats: boolean = true;
+
   // API configuration properties
   apiKey: string = '';
   selectedModel: string = '';
@@ -469,22 +480,68 @@ export class PacketSearchComponent implements OnInit {
     });
   }
 
-  importQbRandom(): void {
-    if (this.qbImporting) return;
-    const difficulties = this.qbDifficultyTiers
-      .filter(t => this.qbSelectedTiers.includes(t.label))
-      .flatMap(t => t.values);
-    this.qbImporting = true;
-    this.sockbowlQuestionsService.importQbreaderRandom({
+  toggleIndividualDifficulty(d: number): void {
+    const i = this.qbIndividualDifficulties.indexOf(d);
+    if (i >= 0) this.qbIndividualDifficulties.splice(i, 1);
+    else this.qbIndividualDifficulties.push(d);
+  }
+
+  /** Whether the account-level de-dup is actually usable (opted in + logged in). */
+  get qbDedupActive(): boolean {
+    return this.qbAvoidRepeats && this.auth.isAuthenticated();
+  }
+
+  private buildRandomBody(excludeRemoteIds?: string[]) {
+    // Individual difficulties (if any) take precedence over the coarse tiers.
+    const difficulties = this.qbIndividualDifficulties.length
+      ? [...this.qbIndividualDifficulties].sort((a, b) => a - b)
+      : this.qbDifficultyTiers
+          .filter(t => this.qbSelectedTiers.includes(t.label))
+          .flatMap(t => t.values);
+    const subcategories = this.qbSubcategoriesText
+      .split(',').map(s => s.trim()).filter(s => s.length > 0);
+    return {
       categories: this.qbSelectedCategories,
+      subcategories: subcategories.length ? subcategories : undefined,
       difficulties,
+      minYear: this.qbMinYear ?? undefined,
+      maxYear: this.qbMaxYear ?? undefined,
+      standardOnly: this.qbStandardOnly || undefined,
       tossupCount: this.qbTossupCount,
       bonusCount: this.qbBonusCount,
-      name: this.qbRandomName?.trim() || undefined
-    }).subscribe({
-      next: (res) => this.useImportedPacket(res.id),
-      error: (err) => this.onQbImportError(err)
-    });
+      name: this.qbRandomName?.trim() || undefined,
+      excludeRemoteIds
+    };
+  }
+
+  importQbRandom(): void {
+    if (this.qbImporting) return;
+    this.qbImporting = true;
+
+    const run = (excludeRemoteIds?: string[]) => {
+      this.sockbowlQuestionsService.importQbreaderRandom(this.buildRandomBody(excludeRemoteIds)).subscribe({
+        next: (res) => this.afterRandomImport(res),
+        error: (err) => this.onQbImportError(err)
+      });
+    };
+
+    if (this.qbDedupActive) {
+      // Best-effort: fetch this account's seen ids to exclude; never block the import on it.
+      this.sockbowlQuestionsService.getUsedQuestionIds().subscribe({
+        next: (ids) => run(ids),
+        error: () => run()
+      });
+    } else {
+      run();
+    }
+  }
+
+  private afterRandomImport(res: { id: string; usedRemoteIds?: string[] }): void {
+    // Record what this account was served, so future generations avoid it. Fire-and-forget.
+    if (this.qbDedupActive && res.usedRemoteIds && res.usedRemoteIds.length) {
+      this.sockbowlQuestionsService.recordUsedQuestionIds(res.usedRemoteIds).subscribe({ error: () => {} });
+    }
+    this.useImportedPacket(res.id);
   }
 
   /** Fetch the full imported packet and hand it back to the config screen. */

@@ -560,6 +560,48 @@
                 </mat-form-field>
               </div>
 
+              <!-- Advanced filters (full qbreader filter set) -->
+              <button type="button" class="qb-advanced-toggle" (click)="qbShowAdvanced = !qbShowAdvanced">
+                <mat-icon>{{ qbShowAdvanced ? 'expand_less' : 'expand_more' }}</mat-icon>
+                Advanced filters
+              </button>
+              @if (qbShowAdvanced) {
+                <div class="qb-advanced">
+                  <div class="qb-group">
+                    <div class="qb-group-label">Exact difficulty <span class="qb-muted">— overrides the tiers above</span></div>
+                    <div class="qb-chips">
+                      @for (d of qbAllDifficulties; track d) {
+                        <button type="button" class="qb-chip qb-chip--sm" [class.on]="qbIndividualDifficulties.includes(d)"
+                                (click)="toggleIndividualDifficulty(d)">{{ d }}</button>
+                      }
+                    </div>
+                  </div>
+                  <div class="qb-form">
+                    <mat-form-field appearance="outline" class="qb-num-field">
+                      <mat-label>Min year</mat-label>
+                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMinYear">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="qb-num-field">
+                      <mat-label>Max year</mat-label>
+                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMaxYear">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="qb-name-field">
+                      <mat-label>Subcategories (optional)</mat-label>
+                      <input matInput [(ngModel)]="qbSubcategoriesText" placeholder="e.g. Biology, American Literature">
+                    </mat-form-field>
+                  </div>
+                  <mat-slide-toggle color="primary" [(ngModel)]="qbStandardOnly" class="qb-toggle">
+                    Standard sets only
+                  </mat-slide-toggle>
+                </div>
+              }
+
+              @if (auth.isAuthenticated()) {
+                <mat-slide-toggle color="primary" [(ngModel)]="qbAvoidRepeats" class="qb-toggle">
+                  Don't repeat questions I've already seen
+                </mat-slide-toggle>
+              }
+
               <button mat-raised-button color="primary" class="qb-import-btn"
                       [disabled]="qbImporting" (click)="importQbRandom()">
                 @if (qbImporting) {

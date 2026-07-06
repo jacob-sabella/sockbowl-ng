@@ -24,6 +24,7 @@ export interface Bonus {
     bonusParts:  BonusPartElement[];
     id:          string;
     preamble:    string;
+    remoteId:    string;
     subcategory: Subcategory;
     [property: string]: any;
 }
@@ -72,6 +73,7 @@ export interface Tossup {
     answer:      string;
     id:          string;
     question:    string;
+    remoteId:    string;
     subcategory: Subcategory;
     [property: string]: any;
 }

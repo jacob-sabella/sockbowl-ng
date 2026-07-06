@@ -12,6 +12,8 @@ export class SockbowlQuestionsService {
 
   private graphqlUrl: string = environment.sockbowlQuestionsApiUrl + "graphql";
   private qbreaderUrl: string = environment.sockbowlQuestionsApiUrl + "api/qbreader";
+  // Per-user used-question tracking lives on the game backend (Postgres + auth).
+  private gameUserUrl: string = environment.sockbowlGameApiUrl + "api/v1/user";
 
   constructor(private http: HttpClient) { }
 
@@ -34,13 +36,27 @@ export class SockbowlQuestionsService {
       .pipe(timeout(120000));
   }
 
-  /** Build a random qbreader packet from category/difficulty filters. */
+  /** Build a random qbreader packet from the full qbreader filter set (all fields optional). */
   importQbreaderRandom(body: {
-    categories: string[]; difficulties: number[]; tossupCount: number; bonusCount: number; name?: string;
-  }): Observable<{ id: string; name: string }> {
+    categories?: string[]; subcategories?: string[]; difficulties?: number[];
+    minYear?: number; maxYear?: number; standardOnly?: boolean;
+    tossupCount: number; bonusCount: number; name?: string; excludeRemoteIds?: string[];
+  }): Observable<{ id: string; name: string; usedRemoteIds: string[] }> {
     return this.http
-      .post<{ id: string; name: string }>(`${this.qbreaderUrl}/import-random`, body)
+      .post<{ id: string; name: string; usedRemoteIds: string[] }>(`${this.qbreaderUrl}/import-random`, body)
       .pipe(timeout(120000));
+  }
+
+  /** The qbreader question ids the logged-in user has already been served (auth required). */
+  getUsedQuestionIds(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.gameUserUrl}/used-questions`).pipe(timeout(20000));
+  }
+
+  /** Record qbreader question ids just served to the logged-in user (auth required). */
+  recordUsedQuestionIds(remoteIds: string[]): Observable<{ recorded: number }> {
+    return this.http
+      .post<{ recorded: number }>(`${this.gameUserUrl}/used-questions`, remoteIds)
+      .pipe(timeout(20000));
   }
 
   /**
