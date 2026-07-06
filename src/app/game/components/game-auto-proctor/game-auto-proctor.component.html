@@ -27,7 +27,7 @@
           <span class="ap__answer-text font-serif" [innerHTML]="round.answer"></span>
         </div>
         @if (isOwner) {
-          <button type="button" class="ap__next" (click)="next()">Next tossup →</button>
+          <button type="button" class="ap__next" (click)="next()">Next tossup</button>
         } @else {
           <p class="ap__hint">Waiting for the host to advance…</p>
         }
@@ -37,7 +37,7 @@
       <div class="ap__bonus">
         <div class="ap__bonus-head">
           <mat-icon>star</mat-icon>
-          <span>Bonus · part {{ bonusPartIndex + 1 }} of 3@if (!bonusEligible) { — {{ bonusTeamName }}'s bonus }</span>
+          <span>Bonus · part {{ bonusPartIndex + 1 }} of 3@if (!bonusEligible) { ({{ bonusTeamName }}'s bonus) }</span>
         </div>
         @if (bonusPreamble) {
           <div class="ap__question font-serif" [innerHTML]="bonusPreamble"></div>

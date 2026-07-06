@@ -7,12 +7,12 @@
           <div class="info-item">
             <mat-icon>account_circle</mat-icon>
             <span class="info-label">Proctor:</span>
-            <span class="info-value">{{ gameSession.gameSettings.proctorType || '—' }}</span>
+            <span class="info-value">{{ gameSession.gameSettings.proctorType || 'None' }}</span>
           </div>
           <div class="info-item">
             <mat-icon>tune</mat-icon>
             <span class="info-label">Mode:</span>
-            <span class="info-value">{{ gameSession.gameSettings.gameMode || '—' }}</span>
+            <span class="info-value">{{ gameSession.gameSettings.gameMode || 'None' }}</span>
           </div>
           @if (gameStateService.getCurrentPlayer()) {
             <div class="info-item">
@@ -74,7 +74,7 @@
           <div class="launch__meta">
             <span class="launch__label">Mode</span>
             <span class="launch__name">
-              {{ gameStateService.isAutoProctor() ? 'Auto-judged — no proctor' : 'Solo practice — answers auto-judged' }}
+              {{ gameStateService.isAutoProctor() ? 'Auto-judged, no proctor' : 'Solo practice, answers auto-judged' }}
             </span>
           </div>
         </div>

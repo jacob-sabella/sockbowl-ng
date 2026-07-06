@@ -13,14 +13,14 @@
     content: '';
     position: absolute;
     inset: 0;
+    /* Faint answer-sheet grid only — no purple wash. */
     background:
-      radial-gradient(ellipse 60% 50% at 50% 0%, var(--glow-primary, rgba(99, 102, 241, 0.14)) 0%, transparent 60%),
       linear-gradient(var(--border-subtle) 1px, transparent 1px),
       linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
-    background-size: 100% 100%, 44px 44px, 44px 44px;
-    opacity: 0.5;
-    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 30%, transparent 100%);
-    mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 30%, transparent 100%);
+    background-size: 46px 46px, 46px 46px;
+    opacity: 0.3;
+    -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 42%, #000 20%, transparent 100%);
+    mask-image: radial-gradient(ellipse 85% 75% at 50% 42%, #000 20%, transparent 100%);
     pointer-events: none;
   }
 
@@ -34,11 +34,10 @@
     background: var(--surface) !important;
     border: 1px solid var(--border-medium) !important;
     border-radius: 24px !important;
+    // Clean depth, not an ambient purple glow (the LLM-default "dark tech" wash).
     box-shadow:
-      0 20px 60px rgba(0, 0, 0, 0.5),
-      0 0 80px rgba(99, 102, 241, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(20px);
+      0 24px 70px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 
     .header-container {
       display: flex;
@@ -59,16 +58,15 @@
       }
 
       .centered-title {
-        font-size: 1.5em;
+        font-family: var(--font-display);
+        font-size: 1.4em;
         font-weight: 700;
+        letter-spacing: -0.01em;
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
         text-align: center;
-        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--text-primary);
       }
     }
 
@@ -166,13 +164,16 @@
         &:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 
         &.primary {
+          // Solid accent, not a gradient+glow (the two clearest AI-button tells).
           border-color: transparent;
-          background: linear-gradient(120deg, var(--accent-primary), var(--accent-secondary));
+          background: var(--accent-primary);
           color: #fff;
-          box-shadow: var(--shadow-md) var(--glow-primary, rgba(99, 102, 241, 0.35));
+          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
 
           > mat-icon, .lobby-action-arrow { color: #fff; }
-          .lobby-action-hint { color: rgba(255, 255, 255, 0.82); }
+          .lobby-action-hint { color: rgba(255, 255, 255, 0.85); }
+
+          &:hover { filter: brightness(1.06); }
         }
       }
     }

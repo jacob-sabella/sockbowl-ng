@@ -14,9 +14,8 @@
     <!-- Landing hero -->
     @if (!showCreateForm && !showJoinForm && !showModeSelect) {
       <div class="lobby-hero">
-        <span class="lobby-eyebrow">Academic Quiz Bowl</span>
         <h1 class="lobby-title font-display">Sockbowl</h1>
-        <p class="lobby-sub">Host a room or join with a code — real packets, live buzzers, tossups&nbsp;&amp;&nbsp;bonuses.</p>
+        <p class="lobby-sub">Real quiz-bowl packets and live buzzers, with answers judged the moment you type them.</p>
 
         <div class="lobby-actions">
           <button class="lobby-action primary" (click)="onNewGame()">
@@ -48,7 +47,7 @@
           <mat-icon>person</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Solo practice</span>
-            <span class="lobby-action-hint">Just you vs. the packet — answers auto-judged</span>
+            <span class="lobby-action-hint">Just you vs. the packet, answers auto-judged</span>
           </span>
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
@@ -57,7 +56,7 @@
           <mat-icon>groups</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Auto-judged match</span>
-            <span class="lobby-action-hint">Teams &amp; buzzers, no proctor — answers auto-judged</span>
+            <span class="lobby-action-hint">Teams &amp; buzzers, no proctor, answers auto-judged</span>
           </span>
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
@@ -66,7 +65,7 @@
           <mat-icon>stadium</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Proctored match</span>
-            <span class="lobby-action-hint">A person reads &amp; judges — classic quiz bowl</span>
+            <span class="lobby-action-hint">A person reads and judges, classic quiz bowl</span>
           </span>
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
