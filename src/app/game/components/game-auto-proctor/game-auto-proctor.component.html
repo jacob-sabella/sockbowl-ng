@@ -32,6 +32,28 @@
           <p class="ap__hint">Waiting for the host to advance…</p>
         }
       </div>
+    } @else if (isBonus) {
+      <!-- Bonus: read to the eligible team, each part typed + auto-judged -->
+      <div class="ap__bonus">
+        <div class="ap__bonus-head">
+          <mat-icon>star</mat-icon>
+          <span>Bonus · part {{ bonusPartIndex + 1 }} of 3@if (!bonusEligible) { — {{ bonusTeamName }}'s bonus }</span>
+        </div>
+        @if (bonusPreamble) {
+          <div class="ap__question font-serif" [innerHTML]="bonusPreamble"></div>
+        }
+        <div class="ap__question font-serif" [innerHTML]="bonusPartQuestion"></div>
+
+        @if (bonusEligible) {
+          <form class="ap__form" (ngSubmit)="submit()">
+            <input #answerInput class="ap__input" name="banswer" [(ngModel)]="answerText"
+                   autocomplete="off" spellcheck="false" placeholder="Answer this part…" aria-label="Bonus answer" />
+            <button type="submit" class="ap__submit" [disabled]="!canSubmit">Submit</button>
+          </form>
+        } @else {
+          <p class="ap__hint">{{ bonusTeamName }} is answering the bonus…</p>
+        }
+      </div>
     } @else {
       <div class="ap__reading font-serif">
         <span>{{ revealedText }}</span>@if (!readingComplete && isBuzzable) { <span class="ap__cursor">▍</span> }

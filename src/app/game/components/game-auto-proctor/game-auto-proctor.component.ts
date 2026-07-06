@@ -33,7 +33,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private readingTimer: any = null;
   private currentRoundKey = '';
-  private lastBuzzerId: string | null = null;
+  private lastAnswerKey = '';
 
   constructor(public gameStateService: GameStateService) {}
 
@@ -103,7 +103,48 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   get canSubmit(): boolean {
-    return this.iAmBuzzer && this.answerText.trim().length > 0;
+    return (this.iAmBuzzer || this.bonusEligible) && this.answerText.trim().length > 0;
+  }
+
+  /* -------------------------------- bonus ------------------------------- */
+
+  get isBonus(): boolean {
+    return this.roundState === RoundState.BONUS_AWAITING_ANSWER;
+  }
+
+  get bonusPreamble(): string {
+    return this.round?.currentBonus?.preamble || '';
+  }
+
+  get bonusPartIndex(): number {
+    return this.round?.currentBonusPartIndex ?? 0;
+  }
+
+  /** The current bonus part's question text (by order, falling back to list position). */
+  get bonusPartQuestion(): string {
+    const parts = this.round?.currentBonus?.bonusParts || [];
+    const byOrder = parts.find((p: any) => p.order === this.bonusPartIndex);
+    const part = byOrder || parts[this.bonusPartIndex];
+    return part?.bonusPart?.question || '';
+  }
+
+  /** The team the current player belongs to. */
+  get myTeamId(): string | null {
+    for (const t of (this.gameSession?.teamList || [])) {
+      if ((t.teamPlayers || []).some((p: any) => p.playerId === this.myPlayerId)) {
+        return t.teamId;
+      }
+    }
+    return null;
+  }
+
+  get bonusEligible(): boolean {
+    return this.isBonus && this.round?.bonusEligibleTeamId === this.myTeamId;
+  }
+
+  get bonusTeamName(): string {
+    return this.round?.bonusEligibleTeamId
+      ? (this.gameStateService.getTeamNameById(this.round.bonusEligibleTeamId) || 'A team') : '';
   }
 
   get isOwner(): boolean {
@@ -175,11 +216,14 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     }
     const key = `${r.roundNumber}:${(r.question || '').length}`;
 
-    // Focus the answer box the moment I become the buzzer.
-    if (this.iAmBuzzer && this.currentBuzz?.playerId !== this.lastBuzzerId) {
+    // Clear + focus the answer box the moment I become the answerer (a tossup buzz or a bonus part).
+    const answerKey = this.iAmBuzzer ? `buzz:${this.currentBuzz?.playerId}`
+      : this.bonusEligible ? `bonus:${this.bonusPartIndex}` : '';
+    if (answerKey && answerKey !== this.lastAnswerKey) {
+      this.answerText = '';
       setTimeout(() => this.answerInput?.nativeElement?.focus(), 0);
     }
-    this.lastBuzzerId = this.currentBuzz?.playerId ?? null;
+    this.lastAnswerKey = answerKey;
 
     if (this.isBuzzable) {
       if (key !== this.currentRoundKey) {
