@@ -13,7 +13,9 @@ export class SockbowlQuestionsService {
   private graphqlUrl: string = environment.sockbowlQuestionsApiUrl + "graphql";
   private qbreaderUrl: string = environment.sockbowlQuestionsApiUrl + "api/qbreader";
   // Per-user used-question tracking lives on the game backend (Postgres + auth).
-  private gameUserUrl: string = environment.sockbowlGameApiUrl + "api/v1/user";
+  // sockbowlGameApiUrl is session-scoped (…/api/v1/session), so swap the tail for the user API.
+  private gameUserUrl: string =
+    environment.sockbowlGameApiUrl.replace(/api\/v1\/session\/?$/, "api/v1/user");
 
   constructor(private http: HttpClient) { }
 
