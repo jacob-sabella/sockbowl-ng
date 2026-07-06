@@ -68,13 +68,23 @@
 
     <!-- LAUNCH BAR — proctor status + the primary Start Match action -->
     <section class="launch">
-      <div class="launch__proctor">
-        <mat-icon class="launch__icon">supervisor_account</mat-icon>
-        <div class="launch__meta">
-          <span class="launch__label">Proctor</span>
-          <span class="launch__name">{{ gameStateService.getProctor()?.name || 'No proctor yet' }}</span>
+      @if (gameStateService.isSinglePlayer()) {
+        <div class="launch__proctor">
+          <mat-icon class="launch__icon">person</mat-icon>
+          <div class="launch__meta">
+            <span class="launch__label">Mode</span>
+            <span class="launch__name">Solo practice — answers auto-judged</span>
+          </div>
         </div>
-      </div>
+      } @else {
+        <div class="launch__proctor">
+          <mat-icon class="launch__icon">supervisor_account</mat-icon>
+          <div class="launch__meta">
+            <span class="launch__label">Proctor</span>
+            <span class="launch__name">{{ gameStateService.getProctor()?.name || 'No proctor yet' }}</span>
+          </div>
+        </div>
+      }
       <div class="launch__status">
         <span class="launch__step" [class.done]="!!gameSession.currentMatch.packet?.id">
           <mat-icon>{{ gameSession.currentMatch.packet?.id ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
@@ -89,7 +99,7 @@
             <mat-icon>workspace_premium</mat-icon> Become Proctor
           </button>
         }
-        @if (gameStateService.isSelfProctor()) {
+        @if (canManageConfig()) {
           <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
                   [disabled]="!gameSession.currentMatch.packet?.id">
             <mat-icon>play_arrow</mat-icon> Start Match
@@ -149,13 +159,13 @@
           }
         </mat-card-content>
         <mat-card-actions align="end">
-          @if (gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) {
+          @if (canManageConfig() && gameSession.currentMatch.packet?.id) {
             <button mat-stroked-button color="primary" (click)="openPacketPreview()">
               <mat-icon>visibility</mat-icon>
               Preview
             </button>
           }
-          @if (gameStateService.isSelfProctor()) {
+          @if (canManageConfig()) {
             <button mat-raised-button color="primary" (click)="openPacketSearch()">
               <mat-icon>travel_explore</mat-icon>
               Find a Packet

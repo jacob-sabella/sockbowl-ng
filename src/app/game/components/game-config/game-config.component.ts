@@ -126,6 +126,10 @@ export class GameConfigComponent implements OnInit {
   }
 
   canBecomeProctor(): boolean {
+    // Single player has no proctor role — the lone player runs the match themselves.
+    if (this.gameStateService.isSinglePlayer()) {
+      return false;
+    }
     const proctor = this.gameStateService.getProctor();
     const isProctor =
       !!proctor && proctor.playerId === this.gameStateService.playerSessionId;
@@ -133,6 +137,14 @@ export class GameConfigComponent implements OnInit {
     const noProctor = !proctor;
 
     return (noProctor || isGameOwner) && !isProctor;
+  }
+
+  /**
+   * Whether the current player may manage config (pick/preview packet, start).
+   * The proctor manages a normal game; in single player the lone owner does.
+   */
+  canManageConfig(): boolean {
+    return this.gameStateService.isSelfProctor() || this.gameStateService.isSinglePlayer();
   }
 
   becomeProctor(): void {
