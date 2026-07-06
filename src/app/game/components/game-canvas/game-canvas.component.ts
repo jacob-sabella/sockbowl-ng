@@ -42,7 +42,15 @@ export class GameCanvasComponent {
 
 
   shouldShowBuzzerComponent(): boolean {
-    return this.gameStateService.getMatchState() == MatchState.IN_GAME && this.gameStateService.isSelfOnAnyTeam();
+    return this.gameStateService.getMatchState() == MatchState.IN_GAME
+      && this.gameStateService.isSelfOnAnyTeam()
+      && !this.gameStateService.isSinglePlayer();
+  }
+
+  shouldShowSinglePlayerComponent(): boolean {
+    return this.gameStateService.getMatchState() == MatchState.IN_GAME
+      && this.gameStateService.isSinglePlayer()
+      && this.gameStateService.isSelfOnAnyTeam();
   }
 
   shouldShowSpectatorComponent(): boolean {

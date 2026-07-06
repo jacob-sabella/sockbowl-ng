@@ -3,7 +3,7 @@ import {ReplaySubject, Observable} from 'rxjs';
 import {filter, tap} from 'rxjs/operators';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {GameMessageService} from './game-message.service';
-import {
+import { GameMode,
   AdvanceRound,
   AnswerOutcome,
   AnswerUpdate,
@@ -22,6 +22,7 @@ import {
   Player,
   PlayerBuzzed,
   PlayerIncomingBuzz,
+  SubmitAnswer,
   PlayerMode,
   PlayerRosterUpdate,
   ProcessError,
@@ -305,6 +306,14 @@ export class GameStateService {
   }
 
   /**
+   * Sends a SubmitAnswer message (single-player typed answer).
+   */
+  public sendSubmitAnswer(answerText: string): void {
+    const submitAnswer = new SubmitAnswer({ answerText } as SubmitAnswer);
+    this.gameMessageService.sendMessage(`/app/game/submit-answer`, submitAnswer);
+  }
+
+  /**
    * Sends a TimeoutRound message.
    */
   public sendTimeoutRound(): void {
@@ -454,6 +463,13 @@ export class GameStateService {
    */
   public getMatchState(): MatchState {
     return this.gameSessionState.currentMatch.matchState;
+  }
+
+  /**
+   * Whether the current game is single-player (auto-judged, no proctor).
+   */
+  public isSinglePlayer(): boolean {
+    return this.gameSessionState?.gameSettings?.gameMode === GameMode.SINGLE_PLAYER;
   }
 
   /**
