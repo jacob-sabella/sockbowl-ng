@@ -41,9 +41,12 @@ export class PacketSearchComponent implements OnInit {
   qbImporting: boolean = false;
   qbLoaded: boolean = false;
 
+  // The 12 canonical qbreader categories. ("Pop Culture" is qbreader's name for
+  // what quizbowl traditionally calls "Trash" — the earlier 'Trash' label was
+  // silently ignored by the API and returned unfiltered questions.)
   readonly qbCategories: string[] = [
     'Literature', 'History', 'Science', 'Fine Arts', 'Religion', 'Mythology',
-    'Philosophy', 'Social Science', 'Geography', 'Current Events', 'Other Academic', 'Trash'
+    'Philosophy', 'Social Science', 'Geography', 'Current Events', 'Other Academic', 'Pop Culture'
   ];
   readonly qbDifficultyTiers: { label: string; values: number[] }[] = [
     { label: 'Middle School', values: [1, 2] },
