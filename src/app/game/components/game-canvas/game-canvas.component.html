@@ -13,6 +13,12 @@
         <app-game-proctor></app-game-proctor>
       </div>
     }
+    <!-- Auto-proctor multiplayer component -->
+    @if (shouldShowAutoProctorComponent()) {
+      <div>
+        <app-game-auto-proctor></app-game-auto-proctor>
+      </div>
+    }
     <!-- Single-player component -->
     @if (shouldShowSinglePlayerComponent()) {
       <div>

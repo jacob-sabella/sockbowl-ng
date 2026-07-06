@@ -44,12 +44,18 @@ export class GameCanvasComponent {
   shouldShowBuzzerComponent(): boolean {
     return this.gameStateService.getMatchState() == MatchState.IN_GAME
       && this.gameStateService.isSelfOnAnyTeam()
-      && !this.gameStateService.isSinglePlayer();
+      && !this.gameStateService.isProctorless();
   }
 
   shouldShowSinglePlayerComponent(): boolean {
     return this.gameStateService.getMatchState() == MatchState.IN_GAME
       && this.gameStateService.isSinglePlayer()
+      && this.gameStateService.isSelfOnAnyTeam();
+  }
+
+  shouldShowAutoProctorComponent(): boolean {
+    return this.gameStateService.getMatchState() == MatchState.IN_GAME
+      && this.gameStateService.isAutoProctor()
       && this.gameStateService.isSelfOnAnyTeam();
   }
 

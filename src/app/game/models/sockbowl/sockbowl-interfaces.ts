@@ -555,6 +555,7 @@ export enum MessageTypes {
 export enum GameMode {
   QUIZ_BOWL_CLASSIC = "QUIZ_BOWL_CLASSIC",
   SINGLE_PLAYER = "SINGLE_PLAYER",
+  AUTO_PROCTOR = "AUTO_PROCTOR",
 }
 
 export enum JoinStatus {

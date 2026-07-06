@@ -68,12 +68,14 @@
 
     <!-- LAUNCH BAR — proctor status + the primary Start Match action -->
     <section class="launch">
-      @if (gameStateService.isSinglePlayer()) {
+      @if (gameStateService.isProctorless()) {
         <div class="launch__proctor">
-          <mat-icon class="launch__icon">person</mat-icon>
+          <mat-icon class="launch__icon">{{ gameStateService.isAutoProctor() ? 'groups' : 'person' }}</mat-icon>
           <div class="launch__meta">
             <span class="launch__label">Mode</span>
-            <span class="launch__name">Solo practice — answers auto-judged</span>
+            <span class="launch__name">
+              {{ gameStateService.isAutoProctor() ? 'Auto-judged — no proctor' : 'Solo practice — answers auto-judged' }}
+            </span>
           </div>
         </div>
       } @else {

@@ -1,4 +1,5 @@
 import {GameSinglePlayerComponent} from './game/components/game-single-player/game-single-player.component';
+import {GameAutoProctorComponent} from './game/components/game-auto-proctor/game-auto-proctor.component';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
@@ -54,6 +55,7 @@ import { AdminBansComponent } from './structure/components/admin-bans/admin-bans
         GameProctorComponent,
         GameBuzzerComponent,
     GameSinglePlayerComponent,
+    GameAutoProctorComponent,
         GameSpectatorComponent,
         TeamListComponent,
         MatchSummaryComponent,

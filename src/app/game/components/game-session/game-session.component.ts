@@ -86,6 +86,18 @@ export class GameSessionComponent {
     this.submitCreateGame();
   }
 
+  /**
+   * Hosts an auto-proctor multiplayer game (teams + buzzers, answers auto-judged,
+   * no proctor). Lands in config to assign teams + pick a packet, then start.
+   */
+  startAutoProctorGame(): void {
+    this.createGameRequest.gameSettings.gameMode = GameMode.AUTO_PROCTOR;
+    if (!this.joinGameRequest.name) {
+      this.joinGameRequest.name = this.authService.getUserProfile()?.name || 'Host';
+    }
+    this.submitCreateGame();
+  }
+
   submitCreateGame(): void {
     this.gameSessionService.createNewGame(this.createGameRequest).subscribe(response => {
       console.log("Create game response");

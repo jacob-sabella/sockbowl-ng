@@ -1,0 +1,74 @@
+@if (round) {
+  <section class="ap">
+    <header class="ap__meta">
+      <span class="ap__round">Tossup {{ round.roundNumber }}</span>
+      @if (round.category) {
+        <span class="ap__cat">
+          {{ round.category }}@if (round.subcategory) { <span class="ap__sub">· {{ round.subcategory }}</span> }
+        </span>
+      }
+    </header>
+
+    <!-- Team scores -->
+    <div class="ap__scores">
+      @for (t of teamScores; track t.name) {
+        <span class="ap__team"><span class="ap__team-name">{{ t.name }}</span><strong>{{ t.score }}</strong></span>
+      }
+    </div>
+
+    @if (isCompleted) {
+      <div class="ap__question font-serif" [innerHTML]="round.question"></div>
+      <div class="ap__result" [class.ap__result--correct]="wasCorrect" [class.ap__result--wrong]="!wasCorrect">
+        <span class="ap__verdict">
+          {{ wasCorrect ? (buzzerTeam + ' got it') : 'Nobody got it' }}
+        </span>
+        <div class="ap__answer">
+          <span class="ap__answer-label">Answer</span>
+          <span class="ap__answer-text font-serif" [innerHTML]="round.answer"></span>
+        </div>
+        @if (isOwner) {
+          <button type="button" class="ap__next" (click)="next()">Next tossup →</button>
+        } @else {
+          <p class="ap__hint">Waiting for the host to advance…</p>
+        }
+      </div>
+    } @else {
+      <div class="ap__reading font-serif">
+        <span>{{ revealedText }}</span>@if (!readingComplete && isBuzzable) { <span class="ap__cursor">▍</span> }
+      </div>
+
+      @if (someoneBuzzed && !iAmBuzzer) {
+        <div class="ap__buzzed">
+          <mat-icon>hearing</mat-icon>
+          <span><strong>{{ buzzerName }}</strong>@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering…</span>
+        </div>
+      }
+
+      @if (iAmBuzzer) {
+        <form class="ap__form" (ngSubmit)="submit()">
+          <input #answerInput class="ap__input" name="answer" [(ngModel)]="answerText"
+                 autocomplete="off" spellcheck="false" placeholder="Type your answer…" aria-label="Your answer" />
+          <button type="submit" class="ap__submit" [disabled]="!canSubmit">Submit</button>
+        </form>
+      }
+
+      @if (isBuzzable) {
+        <div class="ap__controls">
+          <button type="button" class="ap__buzz" (click)="buzz()" [disabled]="!canBuzz">
+            <span class="ap__buzz-key">Buzz</span>
+            @if (!gameStateService.isSelfOnAnyTeam()) {
+              <span class="ap__buzz-hint">spectating</span>
+            } @else if (gameStateService.hasCurrentPlayerTeamBuzzed()) {
+              <span class="ap__buzz-hint">team locked out</span>
+            }
+          </button>
+          <label class="ap__speed">
+            <span class="ap__speed-label">Reading speed</span>
+            <input type="range" min="1" max="10" step="1" [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
+                   aria-label="Reading speed">
+          </label>
+        </div>
+      }
+    }
+  </section>
+}

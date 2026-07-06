@@ -472,6 +472,16 @@ export class GameStateService {
     return this.gameSessionState?.gameSettings?.gameMode === GameMode.SINGLE_PLAYER;
   }
 
+  /** Whether the current game is auto-proctor multiplayer (teams + buzzers, no proctor). */
+  public isAutoProctor(): boolean {
+    return this.gameSessionState?.gameSettings?.gameMode === GameMode.AUTO_PROCTOR;
+  }
+
+  /** Modes with no human proctor. */
+  public isProctorless(): boolean {
+    return this.isSinglePlayer() || this.isAutoProctor();
+  }
+
   /**
    * Gets the current player's information.
    */
