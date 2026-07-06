@@ -9,20 +9,9 @@
       }
     </header>
 
-    <div class="solo__question font-serif" [innerHTML]="round.question"></div>
-
-    @if (!isCompleted) {
-      <form class="solo__form" (ngSubmit)="submit()">
-        <input class="solo__input"
-               name="answer"
-               [(ngModel)]="answerText"
-               autocomplete="off"
-               spellcheck="false"
-               placeholder="Type your answer…"
-               aria-label="Your answer" />
-        <button type="submit" class="solo__submit" [disabled]="!canSubmit">Submit</button>
-      </form>
-    } @else {
+    @if (isCompleted) {
+      <!-- Reveal: full formatted question + verdict + answer + next -->
+      <div class="solo__question font-serif" [innerHTML]="round.question"></div>
       <div class="solo__result" [class.solo__result--correct]="wasCorrect" [class.solo__result--wrong]="!wasCorrect">
         <span class="solo__verdict">{{ wasCorrect ? 'Correct' : 'Incorrect' }}</span>
         <div class="solo__answer">
@@ -31,6 +20,43 @@
         </div>
         <button type="button" class="solo__next" (click)="next()">Next tossup →</button>
       </div>
+    } @else {
+      <!-- Reading: progressively revealed question -->
+      <div class="solo__reading font-serif">
+        <span>{{ revealedText }}</span>@if (!readingComplete && !hasBuzzed) { <span class="solo__cursor">▍</span> }
+      </div>
+
+      @if (isReadingPhase) {
+        <div class="solo__controls">
+          <button type="button" class="solo__buzz" (click)="buzz()">
+            <span class="solo__buzz-key">Buzz</span>
+            <span class="solo__buzz-hint">space</span>
+          </button>
+          <label class="solo__speed">
+            <span class="solo__speed-label">Reading speed</span>
+            <input type="range" min="1" max="10" step="1"
+                   [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
+                   aria-label="Reading speed">
+          </label>
+        </div>
+        @if (readingComplete) {
+          <p class="solo__hint">Reading complete — buzz to answer.</p>
+        }
+      }
+
+      @if (isAnswering) {
+        <form class="solo__form" (ngSubmit)="submit()">
+          <input #answerInput
+                 class="solo__input"
+                 name="answer"
+                 [(ngModel)]="answerText"
+                 autocomplete="off"
+                 spellcheck="false"
+                 placeholder="Type your answer…"
+                 aria-label="Your answer" />
+          <button type="submit" class="solo__submit" [disabled]="!canSubmit">Submit</button>
+        </form>
+      }
     }
   </section>
 }
