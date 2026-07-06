@@ -1,7 +1,8 @@
 .game-buzzer-container {
-  height: 100vh;
-  max-height: 100vh;
-  overflow: hidden;
+  // Fill the viewport but let content scroll on short phones instead of clipping
+  // (buzzer + bonus + timer + team list can exceed the height).
+  min-height: 100vh;
+  overflow-y: auto;
   background: var(--bg-primary);
   padding: 2rem;
   display: flex;

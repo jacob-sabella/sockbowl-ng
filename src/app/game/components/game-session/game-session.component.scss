@@ -27,7 +27,8 @@
   .centered-card {
     width: 90vw;
     max-width: 480px;
-    padding: 3em;
+    // Fluid padding so the content column isn't crushed on small phones (was a flat 3em).
+    padding: clamp(1.5em, 6vw, 3em);
     position: relative;
     z-index: 1;
     background: var(--surface) !important;
