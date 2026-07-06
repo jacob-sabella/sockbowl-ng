@@ -27,3 +27,8 @@ mkdir -p "$(dirname "$DEST")"
 } > "$DEST"
 
 echo "Synced schema -> $DEST"
+
+# JSON Schema of the models (consumed by quicktype -> packet-types.generated.ts)
+JSON_SRC="$(dirname "$SRC")/questions-models.schema.json"
+JSON_DEST="$REPO_ROOT/src/app/game/models/sockbowl/questions-models.schema.json"
+if [[ -f "$JSON_SRC" ]]; then cp "$JSON_SRC" "$JSON_DEST" && echo "synced models JSON schema"; fi
