@@ -1,0 +1,58 @@
+<div class="preview">
+  <div class="preview__head">
+    <div class="preview__headings">
+      <div class="preview__eyebrow"><mat-icon>visibility</mat-icon> Packet preview · proctor only</div>
+      <h2 class="preview__title">{{ packet?.name || 'Packet' }}</h2>
+      <div class="preview__meta">{{ tossups.length }} tossups · {{ bonuses.length }} bonuses</div>
+    </div>
+    <button mat-icon-button (click)="close()" aria-label="Close preview">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="preview__body">
+    <mat-tab-group>
+      <mat-tab label="Tossups ({{ tossups.length }})">
+        <div class="qset">
+          @for (ct of tossups; track $index) {
+            <article class="q">
+              <div class="q__num">{{ $index + 1 }}</div>
+              <div class="q__body">
+                <div class="q__question" [innerHTML]="ct.tossup?.question || '(no question)'"></div>
+                <div class="q__answer">
+                  <span class="q__label">Answer</span>
+                  <span [innerHTML]="ct.tossup?.answer"></span>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Bonuses ({{ bonuses.length }})">
+        <div class="qset">
+          @for (cb of bonuses; track $index) {
+            <article class="q">
+              <div class="q__num">{{ $index + 1 }}</div>
+              <div class="q__body">
+                <div class="q__question" [innerHTML]="cb.bonus?.preamble || '(no preamble)'"></div>
+                @for (hp of parts(cb); track $index) {
+                  <div class="q__part">
+                    <div class="q__part-q">
+                      <span class="q__label">[10]</span>
+                      <span [innerHTML]="hp.bonusPart?.question"></span>
+                    </div>
+                    <div class="q__answer">
+                      <span class="q__label">Answer</span>
+                      <span [innerHTML]="hp.bonusPart?.answer"></span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-dialog-content>
+</div>

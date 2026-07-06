@@ -149,6 +149,12 @@
           }
         </mat-card-content>
         <mat-card-actions align="end">
+          @if (gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) {
+            <button mat-stroked-button color="primary" (click)="openPacketPreview()">
+              <mat-icon>visibility</mat-icon>
+              Preview
+            </button>
+          }
           @if (gameStateService.isSelfProctor()) {
             <button mat-raised-button color="primary" (click)="openPacketSearch()">
               <mat-icon>travel_explore</mat-icon>

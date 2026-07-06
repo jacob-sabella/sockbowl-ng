@@ -1,0 +1,97 @@
+.preview {
+  display: flex;
+  flex-direction: column;
+  max-height: 86vh;
+  min-width: min(720px, 92vw);
+  color: var(--text-primary);
+}
+
+.preview__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+
+  .preview__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-display);
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--accent-primary);
+    mat-icon { font-size: 15px; width: 15px; height: 15px; }
+  }
+  .preview__title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    margin: 0.35rem 0 0.2rem;
+  }
+  .preview__meta { color: var(--text-muted); font-size: 0.85rem; }
+}
+
+.preview__body { padding: 0 !important; overflow: hidden; }
+
+.qset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 0.4rem 0.25rem;
+  max-height: 62vh;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 4px; }
+}
+
+.q {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+
+  .q__num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--accent-primary);
+    min-width: 1.75rem;
+  }
+  .q__body { flex: 1; min-width: 0; }
+
+  /* The reading surface: questions/answers in the packet serif */
+  .q__question {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+  .q__answer {
+    margin-top: 0.5rem;
+    font-family: var(--font-serif);
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+  .q__label {
+    font-family: var(--font-display);
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent-primary);
+    margin-right: 0.4rem;
+    vertical-align: 0.05em;
+  }
+  .q__part {
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed var(--border-subtle);
+  }
+  .q__part-q { font-family: var(--font-serif); line-height: 1.5; }
+}

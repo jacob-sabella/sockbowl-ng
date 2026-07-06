@@ -15,6 +15,7 @@ import { GameStateService } from '../../services/game-state.service';
 import { GameMessageService } from '../../services/game-message.service';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
+import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
 import { CastStateService } from '../../services/cast-state.service';
 import { PresentationConnectionState } from '../../models/cast-interfaces';
@@ -143,6 +144,22 @@ export class GameConfigComponent implements OnInit {
 
   setPacket(): void {
     this.gameStateService.setMatchPacket(this.packetId);
+  }
+
+  /** Proctor-only: open a read-through of the set packet's questions + answers. */
+  openPacketPreview(): void {
+    const id = this.gameSession?.currentMatch?.packet?.id;
+    if (!id) return;
+    const open = (packet: Packet) =>
+      this.dialog.open(PacketPreviewComponent, { width: '760px', maxWidth: '94vw', data: packet });
+    // selectedPacket is usually the full packet already; fetch fresh if it lacks questions.
+    if (this.selectedPacket?.tossups?.length) {
+      open(this.selectedPacket);
+    } else {
+      this.sockbowlQuestionsService.getPacketById(id.toString()).subscribe(packet => {
+        if (packet) { this.selectedPacket = packet; open(packet); }
+      });
+    }
   }
 
   openPacketSearch(): void {

@@ -30,6 +30,7 @@ import {MatSlideToggleModule} from "@angular/material/slide-toggle";
 import { MatchSummaryComponent } from './game/components/match-summary/match-summary.component';
 import {MatExpansionModule} from "@angular/material/expansion";
 import { PacketSearchComponent } from './game/components/packet-search/packet-search.component';
+import { PacketPreviewComponent } from './game/components/packet-preview/packet-preview.component';
 import {MatDialogModule} from "@angular/material/dialog";
 import {MatBadgeModule} from "@angular/material/badge";
 import {MatChipsModule} from "@angular/material/chips";
@@ -55,6 +56,7 @@ import { AdminBansComponent } from './structure/components/admin-bans/admin-bans
         TeamListComponent,
         MatchSummaryComponent,
         PacketSearchComponent,
+        PacketPreviewComponent,
         ProfileComponent,
         ThemeSelectorComponent,
         AdminBansComponent
