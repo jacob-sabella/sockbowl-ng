@@ -101,20 +101,12 @@
       }
 
       .lobby-title {
-        font-size: clamp(2.4rem, 8vw, 3.25rem);
+        font-size: clamp(2.6rem, 8vw, 3.5rem);
         font-weight: 700;
-        line-height: 0.98;
-        letter-spacing: -0.02em;
+        line-height: 1.02;
+        letter-spacing: -0.03em;
         margin: 0.5rem 0 0;
         color: var(--text-primary);
-
-        em {
-          font-style: normal;
-          background: linear-gradient(120deg, var(--accent-primary), var(--accent-secondary));
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
       }
 
       .lobby-sub {

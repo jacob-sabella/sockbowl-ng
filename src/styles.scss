@@ -69,3 +69,13 @@ h1, h2, h3, h4,
     min-height: 40px;
   }
 }
+
+/* Packet preview: theme the dialog surface itself so the default (light) Material
+   surface never shows around the edges of the themed content. */
+.preview-dialog .mat-mdc-dialog-surface {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  overflow: hidden;
+}

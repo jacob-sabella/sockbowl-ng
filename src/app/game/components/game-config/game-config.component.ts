@@ -163,7 +163,9 @@ export class GameConfigComponent implements OnInit {
     const id = this.gameSession?.currentMatch?.packet?.id;
     if (!id) return;
     const open = (packet: Packet) =>
-      this.dialog.open(PacketPreviewComponent, { width: '760px', maxWidth: '94vw', data: packet });
+      this.dialog.open(PacketPreviewComponent, {
+        width: '760px', maxWidth: '94vw', panelClass: 'preview-dialog', data: packet
+      });
     // selectedPacket is usually the full packet already; fetch fresh if it lacks questions.
     if (this.selectedPacket?.tossups?.length) {
       open(this.selectedPacket);

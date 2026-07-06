@@ -101,7 +101,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   /* ------------------------------ actions ------------------------------- */
 
   @HostListener('document:keydown.space', ['$event'])
-  onSpacebar(event: KeyboardEvent): void {
+  onSpacebar(event: Event): void {
     // Spacebar buzzes while reading — but never when typing in the answer box.
     if (this.isReadingPhase && !(event.target instanceof HTMLInputElement)) {
       event.preventDefault();
