@@ -74,6 +74,18 @@ export class GameSessionComponent {
     this.showJoinForm = false;
   }
 
+  /**
+   * Starts a single-player game: sets the mode, then reuses the create→join flow.
+   * The player lands in config to pick a packet, then starts the match solo.
+   */
+  startSoloGame(): void {
+    this.createGameRequest.gameSettings.gameMode = GameMode.SINGLE_PLAYER;
+    if (!this.joinGameRequest.name) {
+      this.joinGameRequest.name = this.authService.getUserProfile()?.name || 'Player';
+    }
+    this.submitCreateGame();
+  }
+
   submitCreateGame(): void {
     this.gameSessionService.createNewGame(this.createGameRequest).subscribe(response => {
       console.log("Create game response");

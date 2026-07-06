@@ -1,0 +1,36 @@
+@if (round) {
+  <section class="solo">
+    <header class="solo__meta">
+      <span class="solo__round">Tossup {{ round.roundNumber }}</span>
+      @if (round.category) {
+        <span class="solo__cat">
+          {{ round.category }}@if (round.subcategory) { <span class="solo__sub">· {{ round.subcategory }}</span> }
+        </span>
+      }
+    </header>
+
+    <div class="solo__question font-serif" [innerHTML]="round.question"></div>
+
+    @if (!isCompleted) {
+      <form class="solo__form" (ngSubmit)="submit()">
+        <input class="solo__input"
+               name="answer"
+               [(ngModel)]="answerText"
+               autocomplete="off"
+               spellcheck="false"
+               placeholder="Type your answer…"
+               aria-label="Your answer" />
+        <button type="submit" class="solo__submit" [disabled]="!canSubmit">Submit</button>
+      </form>
+    } @else {
+      <div class="solo__result" [class.solo__result--correct]="wasCorrect" [class.solo__result--wrong]="!wasCorrect">
+        <span class="solo__verdict">{{ wasCorrect ? 'Correct' : 'Incorrect' }}</span>
+        <div class="solo__answer">
+          <span class="solo__answer-label">Answer</span>
+          <span class="solo__answer-text font-serif" [innerHTML]="round.answer"></span>
+        </div>
+        <button type="button" class="solo__next" (click)="next()">Next tossup →</button>
+      </div>
+    }
+  </section>
+}

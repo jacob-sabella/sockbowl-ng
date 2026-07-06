@@ -13,6 +13,12 @@
         <app-game-proctor></app-game-proctor>
       </div>
     }
+    <!-- Single-player component -->
+    @if (shouldShowSinglePlayerComponent()) {
+      <div>
+        <app-game-single-player></app-game-single-player>
+      </div>
+    }
     <!-- Buzzer component -->
     @if (shouldShowBuzzerComponent()) {
       <div>

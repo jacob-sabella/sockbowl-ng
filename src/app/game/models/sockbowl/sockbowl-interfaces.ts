@@ -157,6 +157,15 @@ export class AnswerOutcome extends SockbowlInMessage {
   }
 }
 
+export class SubmitAnswer extends SockbowlInMessage {
+  answerText: string;
+
+  constructor(data: SubmitAnswer) {
+    super(data);
+    this.answerText = data.answerText;
+  }
+}
+
 export class FinishedReading extends SockbowlInMessage {
 
   constructor(data: FinishedReading) {
@@ -545,6 +554,7 @@ export enum MessageTypes {
 
 export enum GameMode {
   QUIZ_BOWL_CLASSIC = "QUIZ_BOWL_CLASSIC",
+  SINGLE_PLAYER = "SINGLE_PLAYER",
 }
 
 export enum JoinStatus {
