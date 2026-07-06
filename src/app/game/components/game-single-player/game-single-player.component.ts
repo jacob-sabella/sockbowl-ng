@@ -32,8 +32,15 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   /** 1 (slow) … 10 (fast); persisted per browser. */
   readingSpeed = 5;
 
+  /** Grace window (seconds) to buzz once the read finishes before the tossup is forgone. */
+  private static readonly BUZZ_WINDOW = 8;
+  buzzSecondsLeft: number | null = null;
+  /** True when the current round ended because the buzz window elapsed (no answer). */
+  forwent = false;
+
   private sub?: Subscription;
   private readingTimer: any = null;
+  private buzzTimer: any = null;
   private currentRoundKey = '';
 
   constructor(public gameStateService: GameStateService) {}
@@ -51,6 +58,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearTimer();
+    this.clearBuzzTimer();
     this.sub?.unsubscribe();
   }
 
@@ -114,8 +122,41 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
       return;
     }
     this.clearTimer();
+    this.clearBuzzTimer();
+    this.buzzSecondsLeft = null;
     this.hasBuzzed = true;
     setTimeout(() => this.answerInput?.nativeElement?.focus(), 0);
+  }
+
+  /** Buzz window elapsed with no buzz — forgo the tossup (reveal the answer, no points). */
+  private forgo(): void {
+    this.clearBuzzTimer();
+    this.buzzSecondsLeft = null;
+    this.forwent = true;
+    // An empty guess is judged incorrect, which completes the round and reveals the answer.
+    this.gameStateService.sendSubmitAnswer('');
+  }
+
+  /* ------------------------------- scoring ------------------------------ */
+
+  private get scoredRounds(): any[] {
+    const prev = this.gameSession?.currentMatch?.previousRounds || [];
+    return this.round ? [...prev, this.round] : [...prev];
+  }
+
+  /** Tossups correctly answered (10 points each). */
+  get correctCount(): number {
+    return this.scoredRounds.filter(r => (r.buzzList || []).some((b: any) => b.correct)).length;
+  }
+
+  get score(): number {
+    return this.correctCount * 10;
+  }
+
+  /** Tossups that have been resolved (completed). */
+  get tossupsSeen(): number {
+    const prev = this.gameSession?.currentMatch?.previousRounds?.length || 0;
+    return prev + (this.isCompleted ? 1 : 0);
   }
 
   onSpeedChange(): void {
@@ -143,6 +184,8 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   private syncToRound(): void {
     if (!this.round || this.isCompleted) {
       this.clearTimer();
+      this.clearBuzzTimer();
+      this.buzzSecondsLeft = null;
       return;
     }
     const key = `${this.round.roundNumber}:${(this.round.question || '').length}`;
@@ -154,8 +197,11 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
 
   private startReading(): void {
     this.clearTimer();
+    this.clearBuzzTimer();
     this.answerText = '';
     this.hasBuzzed = false;
+    this.forwent = false;
+    this.buzzSecondsLeft = null;
     this.revealedCount = 0;
     this.words = this.tokenize(this.round?.question || '');
     if (this.words.length > 0) {
@@ -170,8 +216,32 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
         this.revealedCount++;
       } else {
         this.clearTimer();
+        this.startBuzzWindow();
       }
     }, this.intervalMs());
+  }
+
+  /** After the read finishes, count down the grace period; forgo if it elapses. */
+  private startBuzzWindow(): void {
+    if (this.hasBuzzed || this.buzzTimer) {
+      return;
+    }
+    this.buzzSecondsLeft = GameSinglePlayerComponent.BUZZ_WINDOW;
+    this.buzzTimer = setInterval(() => {
+      if (this.buzzSecondsLeft !== null) {
+        this.buzzSecondsLeft--;
+      }
+      if (this.buzzSecondsLeft !== null && this.buzzSecondsLeft <= 0) {
+        this.forgo();
+      }
+    }, 1000);
+  }
+
+  private clearBuzzTimer(): void {
+    if (this.buzzTimer) {
+      clearInterval(this.buzzTimer);
+      this.buzzTimer = null;
+    }
   }
 
   /** speed 1..10 → ~520ms (slow) down to ~70ms (fast) per word. */

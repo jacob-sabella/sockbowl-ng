@@ -7,13 +7,16 @@
           {{ round.category }}@if (round.subcategory) { <span class="solo__sub">· {{ round.subcategory }}</span> }
         </span>
       }
+      <span class="solo__score" title="Correct answers">
+        <strong>{{ score }}</strong> pts · {{ correctCount }}/{{ tossupsSeen }}
+      </span>
     </header>
 
     @if (isCompleted) {
       <!-- Reveal: full formatted question + verdict + answer + next -->
       <div class="solo__question font-serif" [innerHTML]="round.question"></div>
       <div class="solo__result" [class.solo__result--correct]="wasCorrect" [class.solo__result--wrong]="!wasCorrect">
-        <span class="solo__verdict">{{ wasCorrect ? 'Correct' : 'Incorrect' }}</span>
+        <span class="solo__verdict">{{ wasCorrect ? 'Correct' : (forwent ? 'No answer — time\'s up' : 'Incorrect') }}</span>
         <div class="solo__answer">
           <span class="solo__answer-label">Answer</span>
           <span class="solo__answer-text font-serif" [innerHTML]="round.answer"></span>
@@ -38,8 +41,13 @@
                    [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
                    aria-label="Reading speed">
           </label>
+          @if (buzzSecondsLeft !== null) {
+            <span class="solo__countdown" [class.solo__countdown--urgent]="buzzSecondsLeft <= 3">
+              Buzz in {{ buzzSecondsLeft }}s
+            </span>
+          }
         </div>
-        @if (readingComplete) {
+        @if (readingComplete && buzzSecondsLeft === null) {
           <p class="solo__hint">Reading complete — buzz to answer.</p>
         }
       }

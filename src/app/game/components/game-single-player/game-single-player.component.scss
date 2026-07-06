@@ -215,3 +215,36 @@
   color: var(--text-muted, var(--text-secondary));
   margin: 0;
 }
+
+/* --- score + buzz countdown --- */
+.solo__score {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text-secondary);
+
+  strong { color: var(--accent-primary); font-size: 0.95rem; }
+}
+
+.solo__countdown {
+  font-family: var(--font-display, var(--font-body));
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--surface-border, rgba(128,128,128,0.35));
+
+  &--urgent {
+    color: var(--danger, #d0453f);
+    border-color: var(--danger, #d0453f);
+    animation: solo-pulse 1s ease-in-out infinite;
+  }
+}
+
+@keyframes solo-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
