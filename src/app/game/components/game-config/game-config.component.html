@@ -161,7 +161,9 @@
           }
         </mat-card-content>
         <mat-card-actions align="end">
-          @if (canManageConfig() && gameSession.currentMatch.packet?.id) {
+          <!-- Preview reveals answers, so only a human proctor may see it — never a
+               player in a proctorless (solo / auto-judged) mode. -->
+          @if (gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) {
             <button mat-stroked-button color="primary" (click)="openPacketPreview()">
               <mat-icon>visibility</mat-icon>
               Preview
