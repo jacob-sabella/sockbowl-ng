@@ -76,8 +76,8 @@
         </div>
       </div>
       <div class="launch__status">
-        <span class="launch__step" [class.done]="!!gameSession.currentMatch.packet">
-          <mat-icon>{{ gameSession.currentMatch.packet ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
+        <span class="launch__step" [class.done]="!!gameSession.currentMatch.packet?.id">
+          <mat-icon>{{ gameSession.currentMatch.packet?.id ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
         </span>
         <span class="launch__step" [class.done]="hasAnyPlayers()">
           <mat-icon>{{ hasAnyPlayers() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Players
@@ -91,7 +91,7 @@
         }
         @if (gameStateService.isSelfProctor()) {
           <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
-                  [disabled]="!gameSession.currentMatch.packet">
+                  [disabled]="!gameSession.currentMatch.packet?.id">
             <mat-icon>play_arrow</mat-icon> Start Match
           </button>
         }
@@ -110,7 +110,7 @@
           <mat-card-subtitle>Choose a packet to use for this match.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          @if (gameSession.currentMatch.packet) {
+          @if (gameSession.currentMatch.packet?.id) {
             <div class="kv">
               <div class="kv__row">
                 <span class="kv__key">Packet ID: </span>
@@ -143,8 +143,8 @@
             }
           } @else {
             <div class="empty-state">
-              <mat-icon>search</mat-icon>
-              <p>No packet selected.</p>
+              <mat-icon>inventory_2</mat-icon>
+              <p>No packet yet. Pull a real one from qbreader or search the library to set the questions for this match.</p>
             </div>
           }
         </mat-card-content>
