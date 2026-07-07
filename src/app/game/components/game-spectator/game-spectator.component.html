@@ -47,9 +47,15 @@
             }
           </mat-card-header>
           <mat-card-content>
-            <!-- Question Text -->
+            <!-- Question Text: reveals word-by-word while being read, full once answered -->
             <div class="question-text" aria-live="polite" aria-atomic="true" aria-label="Current question">
-              <p>{{ currentRound.question || 'Waiting for question...' }}</p>
+              @if (isReadingPhase) {
+                <p class="font-serif"><span>{{ revealedText }}</span>@if (!readingComplete) { <span class="reveal-cursor" aria-hidden="true">▍</span> }</p>
+              } @else if (currentRound.question) {
+                <p class="font-serif" [innerHTML]="currentRound.question"></p>
+              } @else {
+                <p>Waiting for the question.</p>
+              }
             </div>
             <!-- Answer status (announced when it changes) -->
             <div class="answer-region" aria-live="polite" aria-atomic="true">

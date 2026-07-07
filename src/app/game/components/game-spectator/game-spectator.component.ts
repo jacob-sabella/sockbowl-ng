@@ -17,6 +17,13 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
 
   RoundState = RoundState;
 
+  /** Read-only progressive reveal so spectators watch the tossup unfold (no spoiler). */
+  words: string[] = [];
+  revealedCount = 0;
+  private readingTimer: any = null;
+  private currentRoundKey = '';
+  private readonly readingSpeed = 5;
+
   private gameSessionSubscription?: Subscription;
 
   constructor(public gameStateService: GameStateService) {}
@@ -28,12 +35,76 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
         this.currentRound = gameSession.currentMatch?.currentRound || null;
         this.previousRounds = gameSession.currentMatch?.previousRounds || [];
         this.teams = gameSession.teamList || [];
+        this.syncReveal();
       }
     });
   }
 
   ngOnDestroy(): void {
+    this.clearTimer();
     this.gameSessionSubscription?.unsubscribe();
+  }
+
+  /* --------------------------- read-along reveal --------------------------- */
+
+  /** The tossup is being read (reveal in progress) rather than answered/complete. */
+  get isReadingPhase(): boolean {
+    const s = this.currentRound?.roundState;
+    return s === RoundState.PROCTOR_READING || s === RoundState.AWAITING_BUZZ;
+  }
+
+  get revealedText(): string {
+    return this.words.slice(0, this.revealedCount).join(' ');
+  }
+
+  get readingComplete(): boolean {
+    return this.words.length > 0 && this.revealedCount >= this.words.length;
+  }
+
+  /** Keep the reveal in step with the round: reveal while reading, stop otherwise. */
+  private syncReveal(): void {
+    const r = this.currentRound;
+    if (!r || !this.isReadingPhase) {
+      this.clearTimer();
+      return;
+    }
+    const key = `${r.roundNumber}:${(r.question || '').length}`;
+    if (key !== this.currentRoundKey) {
+      this.currentRoundKey = key;
+      this.words = this.tokenize(r.question || '');
+      this.revealedCount = 0;
+      if (this.words.length > 0) {
+        this.scheduleTick();
+      }
+    } else if (!this.readingTimer && this.revealedCount < this.words.length) {
+      this.scheduleTick();
+    }
+  }
+
+  private scheduleTick(): void {
+    this.clearTimer();
+    const interval = Math.round(520 - (this.readingSpeed - 1) * 50);
+    this.readingTimer = setInterval(() => {
+      if (this.revealedCount < this.words.length) {
+        this.revealedCount++;
+      } else {
+        this.clearTimer();
+      }
+    }, interval);
+  }
+
+  private clearTimer(): void {
+    if (this.readingTimer) {
+      clearInterval(this.readingTimer);
+      this.readingTimer = null;
+    }
+  }
+
+  private tokenize(html: string): string[] {
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    const text = (div.textContent || '').replace(/\s+/g, ' ').trim();
+    return text.length ? text.split(' ') : [];
   }
 
   /**

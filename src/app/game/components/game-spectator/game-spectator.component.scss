@@ -448,3 +448,11 @@ h2 {
   line-height: 1.7;
 }
 .answer-revealed strong { font-family: var(--font-display); }
+
+/* read-along reveal cursor (matches the play surfaces) */
+.reveal-cursor {
+  color: var(--accent-primary);
+  animation: spectator-blink 1s step-end infinite;
+}
+@keyframes spectator-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .reveal-cursor { animation: none; } }
