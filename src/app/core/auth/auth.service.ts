@@ -185,10 +185,14 @@ export class AuthService {
    *
    * Keycloak expands composite roles into `realm_access.roles`, so a
    * fine-grained permission like `packet:create` or `user:ban` is just
-   * membership in that same array. Returns false in guest mode (auth
-   * disabled) or when the user has no roles.
+   * membership in that same array. When auth is disabled (self-hosted
+   * single-user mode) every feature permission is granted, so the app is
+   * fully usable without Keycloak; otherwise it is role membership.
    */
   public hasPermission(permission: string): boolean {
+    if (!environment.authEnabled) {
+      return true;
+    }
     return this.getRoles().includes(permission);
   }
 

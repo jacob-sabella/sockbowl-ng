@@ -5,6 +5,7 @@ import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { TestClipsModalComponent } from './shared/test-clips/test-clips-modal.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { GameSessionComponent } from './game/components/game-session/game-session.component';
 import {MatButtonModule} from "@angular/material/button";
@@ -63,7 +64,8 @@ import { AdminBansComponent } from './structure/components/admin-bans/admin-bans
         PacketPreviewComponent,
         ProfileComponent,
         ThemeSelectorComponent,
-        AdminBansComponent
+        AdminBansComponent,
+        TestClipsModalComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         AppRoutingModule,

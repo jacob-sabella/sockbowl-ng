@@ -1,0 +1,40 @@
+{
+  "clips": [
+    {
+      "title": "Generate a packet from the bank with live filters",
+      "spec": "generate.spec.ts",
+      "file": "generate-a-packet-from-the-bank-with-live-filters.webm",
+      "ok": true
+    },
+    {
+      "title": "Join with a code opens the join form",
+      "spec": "landing.spec.ts",
+      "file": "join-with-a-code-opens-the-join-form.webm",
+      "ok": true
+    },
+    {
+      "title": "New game reveals the three match modes",
+      "spec": "landing.spec.ts",
+      "file": "new-game-reveals-the-three-match-modes.webm",
+      "ok": true
+    },
+    {
+      "title": "the lobby offers New game and Join with a code",
+      "spec": "landing.spec.ts",
+      "file": "the-lobby-offers-new-game-and-join-with-a-code.webm",
+      "ok": true
+    },
+    {
+      "title": "Auto-judged match: two players buzz and answer",
+      "spec": "match.spec.ts",
+      "file": "auto-judged-match-two-players-buzz-and-answer.webm",
+      "ok": true
+    },
+    {
+      "title": "Solo practice reads a tossup, buzz and answer",
+      "spec": "solo.spec.ts",
+      "file": "solo-practice-reads-a-tossup-buzz-and-answer.webm",
+      "ok": true
+    }
+  ]
+}

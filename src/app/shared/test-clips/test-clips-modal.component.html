@@ -1,0 +1,55 @@
+<div class="clips-backdrop" (click)="close()">
+  <div class="clips-modal" role="dialog" aria-label="UI test gallery" aria-modal="true"
+       (click)="$event.stopPropagation()">
+    <div class="clips-head">
+      <h2 class="clips-title">Test gallery</h2>
+      <span class="clips-count">
+        @if (clips) { {{ clips.length }} recorded UI test{{ clips.length === 1 ? '' : 's' }} }
+        @else if (!error) { loading… }
+      </span>
+      <button type="button" class="clips-close" (click)="close()" aria-label="Close test gallery">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    @if (error) {
+      <p class="clips-empty">
+        No clips packaged in this build. Run <code>npm run clips</code> to record them.
+      </p>
+    } @else {
+      <div class="clips-body">
+        <nav class="clips-list" aria-label="Recorded tests">
+          @for (group of groups; track group.spec) {
+            <div class="clips-group">
+              <div class="clips-group-title">{{ specLabel(group.spec) }}</div>
+              @for (clip of group.items; track clip.file) {
+                <button type="button"
+                        class="clips-item"
+                        [class.active]="selected?.file === clip.file"
+                        (click)="select(clip)"
+                        [attr.aria-pressed]="selected?.file === clip.file">
+                  <span class="clips-dot" [class.ok]="clip.ok" [class.fail]="!clip.ok"
+                        [attr.aria-label]="clip.ok ? 'passed' : 'failed'"></span>
+                  <span class="clips-item-title">{{ clip.title }}</span>
+                </button>
+              }
+            </div>
+          }
+        </nav>
+
+        <div class="clips-player">
+          @if (selected) {
+            <video class="clips-video" [src]="'/assets/test-clips/' + selected.file"
+                   controls autoplay loop muted playsinline></video>
+            <div class="clips-caption">
+              <span class="clips-caption-title">{{ selected.title }}</span>
+              <span class="clips-caption-spec">{{ specLabel(selected.spec) }}</span>
+            </div>
+          } @else {
+            <p class="clips-hint">{{ clips ? 'Select a test to play it.' : '' }}</p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
