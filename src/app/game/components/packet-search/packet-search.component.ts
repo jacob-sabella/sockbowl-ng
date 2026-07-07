@@ -162,9 +162,13 @@ export class PacketSearchComponent implements OnInit {
     this.countSubject.pipe(debounceTime(350)).subscribe(() => this.refreshAvailability());
     this.loadFilters();
     this.queueCount();
-    this.sockbowlQuestionsService.getBankCategoryCounts().subscribe({
-      next: (c) => this.categoryCounts = c || {},
-      error: () => { /* non-critical — chips just omit counts */ }
+    this.sockbowlQuestionsService.getBankTaxonomyCounts().subscribe({
+      next: (t) => {
+        this.categoryCounts = t?.categories || {};
+        this.subCounts = t?.subcategories || {};
+        this.altCounts = t?.alternates || {};
+      },
+      error: () => { /* non-critical — chips/options just omit counts */ }
     });
   }
 
@@ -179,6 +183,8 @@ export class PacketSearchComponent implements OnInit {
   availBonuses: number | null = null;
   countingAvail = false;
   categoryCounts: { [category: string]: number } = {};
+  subCounts: { [subcategory: string]: number } = {};
+  altCounts: { [alternate: string]: number } = {};
 
   private static readonly FILTERS_KEY = 'sockbowl_gen_filters';
 

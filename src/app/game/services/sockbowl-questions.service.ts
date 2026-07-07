@@ -30,10 +30,14 @@ export class SockbowlQuestionsService {
       .pipe(timeout(120000));
   }
 
-  /** Total bank tossups per category, e.g. { Science: 45000, ... }. */
-  getBankCategoryCounts(): Observable<{ [category: string]: number }> {
+  /** Bank tossup counts per category, subcategory, and alternate subcategory. */
+  getBankTaxonomyCounts(): Observable<{
+    categories: { [k: string]: number };
+    subcategories: { [k: string]: number };
+    alternates: { [k: string]: number };
+  }> {
     return this.http
-      .get<{ [category: string]: number }>(`${this.qbreaderUrl}/category-counts`)
+      .get<{ categories: any; subcategories: any; alternates: any }>(`${this.qbreaderUrl}/taxonomy-counts`)
       .pipe(timeout(15000));
   }
 

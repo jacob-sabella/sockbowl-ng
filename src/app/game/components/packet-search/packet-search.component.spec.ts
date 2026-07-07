@@ -21,7 +21,7 @@ describe('PacketSearchComponent', () => {
         { provide: MAT_DIALOG_DATA, useValue: {} },
         { provide: MatSnackBar, useValue: { open: () => {} } },
         { provide: SockbowlQuestionsService, useValue: {
-            getBankCategoryCounts: () => of({}),
+            getBankTaxonomyCounts: () => of({ categories: {}, subcategories: {}, alternates: {} }),
             countBankAvailable: () => of({ tossups: 0, bonuses: 0 }),
         } },
         { provide: OpenAiModelService, useValue: {} },

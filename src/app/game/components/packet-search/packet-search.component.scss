@@ -1271,3 +1271,11 @@
 
 /* Keep the qbreader tab body from cramping against the dialog scrollbar */
 .qb-content .qb-random { padding-bottom: 4px; }
+
+/* Count shown next to subcategory/alternate typeahead options (rendered in a CDK overlay). */
+::ng-deep .qb-opt-n {
+  margin-left: 8px;
+  font-size: 11px;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}

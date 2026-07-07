@@ -547,7 +547,8 @@
                              (input)="filterSubs(subInput.value)" (focus)="filterSubs(subInput.value)">
                       <mat-autocomplete #subAuto (optionSelected)="addSub($event.option.value); subInput.value = ''">
                         @for (opt of subFiltered; track opt) {
-                          <mat-option [value]="opt">{{ opt }}</mat-option>
+                          <mat-option [value]="opt">{{ opt }}@if (subCounts[opt]) {
+                            <span class="qb-opt-n">{{ subCounts[opt] | number }}</span> }</mat-option>
                         }
                       </mat-autocomplete>
                     </mat-form-field>
@@ -568,7 +569,8 @@
                              (input)="filterAlts(altInput.value)" (focus)="filterAlts(altInput.value)">
                       <mat-autocomplete #altAuto (optionSelected)="addAlt($event.option.value); altInput.value = ''">
                         @for (opt of altFiltered; track opt) {
-                          <mat-option [value]="opt">{{ opt }}</mat-option>
+                          <mat-option [value]="opt">{{ opt }}@if (altCounts[opt]) {
+                            <span class="qb-opt-n">{{ altCounts[opt] | number }}</span> }</mat-option>
                         }
                       </mat-autocomplete>
                       <mat-hint>Few questions are tagged at this level, so these mixes can come back small.</mat-hint>
