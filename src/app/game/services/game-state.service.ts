@@ -122,6 +122,9 @@ export class GameStateService {
         tap((msg: MatchPacketUpdate) => {
           this.gameSessionState.currentMatch.packet.id = msg.packetId;
           this.gameSessionState.currentMatch.packet.name = msg.packetName;
+          // Clients aren't sent the tossups (anti-spoiler); keep a length-only array so
+          // "Tossup N of M" progress can read packet.tossups.length.
+          this.gameSessionState.currentMatch.packet.tossups = new Array(msg.tossupCount || 0);
           this.gameSessionSubject.next(this.gameSessionState);
         })
       )

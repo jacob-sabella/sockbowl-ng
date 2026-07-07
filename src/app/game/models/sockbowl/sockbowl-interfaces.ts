@@ -266,11 +266,13 @@ export class SockbowlOutMessage {
 export class MatchPacketUpdate extends SockbowlOutMessage {
   packetId: string;
   packetName: string;
+  tossupCount: number;
 
   constructor(data: MatchPacketUpdate) {
     super(data);
     this.packetId = data.packetId;
     this.packetName = data.packetName;
+    this.tossupCount = data.tossupCount;
   }
 }
 
