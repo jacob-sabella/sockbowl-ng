@@ -48,15 +48,21 @@ export class PacketSearchComponent implements OnInit {
     'Literature', 'History', 'Science', 'Fine Arts', 'Religion', 'Mythology',
     'Philosophy', 'Social Science', 'Geography', 'Current Events', 'Other Academic', 'Pop Culture'
   ];
-  // qbreader's subcategory taxonomy. Only these four categories have subcategories;
-  // the rest (Religion, Mythology, …) are leaf categories with no finer filter.
+  // qbreader's subcategory taxonomy (from quizbowl/categories.js). Only these
+  // categories break into multiple distinct subcategories; the rest (Religion,
+  // Mythology, Philosophy, Social Science, Current Events, Geography, Other
+  // Academic) are leaf categories whose only subcategory equals the category, so
+  // filtering them by subcategory is redundant with the category chip. NOTE: Math,
+  // Astronomy, etc. are qbreader ALTERNATE subcategories, a separate dimension —
+  // not listed here.
   readonly qbSubcategoriesByCategory: { [category: string]: string[] } = {
     'Literature': ['American Literature', 'British Literature', 'Classical Literature',
                    'European Literature', 'World Literature', 'Other Literature'],
     'History': ['American History', 'Ancient History', 'European History',
                 'World History', 'Other History'],
-    'Science': ['Biology', 'Chemistry', 'Physics', 'Math', 'Other Science'],
-    'Fine Arts': ['Visual Fine Arts', 'Auditory Fine Arts', 'Other Fine Arts']
+    'Science': ['Biology', 'Chemistry', 'Physics', 'Other Science'],
+    'Fine Arts': ['Visual Fine Arts', 'Auditory Fine Arts', 'Other Fine Arts'],
+    'Pop Culture': ['Movies', 'Music', 'Sports', 'Television', 'Video Games', 'Other Pop Culture']
   };
   readonly qbDifficultyTiers: { label: string; values: number[] }[] = [
     { label: 'Middle School', values: [1, 2] },
