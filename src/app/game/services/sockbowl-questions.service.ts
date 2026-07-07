@@ -30,6 +30,16 @@ export class SockbowlQuestionsService {
       .pipe(timeout(120000));
   }
 
+  /** How many bank tossups/bonuses match a filter (live breadth preview for the Generate tab). */
+  countBankAvailable(body: {
+    categories?: string[]; subcategories?: string[]; alternateSubcategories?: string[];
+    difficulties?: number[]; minYear?: number; maxYear?: number; standardOnly?: boolean;
+  }): Observable<{ tossups: number; bonuses: number }> {
+    return this.http
+      .post<{ tossups: number; bonuses: number }>(`${this.qbreaderUrl}/count`, body)
+      .pipe(timeout(15000));
+  }
+
   /** The qbreader question ids the logged-in user has already been served (auth required). */
   getUsedQuestionIds(): Observable<string[]> {
     return this.http.get<string[]>(`${this.gameUserUrl}/used-questions`).pipe(timeout(20000));

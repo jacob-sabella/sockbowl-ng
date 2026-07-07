@@ -570,14 +570,17 @@
                   <div class="qb-form">
                     <mat-form-field appearance="outline" class="qb-num-field">
                       <mat-label>Min year</mat-label>
-                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMinYear">
+                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMinYear"
+                             (ngModelChange)="queueCount()">
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="qb-num-field">
                       <mat-label>Max year</mat-label>
-                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMaxYear">
+                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMaxYear"
+                             (ngModelChange)="queueCount()">
                     </mat-form-field>
                   </div>
-                  <mat-slide-toggle color="primary" [(ngModel)]="qbStandardOnly" class="qb-toggle">
+                  <mat-slide-toggle color="primary" [(ngModel)]="qbStandardOnly" class="qb-toggle"
+                                    (change)="queueCount()">
                     Standard sets only
                   </mat-slide-toggle>
                 </div>
@@ -589,8 +592,19 @@
                 </mat-slide-toggle>
               }
 
+              <div class="qb-avail" aria-live="polite">
+                @if (countingAvail) {
+                  <span class="qb-avail-count">Counting…</span>
+                } @else if (availTossups !== null) {
+                  <span class="qb-avail-count">{{ availTossups | number }}</span> tossups
+                  <span class="qb-avail-sep">·</span>
+                  <span class="qb-avail-count">{{ availBonuses | number }}</span> bonuses match
+                  @if (availTossups === 0) { <span class="qb-avail-warn">(loosen the filters)</span> }
+                }
+              </div>
+
               <button mat-raised-button color="primary" class="qb-import-btn"
-                      [disabled]="qbImporting" (click)="generateFromBank()">
+                      [disabled]="qbImporting || availTossups === 0" (click)="generateFromBank()">
                 @if (qbImporting) {
                   <mat-spinner diameter="20"></mat-spinner> <span>Generating…</span>
                 } @else {

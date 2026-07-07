@@ -155,10 +155,35 @@ export class PacketSearchComponent implements OnInit {
 
     // Load saved API key if available
     this.loadSavedApiKey();
+
+    // Live "how many match" preview for the Generate tab (debounced).
+    this.countSubject.pipe(debounceTime(350)).subscribe(() => this.refreshAvailability());
+    this.queueCount();
   }
 
   searchPackets(): void {
     this.searchSubject.next(this.searchQuery);
+  }
+
+  /* ----------------------- Generate breadth preview ---------------------- */
+
+  private countSubject = new Subject<void>();
+  availTossups: number | null = null;
+  availBonuses: number | null = null;
+  countingAvail = false;
+
+  /** Queue a debounced refresh of the match-count preview after a filter change. */
+  queueCount(): void {
+    this.countingAvail = true;
+    this.countSubject.next();
+  }
+
+  private refreshAvailability(): void {
+    const body = this.buildRandomBody();
+    this.sockbowlQuestionsService.countBankAvailable(body).subscribe({
+      next: (r) => { this.availTossups = r.tossups; this.availBonuses = r.bonuses; this.countingAvail = false; },
+      error: () => { this.availTossups = null; this.availBonuses = null; this.countingAvail = false; }
+    });
   }
 
   private performSearch(query: string): void {
@@ -446,6 +471,7 @@ export class PacketSearchComponent implements OnInit {
     this.qbSelectedAlternateSubcategories = this.qbSelectedAlternateSubcategories.filter(s => alts.includes(s));
     this.filterSubs('');
     this.filterAlts('');
+    this.queueCount();
   }
 
   /** Subcategories offered: those of the picked categories, or all of them if none picked. */
@@ -495,12 +521,14 @@ export class PacketSearchComponent implements OnInit {
   addSub(value: string): void {
     if (value && !this.qbSelectedSubcategories.includes(value)) this.qbSelectedSubcategories.push(value);
     this.filterSubs('');
+    this.queueCount();
   }
 
   removeSub(value: string): void {
     const i = this.qbSelectedSubcategories.indexOf(value);
     if (i >= 0) this.qbSelectedSubcategories.splice(i, 1);
     this.filterSubs('');
+    this.queueCount();
   }
 
   filterAlts(query: string): void {
@@ -510,24 +538,28 @@ export class PacketSearchComponent implements OnInit {
   addAlt(value: string): void {
     if (value && !this.qbSelectedAlternateSubcategories.includes(value)) this.qbSelectedAlternateSubcategories.push(value);
     this.filterAlts('');
+    this.queueCount();
   }
 
   removeAlt(value: string): void {
     const i = this.qbSelectedAlternateSubcategories.indexOf(value);
     if (i >= 0) this.qbSelectedAlternateSubcategories.splice(i, 1);
     this.filterAlts('');
+    this.queueCount();
   }
 
   toggleQbTier(label: string): void {
     const i = this.qbSelectedTiers.indexOf(label);
     if (i >= 0) this.qbSelectedTiers.splice(i, 1);
     else this.qbSelectedTiers.push(label);
+    this.queueCount();
   }
 
   toggleIndividualDifficulty(d: number): void {
     const i = this.qbIndividualDifficulties.indexOf(d);
     if (i >= 0) this.qbIndividualDifficulties.splice(i, 1);
     else this.qbIndividualDifficulties.push(d);
+    this.queueCount();
   }
 
   /** Whether the account-level de-dup is actually usable (opted in + logged in). */

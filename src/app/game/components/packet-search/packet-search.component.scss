@@ -1184,6 +1184,15 @@
 
   .qb-typeahead { width: 100%; }
 
+  .qb-avail {
+    font-size: 13px;
+    color: var(--text-secondary);
+    min-height: 18px;
+    .qb-avail-count { font-weight: 600; color: var(--text-primary); }
+    .qb-avail-sep { opacity: 0.5; margin: 0 5px; }
+    .qb-avail-warn { color: var(--accent-primary); margin-left: 5px; }
+  }
+
   .qb-random { display: flex; flex-direction: column; gap: 16px; }
 
   .qb-advanced-toggle {
