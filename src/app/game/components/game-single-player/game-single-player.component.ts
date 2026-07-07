@@ -168,6 +168,15 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** After a verdict, Enter jumps to the next tossup so solo drilling stays hands-on-keyboard. */
+  @HostListener('document:keydown.enter', ['$event'])
+  onEnter(event: Event): void {
+    if (this.isCompleted && !(event.target instanceof HTMLInputElement)) {
+      event.preventDefault();
+      this.next();
+    }
+  }
+
   buzz(): void {
     if (!this.isReadingPhase) {
       return;

@@ -102,7 +102,9 @@
 
           @if (isCompleted) {
             <button mat-raised-button color="primary" (click)="next()"
-                    aria-label="Go to the next tossup">Next Tossup</button>
+                    aria-label="Go to the next tossup (or press Enter)">
+              Next Tossup <span class="key-hint" aria-hidden="true">Enter</span>
+            </button>
           }
         </div>
       </mat-card-content>

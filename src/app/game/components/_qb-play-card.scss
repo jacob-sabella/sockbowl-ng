@@ -261,3 +261,15 @@
 }
 @keyframes qb-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 @media (prefers-reduced-motion: reduce) { .countdown--urgent strong { animation: none; } }
+
+/* small keyboard-key hint inside a button (e.g. "Next Tossup [Enter]") */
+.key-hint {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+  vertical-align: middle;
+}
