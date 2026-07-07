@@ -21,7 +21,7 @@ describe('PacketSearchComponent', () => {
         { provide: MatSnackBar, useValue: { open: () => {} } },
         { provide: SockbowlQuestionsService, useValue: {} },
         { provide: OpenAiModelService, useValue: {} },
-        { provide: AuthService, useValue: { hasPermission: () => false } },
+        { provide: AuthService, useValue: { hasPermission: () => false, isAuthenticated: () => false } },
       ],
       // Template uses Angular Material elements not declared in this unit test.
       schemas: [NO_ERRORS_SCHEMA]
