@@ -7,6 +7,12 @@
       "ok": true
     },
     {
+      "title": "Generate tab: category filters and live counts",
+      "spec": "generateFilters.spec.ts",
+      "file": "generate-tab-category-filters-and-live-counts.webm",
+      "ok": true
+    },
+    {
       "title": "Join with a code opens the join form",
       "spec": "landing.spec.ts",
       "file": "join-with-a-code-opens-the-join-form.webm",
@@ -31,9 +37,33 @@
       "ok": true
     },
     {
+      "title": "Proctored match: read the tossup, buzz, and judge",
+      "spec": "proctored.spec.ts",
+      "file": "proctored-match-read-the-tossup-buzz-and-judge.webm",
+      "ok": true
+    },
+    {
+      "title": "Search existing packets by name",
+      "spec": "searchExisting.spec.ts",
+      "file": "search-existing-packets-by-name.webm",
+      "ok": true
+    },
+    {
       "title": "Solo practice reads a tossup, buzz and answer",
       "spec": "solo.spec.ts",
       "file": "solo-practice-reads-a-tossup-buzz-and-answer.webm",
+      "ok": true
+    },
+    {
+      "title": "Spectating a live auto-judged match",
+      "spec": "spectator.spec.ts",
+      "file": "spectating-a-live-auto-judged-match.webm",
+      "ok": true
+    },
+    {
+      "title": "Theme selector switches the app theme",
+      "spec": "theme.spec.ts",
+      "file": "theme-selector-switches-the-app-theme.webm",
       "ok": true
     }
   ]
