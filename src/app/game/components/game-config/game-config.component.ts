@@ -180,8 +180,8 @@ export class GameConfigComponent implements OnInit {
 
   openPacketSearch(): void {
     const dialogRef = this.dialog.open(PacketSearchComponent, {
-      width: '900px',
-      maxWidth: '95vw'
+      width: '680px',
+      maxWidth: '96vw'
     });
 
     dialogRef.afterClosed().subscribe((result: Packet) => {
