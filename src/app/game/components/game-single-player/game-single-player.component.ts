@@ -2,6 +2,7 @@ import {Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild} from 
 import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
+import {SpeechService} from '../../services/speech.service';
 
 /**
  * Solo play surface with a moderator-style reader/buzz mechanic: the tossup is
@@ -43,7 +44,15 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   private buzzTimer: any = null;
   private currentRoundKey = '';
 
-  constructor(public gameStateService: GameStateService) {}
+  constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
+
+  /** Toggle the spoken read; if turning on mid-read, pick up from the current word. */
+  toggleTts(): void {
+    this.speech.toggle();
+    if (this.speech.enabled && this.isReadingPhase && !this.readingComplete) {
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+    }
+  }
 
   ngOnInit(): void {
     const saved = Number(localStorage.getItem(GameSinglePlayerComponent.SPEED_KEY));
@@ -59,6 +68,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearTimer();
     this.clearBuzzTimer();
+    this.speech.cancel();
     this.sub?.unsubscribe();
   }
 
@@ -123,6 +133,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     }
     this.clearTimer();
     this.clearBuzzTimer();
+    this.speech.cancel();
     this.buzzSecondsLeft = null;
     this.hasBuzzed = true;
     setTimeout(() => this.answerInput?.nativeElement?.focus(), 0);
@@ -163,6 +174,8 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     localStorage.setItem(GameSinglePlayerComponent.SPEED_KEY, String(this.readingSpeed));
     if (this.isReadingPhase && !this.readingComplete) {
       this.scheduleTick();
+      // Re-speak the remaining words at the new rate so audio tracks the slider.
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
     }
   }
 
@@ -185,6 +198,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     if (!this.round || this.isCompleted) {
       this.clearTimer();
       this.clearBuzzTimer();
+      this.speech.cancel();
       this.buzzSecondsLeft = null;
       return;
     }
@@ -206,6 +220,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     this.words = this.tokenize(this.round?.question || '');
     if (this.words.length > 0) {
       this.scheduleTick();
+      this.speech.speak(this.words.join(' '), this.readingSpeed);
     }
   }
 

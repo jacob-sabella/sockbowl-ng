@@ -2,6 +2,7 @@ import {Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core
 import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
+import {SpeechService} from '../../services/speech.service';
 
 /**
  * Auto-proctor multiplayer play surface: the tossup auto-reveals word-by-word;
@@ -34,8 +35,23 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   private readingTimer: any = null;
   private currentRoundKey = '';
   private lastAnswerKey = '';
+  private lastSpokenBonusKey = '';
 
-  constructor(public gameStateService: GameStateService) {}
+  constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
+
+  /** Toggle the spoken read; if turning on, pick up the tossup or bonus in progress. */
+  toggleTts(): void {
+    this.speech.toggle();
+    if (!this.speech.enabled) {
+      return;
+    }
+    if (this.isBuzzable && !this.readingComplete) {
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+    } else if (this.isBonus) {
+      this.lastSpokenBonusKey = '';
+      this.maybeSpeakBonus();
+    }
+  }
 
   ngOnInit(): void {
     const saved = Number(localStorage.getItem(GameAutoProctorComponent.SPEED_KEY));
@@ -50,6 +66,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearTimer();
+    this.speech.cancel();
     this.sub?.unsubscribe();
   }
 
@@ -185,6 +202,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   buzz(): void {
     if (this.canBuzz) {
       this.gameStateService.sendPlayerIncomingBuzz();
+      this.speech.cancel();
     }
   }
 
@@ -203,6 +221,25 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     localStorage.setItem(GameAutoProctorComponent.SPEED_KEY, String(this.readingSpeed));
     if (this.isBuzzable && !this.readingComplete && this.readingTimer) {
       this.scheduleTick();
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+    }
+  }
+
+  /** Read the current bonus part (with the preamble on part 1) aloud, once per part. */
+  private maybeSpeakBonus(): void {
+    const bkey = `${this.round?.roundNumber}:bonus:${this.bonusPartIndex}`;
+    if (bkey === this.lastSpokenBonusKey) {
+      return;
+    }
+    this.lastSpokenBonusKey = bkey;
+    const parts: string[] = [];
+    if (this.bonusPartIndex === 0 && this.bonusPreamble) {
+      parts.push(this.tokenize(this.bonusPreamble).join(' '));
+    }
+    parts.push(this.tokenize(this.bonusPartQuestion).join(' '));
+    const text = parts.join(' ').trim();
+    if (text) {
+      this.speech.speak(text, this.readingSpeed);
     }
   }
 
@@ -231,9 +268,15 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
         this.startReading();           // new tossup
       } else if (!this.readingTimer && this.revealedCount < this.words.length) {
         this.scheduleTick();           // resume after a wrong buzz reopened play
+        this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
       }
+    } else if (this.isBonus) {
+      this.clearTimer();
+      this.maybeSpeakBonus();          // read each bonus part to the eligible team
     } else {
       this.clearTimer();               // someone is answering, or the round is over
+      this.speech.cancel();
+      this.lastSpokenBonusKey = '';
     }
   }
 
@@ -241,9 +284,11 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     this.clearTimer();
     this.answerText = '';
     this.revealedCount = 0;
+    this.lastSpokenBonusKey = '';
     this.words = this.tokenize(this.round?.question || '');
     if (this.words.length > 0) {
       this.scheduleTick();
+      this.speech.speak(this.words.join(' '), this.readingSpeed);
     }
   }
 

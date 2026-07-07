@@ -209,6 +209,27 @@
   color: var(--text-muted, var(--text-secondary));
 }
 
+.solo__tts {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: var(--surface-raised, var(--bg-secondary));
+  border: 1px solid var(--surface-border, rgba(128, 128, 128, 0.25));
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover { color: var(--text-primary); }
+  &.solo__tts--on {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+  }
+}
+
 .solo__hint {
   font-family: var(--font-body);
   font-size: 0.9rem;

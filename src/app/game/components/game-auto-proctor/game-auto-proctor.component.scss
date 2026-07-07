@@ -163,3 +163,30 @@
   color: var(--accent-primary);
   mat-icon { font-size: 20px; height: 20px; width: 20px; }
 }
+
+.ap__tts {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: var(--surface-raised, var(--bg-secondary));
+  border: 1px solid var(--surface-border, rgba(128, 128, 128, 0.25));
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover { color: var(--text-primary); }
+  &.ap__tts--on {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+  }
+  &.ap__tts--inline {
+    width: 2rem;
+    height: 2rem;
+    margin-left: auto;
+    mat-icon { font-size: 18px; height: 18px; width: 18px; }
+  }
+}

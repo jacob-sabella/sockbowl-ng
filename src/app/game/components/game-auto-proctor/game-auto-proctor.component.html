@@ -38,6 +38,14 @@
         <div class="ap__bonus-head">
           <mat-icon>star</mat-icon>
           <span>Bonus · part {{ bonusPartIndex + 1 }} of 3@if (!bonusEligible) { ({{ bonusTeamName }}'s bonus) }</span>
+          @if (speech.available) {
+            <button type="button" class="ap__tts ap__tts--inline" (click)="toggleTts()" [class.ap__tts--on]="speech.enabled"
+                    [attr.aria-pressed]="speech.enabled"
+                    [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read bonus aloud'"
+                    [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
+              <mat-icon>{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
+            </button>
+          }
         </div>
         @if (bonusPreamble) {
           <div class="ap__question font-serif" [innerHTML]="bonusPreamble"></div>
@@ -89,6 +97,14 @@
             <input type="range" min="1" max="10" step="1" [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
                    aria-label="Reading speed">
           </label>
+          @if (speech.available) {
+            <button type="button" class="ap__tts" (click)="toggleTts()" [class.ap__tts--on]="speech.enabled"
+                    [attr.aria-pressed]="speech.enabled"
+                    [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read question aloud'"
+                    [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
+              <mat-icon>{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
+            </button>
+          }
         </div>
       }
     }

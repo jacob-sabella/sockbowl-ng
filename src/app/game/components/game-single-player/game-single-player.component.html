@@ -41,6 +41,15 @@
                    [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
                    aria-label="Reading speed">
           </label>
+          @if (speech.available) {
+            <button type="button" class="solo__tts" (click)="toggleTts()"
+                    [class.solo__tts--on]="speech.enabled"
+                    [attr.aria-pressed]="speech.enabled"
+                    [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read question aloud'"
+                    [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
+              <mat-icon>{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
+            </button>
+          }
           @if (buzzSecondsLeft !== null) {
             <span class="solo__countdown" [class.solo__countdown--urgent]="buzzSecondsLeft <= 3">
               Buzz in {{ buzzSecondsLeft }}s
