@@ -64,6 +64,13 @@ export class PacketSearchComponent implements OnInit {
     'Fine Arts': ['Visual Fine Arts', 'Auditory Fine Arts', 'Other Fine Arts'],
     'Pop Culture': ['Movies', 'Music', 'Sports', 'Television', 'Video Games', 'Other Pop Culture']
   };
+  // qbreader's ALTERNATE subcategories — a finer, separate filter dimension.
+  readonly qbAlternateByCategory: { [category: string]: string[] } = {
+    'Literature': ['Drama', 'Long Fiction', 'Poetry', 'Short Fiction', 'Misc Literature'],
+    'Science': ['Math', 'Astronomy', 'Computer Science', 'Earth Science', 'Engineering', 'Misc Science'],
+    'Fine Arts': ['Architecture', 'Dance', 'Film', 'Jazz', 'Musicals', 'Opera', 'Photography', 'Misc Arts'],
+    'Social Science': ['Anthropology', 'Economics', 'Linguistics', 'Psychology', 'Sociology', 'Other Social Science']
+  };
   readonly qbDifficultyTiers: { label: string; values: number[] }[] = [
     { label: 'Middle School', values: [1, 2] },
     { label: 'Easy HS', values: [3, 4] },
@@ -83,6 +90,10 @@ export class PacketSearchComponent implements OnInit {
   readonly qbAllDifficulties: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   qbIndividualDifficulties: number[] = []; // if any selected, overrides the coarse tiers
   qbSelectedSubcategories: string[] = [];  // picked from the taxonomy above
+  qbSelectedAlternateSubcategories: string[] = [];
+  // Ranked options shown in each typeahead's autocomplete panel.
+  subFiltered: string[] = [];
+  altFiltered: string[] = [];
   qbMinYear: number | null = null;
   qbMaxYear: number | null = null;
   qbStandardOnly: boolean = false;
@@ -478,24 +489,83 @@ export class PacketSearchComponent implements OnInit {
     const i = this.qbSelectedCategories.indexOf(category);
     if (i >= 0) this.qbSelectedCategories.splice(i, 1);
     else this.qbSelectedCategories.push(category);
-    // Drop any picked subcategories that no longer belong to the selected categories.
-    const available = this.qbAvailableSubcategories;
-    this.qbSelectedSubcategories = this.qbSelectedSubcategories.filter(s => available.includes(s));
+    // Drop any picks that no longer belong to the selected categories, then refresh menus.
+    const subs = this.qbAvailableSubcategories;
+    this.qbSelectedSubcategories = this.qbSelectedSubcategories.filter(s => subs.includes(s));
+    const alts = this.qbAvailableAlternateSubcategories;
+    this.qbSelectedAlternateSubcategories = this.qbSelectedAlternateSubcategories.filter(s => alts.includes(s));
+    this.filterSubs('');
+    this.filterAlts('');
   }
 
   /** Subcategories offered: those of the picked categories, or all of them if none picked. */
   get qbAvailableSubcategories(): string[] {
-    const map = this.qbSubcategoriesByCategory;
+    return this.optionsFor(this.qbSubcategoriesByCategory);
+  }
+
+  /** Alternate subcategories offered, filtered the same way. */
+  get qbAvailableAlternateSubcategories(): string[] {
+    return this.optionsFor(this.qbAlternateByCategory);
+  }
+
+  private optionsFor(map: { [category: string]: string[] }): string[] {
     if (this.qbSelectedCategories.length) {
       return this.qbSelectedCategories.reduce<string[]>((acc, c) => acc.concat(map[c] || []), []);
     }
     return Object.keys(map).reduce<string[]>((acc, c) => acc.concat(map[c]), []);
   }
 
-  toggleQbSubcategory(sub: string): void {
-    const i = this.qbSelectedSubcategories.indexOf(sub);
+  /* --------------------- subcategory typeahead pickers -------------------- */
+
+  /** Fuzzy-rank options against a query: prefix > substring > subsequence. */
+  private fuzzyRank(pool: string[], query: string, selected: string[]): string[] {
+    const available = pool.filter(o => !selected.includes(o));
+    const q = query.trim().toLowerCase();
+    if (!q) return available.slice(0, 12);
+    const score = (opt: string): number => {
+      const s = opt.toLowerCase();
+      if (s.startsWith(q)) return 3;
+      if (s.includes(q)) return 2;
+      let i = 0;
+      for (let k = 0; k < s.length && i < q.length; k++) if (s[k] === q[i]) i++;
+      return i === q.length ? 1 : 0;
+    };
+    return available
+      .map(o => ({o, s: score(o)}))
+      .filter(x => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .map(x => x.o)
+      .slice(0, 12);
+  }
+
+  filterSubs(query: string): void {
+    this.subFiltered = this.fuzzyRank(this.qbAvailableSubcategories, query, this.qbSelectedSubcategories);
+  }
+
+  addSub(value: string): void {
+    if (value && !this.qbSelectedSubcategories.includes(value)) this.qbSelectedSubcategories.push(value);
+    this.filterSubs('');
+  }
+
+  removeSub(value: string): void {
+    const i = this.qbSelectedSubcategories.indexOf(value);
     if (i >= 0) this.qbSelectedSubcategories.splice(i, 1);
-    else this.qbSelectedSubcategories.push(sub);
+    this.filterSubs('');
+  }
+
+  filterAlts(query: string): void {
+    this.altFiltered = this.fuzzyRank(this.qbAvailableAlternateSubcategories, query, this.qbSelectedAlternateSubcategories);
+  }
+
+  addAlt(value: string): void {
+    if (value && !this.qbSelectedAlternateSubcategories.includes(value)) this.qbSelectedAlternateSubcategories.push(value);
+    this.filterAlts('');
+  }
+
+  removeAlt(value: string): void {
+    const i = this.qbSelectedAlternateSubcategories.indexOf(value);
+    if (i >= 0) this.qbSelectedAlternateSubcategories.splice(i, 1);
+    this.filterAlts('');
   }
 
   toggleQbTier(label: string): void {
@@ -535,6 +605,7 @@ export class PacketSearchComponent implements OnInit {
     return {
       categories: this.qbSelectedCategories,
       subcategories: this.qbSelectedSubcategories.length ? this.qbSelectedSubcategories : undefined,
+      alternateSubcategories: this.qbSelectedAlternateSubcategories.length ? this.qbSelectedAlternateSubcategories : undefined,
       difficulties,
       minYear: this.qbMinYear ?? undefined,
       maxYear: this.qbMaxYear ?? undefined,

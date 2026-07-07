@@ -577,15 +577,46 @@
                     </div>
                   </div>
                   @if (qbAvailableSubcategories.length) {
-                    <div class="qb-group">
-                      <div class="qb-group-label">Subcategories <span class="qb-muted">(optional)</span></div>
-                      <div class="qb-chips">
-                        @for (s of qbAvailableSubcategories; track s) {
-                          <button type="button" class="qb-chip" [class.on]="qbSelectedSubcategories.includes(s)"
-                                  (click)="toggleQbSubcategory(s)">{{ s }}</button>
+                    <mat-form-field appearance="outline" class="qb-typeahead">
+                      <mat-label>Subcategories (optional)</mat-label>
+                      <mat-chip-grid #subGrid aria-label="Subcategories">
+                        @for (s of qbSelectedSubcategories; track s) {
+                          <mat-chip-row (removed)="removeSub(s)">
+                            {{ s }}
+                            <button matChipRemove [attr.aria-label]="'Remove ' + s"><mat-icon>cancel</mat-icon></button>
+                          </mat-chip-row>
                         }
-                      </div>
-                    </div>
+                      </mat-chip-grid>
+                      <input #subInput placeholder="Type to search subcategories…"
+                             [matChipInputFor]="subGrid" [matAutocomplete]="subAuto"
+                             (input)="filterSubs(subInput.value)" (focus)="filterSubs(subInput.value)">
+                      <mat-autocomplete #subAuto (optionSelected)="addSub($event.option.value); subInput.value = ''">
+                        @for (opt of subFiltered; track opt) {
+                          <mat-option [value]="opt">{{ opt }}</mat-option>
+                        }
+                      </mat-autocomplete>
+                    </mat-form-field>
+                  }
+                  @if (qbAvailableAlternateSubcategories.length) {
+                    <mat-form-field appearance="outline" class="qb-typeahead">
+                      <mat-label>Alternate subcategories (optional)</mat-label>
+                      <mat-chip-grid #altGrid aria-label="Alternate subcategories">
+                        @for (s of qbSelectedAlternateSubcategories; track s) {
+                          <mat-chip-row (removed)="removeAlt(s)">
+                            {{ s }}
+                            <button matChipRemove [attr.aria-label]="'Remove ' + s"><mat-icon>cancel</mat-icon></button>
+                          </mat-chip-row>
+                        }
+                      </mat-chip-grid>
+                      <input #altInput placeholder="e.g. Math, Poetry, Jazz…"
+                             [matChipInputFor]="altGrid" [matAutocomplete]="altAuto"
+                             (input)="filterAlts(altInput.value)" (focus)="filterAlts(altInput.value)">
+                      <mat-autocomplete #altAuto (optionSelected)="addAlt($event.option.value); altInput.value = ''">
+                        @for (opt of altFiltered; track opt) {
+                          <mat-option [value]="opt">{{ opt }}</mat-option>
+                        }
+                      </mat-autocomplete>
+                    </mat-form-field>
                   }
                   <div class="qb-form">
                     <mat-form-field appearance="outline" class="qb-num-field">

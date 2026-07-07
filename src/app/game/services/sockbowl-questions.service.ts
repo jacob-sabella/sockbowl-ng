@@ -40,7 +40,7 @@ export class SockbowlQuestionsService {
 
   /** Build a random qbreader packet from the full qbreader filter set (all fields optional). */
   importQbreaderRandom(body: {
-    categories?: string[]; subcategories?: string[]; difficulties?: number[];
+    categories?: string[]; subcategories?: string[]; alternateSubcategories?: string[]; difficulties?: number[];
     minYear?: number; maxYear?: number; standardOnly?: boolean;
     tossupCount: number; bonusCount: number; name?: string; excludeRemoteIds?: string[];
   }): Observable<{ id: string; name: string; usedRemoteIds: string[] }> {
