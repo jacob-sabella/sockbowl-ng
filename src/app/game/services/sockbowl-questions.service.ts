@@ -22,7 +22,7 @@ export class SockbowlQuestionsService {
   /** Generate a packet from the local question bank (all filter fields optional). */
   importQbreaderRandom(body: {
     categories?: string[]; subcategories?: string[]; alternateSubcategories?: string[]; difficulties?: number[];
-    minYear?: number; maxYear?: number; standardOnly?: boolean;
+    minYear?: number; maxYear?: number; standardOnly?: boolean; balanced?: boolean;
     tossupCount: number; bonusCount: number; name?: string; excludeRemoteIds?: string[];
   }): Observable<{ id: string; name: string; usedRemoteIds: string[] }> {
     return this.http

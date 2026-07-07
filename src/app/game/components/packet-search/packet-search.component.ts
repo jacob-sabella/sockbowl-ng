@@ -89,6 +89,8 @@ export class PacketSearchComponent implements OnInit {
   qbMinYear: number | null = null;
   qbMaxYear: number | null = null;
   qbStandardOnly: boolean = false;
+  // Spread the mix across categories instead of a pure random draw.
+  qbBalanced: boolean = false;
   // De-dupe against questions this account has already seen (logged-in only).
   qbAvoidRepeats: boolean = true;
 
@@ -189,7 +191,7 @@ export class PacketSearchComponent implements OnInit {
         cats: this.qbSelectedCategories, tiers: this.qbSelectedTiers,
         subs: this.qbSelectedSubcategories, alts: this.qbSelectedAlternateSubcategories,
         indiv: this.qbIndividualDifficulties, tCount: this.qbTossupCount, bCount: this.qbBonusCount,
-        minY: this.qbMinYear, maxY: this.qbMaxYear, std: this.qbStandardOnly
+        minY: this.qbMinYear, maxY: this.qbMaxYear, std: this.qbStandardOnly, bal: this.qbBalanced
       }));
     } catch { /* localStorage unavailable — ignore */ }
   }
@@ -209,6 +211,7 @@ export class PacketSearchComponent implements OnInit {
       this.qbMinYear = typeof f.minY === 'number' ? f.minY : null;
       this.qbMaxYear = typeof f.maxY === 'number' ? f.maxY : null;
       this.qbStandardOnly = !!f.std;
+      this.qbBalanced = !!f.bal;
       this.filterSubs('');
       this.filterAlts('');
     } catch { /* corrupt/unavailable — ignore */ }
@@ -218,7 +221,7 @@ export class PacketSearchComponent implements OnInit {
   get hasActiveFilters(): boolean {
     return this.qbSelectedCategories.length > 0 || this.qbSelectedSubcategories.length > 0 ||
       this.qbSelectedAlternateSubcategories.length > 0 || this.qbIndividualDifficulties.length > 0 ||
-      this.qbMinYear != null || this.qbMaxYear != null || this.qbStandardOnly ||
+      this.qbMinYear != null || this.qbMaxYear != null || this.qbStandardOnly || this.qbBalanced ||
       this.qbSelectedTiers.length !== 1 || this.qbSelectedTiers[0] !== 'Regular HS';
   }
 
@@ -231,6 +234,7 @@ export class PacketSearchComponent implements OnInit {
     this.qbMinYear = null;
     this.qbMaxYear = null;
     this.qbStandardOnly = false;
+    this.qbBalanced = false;
     this.filterSubs('');
     this.filterAlts('');
     this.queueCount();
@@ -640,6 +644,7 @@ export class PacketSearchComponent implements OnInit {
       minYear: this.qbMinYear ?? undefined,
       maxYear: this.qbMaxYear ?? undefined,
       standardOnly: this.qbStandardOnly || undefined,
+      balanced: this.qbBalanced || undefined,
       tossupCount: this.qbTossupCount,
       bonusCount: this.qbBonusCount,
       name: this.qbRandomName?.trim() || undefined,

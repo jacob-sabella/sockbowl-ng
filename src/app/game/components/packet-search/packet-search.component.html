@@ -588,6 +588,10 @@
                                     (change)="queueCount()">
                     Standard sets only
                   </mat-slide-toggle>
+                  <mat-slide-toggle color="primary" [(ngModel)]="qbBalanced" class="qb-toggle"
+                                    (change)="queueCount()">
+                    Balanced mix <span class="qb-muted">(spread across categories)</span>
+                  </mat-slide-toggle>
                 </div>
               }
 
