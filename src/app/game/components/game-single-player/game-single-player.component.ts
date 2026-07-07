@@ -230,6 +230,29 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     return prev + (this.isCompleted ? 1 : 0);
   }
 
+  /** Total tossups in the packet, for the "Tossup N of M" progress. */
+  get totalTossups(): number {
+    return this.gameSession?.currentMatch?.packet?.tossups?.length || 0;
+  }
+
+  /** Reading-speed presets (map the 1..10 rate to three friendly choices). */
+  readonly speedPresets = [
+    { key: 'Slow', value: 3 },
+    { key: 'Normal', value: 6 },
+    { key: 'Fast', value: 9 },
+  ];
+
+  get activePreset(): string {
+    if (this.readingSpeed <= 4) return 'Slow';
+    if (this.readingSpeed <= 7) return 'Normal';
+    return 'Fast';
+  }
+
+  setSpeed(value: number): void {
+    this.readingSpeed = value;
+    this.onSpeedChange();
+  }
+
   onSpeedChange(): void {
     localStorage.setItem(GameSinglePlayerComponent.SPEED_KEY, String(this.readingSpeed));
     if (this.isReadingPhase && !this.readingComplete) {

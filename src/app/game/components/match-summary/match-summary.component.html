@@ -4,21 +4,28 @@
       <!-- Header -->
       <div class="summary-header">
         <mat-icon aria-hidden="true">emoji_events</mat-icon>
-        <h2>Match Summary</h2>
+        <h2>{{ isSolo ? 'Practice Complete' : 'Match Summary' }}</h2>
       </div>
       @if (gameSession.currentMatch) {
         <div class="summary-body">
-          <!-- Winning Team Announcement -->
-          <div class="winning-announcement" role="status" aria-live="polite">
-            <mat-icon class="trophy-icon" aria-hidden="true">emoji_events</mat-icon>
-            <h3>{{ getWinningTeamAnnouncement() }}</h3>
-          </div>
-          <!-- Team Scores -->
-          <app-team-list [teams]="gameSession.teamList"
-            [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
-            [currentRound]="gameSession.currentMatch.currentRound"
-            [previousRoundList]="gameSession.currentMatch.previousRounds">
-          </app-team-list>
+          <!-- Headline: personal accuracy for solo, winning team otherwise -->
+          @if (isSolo) {
+            <div class="winning-announcement" role="status" aria-live="polite">
+              <mat-icon class="trophy-icon" aria-hidden="true">military_tech</mat-icon>
+              <h3>You answered {{ overallAccuracy.correct }} of {{ overallAccuracy.total }} correctly ({{ overallAccuracy.percent }}%)</h3>
+            </div>
+          } @else {
+            <div class="winning-announcement" role="status" aria-live="polite">
+              <mat-icon class="trophy-icon" aria-hidden="true">emoji_events</mat-icon>
+              <h3>{{ getWinningTeamAnnouncement() }}</h3>
+            </div>
+            <!-- Team Scores -->
+            <app-team-list [teams]="gameSession.teamList"
+              [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
+              [currentRound]="gameSession.currentMatch.currentRound"
+              [previousRoundList]="gameSession.currentMatch.previousRounds">
+            </app-team-list>
+          }
           <!-- Per-category performance breakdown -->
           @if (hasCategoryData()) {
             <section class="category-breakdown" aria-labelledby="category-breakdown-title">

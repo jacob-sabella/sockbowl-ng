@@ -25,6 +25,19 @@ export class MatchSummaryComponent implements OnInit {
     });
   }
 
+  /** Solo practice (no opponents) — the summary reads as a personal recap. */
+  get isSolo(): boolean {
+    return this.gameSession?.gameSettings?.gameMode === 'SINGLE_PLAYER';
+  }
+
+  /** Overall correct/total across the session, for the solo recap headline. */
+  get overallAccuracy(): { correct: number; total: number; percent: number } {
+    const rounds = this.gameSession?.currentMatch?.previousRounds ?? [];
+    const total = rounds.length;
+    const correct = rounds.filter(r => this.isCorrectlyAnswered(r)).length;
+    return { correct, total, percent: total > 0 ? Math.round((correct / total) * 100) : 0 };
+  }
+
 
   calculatePlayerScore(player: Player): number {
     let score = 0;

@@ -192,13 +192,47 @@
 
 .speed-control {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  align-items: center;
+  gap: 0.5rem;
+
+  .speed-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, var(--text-secondary));
+  }
+}
+
+.speed-presets {
+  display: inline-flex;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+}
+
+.speed-preset {
+  min-height: 36px;
+  padding: 0.35rem 0.7rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  & + .speed-preset { border-left: 1px solid var(--border-medium); }
+  &:hover { background: var(--surface-hover); color: var(--text-primary); }
+  &.active { background: var(--accent-primary); color: #fff; }
+  &:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+}
+
+/* "of N" suffix in the Tossup N of M title */
+.of-total {
+  margin-left: 0.5rem;
+  font-size: 0.75em;
+  font-weight: 500;
   color: var(--text-muted, var(--text-secondary));
-  input[type="range"] { width: 8rem; accent-color: var(--accent-primary); min-height: 24px; }
 }
 
 .answer-form {

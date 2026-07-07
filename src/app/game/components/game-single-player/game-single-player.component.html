@@ -1,7 +1,7 @@
 <div class="game-proctor-container">
   @if (round) {
     <mat-card class="game-proctor">
-      <mat-card-title>Tossup {{ round.roundNumber }}</mat-card-title>
+      <mat-card-title>Tossup {{ round.roundNumber }}@if (totalTossups) { <span class="of-total">of {{ totalTossups }}</span> }</mat-card-title>
       <mat-card-content>
 
         <!-- Current state banner -->
@@ -81,11 +81,17 @@
                     <mat-icon aria-hidden="true">{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
                   </button>
                 }
-                <label class="speed-control">
-                  <span>Speed</span>
-                  <input type="range" min="1" max="10" step="1" [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
-                         aria-label="Reading speed, 1 slow to 10 fast" [attr.aria-valuetext]="readingSpeed + ' of 10'">
-                </label>
+                <div class="speed-control" role="group" aria-label="Reading speed">
+                  <span class="speed-label">Speed</span>
+                  <div class="speed-presets">
+                    @for (preset of speedPresets; track preset.key) {
+                      <button type="button" class="speed-preset" [class.active]="activePreset === preset.key"
+                              (click)="setSpeed(preset.value)" [attr.aria-pressed]="activePreset === preset.key">
+                        {{ preset.key }}
+                      </button>
+                    }
+                  </div>
+                </div>
               </div>
             </div>
             <button mat-button type="button" class="skip-btn" (click)="skip()"
