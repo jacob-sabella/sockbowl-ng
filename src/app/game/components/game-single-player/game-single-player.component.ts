@@ -19,7 +19,7 @@ import {SpeechService} from '../../services/speech.service';
 export class GameSinglePlayerComponent implements OnInit, OnDestroy {
 
   protected readonly RoundState = RoundState;
-  private static readonly SPEED_KEY = 'solo_reading_speed';
+  private static readonly SPEED_KEY = 'sockbowl_reading_speed';
 
   @ViewChild('answerInput') answerInput?: ElementRef<HTMLInputElement>;
 

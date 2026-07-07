@@ -113,7 +113,9 @@
           @if (isCompleted) {
             @if (isOwner) {
               <button mat-raised-button color="primary" (click)="next()"
-                      aria-label="Advance to the next tossup">Advance Round</button>
+                      aria-label="Advance to the next tossup (or press Enter)">
+                Advance Round <span class="key-hint" aria-hidden="true">Enter</span>
+              </button>
             } @else {
               <p class="waiting-hint">Waiting for the host to advance.</p>
             }

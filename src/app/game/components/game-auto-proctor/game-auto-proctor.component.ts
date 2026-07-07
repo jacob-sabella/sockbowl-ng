@@ -1,4 +1,4 @@
-import {Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
@@ -20,7 +20,7 @@ import {SpeechService} from '../../services/speech.service';
 export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   protected readonly RoundState = RoundState;
-  private static readonly SPEED_KEY = 'auto_reading_speed';
+  private static readonly SPEED_KEY = 'sockbowl_reading_speed';
 
   @ViewChild('answerInput') answerInput?: ElementRef<HTMLInputElement>;
 
@@ -224,6 +224,15 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   next(): void {
     this.gameStateService.sendAdvanceRound();
+  }
+
+  /** The host can advance to the next tossup with Enter once a round is complete. */
+  @HostListener('document:keydown.enter', ['$event'])
+  onEnter(event: Event): void {
+    if (this.isCompleted && this.isOwner && !(event.target instanceof HTMLInputElement)) {
+      event.preventDefault();
+      this.next();
+    }
   }
 
   onSpeedChange(): void {

@@ -22,13 +22,17 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
   revealedCount = 0;
   private readingTimer: any = null;
   private currentRoundKey = '';
-  private readonly readingSpeed = 5;
+  private readingSpeed = 5;
 
   private gameSessionSubscription?: Subscription;
 
   constructor(public gameStateService: GameStateService) {}
 
   ngOnInit(): void {
+    const saved = Number(localStorage.getItem('sockbowl_reading_speed'));
+    if (saved >= 1 && saved <= 10) {
+      this.readingSpeed = saved;
+    }
     this.gameSessionSubscription = this.gameStateService.gameSession$.subscribe(gameSession => {
       if (gameSession) {
         this.gameSession = gameSession;
