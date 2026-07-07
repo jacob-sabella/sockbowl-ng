@@ -1,137 +1,132 @@
-@if (round) {
-  <section class="ap">
-    <header class="ap__meta">
-      <span class="ap__round">Tossup {{ round.roundNumber }}</span>
-      @if (round.category) {
-        <span class="ap__cat">
-          {{ round.category }}@if (round.subcategory) { <span class="ap__sub">· {{ round.subcategory }}</span> }
-        </span>
-      }
-    </header>
+<div class="game-proctor-container">
+  @if (round) {
+    <mat-card class="game-proctor">
+      <mat-card-title>Tossup {{ round.roundNumber }}</mat-card-title>
+      <mat-card-content>
 
-    <!-- Team scores -->
-    <div class="ap__scores" role="list" aria-label="Team scores">
-      @for (t of teamScores; track t.name) {
-        <span class="ap__team" role="listitem" [attr.aria-label]="t.name + ': ' + t.score + ' points'">
-          <span class="ap__team-name">{{ t.name }}</span><strong aria-hidden="true">{{ t.score }}</strong>
-        </span>
-      }
-    </div>
-
-    <!-- Whose turn / current status (single live region for screen readers) -->
-    <p class="ap__turn" role="status" aria-live="polite">
-      @if (isCompleted) {
-        {{ wasCorrect ? (buzzerTeam + ' answered correctly') : 'No correct answer' }}
-      } @else if (isBonus) {
-        Bonus for {{ bonusTeamName }}, part {{ bonusPartIndex + 1 }} of 3.@if (bonusEligible) { <strong>Your team is answering.</strong> }
-      } @else if (iAmBuzzer) {
-        <strong>You buzzed. Type your answer.</strong>
-      } @else if (someoneBuzzed) {
-        {{ buzzerName }}@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering.
-      } @else if (isBuzzable) {
-        Buzzing is open.@if (canBuzz) { It is anyone's buzz. } @else if (!gameStateService.isSelfOnAnyTeam()) { You are spectating. } @else { Your team has already buzzed. }
-      }
-    </p>
-
-    @if (isCompleted) {
-      <div class="ap__question font-serif" [innerHTML]="round.question"></div>
-      <div class="ap__result" [class.ap__result--correct]="wasCorrect" [class.ap__result--wrong]="!wasCorrect"
-           role="status" aria-live="polite">
-        <span class="ap__verdict">
-          {{ wasCorrect ? (buzzerTeam + ' got it') : 'Nobody got it' }}
-        </span>
-        <div class="ap__answer">
-          <span class="ap__answer-label">Answer</span>
-          <span class="ap__answer-text font-serif" [innerHTML]="round.answer"></span>
-        </div>
-        @if (isOwner) {
-          <button type="button" class="ap__next" (click)="next()" aria-label="Advance to the next tossup">Next tossup</button>
-        } @else {
-          <p class="ap__hint">Waiting for the host to advance…</p>
-        }
-      </div>
-    } @else if (isBonus) {
-      <!-- Bonus: read to the eligible team, each part typed + auto-judged -->
-      <div class="ap__bonus">
-        <div class="ap__bonus-head" role="status" aria-live="polite">
-          <mat-icon aria-hidden="true">star</mat-icon>
-          <span>Bonus · part {{ bonusPartIndex + 1 }} of 3@if (!bonusEligible) { ({{ bonusTeamName }}'s bonus) }</span>
-          @if (speech.available) {
-            <button type="button" class="ap__tts ap__tts--inline" (click)="toggleTts()" [class.ap__tts--on]="speech.enabled"
-                    [attr.aria-pressed]="speech.enabled"
-                    [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read bonus aloud'"
-                    [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
-              <mat-icon aria-hidden="true">{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
-            </button>
+        <!-- Current state banner -->
+        <div class="proctor-status" role="status" aria-live="polite">
+          @if (isCompleted) {
+            <span class="status-dot status-dot--done"></span>
+            {{ wasCorrect ? (buzzerTeam + ' answered correctly') : 'No correct answer' }}
+          } @else if (isBonus) {
+            <span class="status-dot status-dot--read"></span>
+            Bonus for {{ bonusTeamName }}, part {{ bonusPartIndex + 1 }} of 3.@if (bonusEligible) { <strong>&nbsp;Your team is answering.</strong> }
+          } @else if (iAmBuzzer) {
+            <span class="status-dot status-dot--judge"></span> You buzzed. Type your answer.
+          } @else if (someoneBuzzed) {
+            <span class="status-dot status-dot--judge"></span> {{ buzzerName }}@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering.
+          } @else if (isBuzzable) {
+            <span class="status-dot status-dot--wait"></span> Buzzing is open.
           }
         </div>
-        @if (bonusPreamble) {
-          <div class="ap__question font-serif" [innerHTML]="bonusPreamble"></div>
-        }
-        <div class="ap__question font-serif" [innerHTML]="bonusPartQuestion"></div>
 
-        @if (bonusEligible) {
-          <form class="ap__form" (ngSubmit)="submit()">
-            <input #answerInput class="ap__input" name="banswer" [(ngModel)]="answerText"
-                   autocomplete="off" spellcheck="false" placeholder="Answer this part…"
-                   aria-label="Type your answer for this bonus part" />
-            <button type="submit" class="ap__submit" [disabled]="!canSubmit" aria-label="Submit bonus answer">Submit</button>
-          </form>
-        } @else {
-          <p class="ap__hint">{{ bonusTeamName }} is answering the bonus…</p>
-        }
-      </div>
-    } @else {
-      <div class="ap__reading font-serif" aria-live="polite" aria-atomic="true"
-           [attr.aria-label]="'Tossup so far: ' + revealedText">
-        <span aria-hidden="true">{{ revealedText }}</span>@if (!readingComplete && isBuzzable) { <span class="ap__cursor" aria-hidden="true">▍</span> }
-      </div>
-
-      @if (someoneBuzzed && !iAmBuzzer) {
-        <div class="ap__buzzed" role="status" aria-live="polite">
-          <mat-icon aria-hidden="true">hearing</mat-icon>
-          <span><strong>{{ buzzerName }}</strong>@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering…</span>
+        <!-- Category / subcategory -->
+        <div class="category-row">
+          <div class="info-section category-section">
+            <span class="info-label">Category</span>
+            <span class="info-value">{{ round.category }}</span>
+          </div>
+          @if (round.subcategory) {
+            <div class="info-section subcategory-section">
+              <span class="info-label">Subcategory</span>
+              <span class="info-value">{{ round.subcategory }}</span>
+            </div>
+          }
         </div>
-      }
 
-      @if (iAmBuzzer) {
-        <form class="ap__form" (ngSubmit)="submit()">
-          <input #answerInput class="ap__input" name="answer" [(ngModel)]="answerText"
-                 autocomplete="off" spellcheck="false" placeholder="Type your answer…"
-                 aria-label="Type your answer" />
-          <button type="submit" class="ap__submit" [disabled]="!canSubmit" aria-label="Submit answer">Submit</button>
-        </form>
-      }
+        <!-- Question -->
+        <div class="info-section question-section">
+          <div class="info-label">Question</div>
+          @if (isCompleted) {
+            <div class="info-value font-serif" [innerHTML]="round.question"></div>
+          } @else if (isBonus) {
+            @if (bonusPreamble) { <div class="info-value font-serif" [innerHTML]="bonusPreamble"></div> }
+            <div class="info-value font-serif" [innerHTML]="bonusPartQuestion"></div>
+          } @else {
+            <div class="info-value font-serif" aria-live="polite" aria-atomic="true">
+              <span>{{ revealedText }}</span>@if (!readingComplete && isBuzzable) { <span class="reveal-cursor" aria-hidden="true">▍</span> }
+            </div>
+          }
+        </div>
 
-      @if (isBuzzable) {
-        <div class="ap__controls">
-          <button type="button" class="ap__buzz" (click)="buzz()" [disabled]="!canBuzz"
-                  [attr.aria-label]="canBuzz ? 'Buzz in now'
-                    : (!gameStateService.isSelfOnAnyTeam() ? 'Buzzer disabled, you are spectating'
-                    : 'Buzzer locked, your team has already buzzed')">
-            <span class="ap__buzz-key">Buzz</span>
-            @if (!gameStateService.isSelfOnAnyTeam()) {
-              <span class="ap__buzz-hint">spectating</span>
-            } @else if (gameStateService.hasCurrentPlayerTeamBuzzed()) {
-              <span class="ap__buzz-hint">team locked out</span>
+        <!-- Answer (on completion) -->
+        @if (isCompleted) {
+          <div class="info-section answer-section" [class.answer-section--wrong]="!wasCorrect" aria-live="polite">
+            <div class="info-label">Answer</div>
+            <div class="info-value font-serif" [innerHTML]="round.answer"></div>
+          </div>
+        }
+
+        <!-- Someone else buzzed -->
+        @if (someoneBuzzed && !iAmBuzzer) {
+          <div class="active-buzz-info" role="status" aria-live="polite">
+            <mat-icon aria-hidden="true">notifications_active</mat-icon>
+            <p><strong>{{ buzzerName }}</strong>@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering.</p>
+          </div>
+        }
+
+        <!-- Controls -->
+        <div class="button-container">
+          @if (isBuzzable) {
+            <div class="ap-controls">
+              <button mat-raised-button class="buzz-btn" (click)="buzz()" [disabled]="!canBuzz"
+                      [attr.aria-label]="canBuzz ? 'Buzz in now'
+                        : (!gameStateService.isSelfOnAnyTeam() ? 'Buzzer disabled, you are spectating'
+                        : 'Buzzer locked, your team has already buzzed')">
+                <mat-icon aria-hidden="true">sports_esports</mat-icon> Buzz
+              </button>
+              <div class="reader-tools">
+                @if (speech.available) {
+                  <button mat-icon-button type="button" (click)="toggleTts()"
+                          [color]="speech.enabled ? 'primary' : undefined"
+                          [attr.aria-pressed]="speech.enabled"
+                          [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read question aloud'"
+                          [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
+                    <mat-icon aria-hidden="true">{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
+                  </button>
+                }
+                <label class="speed-control">
+                  <span>Speed</span>
+                  <input type="range" min="1" max="10" step="1" [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
+                         aria-label="Reading speed, 1 slow to 10 fast" [attr.aria-valuetext]="readingSpeed + ' of 10'">
+                </label>
+              </div>
+            </div>
+          }
+
+          @if (iAmBuzzer || bonusEligible) {
+            <form class="answer-form" (ngSubmit)="submit()">
+              <input #answerInput class="answer-input" name="answer" [(ngModel)]="answerText"
+                     autocomplete="off" spellcheck="false"
+                     [placeholder]="bonusEligible ? 'Answer this bonus part…' : 'Type your answer…'"
+                     aria-label="Type your answer">
+              <button mat-raised-button color="primary" type="submit" [disabled]="!canSubmit"
+                      aria-label="Submit answer">Submit</button>
+            </form>
+          }
+
+          @if (isBonus && !bonusEligible) {
+            <p class="waiting-hint">{{ bonusTeamName }} is answering the bonus.</p>
+          }
+
+          @if (isCompleted) {
+            @if (isOwner) {
+              <button mat-raised-button color="primary" (click)="next()"
+                      aria-label="Advance to the next tossup">Advance Round</button>
+            } @else {
+              <p class="waiting-hint">Waiting for the host to advance.</p>
             }
-          </button>
-          <label class="ap__speed">
-            <span class="ap__speed-label">Reading speed</span>
-            <input type="range" min="1" max="10" step="1" [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
-                   aria-label="Reading speed, 1 slow to 10 fast"
-                   [attr.aria-valuetext]="readingSpeed + ' of 10'">
-          </label>
-          @if (speech.available) {
-            <button type="button" class="ap__tts" (click)="toggleTts()" [class.ap__tts--on]="speech.enabled"
-                    [attr.aria-pressed]="speech.enabled"
-                    [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read question aloud'"
-                    [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
-              <mat-icon aria-hidden="true">{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
-            </button>
           }
         </div>
-      }
-    }
-  </section>
-}
+
+        <!-- Scoreboard (same as classic) -->
+        <app-team-list [teams]="gameSession.teamList"
+                       [currentBuzz]="round.currentBuzz"
+                       [currentRound]="round"
+                       [previousRoundList]="gameSession.currentMatch.previousRounds">
+        </app-team-list>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

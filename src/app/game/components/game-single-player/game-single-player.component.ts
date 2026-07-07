@@ -42,15 +42,25 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private readingTimer: any = null;
   private buzzTimer: any = null;
+  /** char offset of each word within words.join(' '), for boundary-synced reveal. */
+  private wordStarts: number[] = [];
+  private boundaryFired = false;
+  private watchdog: any = null;
   private currentRoundKey = '';
 
   constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
-  /** Toggle the spoken read; if turning on mid-read, pick up from the current word. */
+  /** Toggle the spoken read; hand the on-screen reveal to whichever driver is active. */
   toggleTts(): void {
     this.speech.toggle();
-    if (this.speech.enabled && this.isReadingPhase && !this.readingComplete) {
-      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+    if (this.isReadingPhase && !this.readingComplete) {
+      if (this.speech.enabled) {
+        this.clearTimer();
+        this.startTtsRead(this.revealedCount);
+      } else {
+        this.speech.cancel();
+        this.scheduleTick();
+      }
     }
   }
 
@@ -68,6 +78,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearTimer();
     this.clearBuzzTimer();
+    this.clearWatchdog();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -203,9 +214,12 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   onSpeedChange(): void {
     localStorage.setItem(GameSinglePlayerComponent.SPEED_KEY, String(this.readingSpeed));
     if (this.isReadingPhase && !this.readingComplete) {
-      this.scheduleTick();
-      // Re-speak the remaining words at the new rate so audio tracks the slider.
-      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+      // Re-pace the active driver from the current word at the new speed.
+      if (this.speech.enabled) {
+        this.startTtsRead(this.revealedCount);
+      } else {
+        this.scheduleTick();
+      }
     }
   }
 
@@ -242,15 +256,73 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   private startReading(): void {
     this.clearTimer();
     this.clearBuzzTimer();
+    this.clearWatchdog();
+    this.speech.cancel();
     this.answerText = '';
     this.hasBuzzed = false;
     this.forwent = false;
     this.buzzSecondsLeft = null;
     this.revealedCount = 0;
     this.words = this.tokenize(this.round?.question || '');
-    if (this.words.length > 0) {
-      this.scheduleTick();
-      this.speech.speak(this.words.join(' '), this.readingSpeed);
+    this.buildWordStarts();
+    if (this.words.length === 0) {
+      return;
+    }
+    if (this.speech.enabled && this.speech.available) {
+      this.startTtsRead(0);            // voice drives the reveal
+    } else {
+      this.scheduleTick();             // silent: timer drives the reveal
+    }
+  }
+
+  private buildWordStarts(): void {
+    let offset = 0;
+    this.wordStarts = this.words.map(w => {
+      const start = offset;
+      offset += w.length + 1;
+      return start;
+    });
+  }
+
+  /**
+   * Speak words[from..] and reveal each word the instant the voice reaches it so the
+   * text and audio stay in lockstep; the buzz window opens when the voice finishes.
+   * Falls back to the timer if the voice emits no word-boundary events.
+   */
+  private startTtsRead(from: number): void {
+    this.clearTimer();
+    this.clearWatchdog();
+    const slice = this.words.slice(from);
+    let offset = 0;
+    const starts = slice.map(w => { const s = offset; offset += w.length + 1; return s; });
+    this.boundaryFired = false;
+    this.speech.speak(slice.join(' '), this.readingSpeed, {
+      onBoundary: (charIndex) => {
+        this.boundaryFired = true;
+        this.clearWatchdog();
+        let local = 0;
+        for (let i = 0; i < starts.length; i++) {
+          if (starts[i] <= charIndex) { local = i; } else { break; }
+        }
+        const reveal = from + local + 1;
+        if (reveal > this.revealedCount) {
+          this.revealedCount = reveal;
+        }
+      },
+      onEnd: () => {
+        if (!this.hasBuzzed && !this.isCompleted) {
+          this.revealedCount = this.words.length;
+          this.startBuzzWindow();
+        }
+      }
+    });
+    this.watchdog = setTimeout(() => { if (!this.boundaryFired) { this.scheduleTick(); } }, 1400);
+  }
+
+  private clearWatchdog(): void {
+    if (this.watchdog) {
+      clearTimeout(this.watchdog);
+      this.watchdog = null;
     }
   }
 

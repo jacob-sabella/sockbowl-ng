@@ -60,14 +60,24 @@ export class SpeechService {
     return Math.max(0.6, Math.min(2, 0.6 + (speed - 1) * 0.14));
   }
 
+  /** Whether an utterance is currently being spoken. */
+  isSpeaking(): boolean {
+    return this.available && window.speechSynthesis.speaking;
+  }
+
   /**
    * Speak plain text at a rate derived from the reading-speed slider. Cancels any
-   * in-flight utterance first. `onEnd` fires when speech finishes (or is skipped
-   * because TTS is off/unavailable), so callers can chain reads.
+   * in-flight utterance first.
+   *
+   * `opts.onBoundary(charIndex)` fires at each spoken word boundary (charIndex is
+   * the offset of that word in `text`), letting a caller reveal the on-screen text
+   * in lockstep with the voice so the two line up exactly. `opts.onEnd` fires when
+   * speech finishes (or is skipped because TTS is off/unavailable).
    */
-  speak(text: string, speed: number, onEnd?: () => void): void {
+  speak(text: string, speed: number,
+        opts?: { onEnd?: () => void; onBoundary?: (charIndex: number) => void }): void {
     if (!this.available || !this._enabled || !text || !text.trim()) {
-      onEnd?.();
+      opts?.onEnd?.();
       return;
     }
     this.cancel();
@@ -77,9 +87,15 @@ export class SpeechService {
     if (this.voice) {
       utterance.voice = this.voice;
     }
-    if (onEnd) {
-      utterance.onend = () => onEnd();
+    if (opts?.onBoundary) {
+      utterance.onboundary = (e: SpeechSynthesisEvent) => {
+        // Some engines omit `name`; treat those as word boundaries too.
+        if (!e.name || e.name === 'word') {
+          opts.onBoundary!(e.charIndex);
+        }
+      };
     }
+    utterance.onend = () => opts?.onEnd?.();
     window.speechSynthesis.speak(utterance);
   }
 

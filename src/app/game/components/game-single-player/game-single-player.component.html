@@ -1,100 +1,111 @@
-@if (round) {
-  <section class="solo">
-    <header class="solo__meta">
-      <span class="solo__round">Tossup {{ round.roundNumber }}</span>
-      @if (round.category) {
-        <span class="solo__cat">
-          {{ round.category }}@if (round.subcategory) { <span class="solo__sub">· {{ round.subcategory }}</span> }
-        </span>
-      }
-      <span class="solo__score" title="Score, correct answers out of tossups seen">
-        <strong>{{ score }}</strong> pts · {{ correctCount }}/{{ tossupsSeen }}
-      </span>
-    </header>
+<div class="game-proctor-container">
+  @if (round) {
+    <mat-card class="game-proctor">
+      <mat-card-title>Tossup {{ round.roundNumber }}</mat-card-title>
+      <mat-card-content>
 
-    @if (isCompleted) {
-      <!-- Reveal: full formatted question + verdict + answer + next -->
-      <div class="solo__question font-serif" [innerHTML]="round.question"></div>
-      <div class="solo__result" role="status" aria-live="polite"
-           [class.solo__result--correct]="wasCorrect" [class.solo__result--wrong]="!wasCorrect">
-        <span class="solo__verdict">
-          <span class="solo__verdict-icon" aria-hidden="true">{{ wasCorrect ? '✓' : '✗' }}</span>
-          {{ verdictText }}
-        </span>
-        <div class="solo__answer">
-          <span class="solo__answer-label">Answer</span>
-          <span class="solo__answer-text font-serif" [innerHTML]="round.answer"></span>
-        </div>
-        <button type="button" class="solo__next" (click)="next()">Next tossup →</button>
-      </div>
-    } @else {
-      <!-- Reading: progressively revealed question -->
-      @if (isReadingPhase && !hasBuzzed) {
-        <div class="solo__progress" role="progressbar"
-             [attr.aria-valuenow]="readingProgress" aria-valuemin="0" aria-valuemax="100"
-             aria-label="Reading progress">
-          <div class="solo__progress-fill" [style.width.%]="readingProgress"></div>
-        </div>
-      }
-
-      <div class="solo__reading font-serif" aria-live="polite" aria-atomic="true">
-        <span>{{ revealedText }}</span>@if (!readingComplete && !hasBuzzed) { <span class="solo__cursor" aria-hidden="true">▍</span> }
-      </div>
-
-      <!-- Visually-hidden running status for screen readers -->
-      <p class="solo__sr-status" aria-live="polite">{{ readingStatus }}</p>
-
-      @if (isReadingPhase) {
-        @if (buzzSecondsLeft !== null) {
-          <div class="solo__countdown" role="status" aria-live="assertive"
-               [class.solo__countdown--urgent]="buzzSecondsLeft <= 3">
-            <span class="solo__countdown-num">{{ buzzSecondsLeft }}</span>
-            <span class="solo__countdown-label">seconds left to buzz</span>
-          </div>
-        } @else if (readingComplete) {
-          <p class="solo__hint">Reading complete, buzz to answer.</p>
-        }
-
-        <div class="solo__controls">
-          <button type="button" class="solo__buzz" (click)="buzz()"
-                  aria-label="Buzz in to answer (or press the space bar)">
-            <span class="solo__buzz-key">Buzz</span>
-            <span class="solo__buzz-hint">space</span>
-          </button>
-
-          <label class="solo__speed">
-            <span class="solo__speed-label">Reading speed</span>
-            <input type="range" min="1" max="10" step="1"
-                   [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
-                   aria-label="Reading speed, 1 slow to 10 fast"
-                   [attr.aria-valuetext]="readingSpeed + ' of 10'">
-          </label>
-
-          @if (speech.available) {
-            <button type="button" class="solo__tts" (click)="toggleTts()"
-                    [class.solo__tts--on]="speech.enabled"
-                    [attr.aria-pressed]="speech.enabled"
-                    [attr.aria-label]="speech.enabled ? 'Turn off read-aloud' : 'Turn on read-aloud'"
-                    [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
-              <mat-icon>{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
-            </button>
+        <!-- Current state banner -->
+        <div class="proctor-status" role="status" aria-live="polite">
+          @if (isCompleted) {
+            <span class="status-dot status-dot--done"></span> {{ verdictText }}
+          } @else if (isAnswering) {
+            <span class="status-dot status-dot--judge"></span> Type your answer.
+          } @else if (buzzSecondsLeft !== null) {
+            <span class="status-dot status-dot--wait"></span> Reading complete. Buzz within {{ buzzSecondsLeft }} seconds.
+          } @else if (readingComplete) {
+            <span class="status-dot status-dot--wait"></span> Reading complete. Buzz to answer.
+          } @else {
+            <span class="status-dot status-dot--read"></span> Reading in progress.
           }
         </div>
-      }
 
-      @if (isAnswering) {
-        <form class="solo__form" (ngSubmit)="submit()">
-          <input #answerInput
-                 class="solo__input"
-                 name="answer"
-                 [(ngModel)]="answerText"
-                 autocomplete="off"
-                 spellcheck="false"
-                 placeholder="Type your answer…"
-                 aria-label="Your answer" />
-          <button type="submit" class="solo__submit" [disabled]="!canSubmit">Submit</button>
-        </form>
-      }
-    }
-  </section>
-}
+        <!-- Category / subcategory / score -->
+        <div class="category-row">
+          <div class="info-section category-section">
+            <span class="info-label">Category</span>
+            <span class="info-value">{{ round.category }}</span>
+          </div>
+          @if (round.subcategory) {
+            <div class="info-section subcategory-section">
+              <span class="info-label">Subcategory</span>
+              <span class="info-value">{{ round.subcategory }}</span>
+            </div>
+          }
+          <div class="info-section score-section">
+            <span class="info-label">Score</span>
+            <span class="info-value">{{ score }} pts, {{ correctCount }}/{{ tossupsSeen }}</span>
+          </div>
+        </div>
+
+        <!-- Question -->
+        <div class="info-section question-section">
+          <div class="info-label">Question</div>
+          @if (isCompleted) {
+            <div class="info-value font-serif" [innerHTML]="round.question"></div>
+          } @else {
+            <div class="info-value font-serif" aria-live="polite" aria-atomic="true">
+              <span>{{ revealedText }}</span>@if (!readingComplete && !hasBuzzed) { <span class="reveal-cursor" aria-hidden="true">▍</span> }
+            </div>
+          }
+        </div>
+
+        <!-- Answer (on completion) -->
+        @if (isCompleted) {
+          <div class="info-section answer-section" [class.answer-section--wrong]="!wasCorrect" aria-live="polite">
+            <div class="info-label">Answer</div>
+            <div class="info-value font-serif" [innerHTML]="round.answer"></div>
+          </div>
+        }
+
+        <!-- Controls -->
+        <div class="button-container">
+          @if (isReadingPhase) {
+            @if (buzzSecondsLeft !== null) {
+              <div class="countdown" [class.countdown--urgent]="buzzSecondsLeft <= 3"
+                   role="status" aria-live="assertive">
+                <strong>{{ buzzSecondsLeft }}</strong> seconds left to buzz
+              </div>
+            }
+            <div class="ap-controls">
+              <button mat-raised-button class="buzz-btn" (click)="buzz()"
+                      aria-label="Buzz in to answer (or press the space bar)">
+                <mat-icon aria-hidden="true">sports_esports</mat-icon> Buzz
+              </button>
+              <div class="reader-tools">
+                @if (speech.available) {
+                  <button mat-icon-button type="button" (click)="toggleTts()"
+                          [color]="speech.enabled ? 'primary' : undefined"
+                          [attr.aria-pressed]="speech.enabled"
+                          [attr.aria-label]="speech.enabled ? 'Turn off read-aloud' : 'Turn on read-aloud'"
+                          [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
+                    <mat-icon aria-hidden="true">{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
+                  </button>
+                }
+                <label class="speed-control">
+                  <span>Speed</span>
+                  <input type="range" min="1" max="10" step="1" [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
+                         aria-label="Reading speed, 1 slow to 10 fast" [attr.aria-valuetext]="readingSpeed + ' of 10'">
+                </label>
+              </div>
+            </div>
+          }
+
+          @if (isAnswering) {
+            <form class="answer-form" (ngSubmit)="submit()">
+              <input #answerInput class="answer-input" name="answer" [(ngModel)]="answerText"
+                     autocomplete="off" spellcheck="false" placeholder="Type your answer…"
+                     aria-label="Your answer">
+              <button mat-raised-button color="primary" type="submit" [disabled]="!canSubmit"
+                      aria-label="Submit answer">Submit</button>
+            </form>
+          }
+
+          @if (isCompleted) {
+            <button mat-raised-button color="primary" (click)="next()"
+                    aria-label="Go to the next tossup">Next Tossup</button>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
