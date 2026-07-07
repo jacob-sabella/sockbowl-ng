@@ -501,11 +501,11 @@
               <div class="qb-form">
                 <mat-form-field appearance="outline" class="qb-num-field">
                   <mat-label>Tossups</mat-label>
-                  <input matInput type="number" min="1" max="30" [(ngModel)]="qbTossupCount">
+                  <input matInput type="number" min="1" max="30" [(ngModel)]="qbTossupCount" (ngModelChange)="queueCount()">
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="qb-num-field">
                   <mat-label>Bonuses</mat-label>
-                  <input matInput type="number" min="0" max="30" [(ngModel)]="qbBonusCount">
+                  <input matInput type="number" min="0" max="30" [(ngModel)]="qbBonusCount" (ngModelChange)="queueCount()">
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="qb-name-field">
                   <mat-label>Packet name (optional)</mat-label>
@@ -608,7 +608,11 @@
                   <span class="qb-avail-count">{{ availTossups | number }}</span> tossups
                   <span class="qb-avail-sep">·</span>
                   <span class="qb-avail-count">{{ availBonuses | number }}</span> bonuses match
-                  @if (availTossups === 0) { <span class="qb-avail-warn">(loosen the filters)</span> }
+                  @if (availTossups === 0) {
+                    <span class="qb-avail-warn">(loosen the filters)</span>
+                  } @else if (availTossups < qbTossupCount) {
+                    <span class="qb-avail-warn">(fewer than the {{ qbTossupCount }} tossups requested)</span>
+                  }
                 }
               </div>
 
