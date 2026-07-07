@@ -25,6 +25,7 @@ test('Spectating a live auto-judged match', async ({ page, browser }) => {
   await player.locator('.team__actions button').last().click();
 
   // The spectator (this recorded page) joins by code and switches to spectating
+  await page.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
   await page.goto('/game-session');
   await page.getByRole('button', { name: /Join with a code/ }).click();
   await page.getByLabel('Join Code').fill(code);

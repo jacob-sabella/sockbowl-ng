@@ -5,6 +5,7 @@ import { test, expect } from '@playwright/test';
 // the tossup reads, someone buzzes, and the typed answer is auto-judged.
 test('Auto-judged match: two players buzz and answer', async ({ page, browser }) => {
   // Host creates the auto-judged room (this page is the recorded one)
+  await page.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
   await page.goto('/game-session');
   await page.getByRole('button', { name: /New game/ }).click();
   await page.getByRole('button', { name: /Auto-judged match/ }).click();
@@ -34,16 +35,16 @@ test('Auto-judged match: two players buzz and answer', async ({ page, browser })
 
   // Host starts the match; the auto-judged play surface reads the tossup
   await page.getByRole('button', { name: /Start Match/ }).click();
-  await expect(page.locator('.ap__reading')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.game-proctor .question-section')).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(2500);
 
   // Host buzzes and answers
-  await page.locator('.ap__buzz').click();
-  const input = page.locator('.ap__input');
+  await page.locator('.buzz-btn').click();
+  const input = page.locator('.answer-input');
   await expect(input).toBeVisible({ timeout: 10_000 });
   await input.fill('the answer');
   await page.waitForTimeout(500);
-  await page.locator('.ap__submit').click();
+  await page.locator('.answer-form button[type="submit"]').click();
   await page.waitForTimeout(2800);
 
   await guestCtx.close();
