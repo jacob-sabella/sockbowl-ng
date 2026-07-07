@@ -158,6 +158,7 @@ export class PacketSearchComponent implements OnInit {
 
     // Live "how many match" preview for the Generate tab (debounced).
     this.countSubject.pipe(debounceTime(350)).subscribe(() => this.refreshAvailability());
+    this.loadFilters();
     this.queueCount();
   }
 
@@ -172,10 +173,67 @@ export class PacketSearchComponent implements OnInit {
   availBonuses: number | null = null;
   countingAvail = false;
 
+  private static readonly FILTERS_KEY = 'sockbowl_gen_filters';
+
   /** Queue a debounced refresh of the match-count preview after a filter change. */
   queueCount(): void {
     this.countingAvail = true;
+    this.saveFilters();
     this.countSubject.next();
+  }
+
+  /** Persist the current Generate filters so repeat users don't re-pick every time. */
+  private saveFilters(): void {
+    try {
+      localStorage.setItem(PacketSearchComponent.FILTERS_KEY, JSON.stringify({
+        cats: this.qbSelectedCategories, tiers: this.qbSelectedTiers,
+        subs: this.qbSelectedSubcategories, alts: this.qbSelectedAlternateSubcategories,
+        indiv: this.qbIndividualDifficulties, tCount: this.qbTossupCount, bCount: this.qbBonusCount,
+        minY: this.qbMinYear, maxY: this.qbMaxYear, std: this.qbStandardOnly
+      }));
+    } catch { /* localStorage unavailable — ignore */ }
+  }
+
+  private loadFilters(): void {
+    try {
+      const raw = localStorage.getItem(PacketSearchComponent.FILTERS_KEY);
+      if (!raw) return;
+      const f = JSON.parse(raw);
+      if (Array.isArray(f.cats)) this.qbSelectedCategories = f.cats;
+      if (Array.isArray(f.tiers)) this.qbSelectedTiers = f.tiers;
+      if (Array.isArray(f.subs)) this.qbSelectedSubcategories = f.subs;
+      if (Array.isArray(f.alts)) this.qbSelectedAlternateSubcategories = f.alts;
+      if (Array.isArray(f.indiv)) this.qbIndividualDifficulties = f.indiv;
+      if (typeof f.tCount === 'number') this.qbTossupCount = f.tCount;
+      if (typeof f.bCount === 'number') this.qbBonusCount = f.bCount;
+      this.qbMinYear = typeof f.minY === 'number' ? f.minY : null;
+      this.qbMaxYear = typeof f.maxY === 'number' ? f.maxY : null;
+      this.qbStandardOnly = !!f.std;
+      this.filterSubs('');
+      this.filterAlts('');
+    } catch { /* corrupt/unavailable — ignore */ }
+  }
+
+  /** Whether any Generate filter differs from defaults (drives the Clear button). */
+  get hasActiveFilters(): boolean {
+    return this.qbSelectedCategories.length > 0 || this.qbSelectedSubcategories.length > 0 ||
+      this.qbSelectedAlternateSubcategories.length > 0 || this.qbIndividualDifficulties.length > 0 ||
+      this.qbMinYear != null || this.qbMaxYear != null || this.qbStandardOnly ||
+      this.qbSelectedTiers.length !== 1 || this.qbSelectedTiers[0] !== 'Regular HS';
+  }
+
+  clearFilters(): void {
+    this.qbSelectedCategories = [];
+    this.qbSelectedTiers = ['Regular HS'];
+    this.qbSelectedSubcategories = [];
+    this.qbSelectedAlternateSubcategories = [];
+    this.qbIndividualDifficulties = [];
+    this.qbMinYear = null;
+    this.qbMaxYear = null;
+    this.qbStandardOnly = false;
+    this.filterSubs('');
+    this.filterAlts('');
+    this.queueCount();
   }
 
   private refreshAvailability(): void {

@@ -470,6 +470,11 @@
               <div class="qb-intro-title">Build a packet from the question bank</div>
               <div class="qb-intro-sub">Pick categories and difficulty, then generate a fresh mix.</div>
             </div>
+            @if (hasActiveFilters) {
+              <button type="button" mat-button class="qb-clear" (click)="clearFilters()">
+                <mat-icon>filter_alt_off</mat-icon> Clear filters
+              </button>
+            }
           </div>
 
             <div class="qb-random">

@@ -1184,6 +1184,13 @@
 
   .qb-typeahead { width: 100%; }
 
+  .qb-clear {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    mat-icon { font-size: 18px; height: 18px; width: 18px; margin-right: 2px; }
+  }
+
   .qb-avail {
     font-size: 13px;
     color: var(--text-secondary);
