@@ -71,4 +71,12 @@ export class TeamListComponent {
 
     return tossupScore + bonusScore;
   }
+
+  getPlayerCount(team: Team): number {
+    return team?.teamPlayers?.length ?? 0;
+  }
+
+  isCurrentPlayerOnTeam(team: Team): boolean {
+    return !!team?.teamPlayers?.some(player => this.isCurrentPlayer(player.playerId));
+  }
 }

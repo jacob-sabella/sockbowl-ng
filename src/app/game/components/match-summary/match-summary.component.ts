@@ -112,6 +112,44 @@ export class MatchSummaryComponent implements OnInit {
     }
   }
 
+  /**
+   * Whether any previous round carries a usable tossup category. Used to decide
+   * whether the per-category performance breakdown is worth rendering.
+   */
+  hasCategoryData(): boolean {
+    const rounds = this.gameSession?.currentMatch?.previousRounds ?? [];
+    return rounds.some(round => !!(round.category && round.category.trim()));
+  }
+
+  /**
+   * Per-category tossup performance for the whole match, computed only from the
+   * rounds already present on the game session. A category counts as "correct"
+   * when its tossup was answered correctly by any player.
+   */
+  getCategoryBreakdown(): { category: string; correct: number; total: number; percent: number }[] {
+    const tally = new Map<string, { correct: number; total: number }>();
+    const rounds = this.gameSession?.currentMatch?.previousRounds ?? [];
+
+    rounds.forEach(round => {
+      const category = round.category && round.category.trim() ? round.category.trim() : 'Uncategorized';
+      const entry = tally.get(category) ?? { correct: 0, total: 0 };
+      entry.total += 1;
+      if (this.isCorrectlyAnswered(round)) {
+        entry.correct += 1;
+      }
+      tally.set(category, entry);
+    });
+
+    return Array.from(tally.entries())
+      .map(([category, value]) => ({
+        category,
+        correct: value.correct,
+        total: value.total,
+        percent: value.total > 0 ? Math.round((value.correct / value.total) * 100) : 0
+      }))
+      .sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
+  }
+
   getCorrectAnswerPlayerWithTeam(round: Round): string {
     const correctBuzz = round.buzzList.find(buzz => buzz.correct);
     if (correctBuzz) {

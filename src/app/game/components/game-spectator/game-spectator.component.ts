@@ -103,4 +103,17 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
   hasBuzzes(round: Round): boolean {
     return round.buzzList && round.buzzList.length > 0;
   }
+
+  /**
+   * Human-readable label for a round state, used for screen-reader
+   * announcements and visible chip text (e.g. "Awaiting Buzz").
+   */
+  getRoundStateLabel(state: RoundState | string | null | undefined): string {
+    if (!state) return '';
+    return String(state)
+      .toLowerCase()
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
 }

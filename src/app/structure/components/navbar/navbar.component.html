@@ -1,7 +1,15 @@
 <mat-toolbar class="navbar">
   <div class="navbar__content">
-    <div class="navbar__brand" [routerLink]="['/']">
-      <mat-icon class="navbar__icon">sports_esports</mat-icon>
+    <div
+      class="navbar__brand"
+      role="button"
+      tabindex="0"
+      aria-label="Sockbowl, go to home"
+      [routerLink]="['/']"
+      (keydown.enter)="navigateHome()"
+      (keydown.space)="navigateHome(); $event.preventDefault()"
+    >
+      <mat-icon class="navbar__icon" aria-hidden="true">sports_esports</mat-icon>
       <span class="navbar__title">Sockbowl</span>
     </div>
 
@@ -12,11 +20,11 @@
 
       <!-- Social Links -->
       <div class="navbar__social">
-        <a mat-icon-button href="https://github.com/jacob-sabella/sockbowl-game" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-          <mat-icon svgIcon="github"></mat-icon>
+        <a mat-icon-button class="navbar__social-link" href="https://github.com/jacob-sabella/sockbowl-game" target="_blank" rel="noopener noreferrer" aria-label="Sockbowl on GitHub (opens in a new tab)">
+          <mat-icon svgIcon="github" aria-hidden="true"></mat-icon>
         </a>
-        <a mat-icon-button href="https://discord.gg/k2XB9Fsh4f" target="_blank" rel="noopener noreferrer" aria-label="Discord">
-          <mat-icon svgIcon="discord"></mat-icon>
+        <a mat-icon-button class="navbar__social-link" href="https://discord.gg/k2XB9Fsh4f" target="_blank" rel="noopener noreferrer" aria-label="Sockbowl on Discord (opens in a new tab)">
+          <mat-icon svgIcon="discord" aria-hidden="true"></mat-icon>
         </a>
       </div>
 
@@ -28,8 +36,8 @@
             <div class="navbar__auth-guest">
               <span class="navbar__guest-label">Playing as Guest</span>
               <button mat-raised-button color="primary" (click)="login()">
-                <mat-icon>login</mat-icon>
-                Sign In
+                <mat-icon aria-hidden="true">login</mat-icon>
+                <span class="navbar__btn-label">Sign In</span>
               </button>
             </div>
           }
@@ -37,22 +45,22 @@
           @if (isAuthenticated$ | async) {
             <div class="navbar__auth-user">
               <span class="navbar__user-name">
-                <mat-icon>account_circle</mat-icon>
-                {{ (userProfile$ | async)?.name || 'User' }}
+                <mat-icon aria-hidden="true">account_circle</mat-icon>
+                <span class="navbar__btn-label">{{ (userProfile$ | async)?.name || 'User' }}</span>
               </span>
-              <button mat-button [routerLink]="['/profile']">
-                <mat-icon>person</mat-icon>
-                Profile
+              <button mat-button [routerLink]="['/profile']" aria-label="Profile">
+                <mat-icon aria-hidden="true">person</mat-icon>
+                <span class="navbar__btn-label">Profile</span>
               </button>
               @if ((userProfile$ | async)?.isAdmin) {
-                <button mat-button [routerLink]="['/admin/bans']">
-                  <mat-icon>gavel</mat-icon>
-                  Admin
+                <button mat-button [routerLink]="['/admin/bans']" aria-label="Admin">
+                  <mat-icon aria-hidden="true">gavel</mat-icon>
+                  <span class="navbar__btn-label">Admin</span>
                 </button>
               }
-              <button mat-button (click)="logout()">
-                <mat-icon>logout</mat-icon>
-                Logout
+              <button mat-button (click)="logout()" aria-label="Logout">
+                <mat-icon aria-hidden="true">logout</mat-icon>
+                <span class="navbar__btn-label">Logout</span>
               </button>
             </div>
           }

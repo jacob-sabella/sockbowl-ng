@@ -11,6 +11,7 @@
               mat-icon-button
               (click)="startCasting()"
               matTooltip="Cast to TV"
+              aria-label="Cast this match to a TV"
               class="cast-button">
               <mat-icon>cast</mat-icon>
             </button>
@@ -21,6 +22,7 @@
               color="primary"
               (click)="stopCasting()"
               matTooltip="Stop casting"
+              aria-label="Stop casting to TV"
               class="cast-button cast-button--connected">
               <mat-icon>cast_connected</mat-icon>
             </button>
@@ -32,6 +34,20 @@
         Round {{ gameSession.currentMatch.currentRound.roundNumber }}
       </mat-card-title>
       <mat-card-content>
+        <!-- Current state banner: tells the proctor what to do right now -->
+        <div class="proctor-status" role="status" aria-live="polite">
+          @switch (gameSession.currentMatch.currentRound.roundState) {
+            @case (RoundState.PROCTOR_READING) { <span class="status-dot status-dot--read"></span> Read the tossup aloud }
+            @case (RoundState.AWAITING_BUZZ) { <span class="status-dot status-dot--wait"></span> Waiting for a buzz }
+            @case (RoundState.AWAITING_ANSWER) { <span class="status-dot status-dot--judge"></span> Judge the answer }
+            @case (RoundState.COMPLETED) { <span class="status-dot status-dot--done"></span> Round complete }
+            @case (RoundState.BONUS_READING_PREAMBLE) { <span class="status-dot status-dot--read"></span> Read the bonus preamble }
+            @case (RoundState.BONUS_READING_PART) { <span class="status-dot status-dot--read"></span> Read the bonus part }
+            @case (RoundState.BONUS_AWAITING_ANSWER) { <span class="status-dot status-dot--judge"></span> Judge the bonus part }
+            @case (RoundState.BONUS_COMPLETED) { <span class="status-dot status-dot--done"></span> Bonus complete }
+          }
+        </div>
+
         <div class="category-row">
           <div class="info-section category-section">
             <span class="info-label">Category:</span>
@@ -46,15 +62,17 @@
           <div class="info-label">Question</div>
           <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.question"></div>
         </div>
-        <div class="info-section answer-section">
+        <div class="info-section answer-section" aria-live="polite">
           <div class="info-label">Answer</div>
           <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.answer"></div>
         </div>
         <!-- Buzz Information -->
         @if (gameSession.currentMatch.currentRound.currentBuzz) {
-          <div class="active-buzz-info">
-            <p>{{ gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz.playerId) }} (
-              {{ gameStateService.getTeamNameById(gameSession.currentMatch.currentRound.currentBuzz.teamId) }})
+          <div class="active-buzz-info" role="alert" aria-live="assertive">
+            <mat-icon aria-hidden="true">notifications_active</mat-icon>
+            <p>
+              <strong>{{ gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz.playerId) }}</strong>
+              ({{ gameStateService.getTeamNameById(gameSession.currentMatch.currentRound.currentBuzz.teamId) }})
               has buzzed in
             </p>
           </div>
@@ -65,6 +83,7 @@
             <button
               mat-raised-button
               id="finished-reading-btn"
+              aria-label="Finished reading the tossup"
               (click)="gameStateService.sendFinishedReading()">
               Finished Reading
             </button>
@@ -74,6 +93,7 @@
             <button
               mat-raised-button
               id="timeout-btn"
+              aria-label="Time out the tossup with no buzz"
               (click)="gameStateService.sendTimeoutRound()">
               Timeout
             </button>
@@ -83,16 +103,30 @@
             <button
               mat-raised-button
               id="advance-round-btn"
+              aria-label="Advance to the next round"
               (click)="gameStateService.sendAdvanceRound()">
               Advance Round
             </button>
           }
           <!-- Right/Wrong Buttons -->
           @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_ANSWER) {
-            <div
-              class="right-wrong-buttons">
-              <button mat-raised-button id="right-btn" (click)="gameStateService.sendAnswerCorrect()">Right</button>
-              <button mat-raised-button id="wrong-btn" (click)="gameStateService.sendAnswerIncorrect()">Wrong</button>
+            <div class="right-wrong-buttons">
+              <button
+                mat-raised-button
+                id="right-btn"
+                [attr.aria-label]="'Mark ' + gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz?.playerId ?? '') + ' correct'"
+                (click)="gameStateService.sendAnswerCorrect()">
+                <mat-icon aria-hidden="true">check_circle</mat-icon>
+                Right
+              </button>
+              <button
+                mat-raised-button
+                id="wrong-btn"
+                [attr.aria-label]="'Mark ' + gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz?.playerId ?? '') + ' incorrect'"
+                (click)="gameStateService.sendAnswerIncorrect()">
+                <mat-icon aria-hidden="true">cancel</mat-icon>
+                Wrong
+              </button>
             </div>
           }
           <!-- Bonus judging  -->
@@ -105,7 +139,7 @@
               <!-- Bonus Header -->
               <div class="bonus-header">
                 <h3>Bonus for {{ getBonusEligibleTeamName() }}</h3>
-                <div class="bonus-score">
+                <div class="bonus-score" aria-live="polite">
                   {{ gameStateService.getCurrentRoundBonusPoints() }} / 30 points
                 </div>
               </div>
@@ -120,6 +154,7 @@
                   <button mat-raised-button
                     color="primary"
                     id="finished-reading-preamble-btn"
+                    aria-label="Finished reading the bonus preamble"
                     (click)="gameStateService.sendFinishedReadingBonusPreamble()">
                     Finished Reading Preamble
                   </button>
@@ -131,7 +166,7 @@
                 <div>
                   <!-- Show preamble (read-only) -->
                   <div class="bonus-preamble-section completed">
-                    <h4>Preamble ✓</h4>
+                    <h4>Preamble (read)</h4>
                     <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
                     </div>
                   </div>
@@ -142,10 +177,10 @@
                         <div
                           class="bonus-part completed">
                           <div class="part-header">
-                            <span class="part-label">Part {{ i + 1 }} ✓</span>
+                            <span class="part-label">Part {{ i + 1 }} (done)</span>
                             <span class="part-result"
                               [class.correct]="gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct">
-                              {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct ? '✓ Right (10 pts)' : '✗ Wrong (0 pts)' }}
+                              {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct ? 'Right (10 pts)' : 'Wrong (0 pts)' }}
                             </span>
                           </div>
                           <div class="part-content">
@@ -167,7 +202,7 @@
                       @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay()) {
                         <span
                           class="timer-badge">
-                          ⏱ {{ getBonusTimerDisplay() }}s
+                          {{ getBonusTimerDisplay() }}s
                         </span>
                       }
                     </div>
@@ -186,6 +221,7 @@
                         <button mat-raised-button
                           color="primary"
                           id="finished-reading-part-btn"
+                          [attr.aria-label]="'Finished reading bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1)"
                           (click)="gameStateService.sendFinishedReadingBonusPart()">
                           Finished Reading Part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }}
                         </button>
@@ -196,19 +232,22 @@
                       <div
                         class="part-actions">
                         <button mat-raised-button
-                          color="primary"
+                          class="bonus-right-btn"
+                          [attr.aria-label]="'Mark bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1) + ' correct, 10 points'"
                           (click)="sendBonusPartOutcome(gameSession.currentMatch.currentRound.currentBonusPartIndex, true)">
-                          <mat-icon>check_circle</mat-icon>
+                          <mat-icon aria-hidden="true">check_circle</mat-icon>
                           Right (10 pts)
                         </button>
                         <button mat-raised-button
-                          color="warn"
+                          class="bonus-wrong-btn"
+                          [attr.aria-label]="'Mark bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1) + ' incorrect, 0 points'"
                           (click)="sendBonusPartOutcome(gameSession.currentMatch.currentRound.currentBonusPartIndex, false)">
-                          <mat-icon>cancel</mat-icon>
+                          <mat-icon aria-hidden="true">cancel</mat-icon>
                           Wrong (0 pts)
                         </button>
                         <button mat-raised-button
                           id="timeout-bonus-btn"
+                          [attr.aria-label]="'Time out bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1)"
                           (click)="gameStateService.sendTimeoutBonusPart()">
                           Timeout
                         </button>
@@ -217,7 +256,7 @@
                     <!-- Timer Display -->
                     @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay()) {
                       <div
-                        class="timer-display">
+                        class="timer-display" role="timer" aria-live="off">
                         <p>Bonus time remaining: {{ getBonusTimerDisplay() }}s</p>
                       </div>
                     }
@@ -225,7 +264,8 @@
                     @if (!isAutoTimerEnabled() && gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
                       <button
                         mat-raised-button
-                        color="warn"
+                        class="manual-timeout-btn"
+                        aria-label="Manually time out this bonus part"
                         (click)="gameStateService.sendTimeoutBonusPart()">
                         Manual Bonus Timeout
                       </button>
@@ -237,7 +277,7 @@
               @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED) {
                 <div>
                   <div class="bonus-preamble-section completed">
-                    <h4>Preamble ✓</h4>
+                    <h4>Preamble (read)</h4>
                     <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
                     </div>
                   </div>
@@ -246,10 +286,10 @@
                     <div
                       class="bonus-part completed">
                       <div class="part-header">
-                        <span class="part-label">Part {{ i + 1 }} ✓</span>
+                        <span class="part-label">Part {{ i + 1 }} (done)</span>
                         <span class="part-result"
                           [class.correct]="gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct">
-                          {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct ? '✓ Right (10 pts)' : '✗ Wrong (0 pts)' }}
+                          {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct ? 'Right (10 pts)' : 'Wrong (0 pts)' }}
                         </span>
                       </div>
                       <div class="part-content">
@@ -269,7 +309,7 @@
           <!-- Timer Display -->
           @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ && getTossupTimerDisplay()) {
             <div
-              class="timer-display">
+              class="timer-display" role="timer" aria-live="off">
               <p>Time remaining: {{ getTossupTimerDisplay() }}s</p>
             </div>
           }
@@ -277,7 +317,8 @@
           @if (!isAutoTimerEnabled() && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
             <button
               mat-raised-button
-              color="warn"
+              class="manual-timeout-btn"
+              aria-label="Manually time out the tossup"
               (click)="gameStateService.sendTimeoutRound()">
               Manual Timeout
             </button>

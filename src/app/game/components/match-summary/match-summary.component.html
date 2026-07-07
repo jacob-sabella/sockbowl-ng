@@ -3,14 +3,14 @@
     <div class="match-summary">
       <!-- Header -->
       <div class="summary-header">
-        <mat-icon>emoji_events</mat-icon>
+        <mat-icon aria-hidden="true">emoji_events</mat-icon>
         <h2>Match Summary</h2>
       </div>
       @if (gameSession.currentMatch) {
-        <div>
+        <div class="summary-body">
           <!-- Winning Team Announcement -->
-          <div class="winning-announcement">
-            <mat-icon class="trophy-icon">emoji_events</mat-icon>
+          <div class="winning-announcement" role="status" aria-live="polite">
+            <mat-icon class="trophy-icon" aria-hidden="true">emoji_events</mat-icon>
             <h3>{{ getWinningTeamAnnouncement() }}</h3>
           </div>
           <!-- Team Scores -->
@@ -19,15 +19,42 @@
             [currentRound]="gameSession.currentMatch.currentRound"
             [previousRoundList]="gameSession.currentMatch.previousRounds">
           </app-team-list>
+          <!-- Per-category performance breakdown -->
+          @if (hasCategoryData()) {
+            <section class="category-breakdown" aria-labelledby="category-breakdown-title">
+              <h3 class="section-title" id="category-breakdown-title">
+                <mat-icon aria-hidden="true">insights</mat-icon>
+                Category Breakdown
+              </h3>
+              <ul class="category-list">
+                @for (cat of getCategoryBreakdown(); track cat.category) {
+                  <li class="category-row">
+                    <div class="category-head">
+                      <span class="category-name">{{ cat.category }}</span>
+                      <span class="category-score">{{ cat.correct }}/{{ cat.total }} ({{ cat.percent }}%)</span>
+                    </div>
+                    <div class="category-meter"
+                      role="progressbar"
+                      [attr.aria-valuenow]="cat.percent"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      [attr.aria-label]="cat.category + ': ' + cat.correct + ' of ' + cat.total + ' tossups correct'">
+                      <div class="category-meter-fill" [style.width.%]="cat.percent"></div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
           <!-- New Match Button -->
-          <button mat-raised-button (click)="endMatch()" class="new-match-button">
-            <mat-icon>refresh</mat-icon>
+          <button mat-raised-button (click)="endMatch()" class="new-match-button" aria-label="Start a new match">
+            <mat-icon aria-hidden="true">refresh</mat-icon>
             Start New Match
           </button>
           <!-- Round History -->
           <div class="round-history-section">
             <h3 class="section-title">
-              <mat-icon>history</mat-icon>
+              <mat-icon aria-hidden="true">history</mat-icon>
               Round History
             </h3>
             <mat-accordion class="round-accordion">
@@ -37,7 +64,7 @@
                   <mat-expansion-panel-header>
                     <mat-panel-title>
                       <div class="round-title">
-                        <mat-icon class="status-icon">
+                        <mat-icon class="status-icon" aria-hidden="true">
                           {{ isCorrectlyAnswered(round) ? 'check_circle' : (isIncorrectlyAnswered(round) ? 'cancel' : 'radio_button_unchecked') }}
                         </mat-icon>
                         <span class="round-number">Question {{ round.roundNumber }}</span>
@@ -50,14 +77,14 @@
                   <div class="round-details">
                     <div class="detail-item">
                       <div class="detail-label">
-                        <mat-icon>quiz</mat-icon>
+                        <mat-icon aria-hidden="true">quiz</mat-icon>
                         Question
                       </div>
                       <div class="detail-content">{{ round.question }}</div>
                     </div>
                     <div class="detail-item">
                       <div class="detail-label">
-                        <mat-icon>lightbulb</mat-icon>
+                        <mat-icon aria-hidden="true">lightbulb</mat-icon>
                         Answer
                       </div>
                       <div class="detail-content answer">{{ round.answer }}</div>
@@ -65,7 +92,7 @@
                     @if (isCorrectlyAnswered(round)) {
                       <div class="detail-item">
                         <div class="detail-label">
-                          <mat-icon>person</mat-icon>
+                          <mat-icon aria-hidden="true">person</mat-icon>
                           Answered By
                         </div>
                         <div class="detail-content correct-player">{{ getCorrectAnswerPlayerWithTeam(round) }}</div>
@@ -74,7 +101,7 @@
                     @if (hasBonus(round)) {
                       <div class="detail-item bonus-item">
                         <div class="detail-label">
-                          <mat-icon>stars</mat-icon>
+                          <mat-icon aria-hidden="true">stars</mat-icon>
                           Bonus
                         </div>
                         <div class="detail-content bonus-info">{{ getRoundBonusInfo(round) }}</div>

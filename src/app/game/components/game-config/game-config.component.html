@@ -5,24 +5,24 @@
       <div class="hero__card">
         <div class="hero__info">
           <div class="info-item">
-            <mat-icon>account_circle</mat-icon>
+            <mat-icon aria-hidden="true">account_circle</mat-icon>
             <span class="info-label">Proctor:</span>
             <span class="info-value">{{ gameSession.gameSettings.proctorType || 'None' }}</span>
           </div>
           <div class="info-item">
-            <mat-icon>tune</mat-icon>
+            <mat-icon aria-hidden="true">tune</mat-icon>
             <span class="info-label">Mode:</span>
             <span class="info-value">{{ gameSession.gameSettings.gameMode || 'None' }}</span>
           </div>
           @if (gameStateService.getCurrentPlayer()) {
             <div class="info-item">
-              <mat-icon>person</mat-icon>
+              <mat-icon aria-hidden="true">person</mat-icon>
               <span class="info-label">Player:</span>
               <span class="info-value">{{ gameStateService.getCurrentPlayer()?.name }}</span>
             </div>
           }
           <div class="info-item join-item">
-            <mat-icon>qr_code_2</mat-icon>
+            <mat-icon aria-hidden="true">qr_code_2</mat-icon>
             <span class="info-label">Code:</span>
             <span class="info-value code-value">{{ gameSession.joinCode }}</span>
             <button
@@ -87,12 +87,16 @@
           </div>
         </div>
       }
-      <div class="launch__status">
-        <span class="launch__step" [class.done]="!!gameSession.currentMatch.packet?.id">
-          <mat-icon>{{ gameSession.currentMatch.packet?.id ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
+      <div class="launch__status" role="list" aria-label="Match readiness">
+        <span class="launch__step" role="listitem"
+              [class.done]="!!gameSession.currentMatch.packet?.id"
+              [attr.aria-label]="(gameSession.currentMatch.packet?.id ? 'Packet selected' : 'Packet not selected yet')">
+          <mat-icon aria-hidden="true">{{ gameSession.currentMatch.packet?.id ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
         </span>
-        <span class="launch__step" [class.done]="hasAnyPlayers()">
-          <mat-icon>{{ hasAnyPlayers() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Players
+        <span class="launch__step" role="listitem"
+              [class.done]="hasAnyPlayers()"
+              [attr.aria-label]="(hasAnyPlayers() ? 'Players have joined' : 'No players have joined yet')">
+          <mat-icon aria-hidden="true">{{ hasAnyPlayers() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Players
         </span>
       </div>
       <div class="launch__cta">

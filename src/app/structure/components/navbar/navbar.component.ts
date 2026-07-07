@@ -41,6 +41,10 @@ export class NavbarComponent implements OnInit {
     this.authService.logout();
   }
 
+  navigateHome(): void {
+    this.router.navigate(['/']);
+  }
+
   isInGame(): boolean {
     // Active game canvas only ('/game'), NOT the '/game-session' lobby — which
     // also starts with '/game' and was wrongly hiding the navbar Sign In button

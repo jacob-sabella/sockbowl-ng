@@ -1,10 +1,21 @@
 .ap {
   max-width: 48rem;
+  min-width: 0;
   margin: 0 auto;
   padding: clamp(1rem, 4vw, 2.5rem);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.ap__turn {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  strong { color: var(--text-primary); font-weight: 600; }
+  &:empty { display: none; }
 }
 
 .ap__meta {
@@ -29,6 +40,8 @@
   display: inline-flex;
   align-items: baseline;
   gap: 0.5rem;
+  max-width: 100%;
+  min-width: 0;
   padding: 0.4rem 0.9rem;
   border-radius: 0.6rem;
   background: var(--surface-raised, var(--bg-secondary));
@@ -36,7 +49,7 @@
   font-family: var(--font-body);
   font-size: 0.85rem;
 
-  .ap__team-name { color: var(--text-secondary); }
+  .ap__team-name { color: var(--text-secondary); min-width: 0; overflow-wrap: anywhere; }
   strong { font-family: var(--font-display, var(--font-body)); font-size: 1.05rem; color: var(--accent-primary); }
 }
 
@@ -45,6 +58,7 @@
   line-height: 1.7;
   color: var(--text-primary);
   min-height: 5rem;
+  overflow-wrap: break-word;
 }
 .ap__cursor { color: var(--accent-primary); animation: ap-blink 1s step-end infinite; }
 @keyframes ap-blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
@@ -189,4 +203,35 @@
     margin-left: auto;
     mat-icon { font-size: 18px; height: 18px; width: 18px; }
   }
+}
+
+/* Keyboard focus: a clear, theme-tied ring on every interactive control. */
+.ap__buzz:focus-visible,
+.ap__submit:focus-visible,
+.ap__next:focus-visible,
+.ap__tts:focus-visible,
+.ap__input:focus-visible,
+.ap__speed input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Mobile-first: keep the buzz thumb-friendly and prevent overflow near 360px. */
+@media (max-width: 420px) {
+  .ap { gap: 1rem; }
+
+  .ap__controls {
+    gap: 0.85rem;
+    align-items: stretch;
+  }
+
+  .ap__buzz {
+    width: 100%;
+    order: -1;
+  }
+
+  .ap__tts { align-self: flex-end; }
+
+  .ap__form { gap: 0.6rem; }
+  .ap__submit { flex: 1 1 auto; }
 }

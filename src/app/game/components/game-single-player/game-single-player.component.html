@@ -7,7 +7,7 @@
           {{ round.category }}@if (round.subcategory) { <span class="solo__sub">· {{ round.subcategory }}</span> }
         </span>
       }
-      <span class="solo__score" title="Correct answers">
+      <span class="solo__score" title="Score, correct answers out of tossups seen">
         <strong>{{ score }}</strong> pts · {{ correctCount }}/{{ tossupsSeen }}
       </span>
     </header>
@@ -15,8 +15,12 @@
     @if (isCompleted) {
       <!-- Reveal: full formatted question + verdict + answer + next -->
       <div class="solo__question font-serif" [innerHTML]="round.question"></div>
-      <div class="solo__result" [class.solo__result--correct]="wasCorrect" [class.solo__result--wrong]="!wasCorrect">
-        <span class="solo__verdict">{{ wasCorrect ? 'Correct' : (forwent ? 'No answer, time\'s up' : 'Incorrect') }}</span>
+      <div class="solo__result" role="status" aria-live="polite"
+           [class.solo__result--correct]="wasCorrect" [class.solo__result--wrong]="!wasCorrect">
+        <span class="solo__verdict">
+          <span class="solo__verdict-icon" aria-hidden="true">{{ wasCorrect ? '✓' : '✗' }}</span>
+          {{ verdictText }}
+        </span>
         <div class="solo__answer">
           <span class="solo__answer-label">Answer</span>
           <span class="solo__answer-text font-serif" [innerHTML]="round.answer"></span>
@@ -25,40 +29,57 @@
       </div>
     } @else {
       <!-- Reading: progressively revealed question -->
-      <div class="solo__reading font-serif">
-        <span>{{ revealedText }}</span>@if (!readingComplete && !hasBuzzed) { <span class="solo__cursor">▍</span> }
+      @if (isReadingPhase && !hasBuzzed) {
+        <div class="solo__progress" role="progressbar"
+             [attr.aria-valuenow]="readingProgress" aria-valuemin="0" aria-valuemax="100"
+             aria-label="Reading progress">
+          <div class="solo__progress-fill" [style.width.%]="readingProgress"></div>
+        </div>
+      }
+
+      <div class="solo__reading font-serif" aria-live="polite" aria-atomic="true">
+        <span>{{ revealedText }}</span>@if (!readingComplete && !hasBuzzed) { <span class="solo__cursor" aria-hidden="true">▍</span> }
       </div>
 
+      <!-- Visually-hidden running status for screen readers -->
+      <p class="solo__sr-status" aria-live="polite">{{ readingStatus }}</p>
+
       @if (isReadingPhase) {
+        @if (buzzSecondsLeft !== null) {
+          <div class="solo__countdown" role="status" aria-live="assertive"
+               [class.solo__countdown--urgent]="buzzSecondsLeft <= 3">
+            <span class="solo__countdown-num">{{ buzzSecondsLeft }}</span>
+            <span class="solo__countdown-label">seconds left to buzz</span>
+          </div>
+        } @else if (readingComplete) {
+          <p class="solo__hint">Reading complete, buzz to answer.</p>
+        }
+
         <div class="solo__controls">
-          <button type="button" class="solo__buzz" (click)="buzz()">
+          <button type="button" class="solo__buzz" (click)="buzz()"
+                  aria-label="Buzz in to answer (or press the space bar)">
             <span class="solo__buzz-key">Buzz</span>
             <span class="solo__buzz-hint">space</span>
           </button>
+
           <label class="solo__speed">
             <span class="solo__speed-label">Reading speed</span>
             <input type="range" min="1" max="10" step="1"
                    [(ngModel)]="readingSpeed" (input)="onSpeedChange()"
-                   aria-label="Reading speed">
+                   aria-label="Reading speed, 1 slow to 10 fast"
+                   [attr.aria-valuetext]="readingSpeed + ' of 10'">
           </label>
+
           @if (speech.available) {
             <button type="button" class="solo__tts" (click)="toggleTts()"
                     [class.solo__tts--on]="speech.enabled"
                     [attr.aria-pressed]="speech.enabled"
-                    [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read question aloud'"
+                    [attr.aria-label]="speech.enabled ? 'Turn off read-aloud' : 'Turn on read-aloud'"
                     [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
               <mat-icon>{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
             </button>
           }
-          @if (buzzSecondsLeft !== null) {
-            <span class="solo__countdown" [class.solo__countdown--urgent]="buzzSecondsLeft <= 3">
-              Buzz in {{ buzzSecondsLeft }}s
-            </span>
-          }
         </div>
-        @if (readingComplete && buzzSecondsLeft === null) {
-          <p class="solo__hint">Reading complete, buzz to answer.</p>
-        }
       }
 
       @if (isAnswering) {

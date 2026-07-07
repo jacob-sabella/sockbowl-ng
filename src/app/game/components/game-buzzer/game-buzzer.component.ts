@@ -47,18 +47,21 @@ export class GameBuzzerComponent implements OnInit {
     return this.gameStateService.hasCurrentPlayerTeamBuzzed() ? 'Team already buzzed' : 'Buzz!';
   }
 
-  getCurrentBonusPart(bonus: any, partIndex: number): any {
-    console.log('[GameBuzzerComponent] getCurrentBonusPart called');
-    console.log('[GameBuzzerComponent] bonus:', bonus);
-    console.log('[GameBuzzerComponent] partIndex:', partIndex);
+  /**
+   * Descriptive accessible label for the buzz button, reflecting its enabled or locked state.
+   */
+  getBuzzButtonAriaLabel(): string {
+    return this.gameStateService.hasCurrentPlayerTeamBuzzed()
+      ? 'Buzzer locked. Your team has already buzzed in.'
+      : 'Buzz in to answer the tossup';
+  }
 
+  getCurrentBonusPart(bonus: any, partIndex: number): any {
     if (!bonus || !bonus.bonusParts || partIndex === undefined || partIndex === null) {
       return null;
     }
 
-    const currentPart = bonus.bonusParts[partIndex];
-    console.log('[GameBuzzerComponent] Returning part:', currentPart);
-    return currentPart;
+    return bonus.bonusParts[partIndex];
   }
 
   getBonusEligibleTeamName(): string {

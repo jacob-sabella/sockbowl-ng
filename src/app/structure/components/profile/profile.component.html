@@ -1,7 +1,7 @@
 <div class="profile-container">
   <!-- Loading State -->
   @if (loading) {
-    <div class="loading-container">
+    <div class="loading-container" role="status" aria-live="polite" aria-busy="true">
       <mat-spinner></mat-spinner>
       <p>Loading profile...</p>
     </div>
@@ -9,11 +9,11 @@
 
   <!-- Error State -->
   @if (error && !loading) {
-    <div class="error-container">
-      <mat-icon color="warn">error</mat-icon>
+    <div class="error-container" role="alert" aria-live="assertive">
+      <mat-icon color="warn" aria-hidden="true">error</mat-icon>
       <p>{{ error }}</p>
       <button mat-raised-button color="primary" (click)="loadUserData()">
-        <mat-icon>refresh</mat-icon>
+        <mat-icon aria-hidden="true">refresh</mat-icon>
         Retry
       </button>
     </div>
@@ -24,75 +24,78 @@
     <div class="profile-content">
       <!-- User Info Card -->
       @if (user$ | async; as user) {
-        <mat-card class="profile-card">
+        <mat-card class="profile-card" aria-labelledby="profile-name">
           <mat-card-header>
-            <mat-icon mat-card-avatar class="profile-icon">account_circle</mat-icon>
-            <mat-card-title>{{ user.name }}</mat-card-title>
+            <mat-icon mat-card-avatar class="profile-icon" aria-hidden="true">account_circle</mat-icon>
+            <mat-card-title id="profile-name">{{ user.name }}</mat-card-title>
             <mat-card-subtitle>{{ user.email }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <div class="user-info">
+            <dl class="user-info">
               <div class="info-item">
-                <span class="label">Member Since:</span>
-                <span class="value">{{ formatDate(user.createdAt) }}</span>
+                <dt class="label">Member Since</dt>
+                <dd class="value">{{ formatDate(user.createdAt) }}</dd>
               </div>
               <div class="info-item">
-                <span class="label">Last Login:</span>
-                <span class="value">{{ formatDate(user.lastLoginAt) }}</span>
+                <dt class="label">Last Login</dt>
+                <dd class="value">{{ formatDate(user.lastLoginAt) }}</dd>
               </div>
-            </div>
+            </dl>
           </mat-card-content>
         </mat-card>
       }
       <!-- Stats Cards -->
       @if (stats$ | async; as stats) {
-        <div class="stats-grid">
-          <mat-card class="stat-card">
-            <mat-card-content>
-              <mat-icon class="stat-icon">games</mat-icon>
-              <div class="stat-value">{{ stats.totalGames }}</div>
-              <div class="stat-label">Total Games</div>
-            </mat-card-content>
-          </mat-card>
-          <mat-card class="stat-card">
-            <mat-card-content>
-              <mat-icon class="stat-icon" color="accent">emoji_events</mat-icon>
-              <div class="stat-value">{{ stats.totalWins }}</div>
-              <div class="stat-label">Total Wins</div>
-              <div class="stat-percentage">{{ calculateWinRate(stats).toFixed(1) }}% Win Rate</div>
-            </mat-card-content>
-          </mat-card>
-          <mat-card class="stat-card">
-            <mat-card-content>
-              <mat-icon class="stat-icon" color="primary">touch_app</mat-icon>
-              <div class="stat-value">{{ stats.totalBuzzes }}</div>
-              <div class="stat-label">Total Buzzes</div>
-            </mat-card-content>
-          </mat-card>
-          <mat-card class="stat-card">
-            <mat-card-content>
-              <mat-icon class="stat-icon" style="color: #4caf50;">check_circle</mat-icon>
-              <div class="stat-value">{{ stats.correctBuzzes }}</div>
-              <div class="stat-label">Correct Buzzes</div>
-              <div class="stat-percentage">{{ calculateBuzzAccuracy(stats).toFixed(1) }}% Accuracy</div>
-            </mat-card-content>
-          </mat-card>
-        </div>
+        <section class="stats-section" aria-labelledby="stats-heading">
+          <h2 id="stats-heading" class="section-heading">Statistics</h2>
+          <div class="stats-grid">
+            <mat-card class="stat-card" role="group" aria-label="Total games played">
+              <mat-card-content>
+                <mat-icon class="stat-icon" aria-hidden="true">games</mat-icon>
+                <div class="stat-value">{{ stats.totalGames }}</div>
+                <div class="stat-label">Total Games</div>
+              </mat-card-content>
+            </mat-card>
+            <mat-card class="stat-card" role="group" aria-label="Total wins and win rate">
+              <mat-card-content>
+                <mat-icon class="stat-icon stat-icon-accent" aria-hidden="true">emoji_events</mat-icon>
+                <div class="stat-value">{{ stats.totalWins }}</div>
+                <div class="stat-label">Total Wins</div>
+                <div class="stat-percentage">{{ calculateWinRate(stats).toFixed(1) }}% Win Rate</div>
+              </mat-card-content>
+            </mat-card>
+            <mat-card class="stat-card" role="group" aria-label="Total buzzes">
+              <mat-card-content>
+                <mat-icon class="stat-icon stat-icon-primary" aria-hidden="true">touch_app</mat-icon>
+                <div class="stat-value">{{ stats.totalBuzzes }}</div>
+                <div class="stat-label">Total Buzzes</div>
+              </mat-card-content>
+            </mat-card>
+            <mat-card class="stat-card" role="group" aria-label="Correct buzzes and accuracy">
+              <mat-card-content>
+                <mat-icon class="stat-icon stat-icon-success" aria-hidden="true">check_circle</mat-icon>
+                <div class="stat-value">{{ stats.correctBuzzes }}</div>
+                <div class="stat-label">Correct Buzzes</div>
+                <div class="stat-percentage">{{ calculateBuzzAccuracy(stats).toFixed(1) }}% Accuracy</div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </section>
       }
       <!-- Game History -->
-      <mat-card class="history-card">
+      <mat-card class="history-card" aria-labelledby="history-heading">
         <mat-card-header>
-          <mat-card-title>
-            <mat-icon>history</mat-icon>
+          <mat-card-title id="history-heading">
+            <mat-icon aria-hidden="true">history</mat-icon>
             Game History
           </mat-card-title>
-          <mat-card-subtitle style="color: darkgrey">{{ totalElements }} total games played</mat-card-subtitle>
+          <mat-card-subtitle class="history-subtitle">{{ totalElements }} total games played</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           @if (gameHistory.length === 0) {
             <div class="no-history">
-              <mat-icon>inbox</mat-icon>
-              <p>No game history yet. Start playing to see your games here!</p>
+              <mat-icon aria-hidden="true">inbox</mat-icon>
+              <p>No game history yet. Start playing to see your games here.</p>
             </div>
           }
           @if (gameHistory.length > 0) {
@@ -100,7 +103,7 @@
               <mat-list>
                 @for (game of gameHistory; track game) {
                   <mat-list-item class="history-item">
-                    <mat-icon matListItemIcon>sports_esports</mat-icon>
+                    <mat-icon matListItemIcon aria-hidden="true">sports_esports</mat-icon>
                     <div matListItemTitle class="game-info">
                       <span class="team-name">{{ game.teamName || 'No Team' }}</span>
                       <span class="game-date">{{ formatDate(game.joinedAt) }}</span>
@@ -123,25 +126,27 @@
               </mat-list>
               <!-- Pagination -->
               @if (totalPages > 1) {
-                <div class="pagination">
+                <nav class="pagination" aria-label="Game history pages">
                   <button
                     mat-icon-button
                     [disabled]="currentPage === 0"
                     (click)="loadPage(currentPage - 1)"
-                    matTooltip="Previous Page">
-                    <mat-icon>chevron_left</mat-icon>
+                    matTooltip="Previous Page"
+                    aria-label="Previous page">
+                    <mat-icon aria-hidden="true">chevron_left</mat-icon>
                   </button>
-                  <span class="page-info">
+                  <span class="page-info" aria-live="polite">
                     Page {{ currentPage + 1 }} of {{ totalPages }}
                   </span>
                   <button
                     mat-icon-button
                     [disabled]="currentPage >= totalPages - 1"
                     (click)="loadPage(currentPage + 1)"
-                    matTooltip="Next Page">
-                    <mat-icon>chevron_right</mat-icon>
+                    matTooltip="Next Page"
+                    aria-label="Next page">
+                    <mat-icon aria-hidden="true">chevron_right</mat-icon>
                   </button>
-                </div>
+                </nav>
               }
             </div>
           }

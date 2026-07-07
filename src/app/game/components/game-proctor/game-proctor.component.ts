@@ -59,18 +59,11 @@ export class GameProctorComponent implements OnInit {
   }
 
   getCurrentBonusPart(bonus: any, partIndex: number): any {
-    console.log('[GameProctorComponent] getCurrentBonusPart called');
-    console.log('[GameProctorComponent] bonus:', bonus);
-    console.log('[GameProctorComponent] partIndex:', partIndex);
-    console.log('[GameProctorComponent] bonusParts:', bonus?.bonusParts);
-
     if (!bonus || !bonus.bonusParts || partIndex === undefined || partIndex === null) {
-      console.log('[GameProctorComponent] Returning null - missing data');
       return null;
     }
 
     const currentPart = bonus.bonusParts[partIndex];
-    console.log('[GameProctorComponent] Returning part:', currentPart);
 
     // Handle nested structure: if part has bonusPart property, return that, otherwise return the part itself
     return currentPart?.bonusPart || currentPart;

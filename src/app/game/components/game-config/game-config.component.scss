@@ -8,9 +8,25 @@
 
 /* ===== PAGE ===== */
 .page {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-primary);
-  padding-bottom: 6rem;
+  padding-bottom: clamp(2.5rem, 8vw, 6rem);
+  overflow-x: hidden; /* belt-and-suspenders: never let a child cause horizontal scroll */
+}
+
+/* Shared horizontal gutter token so full-width sections never touch the screen
+   edge. Consumed by the max-width calcs on .launch and .grid below. */
+.launch,
+.grid {
+  --gutter: clamp(0.75rem, 3vw, 1.5rem);
+  box-sizing: border-box;
+}
+
+/* Consistent keyboard focus ring for every interactive control on the page. */
+:host :is(button, a, .copy-btn, .cast-btn):focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 /* ===== HERO ===== */
@@ -18,8 +34,8 @@
   width: 100%;
   display: grid;
   place-items: center;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding: 1rem clamp(0.75rem, 3vw, 1.5rem);
+  box-sizing: border-box;
   background: linear-gradient(
     160deg,
     color-mix(in srgb, var(--accent-primary) 15%, transparent) 0%,
@@ -45,7 +61,8 @@
 
 .hero__card {
   width: 100%;
-  max-width: min(1200px, calc(100vw - 2rem));
+  max-width: 1200px;
+  box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border-medium);
   border-radius: 16px;
@@ -124,6 +141,7 @@
 
   &.join-item {
     flex-wrap: wrap;
+    row-gap: 0.25rem;
 
     .code-value {
       font-family:
@@ -138,25 +156,14 @@
       border-radius: 6px;
     }
 
-    .copy-btn {
-      color: var(--text-secondary);
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: var(--accent-primary);
-        background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
-      }
-
-      mat-icon {
-        font-size: 1.125rem;
-        width: 1.125rem;
-        height: 1.125rem;
-      }
-    }
-
+    .copy-btn,
     .cast-btn {
       color: var(--text-secondary);
-      transition: all 0.2s ease;
+      transition: color 0.2s ease, background 0.2s ease;
+      /* Guarantee a comfortable 44px tap target on touch screens. */
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
 
       &:hover {
         color: var(--accent-primary);
@@ -195,16 +202,16 @@
 
 .start-game-btn {
   background: var(--accent-primary) !important;
-  color: white !important;
+  color: #fff !important;
   border: none !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
-  transition: all 0.3s ease !important;
+  box-shadow: 0 8px 24px var(--shadow-color) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease !important;
   font-weight: 600 !important;
 
   &:hover {
     transform: translateY(-2px) !important;
     filter: brightness(1.06);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: 0 10px 28px var(--shadow-color) !important;
   }
 
   mat-icon {
@@ -214,7 +221,7 @@
 
 /* ===== MASONRY LAYOUT ===== */
 .grid {
-  --container: min(1200px, 100%);
+  --container: min(1200px, calc(100% - 2 * var(--gutter)));
 
   width: 100%;
   max-width: var(--container);
@@ -239,14 +246,12 @@
   background: var(--surface) !important;
   border: 1px solid var(--border-subtle) !important;
   border-radius: 20px !important;
-  box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-  padding: clamp(1.5rem, 2.2vw, 2rem);
+  box-shadow: 0 10px 40px var(--shadow-color) !important;
+  padding: clamp(1.25rem, 2.2vw, 2rem);
   display: grid;
   grid-template-rows: auto 1fr auto;
   row-gap: clamp(1rem, 1.5vw, 1.5rem);
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   position: relative;
   overflow: hidden;
 
@@ -264,9 +269,7 @@
 
   &:hover {
     border-color: var(--border-medium) !important;
-    box-shadow:
-      0 15px 50px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 15px 50px var(--shadow-color) !important;
 
     &::before {
       opacity: 1;
@@ -327,19 +330,20 @@ mat-card-actions {
   button {
     border-radius: 10px;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, background 0.2s ease;
     padding: 0 1.5rem;
+    min-height: 44px; /* comfortable tap target */
 
     &[color="primary"] {
       background: var(--accent-primary) !important;
-      color: white !important;
+      color: #fff !important;
       border: none !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 8px 24px var(--shadow-color);
 
       &:hover {
         transform: translateY(-2px);
         filter: brightness(1.06);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 10px 28px var(--shadow-color);
       }
     }
 
@@ -378,11 +382,12 @@ mat-card-actions {
     &.code {
       font-family:
         ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      background: rgba(99, 102, 241, 0.1);
+      background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
       padding: 0.25rem 0.5rem;
       border-radius: 6px;
       font-size: 0.9rem;
       border: 1px solid var(--border-subtle);
+      word-break: break-all; /* long packet ids must not overflow the card */
     }
   }
 }
@@ -464,7 +469,7 @@ mat-card-actions {
   &:hover {
     background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
     border-color: var(--border-medium);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 24px var(--shadow-color);
   }
 
   &__header {
@@ -493,7 +498,7 @@ mat-card-actions {
     padding: 0 0.5rem;
     border-radius: 14px;
     background: var(--accent-primary);
-    color: white;
+    color: #fff;
     font-size: 0.85rem;
     font-weight: 700;
   }
@@ -726,7 +731,7 @@ mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
 
 /* ===================== Launch bar (primary Start action) ===================== */
 .launch {
-  max-width: min(1200px, 100%);
+  max-width: min(1200px, calc(100% - 2 * var(--gutter)));
   margin: 1.5rem auto 0;
   display: flex;
   align-items: center;
@@ -735,7 +740,11 @@ mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
   padding: 1rem 1.25rem;
   border-radius: 18px;
   border: 1px solid var(--border-medium);
-  background: linear-gradient(120deg, rgba(99, 102, 241, 0.14), var(--surface) 60%);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent-primary) 14%, transparent),
+    var(--surface) 60%
+  );
   box-shadow: var(--shadow-md, 0 4px 20px) var(--shadow-color, rgba(0, 0, 0, 0.3));
 
   .launch__proctor { display: flex; align-items: center; gap: 0.75rem; }
@@ -747,7 +756,7 @@ mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
   }
   .launch__name { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
 
-  .launch__status { display: flex; gap: 1.25rem; margin-left: auto; }
+  .launch__status { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-left: auto; }
   .launch__step {
     display: inline-flex; align-items: center; gap: 0.35rem;
     font-size: 0.85rem; font-weight: 500; color: var(--text-muted);
@@ -755,7 +764,14 @@ mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
     &.done { color: var(--success, #22c55e); }
   }
 
-  .launch__cta { display: flex; gap: 0.75rem; align-items: center; }
+  .launch__cta {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+
+    button { min-height: 44px; }
+  }
 
   .start-game-btn {
     font-family: var(--font-display);
@@ -767,7 +783,7 @@ mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
     &:not(:disabled) {
       background: var(--accent-primary) !important;
       color: #fff !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 8px 24px var(--shadow-color);
 
       &:hover { filter: brightness(1.06); }
     }

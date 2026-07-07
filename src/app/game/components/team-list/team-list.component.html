@@ -1,27 +1,52 @@
-<div class="team-lists-container">
+<div class="team-lists-container" role="list" aria-label="Teams and rosters">
   @for (team of teams; track team) {
-    <mat-list class="team-list" [ngClass]="{'buzzed': hasTeamBuzzed(team.teamId)}">
-      <h3 mat-subheader>
-        <b>{{ team.teamName }} - ({{ getTeamScore(team) }})</b>
-        @if (getTeamBonusScore(team.teamId) > 0) {
-          <span class="score-breakdown">
-            <mat-icon class="bonus-icon">stars</mat-icon>
-            +{{ getTeamBonusScore(team.teamId) }} bonus
-          </span>
-        }
+    <mat-list
+        class="team-list"
+        role="listitem"
+        [ngClass]="{'buzzed': hasTeamBuzzed(team.teamId), 'your-team': isCurrentPlayerOnTeam(team)}"
+        [attr.aria-label]="team.teamName + ', ' + getTeamScore(team) + ' points, ' + getPlayerCount(team) + ' player' + (getPlayerCount(team) === 1 ? '' : 's') + (isCurrentPlayerOnTeam(team) ? ', your team' : '') + (hasTeamBuzzed(team.teamId) ? ', buzzed in' : '')">
+      <h3 mat-subheader class="team-header">
+        <span class="team-title-row">
+          <b class="team-name">{{ team.teamName }}</b>
+          <span class="team-score" aria-hidden="true">{{ getTeamScore(team) }}</span>
+        </span>
+        <span class="team-meta">
+          <span class="player-count">{{ getPlayerCount(team) }} {{ getPlayerCount(team) === 1 ? 'player' : 'players' }}</span>
+          @if (isCurrentPlayerOnTeam(team)) {
+            <span class="you-badge" aria-hidden="true">
+              <mat-icon class="you-icon">person</mat-icon>
+              Your team
+            </span>
+          }
+          @if (getTeamBonusScore(team.teamId) > 0) {
+            <span class="score-breakdown">
+              <mat-icon class="bonus-icon" aria-hidden="true">stars</mat-icon>
+              +{{ getTeamBonusScore(team.teamId) }} bonus
+            </span>
+          }
+        </span>
       </h3>
+      @if (getPlayerCount(team) === 0) {
+        <div class="roster-empty">No players yet</div>
+      }
       @for (player of team.teamPlayers; track player) {
         <mat-list-item
                    [ngClass]="{
                      'current-buzz': isCurrentBuzz(player.playerId),
                      'current-player': isCurrentPlayer(player.playerId)
-                   }">
-          @if (isCurrentPlayer(player.playerId)) {
-            <mat-icon class="current-player-icon">person</mat-icon>
-          }
-          {{ player.name }} - ({{ getPlayerScore(player.playerId) }})
+                   }"
+                   [attr.aria-label]="player.name + ', ' + getPlayerScore(player.playerId) + ' points' + (isCurrentPlayer(player.playerId) ? ', you' : '') + (isCurrentBuzz(player.playerId) ? ', buzzed in' : '')">
+          <span class="player-row">
+            @if (isCurrentPlayer(player.playerId)) {
+              <mat-icon class="current-player-icon" aria-hidden="true">person</mat-icon>
+            }
+            <span class="player-name">{{ player.name }}</span>
+            <span class="player-score" aria-hidden="true">{{ getPlayerScore(player.playerId) }}</span>
+          </span>
         </mat-list-item>
       }
     </mat-list>
+  } @empty {
+    <div class="teams-empty">No teams yet</div>
   }
 </div>

@@ -116,6 +116,36 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     return !!this.lastBuzz?.correct;
   }
 
+  /** Human-readable outcome for the completed round (used for display + aria-live). */
+  get verdictText(): string {
+    if (this.wasCorrect) {
+      return 'Correct';
+    }
+    return this.forwent ? "No answer, time's up" : 'Incorrect';
+  }
+
+  /** Fraction of the tossup revealed so far, 0..100, for the reading progress bar. */
+  get readingProgress(): number {
+    if (this.words.length === 0) {
+      return 0;
+    }
+    return Math.min(100, Math.round((this.revealedCount / this.words.length) * 100));
+  }
+
+  /** Concise status announced to assistive tech as the read phase changes. */
+  get readingStatus(): string {
+    if (this.hasBuzzed) {
+      return 'Buzzed in. Type your answer.';
+    }
+    if (this.buzzSecondsLeft !== null) {
+      return `Reading complete. Buzz within ${this.buzzSecondsLeft} seconds.`;
+    }
+    if (this.readingComplete) {
+      return 'Reading complete. Buzz to answer.';
+    }
+    return 'Reading in progress.';
+  }
+
   /* ------------------------------ actions ------------------------------- */
 
   @HostListener('document:keydown.space', ['$event'])

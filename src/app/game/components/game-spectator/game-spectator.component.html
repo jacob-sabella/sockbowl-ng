@@ -1,14 +1,14 @@
 @if (gameSession) {
   <div class="spectator-container">
     <!-- Header -->
-    <div class="spectator-header">
-      <mat-icon class="spectator-icon">visibility</mat-icon>
+    <header class="spectator-header">
+      <mat-icon class="spectator-icon" aria-hidden="true">visibility</mat-icon>
       <h1 class="spectator-title">Spectator Mode</h1>
-    </div>
+    </header>
     <!-- Teams Section -->
-    <div class="teams-section">
-      <h2>
-        <mat-icon>groups</mat-icon>
+    <section class="teams-section" aria-labelledby="teams-heading">
+      <h2 id="teams-heading">
+        <mat-icon aria-hidden="true">groups</mat-icon>
         Teams
       </h2>
       <div class="teams-grid">
@@ -16,13 +16,13 @@
           <mat-card class="team-card">
             <mat-card-header>
               <mat-card-title>{{ team.teamName }}</mat-card-title>
-              <mat-card-subtitle>Score: {{ getTeamScore(team) }}</mat-card-subtitle>
+              <mat-card-subtitle aria-live="polite">Score: {{ getTeamScore(team) }}</mat-card-subtitle>
             </mat-card-header>
             <mat-card-content>
               <mat-list class="player-list">
                 @for (player of team.teamPlayers; track player) {
                   <mat-list-item>
-                    <mat-icon matListItemIcon>person</mat-icon>
+                    <mat-icon matListItemIcon aria-hidden="true">person</mat-icon>
                     <div matListItemTitle>{{ player.name }}</div>
                   </mat-list-item>
                 }
@@ -31,12 +31,12 @@
           </mat-card>
         }
       </div>
-    </div>
+    </section>
     <!-- Current Round Section -->
     @if (currentRound) {
-      <div class="current-round-section">
-        <h2>
-          <mat-icon>article</mat-icon>
+      <section class="current-round-section" aria-labelledby="current-round-heading">
+        <h2 id="current-round-heading">
+          <mat-icon aria-hidden="true">article</mat-icon>
           Current Round ({{ currentRound.roundNumber }})
         </h2>
         <mat-card class="current-round-card">
@@ -48,32 +48,35 @@
           </mat-card-header>
           <mat-card-content>
             <!-- Question Text -->
-            <div class="question-text">
+            <div class="question-text" aria-live="polite" aria-atomic="true" aria-label="Current question">
               <p>{{ currentRound.question || 'Waiting for question...' }}</p>
             </div>
-            <!-- Answer (only shown when revealed) -->
-            @if (isAnswerVisible()) {
-              <div class="answer-section">
-                <div class="answer-revealed">
-                  <mat-icon>check_circle</mat-icon>
-                  <strong>Answer:</strong> {{ currentRound.answer }}
+            <!-- Answer status (announced when it changes) -->
+            <div class="answer-region" aria-live="polite" aria-atomic="true">
+              <!-- Answer (only shown when revealed) -->
+              @if (isAnswerVisible()) {
+                <div class="answer-section">
+                  <div class="answer-revealed">
+                    <mat-icon aria-hidden="true">check_circle</mat-icon>
+                    <span><strong>Answer:</strong> {{ currentRound.answer }}</span>
+                  </div>
                 </div>
-              </div>
-            }
-            <!-- Answer Hidden Message -->
-            @if (!isAnswerVisible()) {
-              <div class="answer-hidden">
-                <mat-icon>visibility_off</mat-icon>
-                <em>Answer hidden until revealed</em>
-              </div>
-            }
+              }
+              <!-- Answer Hidden Message -->
+              @if (!isAnswerVisible()) {
+                <div class="answer-hidden">
+                  <mat-icon aria-hidden="true">visibility_off</mat-icon>
+                  <em>Answer hidden until revealed</em>
+                </div>
+              }
+            </div>
             <!-- Buzz Status -->
             @if (hasBuzzes(currentRound)) {
-              <div class="buzz-status">
+              <div class="buzz-status" aria-live="polite" aria-atomic="true" aria-label="Buzz activity">
                 <mat-chip-set>
                   @for (buzz of currentRound.buzzList; track buzz) {
                     <mat-chip>
-                      <mat-icon>notifications</mat-icon>
+                      <mat-icon aria-hidden="true">notifications</mat-icon>
                       {{ getTeamName(buzz.teamId) }} buzzed
                     </mat-chip>
                   }
@@ -81,22 +84,23 @@
               </div>
             }
             <!-- Round State Indicator -->
-            <div class="round-state">
+            <div class="round-state" aria-live="polite" aria-atomic="true">
               <mat-chip [class.reading]="currentRound.roundState === RoundState.PROCTOR_READING"
                 [class.awaiting-buzz]="currentRound.roundState === RoundState.AWAITING_BUZZ"
-                [class.awaiting-answer]="currentRound.roundState === RoundState.AWAITING_ANSWER">
-                {{ currentRound.roundState }}
+                [class.awaiting-answer]="currentRound.roundState === RoundState.AWAITING_ANSWER"
+                [attr.aria-label]="'Round state: ' + getRoundStateLabel(currentRound.roundState)">
+                {{ getRoundStateLabel(currentRound.roundState) }}
               </mat-chip>
             </div>
           </mat-card-content>
         </mat-card>
-      </div>
+      </section>
     }
     <!-- Previous Rounds Section -->
     @if (previousRounds && previousRounds.length > 0) {
-      <div class="previous-rounds-section">
-        <h2>
-          <mat-icon>history</mat-icon>
+      <section class="previous-rounds-section" aria-labelledby="previous-rounds-heading">
+        <h2 id="previous-rounds-heading">
+          <mat-icon aria-hidden="true">history</mat-icon>
           Previous Rounds
         </h2>
         <mat-accordion class="previous-rounds-accordion">
@@ -136,7 +140,8 @@
                         <mat-list-item>
                           <mat-icon matListItemIcon
                             [class.correct]="buzz.correct"
-                            [class.incorrect]="!buzz.correct">
+                            [class.incorrect]="!buzz.correct"
+                            aria-hidden="true">
                             {{ buzz.correct ? 'check_circle' : 'cancel' }}
                           </mat-icon>
                           <div matListItemTitle>{{ getTeamName(buzz.teamId) }}</div>
@@ -150,12 +155,12 @@
             </mat-expansion-panel>
           }
         </mat-accordion>
-      </div>
+      </section>
     }
     <!-- No Previous Rounds Message -->
     @if (!previousRounds || previousRounds.length === 0) {
       <div class="no-previous-rounds">
-        <mat-icon>info</mat-icon>
+        <mat-icon aria-hidden="true">info</mat-icon>
         <p>No previous rounds yet</p>
       </div>
     }

@@ -2,63 +2,88 @@
   background: var(--bg-elevated) !important;
   color: var(--text-primary) !important;
   border-bottom: 1px solid var(--border-subtle);
-  box-shadow: 0 4px 20px var(--shadow-color);
+  box-shadow: 0 2px 10px var(--shadow-color);
   padding: 0 !important;
-  height: 64px;
+  height: 56px;
+  min-height: 56px;
   position: sticky;
   top: 0;
   z-index: 100;
+
+  @media (min-width: 641px) {
+    height: 64px;
+    min-height: 64px;
+  }
 }
 
 .navbar__content {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  flex-wrap: nowrap;
 
-  @media (max-width: 768px) {
+  @media (min-width: 641px) {
     padding-left: 1rem;
     padding-right: 1rem;
+    gap: 0.5rem;
   }
+
+  @media (min-width: 769px) {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Shared visible-focus treatment for all interactive navbar elements */
+.navbar__brand:focus-visible,
+.navbar__social a:focus-visible,
+.navbar__auth button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 .navbar__brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
 
   &:hover {
     transform: translateY(-1px);
 
     .navbar__icon {
-      transform: scale(1.1) rotate(5deg);
+      transform: scale(1.08) rotate(5deg);
     }
+  }
+
+  @media (min-width: 641px) {
+    gap: 0.75rem;
   }
 }
 
 .navbar__icon {
-  font-size: clamp(1.5rem, 4vw, 2rem);
-  width: clamp(1.5rem, 4vw, 2rem);
-  height: clamp(1.5rem, 4vw, 2rem);
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  width: clamp(1.4rem, 4vw, 2rem);
+  height: clamp(1.4rem, 4vw, 2rem);
   color: var(--accent-primary);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
 
 .navbar__title {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
-  font-size: clamp(1.1rem, 3.5vw, 1.8rem);
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 3.5vw, 1.8rem);
   font-weight: 800;
   letter-spacing: 0.05em;
   color: var(--accent-primary);
@@ -71,22 +96,22 @@
 .navbar__actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   flex-shrink: 0;
 
-  @media (max-width: 768px) {
-    gap: 0.25rem;
+  @media (min-width: 641px) {
+    gap: 0.5rem;
   }
 }
 
 .navbar__social {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.125rem;
 
   a {
     color: var(--text-secondary);
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
 
     &:hover {
       color: var(--accent-primary);
@@ -104,23 +129,19 @@
 .navbar__auth {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .navbar__auth-guest {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 
   .navbar__guest-label {
     color: var(--text-secondary);
     font-size: 0.875rem;
     font-weight: 500;
     white-space: nowrap;
-
-    @media (max-width: 640px) {
-      display: none;
-    }
   }
 
   button {
@@ -128,31 +149,23 @@
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
-
-    @media (max-width: 640px) {
-      padding: 0 0.75rem;
-
-      mat-icon {
-        margin-right: 0;
-      }
-
-      span {
-        display: none;
-      }
-    }
   }
 }
 
 .navbar__auth-user {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
+
+  @media (min-width: 641px) {
+    gap: 0.5rem;
+  }
 
   .navbar__user-name {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.85rem;
     background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
     border-radius: 20px;
     color: var(--text-primary);
@@ -168,15 +181,6 @@
       height: 1.5rem;
       flex-shrink: 0;
     }
-
-    @media (max-width: 768px) {
-      padding: 0.5rem;
-      max-width: 150px;
-
-      span {
-        display: none;
-      }
-    }
   }
 
   button {
@@ -184,7 +188,7 @@
     align-items: center;
     gap: 0.25rem;
     color: var(--text-secondary);
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
     white-space: nowrap;
 
     mat-icon {
@@ -198,24 +202,62 @@
       color: var(--text-primary);
       background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
     }
+  }
+}
 
-    @media (max-width: 768px) {
-      span {
+/* ---- Responsive condensing ---- */
+
+/* Tablets / small screens: hide button text labels, keep icons */
+@media (max-width: 768px) {
+  .navbar__auth-user {
+    .navbar__user-name {
+      padding: 0.4rem;
+      max-width: 150px;
+
+      .navbar__btn-label {
         display: none;
       }
+    }
 
+    button {
       padding: 0 0.5rem;
+
+      .navbar__btn-label {
+        display: none;
+      }
     }
   }
 }
 
-/* ---- Narrow-mobile responsiveness (fixes navbar overflow ≤480px) ---- */
-@media (max-width: 600px) {
-  .navbar__social { display: none; }          // drop GitHub/Discord links
-  .navbar__guest-label { display: none; }      // drop "Playing as Guest" text
-  .navbar__content { gap: 0.25rem; }
+/* Phones: drop "Playing as Guest" text, condense Sign In to icon + short label */
+@media (max-width: 640px) {
+  .navbar__auth-guest {
+    .navbar__guest-label {
+      display: none;
+    }
+
+    button {
+      padding: 0 0.85rem;
+    }
+  }
 }
+
+/* Narrow phones: social links become the first thing to drop so the bar
+   never overflows; logo, theme toggle and sign-in stay reachable. */
+@media (max-width: 480px) {
+  .navbar__social {
+    display: none;
+  }
+}
+
+/* Smallest phones: icon-only wordmark to guarantee a single-line fit */
 @media (max-width: 360px) {
-  .navbar__content { padding-left: 0.5rem; padding-right: 0.5rem; }
-  .navbar__title { display: none; }            // icon-only wordmark on the smallest screens
+  .navbar__content {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .navbar__title {
+    display: none;
+  }
 }

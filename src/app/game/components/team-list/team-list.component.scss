@@ -1,29 +1,59 @@
 .team-lists-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 1.5rem;
   margin-top: 2rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 1rem;
+    margin-top: 1.25rem;
   }
+}
+
+.teams-empty,
+.roster-empty {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.teams-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem 1rem;
+  border: 2px dashed var(--border-medium);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.roster-empty {
+  background: var(--bg-secondary);
+  padding: 0.85rem 1.25rem;
+  font-size: 0.95rem;
 }
 
 .team-list {
   flex: 1;
+  min-width: 0;
   background: var(--surface) !important;
   border: 2px solid var(--border-medium) !important;
   border-radius: 12px !important;
   padding: 0 !important;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 4px 15px var(--shadow-color);
+
+  &.your-team {
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border-medium)) !important;
+  }
 
   &.buzzed {
     background: color-mix(in srgb, var(--accent-primary) 15%, transparent) !important;
     border-color: color-mix(in srgb, var(--accent-primary) 60%, transparent) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 24px var(--shadow-color);
   }
 
   h3[mat-subheader] {
@@ -31,10 +61,10 @@
     color: var(--text-primary) !important;
     font-size: 1.15rem !important;
     font-weight: 700 !important;
-    padding: 1rem 1.25rem !important;
+    padding: 0.9rem 1.1rem !important;
     margin: 0 !important;
     border-bottom: 2px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
-    line-height: 1.5 !important;
+    line-height: 1.4 !important;
     height: auto !important;
     letter-spacing: 0.02em;
     display: flex !important;
@@ -46,18 +76,73 @@
       color: var(--text-primary) !important;
     }
 
+    .team-title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
+    .team-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .team-score {
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      color: var(--accent-primary) !important;
+    }
+
+    .team-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.6rem;
+    }
+
+    .player-count {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .you-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+
+      .you-icon {
+        font-size: 0.9rem !important;
+        width: 0.9rem !important;
+        height: 0.9rem !important;
+        line-height: 0.9rem !important;
+      }
+    }
+
     .score-breakdown {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--accent-secondary);
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
       background: color-mix(in srgb, var(--accent-secondary) 15%, transparent);
-      padding: 0.35rem 0.75rem;
+      padding: 0.2rem 0.55rem;
       border-radius: 6px;
       border: 1px solid color-mix(in srgb, var(--accent-secondary) 30%, transparent);
-      width: fit-content;
 
       .bonus-icon {
         font-size: 1rem !important;
@@ -73,11 +158,11 @@
     background: var(--bg-secondary) !important;
     color: var(--text-secondary) !important;
     border-bottom: 1px solid var(--border-subtle) !important;
-    padding: 0.85rem 1.25rem !important;
+    padding: 0.6rem 1.1rem !important;
     height: auto !important;
-    min-height: 52px !important;
+    min-height: 48px !important;
     font-size: 1rem !important;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease;
     display: flex !important;
     align-items: center !important;
 
@@ -88,6 +173,26 @@
     &:hover {
       background: var(--surface-hover) !important;
       color: var(--text-primary) !important;
+    }
+
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .player-name {
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow-wrap: anywhere;
+    }
+
+    .player-score {
+      flex-shrink: 0;
+      margin-left: auto;
+      color: inherit;
     }
 
     &.current-player {
@@ -103,7 +208,6 @@
 
       .current-player-icon {
         color: var(--accent-primary) !important;
-        margin-right: 0.5rem;
         font-size: 1.1rem !important;
         width: 1.1rem !important;
         height: 1.1rem !important;
@@ -138,6 +242,12 @@
     ::ng-deep .mdc-list-item__content {
       color: inherit !important;
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-list mat-list-item.current-buzz {
+    animation: none;
   }
 }
 
