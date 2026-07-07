@@ -162,6 +162,10 @@ export class PacketSearchComponent implements OnInit {
     this.countSubject.pipe(debounceTime(350)).subscribe(() => this.refreshAvailability());
     this.loadFilters();
     this.queueCount();
+    this.sockbowlQuestionsService.getBankCategoryCounts().subscribe({
+      next: (c) => this.categoryCounts = c || {},
+      error: () => { /* non-critical — chips just omit counts */ }
+    });
   }
 
   searchPackets(): void {
@@ -174,6 +178,7 @@ export class PacketSearchComponent implements OnInit {
   availTossups: number | null = null;
   availBonuses: number | null = null;
   countingAvail = false;
+  categoryCounts: { [category: string]: number } = {};
 
   private static readonly FILTERS_KEY = 'sockbowl_gen_filters';
 

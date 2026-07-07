@@ -1191,6 +1191,14 @@
     mat-icon { font-size: 18px; height: 18px; width: 18px; margin-right: 2px; }
   }
 
+  .qb-chip-n {
+    margin-left: 6px;
+    font-size: 11px;
+    opacity: 0.55;
+    font-variant-numeric: tabular-nums;
+  }
+  .qb-chip.on .qb-chip-n { opacity: 0.85; }
+
   .qb-avail {
     font-size: 13px;
     color: var(--text-secondary);

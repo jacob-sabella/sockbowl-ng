@@ -483,7 +483,9 @@
                 <div class="qb-chips">
                   @for (c of qbCategories; track c) {
                     <button type="button" class="qb-chip" [class.on]="qbSelectedCategories.includes(c)"
-                            (click)="toggleQbCategory(c)">{{ c }}</button>
+                            (click)="toggleQbCategory(c)">{{ c }}@if (categoryCounts[c]) {
+                      <span class="qb-chip-n">{{ categoryCounts[c] | number }}</span>
+                    }</button>
                   }
                 </div>
               </div>

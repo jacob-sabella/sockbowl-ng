@@ -30,6 +30,13 @@ export class SockbowlQuestionsService {
       .pipe(timeout(120000));
   }
 
+  /** Total bank tossups per category, e.g. { Science: 45000, ... }. */
+  getBankCategoryCounts(): Observable<{ [category: string]: number }> {
+    return this.http
+      .get<{ [category: string]: number }>(`${this.qbreaderUrl}/category-counts`)
+      .pipe(timeout(15000));
+  }
+
   /** How many bank tossups/bonuses match a filter (live breadth preview for the Generate tab). */
   countBankAvailable(body: {
     categories?: string[]; subcategories?: string[]; alternateSubcategories?: string[];
