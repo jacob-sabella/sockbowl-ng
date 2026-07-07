@@ -273,3 +273,12 @@
   background: color-mix(in srgb, currentColor 22%, transparent);
   vertical-align: middle;
 }
+
+/* subtle "give up / reveal" action under the solo buzz controls */
+.skip-btn {
+  align-self: flex-start;
+  color: var(--text-muted, var(--text-secondary)) !important;
+  font-size: 0.85rem;
+  &:hover { color: var(--text-secondary) !important; }
+  &:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+}

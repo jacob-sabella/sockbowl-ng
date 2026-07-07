@@ -189,6 +189,16 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     setTimeout(() => this.answerInput?.nativeElement?.focus(), 0);
   }
 
+  /** Give up on the current tossup and reveal the answer straight away (solo only). */
+  skip(): void {
+    if (this.isReadingPhase) {
+      this.clearTimer();
+      this.clearWatchdog();
+      this.speech.cancel();
+      this.forgo();
+    }
+  }
+
   /** Buzz window elapsed with no buzz — forgo the tossup (reveal the answer, no points). */
   private forgo(): void {
     this.clearBuzzTimer();

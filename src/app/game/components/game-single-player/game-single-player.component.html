@@ -88,6 +88,10 @@
                 </label>
               </div>
             </div>
+            <button mat-button type="button" class="skip-btn" (click)="skip()"
+                    aria-label="Give up on this tossup and reveal the answer">
+              Reveal answer
+            </button>
           }
 
           @if (isAnswering) {
