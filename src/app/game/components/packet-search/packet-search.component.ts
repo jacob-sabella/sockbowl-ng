@@ -48,6 +48,16 @@ export class PacketSearchComponent implements OnInit {
     'Literature', 'History', 'Science', 'Fine Arts', 'Religion', 'Mythology',
     'Philosophy', 'Social Science', 'Geography', 'Current Events', 'Other Academic', 'Pop Culture'
   ];
+  // qbreader's subcategory taxonomy. Only these four categories have subcategories;
+  // the rest (Religion, Mythology, …) are leaf categories with no finer filter.
+  readonly qbSubcategoriesByCategory: { [category: string]: string[] } = {
+    'Literature': ['American Literature', 'British Literature', 'Classical Literature',
+                   'European Literature', 'World Literature', 'Other Literature'],
+    'History': ['American History', 'Ancient History', 'European History',
+                'World History', 'Other History'],
+    'Science': ['Biology', 'Chemistry', 'Physics', 'Math', 'Other Science'],
+    'Fine Arts': ['Visual Fine Arts', 'Auditory Fine Arts', 'Other Fine Arts']
+  };
   readonly qbDifficultyTiers: { label: string; values: number[] }[] = [
     { label: 'Middle School', values: [1, 2] },
     { label: 'Easy HS', values: [3, 4] },
@@ -66,7 +76,7 @@ export class PacketSearchComponent implements OnInit {
   qbShowAdvanced: boolean = false;
   readonly qbAllDifficulties: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   qbIndividualDifficulties: number[] = []; // if any selected, overrides the coarse tiers
-  qbSubcategoriesText: string = '';        // comma-separated subcategory names
+  qbSelectedSubcategories: string[] = [];  // picked from the taxonomy above
   qbMinYear: number | null = null;
   qbMaxYear: number | null = null;
   qbStandardOnly: boolean = false;
@@ -462,6 +472,24 @@ export class PacketSearchComponent implements OnInit {
     const i = this.qbSelectedCategories.indexOf(category);
     if (i >= 0) this.qbSelectedCategories.splice(i, 1);
     else this.qbSelectedCategories.push(category);
+    // Drop any picked subcategories that no longer belong to the selected categories.
+    const available = this.qbAvailableSubcategories;
+    this.qbSelectedSubcategories = this.qbSelectedSubcategories.filter(s => available.includes(s));
+  }
+
+  /** Subcategories offered: those of the picked categories, or all of them if none picked. */
+  get qbAvailableSubcategories(): string[] {
+    const map = this.qbSubcategoriesByCategory;
+    if (this.qbSelectedCategories.length) {
+      return this.qbSelectedCategories.reduce<string[]>((acc, c) => acc.concat(map[c] || []), []);
+    }
+    return Object.keys(map).reduce<string[]>((acc, c) => acc.concat(map[c]), []);
+  }
+
+  toggleQbSubcategory(sub: string): void {
+    const i = this.qbSelectedSubcategories.indexOf(sub);
+    if (i >= 0) this.qbSelectedSubcategories.splice(i, 1);
+    else this.qbSelectedSubcategories.push(sub);
   }
 
   toggleQbTier(label: string): void {
@@ -498,11 +526,9 @@ export class PacketSearchComponent implements OnInit {
       : this.qbDifficultyTiers
           .filter(t => this.qbSelectedTiers.includes(t.label))
           .flatMap(t => t.values);
-    const subcategories = this.qbSubcategoriesText
-      .split(',').map(s => s.trim()).filter(s => s.length > 0);
     return {
       categories: this.qbSelectedCategories,
-      subcategories: subcategories.length ? subcategories : undefined,
+      subcategories: this.qbSelectedSubcategories.length ? this.qbSelectedSubcategories : undefined,
       difficulties,
       minYear: this.qbMinYear ?? undefined,
       maxYear: this.qbMaxYear ?? undefined,

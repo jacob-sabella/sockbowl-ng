@@ -576,6 +576,17 @@
                       }
                     </div>
                   </div>
+                  @if (qbAvailableSubcategories.length) {
+                    <div class="qb-group">
+                      <div class="qb-group-label">Subcategories <span class="qb-muted">(optional)</span></div>
+                      <div class="qb-chips">
+                        @for (s of qbAvailableSubcategories; track s) {
+                          <button type="button" class="qb-chip" [class.on]="qbSelectedSubcategories.includes(s)"
+                                  (click)="toggleQbSubcategory(s)">{{ s }}</button>
+                        }
+                      </div>
+                    </div>
+                  }
                   <div class="qb-form">
                     <mat-form-field appearance="outline" class="qb-num-field">
                       <mat-label>Min year</mat-label>
@@ -584,10 +595,6 @@
                     <mat-form-field appearance="outline" class="qb-num-field">
                       <mat-label>Max year</mat-label>
                       <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMaxYear">
-                    </mat-form-field>
-                    <mat-form-field appearance="outline" class="qb-name-field">
-                      <mat-label>Subcategories (optional)</mat-label>
-                      <input matInput [(ngModel)]="qbSubcategoriesText" placeholder="e.g. Biology, American Literature">
                     </mat-form-field>
                   </div>
                   <mat-slide-toggle color="primary" [(ngModel)]="qbStandardOnly" class="qb-toggle">
