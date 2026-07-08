@@ -1,6 +1,12 @@
 {
   "clips": [
     {
+      "title": "Auto-judged bonus flow advances through all parts without stalling",
+      "spec": "bonus.spec.ts",
+      "file": "auto-judged-bonus-flow-advances-through-all-parts-without-st.webm",
+      "ok": true
+    },
+    {
       "title": "Generate a packet from the bank with live filters",
       "spec": "generate.spec.ts",
       "file": "generate-a-packet-from-the-bank-with-live-filters.webm",
