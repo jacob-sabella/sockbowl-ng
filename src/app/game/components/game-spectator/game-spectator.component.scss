@@ -456,3 +456,19 @@ h2 {
 }
 @keyframes spectator-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .reveal-cursor { animation: none; } }
+
+/* bonus display in the spectator view */
+.bonus-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  .bonus-head {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent-secondary, var(--accent-primary));
+  }
+  .bonus-preamble { opacity: 0.85; }
+}

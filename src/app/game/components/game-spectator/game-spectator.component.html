@@ -47,9 +47,15 @@
             }
           </mat-card-header>
           <mat-card-content>
-            <!-- Question Text: reveals word-by-word while being read, full once answered -->
+            <!-- Question Text: bonus when in the bonus phase, else the tossup (revealing while read) -->
             <div class="question-text" aria-live="polite" aria-atomic="true" aria-label="Current question">
-              @if (isReadingPhase) {
+              @if (isBonus) {
+                <div class="bonus-block">
+                  <div class="bonus-head">Bonus for {{ bonusTeamName }} · part {{ bonusPartIndex + 1 }} of {{ bonusPartCount }}</div>
+                  @if (bonusPreamble) { <p class="font-serif bonus-preamble" [innerHTML]="bonusPreamble"></p> }
+                  <p class="font-serif" [innerHTML]="bonusPartQuestion"></p>
+                </div>
+              } @else if (isReadingPhase) {
                 <p class="font-serif"><span>{{ revealedText }}</span>@if (!readingComplete) { <span class="reveal-cursor" aria-hidden="true">▍</span> }</p>
               } @else if (currentRound.question) {
                 <p class="font-serif" [innerHTML]="currentRound.question"></p>

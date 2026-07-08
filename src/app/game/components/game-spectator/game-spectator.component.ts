@@ -65,6 +65,38 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
     return this.words.length > 0 && this.revealedCount >= this.words.length;
   }
 
+  /* ------------------------------- bonus -------------------------------- */
+
+  get isBonus(): boolean {
+    const s = this.currentRound?.roundState;
+    return s === RoundState.BONUS_AWAITING_ANSWER
+      || s === RoundState.BONUS_READING_PREAMBLE
+      || s === RoundState.BONUS_READING_PART;
+  }
+
+  get bonusTeamName(): string {
+    const id = (this.currentRound as any)?.bonusEligibleTeamId;
+    return id ? this.getTeamName(id) : '';
+  }
+
+  get bonusPartIndex(): number {
+    return (this.currentRound as any)?.currentBonusPartIndex ?? 0;
+  }
+
+  get bonusPartCount(): number {
+    return (this.currentRound as any)?.currentBonus?.bonusParts?.length || 3;
+  }
+
+  get bonusPreamble(): string {
+    return (this.currentRound as any)?.currentBonus?.preamble || '';
+  }
+
+  get bonusPartQuestion(): string {
+    const parts = (this.currentRound as any)?.currentBonus?.bonusParts || [];
+    const byOrder = parts.find((p: any) => p.order === this.bonusPartIndex);
+    return (byOrder || parts[this.bonusPartIndex])?.bonusPart?.question || '';
+  }
+
   /** Keep the reveal in step with the round: reveal while reading, stop otherwise. */
   private syncReveal(): void {
     const r = this.currentRound;
