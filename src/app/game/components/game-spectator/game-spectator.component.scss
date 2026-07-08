@@ -472,3 +472,12 @@ h2 {
   }
   .bonus-preamble { opacity: 0.85; }
 }
+
+/* reader-role toggle in the spectator header (a shared screen reads aloud) */
+.spectator-header .reader-toggle {
+  margin-left: auto;
+  white-space: nowrap;
+  min-height: 40px;
+  mat-icon { margin-right: 0.3rem; }
+  &.reader-on { border-color: var(--accent-primary) !important; }
+}

@@ -4,6 +4,16 @@
     <header class="spectator-header">
       <mat-icon class="spectator-icon" aria-hidden="true">visibility</mat-icon>
       <h1 class="spectator-title">Spectator Mode</h1>
+      @if (speech.available) {
+        <button mat-stroked-button type="button" class="reader-toggle" (click)="toggleReader()"
+                [color]="readerMode ? 'primary' : undefined" [class.reader-on]="readerMode"
+                [attr.aria-pressed]="readerMode"
+                [attr.aria-label]="readerMode ? 'Stop reading aloud for the room' : 'Read aloud for the room from this screen'"
+                matTooltip="Make this screen the reader — it reads the tossup and bonus aloud for the room or stream.">
+          <mat-icon aria-hidden="true">{{ readerMode ? 'volume_up' : 'record_voice_over' }}</mat-icon>
+          {{ readerMode ? 'Reading aloud' : 'Read aloud' }}
+        </button>
+      }
     </header>
     <!-- Teams Section -->
     <section class="teams-section" aria-labelledby="teams-heading">

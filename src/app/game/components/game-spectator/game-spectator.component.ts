@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
+import { SpeechService } from '../../services/speech.service';
 import { GameSession, Round, RoundState, Team } from '../../models/sockbowl/sockbowl-interfaces';
 import { Subscription } from 'rxjs';
 
@@ -24,15 +25,25 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
   private currentRoundKey = '';
   private readingSpeed = 5;
 
+  /**
+   * Reader role: a shared spectator screen (a TV in the room or a Discord stream)
+   * can opt in to read the tossup and bonus aloud for everyone. Off by default; the
+   * text still reveals at a fixed rate. This is the natural home for the TTS reader.
+   */
+  readerMode = false;
+  private lastSpokenTossup = '';
+  private lastSpokenBonus = '';
+
   private gameSessionSubscription?: Subscription;
 
-  constructor(public gameStateService: GameStateService) {}
+  constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
   ngOnInit(): void {
     const saved = Number(localStorage.getItem('sockbowl_reading_speed'));
     if (saved >= 1 && saved <= 10) {
       this.readingSpeed = saved;
     }
+    this.readerMode = localStorage.getItem('spectator_reader') === 'true';
     this.gameSessionSubscription = this.gameStateService.gameSession$.subscribe(gameSession => {
       if (gameSession) {
         this.gameSession = gameSession;
@@ -40,13 +51,57 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
         this.previousRounds = gameSession.currentMatch?.previousRounds || [];
         this.teams = gameSession.teamList || [];
         this.syncReveal();
+        this.syncBonusSpeech();
+        if (this.readerMode && !this.isReadingPhase && !this.isBonus) {
+          this.speech.cancel();          // buzzed / answering / complete → stop reading aloud
+          this.lastSpokenBonus = '';
+        }
       }
     });
   }
 
   ngOnDestroy(): void {
     this.clearTimer();
+    this.speech.cancel();
     this.gameSessionSubscription?.unsubscribe();
+  }
+
+  /** Make this screen the room's reader (or stop). The text still reveals at a fixed rate. */
+  toggleReader(): void {
+    this.readerMode = !this.readerMode;
+    localStorage.setItem('spectator_reader', String(this.readerMode));
+    if (!this.readerMode) {
+      this.speech.cancel();
+      return;
+    }
+    if (this.isReadingPhase && this.words.length) {
+      this.lastSpokenTossup = this.currentRoundKey;
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+    } else if (this.isBonus) {
+      this.lastSpokenBonus = '';
+      this.syncBonusSpeech();
+    }
+  }
+
+  /** When acting as the reader, read the current bonus part (with the preamble on part 1) once. */
+  private syncBonusSpeech(): void {
+    if (!this.readerMode || !this.isBonus) {
+      return;
+    }
+    const key = `${this.currentRound?.roundNumber}:bonus:${this.bonusPartIndex}`;
+    if (key === this.lastSpokenBonus) {
+      return;
+    }
+    this.lastSpokenBonus = key;
+    const parts: string[] = [];
+    if (this.bonusPartIndex === 0 && this.bonusPreamble) {
+      parts.push(this.tokenize(this.bonusPreamble).join(' '));
+    }
+    parts.push(this.tokenize(this.bonusPartQuestion).join(' '));
+    const text = parts.join(' ').trim();
+    if (text) {
+      this.speech.speak(text, this.readingSpeed);
+    }
   }
 
   /* --------------------------- read-along reveal --------------------------- */
@@ -111,6 +166,10 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
       this.revealedCount = 0;
       if (this.words.length > 0) {
         this.scheduleTick();
+        if (this.readerMode && this.lastSpokenTossup !== key) {
+          this.lastSpokenTossup = key;
+          this.speech.speak(this.words.join(' '), this.readingSpeed);   // read the tossup aloud
+        }
       }
     } else if (!this.readingTimer && this.revealedCount < this.words.length) {
       this.scheduleTick();
