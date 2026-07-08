@@ -153,6 +153,16 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     return this.round?.currentBonusPartIndex ?? 0;
   }
 
+  /** Number of parts in the current bonus (bank bonuses are usually 3, but can differ). */
+  get bonusPartCount(): number {
+    return this.round?.currentBonus?.bonusParts?.length || 3;
+  }
+
+  /** Points earned on the bonus so far (10 per correct part). */
+  get bonusScore(): number {
+    return (this.round?.bonusPartAnswers || []).filter((a: any) => a?.correct).length * 10;
+  }
+
   /** The current bonus part's question text (by order, falling back to list position). */
   get bonusPartQuestion(): string {
     const parts = this.round?.currentBonus?.bonusParts || [];

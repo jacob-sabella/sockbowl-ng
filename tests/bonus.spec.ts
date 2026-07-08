@@ -82,7 +82,7 @@ test('Auto-judged bonus flow advances through all parts without stalling', async
 
   // The bonus must start (correct tossup) — this is the state that used to stall the game.
   await expect(page.getByText(/Bonus for/)).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText(/part 1 of 3/)).toBeVisible({ timeout: 8_000 });
+  await expect(page.getByText(/part 1 of \d/)).toBeVisible({ timeout: 8_000 });
 
   // Answer each bonus part (correctness is irrelevant to flow) until the round completes.
   // If the bonus stalled, the part would never change and this would time out.

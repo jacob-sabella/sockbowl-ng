@@ -10,7 +10,7 @@
             <span class="status-dot status-dot--done"></span> Round complete
           } @else if (isBonus) {
             <span class="status-dot status-dot--read"></span>
-            Bonus for {{ bonusTeamName }}, part {{ bonusPartIndex + 1 }} of 3.@if (bonusEligible) { <strong>&nbsp;Your team is answering.</strong> }
+            Bonus for {{ bonusTeamName }}, part {{ bonusPartIndex + 1 }} of {{ bonusPartCount }}<span class="bonus-tally">{{ bonusScore }}/{{ bonusPartCount * 10 }}</span>.@if (bonusEligible) { <strong>&nbsp;Your team is answering.</strong> }
           } @else if (iAmBuzzer) {
             <span class="status-dot status-dot--judge"></span> You buzzed. Type your answer.
           } @else if (someoneBuzzed) {
