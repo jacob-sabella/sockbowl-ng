@@ -57,8 +57,14 @@
     color: var(--text-secondary) !important;
   }
 
-  input {
+  input,
+  textarea {
     color: var(--text-primary) !important;
+    caret-color: var(--accent-primary) !important;
+
+    &::placeholder {
+      color: var(--text-muted) !important;
+    }
   }
 }
 
