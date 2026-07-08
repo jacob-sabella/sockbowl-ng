@@ -68,6 +68,27 @@
   }
 }
 
+/* ===== MATERIAL BUTTONS ===== */
+/* Unthemed (no color attr) text/outlined/icon buttons fall back to MDC's black
+   label, which is invisible on the dark theme. Theme them; palette-colored
+   buttons (.mat-primary/.mat-accent/.mat-warn) keep their own colors. */
+.mat-mdc-button,
+.mat-mdc-outlined-button,
+.mat-mdc-icon-button {
+  &:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
+    color: var(--text-primary) !important;
+  }
+
+  &:disabled {
+    color: var(--text-muted) !important;
+    opacity: 0.55;
+  }
+}
+
+.mat-mdc-outlined-button {
+  border-color: var(--border-medium) !important;
+}
+
 /* ===== MATERIAL SELECT ===== */
 .mat-mdc-option {
   background: var(--bg-elevated) !important;
