@@ -1,0 +1,401 @@
+<div class="packet-builder">
+  @if (loading) {
+    <div class="packet-builder__status">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+  } @else if (!packet) {
+    <p class="packet-builder__empty">Packet not found.</p>
+  } @else {
+    <!-- Header -->
+    <mat-card class="packet-builder__header">
+      <mat-card-content>
+        <div class="packet-builder__name-row">
+          @if (!editingName) {
+            <h1 class="packet-builder__name">{{ packet.name }}</h1>
+            <button mat-icon-button aria-label="Edit name" (click)="startEditName()">
+              <mat-icon aria-hidden="true">edit</mat-icon>
+            </button>
+          } @else {
+            <mat-form-field appearance="outline" class="packet-builder__name-field">
+              <mat-label>Packet name</mat-label>
+              <input matInput [(ngModel)]="nameDraft" (keyup.enter)="saveName()" />
+            </mat-form-field>
+            <button mat-icon-button color="primary" aria-label="Save name" [disabled]="savingName" (click)="saveName()">
+              <mat-icon aria-hidden="true">check</mat-icon>
+            </button>
+            <button mat-icon-button aria-label="Cancel" (click)="cancelEditName()">
+              <mat-icon aria-hidden="true">close</mat-icon>
+            </button>
+          }
+
+          @if (auth.hasPermission('packet:delete')) {
+            <button mat-icon-button color="warn" class="packet-builder__delete-btn" aria-label="Delete packet" (click)="deletePacket()">
+              <mat-icon aria-hidden="true">delete</mat-icon>
+            </button>
+          }
+        </div>
+
+        <mat-form-field appearance="outline" class="packet-builder__difficulty-field">
+          <mat-label>Difficulty</mat-label>
+          <mat-select [ngModel]="packet.difficulty?.id" (selectionChange)="onDifficultyChange($event.value)">
+            @for (d of difficulties; track d.id) {
+              <mat-option [value]="d.id">{{ d.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Tossups -->
+    <mat-card class="packet-builder__tossups">
+      <mat-card-header>
+        <mat-card-title>Tossups</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-accordion>
+          @for (te of sortedTossups; track te.tossup.id; let first = $first; let last = $last) {
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <span class="packet-builder__index">#{{ te.order + 1 }}</span>
+                  <span class="packet-builder__preview">{{ truncate(te.tossup.question) }}</span>
+                  @if (te.tossup.subcategory?.name) {
+                    <span class="packet-builder__chip">{{ te.tossup.subcategory.name }}</span>
+                  }
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="packet-builder__panel-body">
+                <mat-form-field appearance="outline" class="packet-builder__field">
+                  <mat-label>Question</mat-label>
+                  <textarea matInput rows="3" [(ngModel)]="tossupDrafts[te.tossup.id].question"></textarea>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="packet-builder__field">
+                  <mat-label>Answer</mat-label>
+                  <textarea matInput rows="2" [(ngModel)]="tossupDrafts[te.tossup.id].answer"></textarea>
+                </mat-form-field>
+
+                <div class="packet-builder__subcategory-row">
+                  <mat-form-field appearance="outline" class="packet-builder__field packet-builder__subcategory-field">
+                    <mat-label>Subcategory</mat-label>
+                    <mat-select [(ngModel)]="tossupDrafts[te.tossup.id].subcategoryId">
+                      <mat-option [value]="null">None</mat-option>
+                      @for (group of subcategoryGroups; track group.category) {
+                        <mat-optgroup [label]="group.category">
+                          @for (sub of group.subs; track sub.id) {
+                            <mat-option [value]="sub.id">{{ sub.name }}</mat-option>
+                          }
+                        </mat-optgroup>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  @if (auth.hasPermission('taxonomy:manage')) {
+                    <button mat-icon-button aria-label="Create new subcategory"
+                            (click)="openTaxonomyForm(id => tossupDrafts[te.tossup.id].subcategoryId = id)">
+                      <mat-icon aria-hidden="true">add_circle_outline</mat-icon>
+                    </button>
+                  }
+                </div>
+
+                <div class="packet-builder__row-actions">
+                  <button mat-icon-button aria-label="Move up" [disabled]="first" (click)="moveTossup(te, -1)">
+                    <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+                  </button>
+                  <button mat-icon-button aria-label="Move down" [disabled]="last" (click)="moveTossup(te, 1)">
+                    <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                  </button>
+                  <span class="packet-builder__spacer"></span>
+                  @if (auth.hasPermission('packet:delete')) {
+                    <button mat-icon-button color="warn" aria-label="Remove tossup" (click)="removeTossup(te)">
+                      <mat-icon aria-hidden="true">delete</mat-icon>
+                    </button>
+                  }
+                  <button mat-raised-button class="packet-builder__save-btn" (click)="saveTossup(te)">
+                    <mat-icon aria-hidden="true">save</mat-icon>
+                    Save
+                  </button>
+                </div>
+              </div>
+            </mat-expansion-panel>
+          }
+
+          @if (newTossupOpen) {
+            <mat-expansion-panel [expanded]="true">
+              <mat-expansion-panel-header>
+                <mat-panel-title>New tossup</mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="packet-builder__panel-body">
+                <mat-form-field appearance="outline" class="packet-builder__field">
+                  <mat-label>Question</mat-label>
+                  <textarea matInput rows="3" [(ngModel)]="newTossupDraft.question"></textarea>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="packet-builder__field">
+                  <mat-label>Answer</mat-label>
+                  <textarea matInput rows="2" [(ngModel)]="newTossupDraft.answer"></textarea>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="packet-builder__field packet-builder__subcategory-field">
+                  <mat-label>Subcategory</mat-label>
+                  <mat-select [(ngModel)]="newTossupDraft.subcategoryId">
+                    <mat-option [value]="null">None</mat-option>
+                    @for (group of subcategoryGroups; track group.category) {
+                      <mat-optgroup [label]="group.category">
+                        @for (sub of group.subs; track sub.id) {
+                          <mat-option [value]="sub.id">{{ sub.name }}</mat-option>
+                        }
+                      </mat-optgroup>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <div class="packet-builder__row-actions">
+                  <span class="packet-builder__spacer"></span>
+                  <button mat-button (click)="cancelNewTossup()">Cancel</button>
+                  <button mat-raised-button class="packet-builder__save-btn" [disabled]="addingTossup" (click)="addTossup()">
+                    <mat-icon aria-hidden="true">add</mat-icon>
+                    Add tossup
+                  </button>
+                </div>
+              </div>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+
+        <div class="packet-builder__section-actions">
+          @if (!newTossupOpen) {
+            <button mat-stroked-button (click)="openNewTossup()">
+              <mat-icon aria-hidden="true">add</mat-icon>
+              Add Tossup
+            </button>
+          }
+          @if (auth.hasPermission('question:generate')) {
+            @if (!genOpen) {
+              <button mat-stroked-button (click)="openGenerate()">
+                <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+                Generate with AI
+              </button>
+            }
+          }
+        </div>
+
+        @if (genOpen) {
+          <div class="packet-builder__generate-form">
+            <mat-form-field appearance="outline" class="packet-builder__field">
+              <mat-label>Topic</mat-label>
+              <input matInput [(ngModel)]="genDraft.topic" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="packet-builder__field">
+              <mat-label>Additional context (optional)</mat-label>
+              <textarea matInput rows="2" [(ngModel)]="genDraft.additionalContext"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="packet-builder__field packet-builder__subcategory-field">
+              <mat-label>Subcategory (optional)</mat-label>
+              <mat-select [(ngModel)]="genDraft.subcategoryId">
+                <mat-option [value]="null">None</mat-option>
+                @for (group of subcategoryGroups; track group.category) {
+                  <mat-optgroup [label]="group.category">
+                    @for (sub of group.subs; track sub.id) {
+                      <mat-option [value]="sub.id">{{ sub.name }}</mat-option>
+                    }
+                  </mat-optgroup>
+                }
+              </mat-select>
+            </mat-form-field>
+            <div class="packet-builder__row-actions">
+              <span class="packet-builder__spacer"></span>
+              <button mat-button (click)="cancelGenerate()">Cancel</button>
+              <button mat-raised-button class="packet-builder__save-btn" [disabled]="genSubmitting" (click)="generateTossup()">
+                <mat-icon aria-hidden="true">auto_awesome</mat-icon>
+                Generate
+              </button>
+            </div>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Bonuses -->
+    <mat-card class="packet-builder__bonuses">
+      <mat-card-header>
+        <mat-card-title>Bonuses</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-accordion>
+          @for (be of sortedBonuses; track be.bonus.id; let first = $first; let last = $last) {
+            <mat-expansion-panel [expanded]="isJustAdded(be)">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <span class="packet-builder__index">#{{ be.order + 1 }}</span>
+                  <span class="packet-builder__preview">{{ truncate(be.bonus.preamble || '(no preamble)') }}</span>
+                  @if (be.bonus.subcategory?.name) {
+                    <span class="packet-builder__chip">{{ be.bonus.subcategory.name }}</span>
+                  }
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+
+              <div class="packet-builder__panel-body">
+                <mat-form-field appearance="outline" class="packet-builder__field">
+                  <mat-label>Preamble</mat-label>
+                  <textarea matInput rows="2" [(ngModel)]="bonusDrafts[be.bonus.id].preamble"></textarea>
+                </mat-form-field>
+
+                <div class="packet-builder__subcategory-row">
+                  <mat-form-field appearance="outline" class="packet-builder__field packet-builder__subcategory-field">
+                    <mat-label>Subcategory</mat-label>
+                    <mat-select [(ngModel)]="bonusDrafts[be.bonus.id].subcategoryId">
+                      <mat-option [value]="null">None</mat-option>
+                      @for (group of subcategoryGroups; track group.category) {
+                        <mat-optgroup [label]="group.category">
+                          @for (sub of group.subs; track sub.id) {
+                            <mat-option [value]="sub.id">{{ sub.name }}</mat-option>
+                          }
+                        </mat-optgroup>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  @if (auth.hasPermission('taxonomy:manage')) {
+                    <button mat-icon-button aria-label="Create new subcategory"
+                            (click)="openTaxonomyForm(id => bonusDrafts[be.bonus.id].subcategoryId = id)">
+                      <mat-icon aria-hidden="true">add_circle_outline</mat-icon>
+                    </button>
+                  }
+                </div>
+
+                <div class="packet-builder__row-actions">
+                  <button mat-icon-button aria-label="Move up" [disabled]="first" (click)="moveBonus(be, -1)">
+                    <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+                  </button>
+                  <button mat-icon-button aria-label="Move down" [disabled]="last" (click)="moveBonus(be, 1)">
+                    <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                  </button>
+                  <span class="packet-builder__spacer"></span>
+                  @if (auth.hasPermission('packet:delete')) {
+                    <button mat-icon-button color="warn" aria-label="Remove bonus" (click)="removeBonus(be)">
+                      <mat-icon aria-hidden="true">delete</mat-icon>
+                    </button>
+                  }
+                  <button mat-raised-button class="packet-builder__save-btn" (click)="saveBonus(be)">
+                    <mat-icon aria-hidden="true">save</mat-icon>
+                    Save
+                  </button>
+                </div>
+
+                <!-- Bonus parts -->
+                <div class="packet-builder__parts">
+                  <h4 class="packet-builder__parts-title">Parts</h4>
+                  <div class="packet-builder__parts-list">
+                    @for (pe of sortedParts(be); track pe.bonusPart.id; let partFirst = $first; let partLast = $last) {
+                      <div class="packet-builder__part">
+                        <mat-form-field appearance="outline" class="packet-builder__field">
+                          <mat-label>Question</mat-label>
+                          <textarea matInput rows="2" [(ngModel)]="bonusPartDrafts[pe.bonusPart.id].question"></textarea>
+                        </mat-form-field>
+                        <mat-form-field appearance="outline" class="packet-builder__field">
+                          <mat-label>Answer</mat-label>
+                          <textarea matInput rows="2" [(ngModel)]="bonusPartDrafts[pe.bonusPart.id].answer"></textarea>
+                        </mat-form-field>
+                        <div class="packet-builder__row-actions">
+                          <button mat-icon-button aria-label="Move part up" [disabled]="partFirst" (click)="movePart(be, pe, -1)">
+                            <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+                          </button>
+                          <button mat-icon-button aria-label="Move part down" [disabled]="partLast" (click)="movePart(be, pe, 1)">
+                            <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                          </button>
+                          <span class="packet-builder__spacer"></span>
+                          @if (auth.hasPermission('packet:delete')) {
+                            <button mat-icon-button color="warn" aria-label="Remove part" (click)="removePart(be, pe)">
+                              <mat-icon aria-hidden="true">delete</mat-icon>
+                            </button>
+                          }
+                          <button mat-raised-button class="packet-builder__save-btn" (click)="savePart(be, pe)">
+                            <mat-icon aria-hidden="true">save</mat-icon>
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    }
+
+                    @if (newPartOpen[be.bonus.id]) {
+                      <div class="packet-builder__part">
+                        <mat-form-field appearance="outline" class="packet-builder__field">
+                          <mat-label>Question</mat-label>
+                          <textarea matInput rows="2" [(ngModel)]="newPartDrafts[be.bonus.id].question"></textarea>
+                        </mat-form-field>
+                        <mat-form-field appearance="outline" class="packet-builder__field">
+                          <mat-label>Answer</mat-label>
+                          <textarea matInput rows="2" [(ngModel)]="newPartDrafts[be.bonus.id].answer"></textarea>
+                        </mat-form-field>
+                        <div class="packet-builder__row-actions">
+                          <span class="packet-builder__spacer"></span>
+                          <button mat-button (click)="cancelNewPart(be)">Cancel</button>
+                          <button mat-raised-button class="packet-builder__save-btn" (click)="addPart(be)">
+                            <mat-icon aria-hidden="true">add</mat-icon>
+                            Add part
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  @if (!newPartOpen[be.bonus.id]) {
+                    <button mat-stroked-button (click)="openNewPart(be)">
+                      <mat-icon aria-hidden="true">add</mat-icon>
+                      Add Part
+                    </button>
+                  }
+                </div>
+              </div>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+
+        <div class="packet-builder__section-actions">
+          <button mat-stroked-button [disabled]="addingBonus" (click)="addBonus()">
+            <mat-icon aria-hidden="true">add</mat-icon>
+            Add Bonus
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Shared inline "create new subcategory" form -->
+    @if (taxonomyFormOpen) {
+      <div class="packet-builder__taxonomy-overlay">
+        <mat-card class="packet-builder__taxonomy-card">
+          <mat-card-header>
+            <mat-card-title>New subcategory</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="packet-builder__field">
+              <mat-label>Existing category</mat-label>
+              <mat-select [(ngModel)]="taxonomyNewCategoryId">
+                <mat-option [value]="null">None</mat-option>
+                @for (c of categories; track c.id) {
+                  <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <p class="packet-builder__taxonomy-hint">Or create a new category below.</p>
+            <mat-form-field appearance="outline" class="packet-builder__field">
+              <mat-label>New category name</mat-label>
+              <input matInput [(ngModel)]="taxonomyNewCategoryName" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="packet-builder__field">
+              <mat-label>Subcategory name</mat-label>
+              <input matInput [(ngModel)]="taxonomyNewSubcategoryName" />
+            </mat-form-field>
+            <div class="packet-builder__row-actions">
+              <span class="packet-builder__spacer"></span>
+              <button mat-button (click)="cancelTaxonomyForm()">Cancel</button>
+              <button mat-raised-button class="packet-builder__save-btn" [disabled]="taxonomySubmitting" (click)="submitTaxonomyForm()">
+                <mat-icon aria-hidden="true">check</mat-icon>
+                Create
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+  }
+</div>

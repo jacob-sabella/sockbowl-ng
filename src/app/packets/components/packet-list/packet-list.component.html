@@ -1,0 +1,86 @@
+<div class="packet-list">
+  <div class="packet-list__header">
+    <h1 class="packet-list__title">
+      <mat-icon aria-hidden="true">edit_note</mat-icon>
+      Packet Builder
+    </h1>
+    <button mat-raised-button class="packet-list__new-btn" (click)="toggleCreateForm()">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      New Packet
+    </button>
+  </div>
+
+  @if (showCreateForm) {
+    <mat-card class="packet-list__card">
+      <mat-card-content>
+        <form class="packet-list__form" (ngSubmit)="createPacket()">
+          <mat-form-field appearance="outline" class="packet-list__field">
+            <mat-label>Packet name</mat-label>
+            <input matInput name="newPacketName" [(ngModel)]="newPacketName" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="packet-list__field">
+            <mat-label>Difficulty</mat-label>
+            <mat-select name="newPacketDifficultyId" [(ngModel)]="newPacketDifficultyId">
+              @for (d of difficulties; track d.id) {
+                <mat-option [value]="d.id">{{ d.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-raised-button class="packet-list__create-btn" type="submit" [disabled]="creating">
+            <mat-icon aria-hidden="true">check</mat-icon>
+            Create and edit
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <mat-card class="packet-list__card">
+    <mat-card-content>
+      <div class="packet-list__search">
+        <mat-form-field appearance="outline" class="packet-list__search-field">
+          <mat-label>Search packets by name</mat-label>
+          <input matInput [(ngModel)]="searchQuery" (keyup.enter)="search()" />
+          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        </mat-form-field>
+        <button mat-stroked-button (click)="search()" [disabled]="searching">
+          Search
+        </button>
+      </div>
+
+      @if (loading) {
+        <div class="packet-list__status">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+      } @else if (packets.length === 0) {
+        <p class="packet-list__empty">No packets found.</p>
+      } @else {
+        <div class="packet-list__items">
+          @for (packet of packets; track packet.id) {
+            <div class="packet-list__item">
+              <div class="packet-list__item-info">
+                <span class="packet-list__item-name">{{ packet.name }}</span>
+                @if (packet.difficulty?.name) {
+                  <span class="packet-list__item-chip">{{ packet.difficulty.name }}</span>
+                }
+              </div>
+              <div class="packet-list__item-actions">
+                <button mat-button [routerLink]="['/packets', packet.id, 'edit']" aria-label="Edit packet">
+                  <mat-icon aria-hidden="true">edit</mat-icon>
+                  Edit
+                </button>
+                @if (auth.hasPermission('packet:delete')) {
+                  <button mat-icon-button color="warn" aria-label="Delete packet" (click)="deletePacket(packet)">
+                    <mat-icon aria-hidden="true">delete</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

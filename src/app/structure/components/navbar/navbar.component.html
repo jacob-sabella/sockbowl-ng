@@ -58,6 +58,12 @@
                   <span class="navbar__btn-label">Admin</span>
                 </button>
               }
+              @if ((userProfile$ | async) && authService.hasPermission('packet:update')) {
+                <button mat-button [routerLink]="['/packets']" aria-label="Packet Builder">
+                  <mat-icon aria-hidden="true">edit_note</mat-icon>
+                  <span class="navbar__btn-label">Packets</span>
+                </button>
+              }
               <button mat-button (click)="logout()" aria-label="Logout">
                 <mat-icon aria-hidden="true">logout</mat-icon>
                 <span class="navbar__btn-label">Logout</span>

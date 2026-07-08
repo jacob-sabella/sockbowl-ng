@@ -75,6 +75,10 @@ export class SockbowlQuestionsService {
         searchPacketsByName(name: $name) {
           id
           name
+          difficulty {
+            id
+            name
+          }
           bonuses {
             id
           }
@@ -92,22 +96,35 @@ export class SockbowlQuestionsService {
   }
 
   /**
-   * Get a packet by ID with full details including bonuses.
+   * Get every packet with full details (tossups, bonuses, difficulty). Used
+   * by the packet builder's list view as the fallback when no search text
+   * has been entered.
    *
-   * @param id Packet ID
-   * @return Observable of Packet
+   * @return Observable of Packet array
    */
-  getPacketById(id: string): Observable<Packet | null> {
+  getAllPackets(): Observable<Packet[]> {
     const query = `
-      query ($id: ID!) {
-        getPacketById(id: $id) {
+      query {
+        getAllPackets {
           id
           name
+          difficulty {
+            id
+            name
+          }
           bonuses {
             order
             bonus {
               id
               preamble
+              subcategory {
+                id
+                name
+                category {
+                  id
+                  name
+                }
+              }
               bonusParts {
                 order
                 bonusPart {
@@ -124,6 +141,80 @@ export class SockbowlQuestionsService {
               id
               question
               answer
+              subcategory {
+                id
+                name
+                category {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    return this.http.post<{ data: { getAllPackets: Packet[] } }>(this.graphqlUrl, {
+      query
+    }).pipe(
+      map(response => response.data.getAllPackets.map(p => sortPacketRelationships(p) as Packet))
+    );
+  }
+
+  /**
+   * Get a packet by ID with full details including bonuses.
+   *
+   * @param id Packet ID
+   * @return Observable of Packet
+   */
+  getPacketById(id: string): Observable<Packet | null> {
+    const query = `
+      query ($id: ID!) {
+        getPacketById(id: $id) {
+          id
+          name
+          difficulty {
+            id
+            name
+          }
+          bonuses {
+            order
+            bonus {
+              id
+              preamble
+              subcategory {
+                id
+                name
+                category {
+                  id
+                  name
+                }
+              }
+              bonusParts {
+                order
+                bonusPart {
+                  id
+                  question
+                  answer
+                }
+              }
+            }
+          }
+          tossups {
+            order
+            tossup {
+              id
+              question
+              answer
+              subcategory {
+                id
+                name
+                category {
+                  id
+                  name
+                }
+              }
             }
           }
         }
