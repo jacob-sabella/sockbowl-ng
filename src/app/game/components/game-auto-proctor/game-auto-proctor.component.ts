@@ -39,9 +39,15 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   words: string[] = [];
   revealedCount = 0;
 
+  /** Seconds shown on the "next tossup in…" pause after a round completes. */
+  private static readonly ADVANCE_DELAY = 6;
+  advanceSecondsLeft: number | null = null;
+
   private sub?: Subscription;
   private readingTimer: any = null;
+  private advanceTimer: any = null;
   private currentRoundKey = '';
+  private lastCompletedKey = '';
   private lastAnswerKey = '';
   private lastSpokenBonusKey = '';
 
@@ -75,6 +81,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearTimer();
+    this.clearAdvanceTimer();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -195,6 +202,25 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     return !!this.lastBuzz?.correct;
   }
 
+  /** The player who answered the tossup correctly (for the completed-round verdict). */
+  get resultPlayer(): string {
+    return this.lastBuzz ? (this.gameStateService.getPlayerNameById(this.lastBuzz.playerId) || 'A player') : '';
+  }
+
+  /** The team that answered correctly. */
+  get resultTeam(): string {
+    return this.lastBuzz ? (this.gameStateService.getTeamNameById(this.lastBuzz.teamId) || '') : '';
+  }
+
+  /** Points the answering team earned this round: 10 for the tossup + any bonus parts. */
+  get roundPoints(): number {
+    if (!this.wasCorrect) {
+      return 0;
+    }
+    const bonus = (this.round?.bonusPartAnswers || []).filter((a: any) => a.correct).length * 10;
+    return 10 + bonus;
+  }
+
   /** Per-team running scores across the match (10 points per correct tossup). */
   get teamScores(): { name: string; score: number }[] {
     const prev = this.gameSession?.currentMatch?.previousRounds || [];
@@ -246,6 +272,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   next(): void {
+    this.clearAdvanceTimer();
     this.gameStateService.sendAdvanceRound();
   }
 
@@ -308,6 +335,11 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     }
     this.lastAnswerKey = answerKey;
 
+    // Any active round cancels a pending "next tossup" pause.
+    if (!this.isCompleted) {
+      this.clearAdvanceTimer();
+    }
+
     if (this.isBuzzable) {
       if (key !== this.currentRoundKey) {
         this.currentRoundKey = key;
@@ -322,7 +354,40 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
       this.clearTimer();               // someone is answering, or the round is over
       this.speech.cancel();
       this.lastSpokenBonusKey = '';
+      if (this.isCompleted) {
+        // Pause on the result (answer + who got it) before moving on.
+        const ckey = String(r.roundNumber);
+        if (ckey !== this.lastCompletedKey) {
+          this.lastCompletedKey = ckey;
+          this.startAdvanceCountdown();
+        }
+      }
     }
+  }
+
+  /** Show a short countdown on the completed round, then the host advances automatically. */
+  private startAdvanceCountdown(): void {
+    this.clearAdvanceTimer();
+    this.advanceSecondsLeft = GameAutoProctorComponent.ADVANCE_DELAY;
+    this.advanceTimer = setInterval(() => {
+      if (this.advanceSecondsLeft !== null) {
+        this.advanceSecondsLeft--;
+      }
+      if (this.advanceSecondsLeft !== null && this.advanceSecondsLeft <= 0) {
+        this.clearAdvanceTimer();
+        if (this.isOwner) {
+          this.next();                 // only the host drives the actual advance
+        }
+      }
+    }, 1000);
+  }
+
+  private clearAdvanceTimer(): void {
+    if (this.advanceTimer) {
+      clearInterval(this.advanceTimer);
+      this.advanceTimer = null;
+    }
+    this.advanceSecondsLeft = null;
   }
 
   private startReading(): void {

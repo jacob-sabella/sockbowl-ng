@@ -7,8 +7,7 @@
         <!-- Current state banner -->
         <div class="proctor-status" role="status" aria-live="polite">
           @if (isCompleted) {
-            <span class="status-dot status-dot--done"></span>
-            {{ wasCorrect ? (buzzerTeam + ' answered correctly') : 'No correct answer' }}
+            <span class="status-dot status-dot--done"></span> Round complete
           } @else if (isBonus) {
             <span class="status-dot status-dot--read"></span>
             Bonus for {{ bonusTeamName }}, part {{ bonusPartIndex + 1 }} of 3.@if (bonusEligible) { <strong>&nbsp;Your team is answering.</strong> }
@@ -50,9 +49,17 @@
           }
         </div>
 
-        <!-- Answer (on completion) -->
+        <!-- Result (on completion): who got it + the answer -->
         @if (isCompleted) {
           <div class="info-section answer-section" [class.answer-section--wrong]="!wasCorrect" aria-live="polite">
+            <div class="verdict-line" [class.verdict-line--wrong]="!wasCorrect">
+              <mat-icon aria-hidden="true">{{ wasCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
+              @if (wasCorrect) {
+                <span><strong>{{ resultPlayer }}</strong>@if (resultTeam) { ({{ resultTeam }}) } got it right, +{{ roundPoints }}</span>
+              } @else {
+                <span>No one got it right</span>
+              }
+            </div>
             <div class="info-label">Answer</div>
             <div class="info-value font-serif" [innerHTML]="round.answer"></div>
           </div>
@@ -119,14 +126,22 @@
           }
 
           @if (isCompleted) {
-            @if (isOwner) {
-              <button mat-raised-button color="primary" (click)="next()"
-                      aria-label="Advance to the next tossup (or press Enter)">
-                Advance Round <span class="key-hint" aria-hidden="true">Enter</span>
-              </button>
-            } @else {
-              <p class="waiting-hint">Waiting for the host to advance.</p>
-            }
+            <div class="advance-bar">
+              @if (advanceSecondsLeft !== null) {
+                <span class="advance-countdown" role="status" aria-live="polite">
+                  <mat-icon aria-hidden="true">timer</mat-icon>
+                  Next tossup in {{ advanceSecondsLeft }}s
+                </span>
+              }
+              @if (isOwner) {
+                <button mat-raised-button color="primary" (click)="next()"
+                        aria-label="Go to the next tossup now (or press Enter)">
+                  Next now <span class="key-hint" aria-hidden="true">Enter</span>
+                </button>
+              } @else {
+                <span class="waiting-hint">Host will advance.</span>
+              }
+            </div>
           }
         </div>
 
