@@ -316,3 +316,11 @@
   &:hover { color: var(--text-secondary) !important; }
   &:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 }
+
+/* auto-proctor "reader" role toggle (this device reads aloud for the room) */
+.reader-toggle {
+  min-height: 40px;
+  white-space: nowrap;
+  mat-icon { margin-right: 0.3rem; }
+  &.reader-on { border-color: var(--accent-primary) !important; }
+}

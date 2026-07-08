@@ -78,12 +78,14 @@
               </button>
               <div class="reader-tools">
                 @if (speech.available) {
-                  <button mat-icon-button type="button" (click)="toggleTts()"
-                          [color]="speech.enabled ? 'primary' : undefined"
-                          [attr.aria-pressed]="speech.enabled"
-                          [attr.aria-label]="speech.enabled ? 'Mute read-aloud' : 'Read question aloud'"
-                          [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
-                    <mat-icon aria-hidden="true">{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
+                  <button mat-stroked-button type="button" class="reader-toggle" (click)="toggleReader()"
+                          [color]="readerMode ? 'primary' : undefined"
+                          [class.reader-on]="readerMode"
+                          [attr.aria-pressed]="readerMode"
+                          [attr.aria-label]="readerMode ? 'Stop reading aloud for the room' : 'Read aloud for the room from this device'"
+                          matTooltip="Make this screen the reader — it reads tossups aloud for the room or stream. Turn this on for one shared device only.">
+                    <mat-icon aria-hidden="true">{{ readerMode ? 'volume_up' : 'record_voice_over' }}</mat-icon>
+                    {{ readerMode ? 'Reading aloud' : 'Read aloud' }}
                   </button>
                 }
                 <div class="speed-control" role="group" aria-label="Reading speed">

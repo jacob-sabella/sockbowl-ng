@@ -1,49 +1,27 @@
 import {Injectable} from '@angular/core';
 
 /**
- * Text-to-speech proctor. Wraps the browser Web Speech API so the proctorless
- * reader surfaces (solo, auto-judged) can read a tossup or bonus aloud while the
- * text reveals on screen. No backend, no key — the voice runs in the browser.
+ * Text-to-speech reader. Wraps the browser Web Speech API so a designated device
+ * can read a tossup or bonus aloud.
  *
- * The on/off preference is persisted; speaking rate is derived from each
- * surface's existing 1..10 reading-speed slider so audio tracks the visual read.
+ * The on-screen text always reveals at a fixed rate; speech never drives the reveal
+ * (per-client speech can't stay in sync across devices). Instead a single device
+ * opts in to be the "reader" — a shared TV in the room or a Discord stream — and
+ * that device speaks aloud for everyone. Callers decide when to speak; this service
+ * just does it.
  */
 @Injectable({providedIn: 'root'})
 export class SpeechService {
-  private static readonly ENABLED_KEY = 'tts_enabled';
-
   /** Whether the browser exposes speech synthesis at all. */
   readonly available = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
-  private _enabled = false;
   private voice?: SpeechSynthesisVoice;
 
   constructor() {
-    const saved = this.available ? localStorage.getItem(SpeechService.ENABLED_KEY) : null;
-    // Default on when supported (this IS the proctor for these modes), unless muted before.
-    this._enabled = this.available && (saved === null ? true : saved === 'true');
     if (this.available) {
       this.loadVoices();
       window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
     }
-  }
-
-  get enabled(): boolean {
-    return this._enabled;
-  }
-
-  setEnabled(value: boolean): void {
-    this._enabled = value && this.available;
-    if (this.available) {
-      localStorage.setItem(SpeechService.ENABLED_KEY, String(this._enabled));
-    }
-    if (!this._enabled) {
-      this.cancel();
-    }
-  }
-
-  toggle(): void {
-    this.setEnabled(!this._enabled);
   }
 
   private loadVoices(): void {
@@ -67,17 +45,12 @@ export class SpeechService {
 
   /**
    * Speak plain text at a rate derived from the reading-speed slider. Cancels any
-   * in-flight utterance first.
-   *
-   * `opts.onBoundary(charIndex)` fires at each spoken word boundary (charIndex is
-   * the offset of that word in `text`), letting a caller reveal the on-screen text
-   * in lockstep with the voice so the two line up exactly. `opts.onEnd` fires when
-   * speech finishes (or is skipped because TTS is off/unavailable).
+   * in-flight utterance first. `onEnd` fires when speech finishes (or is skipped
+   * because TTS is unavailable / the text is empty).
    */
-  speak(text: string, speed: number,
-        opts?: { onEnd?: () => void; onBoundary?: (charIndex: number) => void }): void {
-    if (!this.available || !this._enabled || !text || !text.trim()) {
-      opts?.onEnd?.();
+  speak(text: string, speed: number, onEnd?: () => void): void {
+    if (!this.available || !text || !text.trim()) {
+      onEnd?.();
       return;
     }
     this.cancel();
@@ -87,15 +60,7 @@ export class SpeechService {
     if (this.voice) {
       utterance.voice = this.voice;
     }
-    if (opts?.onBoundary) {
-      utterance.onboundary = (e: SpeechSynthesisEvent) => {
-        // Some engines omit `name`; treat those as word boundaries too.
-        if (!e.name || e.name === 'word') {
-          opts.onBoundary!(e.charIndex);
-        }
-      };
-    }
-    utterance.onend = () => opts?.onEnd?.();
+    utterance.onend = () => onEnd?.();
     window.speechSynthesis.speak(utterance);
   }
 

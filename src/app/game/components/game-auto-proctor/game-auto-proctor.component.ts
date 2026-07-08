@@ -21,6 +21,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   protected readonly RoundState = RoundState;
   private static readonly SPEED_KEY = 'sockbowl_reading_speed';
+  private static readonly READER_KEY = 'ap_reader_mode';
 
   @ViewChild('answerInput') answerInput?: ElementRef<HTMLInputElement>;
 
@@ -28,34 +29,33 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   answerText = '';
   readingSpeed = 5;
 
+  /**
+   * "Reader" role: when this device opts in, it reads the tossup aloud for the whole
+   * room (a shared TV / Discord stream). Off by default so individual phones stay
+   * silent — only the designated screen speaks. The text always reveals at a fixed rate.
+   */
+  readerMode = false;
+
   words: string[] = [];
   revealedCount = 0;
 
   private sub?: Subscription;
   private readingTimer: any = null;
-  /** char offset of each word within words.join(' '), for boundary-synced reveal. */
-  private wordStarts: number[] = [];
-  private boundaryFired = false;
-  private watchdog: any = null;
   private currentRoundKey = '';
   private lastAnswerKey = '';
   private lastSpokenBonusKey = '';
 
   constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
-  /** Toggle the spoken read; keep the on-screen reveal in step with whichever driver is active. */
-  toggleTts(): void {
-    this.speech.toggle();
-    if (this.isBuzzable && !this.readingComplete) {
-      // Hand the reveal off between the voice (boundary-driven) and the timer.
-      if (this.speech.enabled) {
-        this.clearTimer();
-        this.startTtsRead(this.revealedCount);
-      } else {
-        this.speech.cancel();
-        this.scheduleTick();
-      }
-    } else if (this.speech.enabled && this.isBonus) {
+  /** Make this device the room's reader (or stop). The text keeps revealing at a fixed rate. */
+  toggleReader(): void {
+    this.readerMode = !this.readerMode;
+    localStorage.setItem(GameAutoProctorComponent.READER_KEY, String(this.readerMode));
+    if (!this.readerMode) {
+      this.speech.cancel();
+    } else if (this.isBuzzable && !this.readingComplete) {
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+    } else if (this.isBonus) {
       this.lastSpokenBonusKey = '';
       this.maybeSpeakBonus();
     }
@@ -66,6 +66,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     if (saved >= 1 && saved <= 10) {
       this.readingSpeed = saved;
     }
+    this.readerMode = localStorage.getItem(GameAutoProctorComponent.READER_KEY) === 'true';
     this.sub = this.gameStateService.gameSession$.subscribe(gs => {
       this.gameSession = gs;
       this.syncToRound();
@@ -74,7 +75,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearTimer();
-    this.clearWatchdog();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -260,18 +260,19 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   onSpeedChange(): void {
     localStorage.setItem(GameAutoProctorComponent.SPEED_KEY, String(this.readingSpeed));
-    if (this.isBuzzable && !this.readingComplete) {
-      // Re-pace the active driver from the current word at the new speed.
-      if (this.speech.enabled) {
-        this.startTtsRead(this.revealedCount);
-      } else if (this.readingTimer) {
-        this.scheduleTick();
+    if (this.isBuzzable && !this.readingComplete && this.readingTimer) {
+      this.scheduleTick();   // re-pace the fixed-rate reveal
+      if (this.readerMode) {
+        this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
       }
     }
   }
 
-  /** Read the current bonus part (with the preamble on part 1) aloud, once per part. */
+  /** The reader device reads the current bonus part (with the preamble on part 1), once per part. */
   private maybeSpeakBonus(): void {
+    if (!this.readerMode) {
+      return;
+    }
     const bkey = `${this.round?.roundNumber}:bonus:${this.bonusPartIndex}`;
     if (bkey === this.lastSpokenBonusKey) {
       return;
@@ -326,83 +327,33 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   private startReading(): void {
     this.clearTimer();
-    this.clearWatchdog();
     this.speech.cancel();
     this.answerText = '';
     this.revealedCount = 0;
     this.lastSpokenBonusKey = '';
     this.words = this.tokenize(this.round?.question || '');
-    this.buildWordStarts();
     if (this.words.length === 0) {
       return;
     }
-    if (this.speech.enabled && this.speech.available) {
-      this.startTtsRead(0);            // voice drives the reveal
-    } else {
-      this.scheduleTick();             // silent: timer drives the reveal
+    this.scheduleTick();                          // text reveals at a fixed rate
+    if (this.readerMode) {
+      this.speech.speak(this.words.join(' '), this.readingSpeed);   // the reader reads aloud
     }
   }
 
-  /** Continue a partially-read tossup from the current word. */
+  /** Continue a partially-read tossup from the current word (after a wrong buzz reopened play). */
   private resumeReading(): void {
     if (this.revealedCount >= this.words.length) {
       return;
     }
-    if (this.speech.enabled && this.speech.available) {
-      this.startTtsRead(this.revealedCount);
-    } else {
-      this.scheduleTick();
+    this.scheduleTick();
+    if (this.readerMode) {
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
     }
   }
 
   private isReadingActive(): boolean {
-    return !!this.readingTimer || this.speech.isSpeaking();
-  }
-
-  private buildWordStarts(): void {
-    let offset = 0;
-    this.wordStarts = this.words.map(w => {
-      const start = offset;
-      offset += w.length + 1;          // + the joining space
-      return start;
-    });
-  }
-
-  /**
-   * Speak words[from..] and reveal each word the instant the voice reaches it, so
-   * the on-screen text and the audio stay in lockstep. Falls back to the timer if
-   * the chosen voice emits no word-boundary events.
-   */
-  private startTtsRead(from: number): void {
-    this.clearTimer();
-    this.clearWatchdog();
-    const slice = this.words.slice(from);
-    let offset = 0;
-    const starts = slice.map(w => { const s = offset; offset += w.length + 1; return s; });
-    this.boundaryFired = false;
-    this.speech.speak(slice.join(' '), this.readingSpeed, {
-      onBoundary: (charIndex) => {
-        this.boundaryFired = true;
-        this.clearWatchdog();
-        let local = 0;
-        for (let i = 0; i < starts.length; i++) {
-          if (starts[i] <= charIndex) { local = i; } else { break; }
-        }
-        const reveal = from + local + 1;
-        if (reveal > this.revealedCount) {
-          this.revealedCount = reveal;
-        }
-      },
-      onEnd: () => { if (this.isBuzzable) { this.revealedCount = this.words.length; } }
-    });
-    this.watchdog = setTimeout(() => { if (!this.boundaryFired) { this.scheduleTick(); } }, 1400);
-  }
-
-  private clearWatchdog(): void {
-    if (this.watchdog) {
-      clearTimeout(this.watchdog);
-      this.watchdog = null;
-    }
+    return !!this.readingTimer;
   }
 
   private scheduleTick(): void {

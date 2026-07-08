@@ -20,6 +20,10 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
 
   protected readonly RoundState = RoundState;
   private static readonly SPEED_KEY = 'sockbowl_reading_speed';
+  private static readonly READ_KEY = 'solo_read_aloud';
+
+  /** Whether this device reads the tossup aloud (solo is one device, so no conflict). */
+  readAloud = true;
 
   @ViewChild('answerInput') answerInput?: ElementRef<HTMLInputElement>;
 
@@ -42,25 +46,18 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private readingTimer: any = null;
   private buzzTimer: any = null;
-  /** char offset of each word within words.join(' '), for boundary-synced reveal. */
-  private wordStarts: number[] = [];
-  private boundaryFired = false;
-  private watchdog: any = null;
   private currentRoundKey = '';
 
   constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
-  /** Toggle the spoken read; hand the on-screen reveal to whichever driver is active. */
-  toggleTts(): void {
-    this.speech.toggle();
-    if (this.isReadingPhase && !this.readingComplete) {
-      if (this.speech.enabled) {
-        this.clearTimer();
-        this.startTtsRead(this.revealedCount);
-      } else {
-        this.speech.cancel();
-        this.scheduleTick();
-      }
+  /** Toggle reading the tossup aloud on this device; the text keeps revealing at a fixed rate. */
+  toggleReadAloud(): void {
+    this.readAloud = !this.readAloud;
+    localStorage.setItem(GameSinglePlayerComponent.READ_KEY, String(this.readAloud));
+    if (!this.readAloud) {
+      this.speech.cancel();
+    } else if (this.isReadingPhase && !this.readingComplete) {
+      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
     }
   }
 
@@ -68,6 +65,10 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     const saved = Number(localStorage.getItem(GameSinglePlayerComponent.SPEED_KEY));
     if (saved >= 1 && saved <= 10) {
       this.readingSpeed = saved;
+    }
+    const savedRead = localStorage.getItem(GameSinglePlayerComponent.READ_KEY);
+    if (savedRead !== null) {
+      this.readAloud = savedRead === 'true';
     }
     this.sub = this.gameStateService.gameSession$.subscribe(gameSession => {
       this.gameSession = gameSession;
@@ -78,7 +79,6 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearTimer();
     this.clearBuzzTimer();
-    this.clearWatchdog();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -193,7 +193,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   skip(): void {
     if (this.isReadingPhase) {
       this.clearTimer();
-      this.clearWatchdog();
+      this.clearBuzzTimer();
       this.speech.cancel();
       this.forgo();
     }
@@ -256,11 +256,9 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   onSpeedChange(): void {
     localStorage.setItem(GameSinglePlayerComponent.SPEED_KEY, String(this.readingSpeed));
     if (this.isReadingPhase && !this.readingComplete) {
-      // Re-pace the active driver from the current word at the new speed.
-      if (this.speech.enabled) {
-        this.startTtsRead(this.revealedCount);
-      } else {
-        this.scheduleTick();
+      this.scheduleTick();   // re-pace the fixed-rate reveal
+      if (this.readAloud) {
+        this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
       }
     }
   }
@@ -298,7 +296,6 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   private startReading(): void {
     this.clearTimer();
     this.clearBuzzTimer();
-    this.clearWatchdog();
     this.speech.cancel();
     this.answerText = '';
     this.hasBuzzed = false;
@@ -306,65 +303,12 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     this.buzzSecondsLeft = null;
     this.revealedCount = 0;
     this.words = this.tokenize(this.round?.question || '');
-    this.buildWordStarts();
     if (this.words.length === 0) {
       return;
     }
-    if (this.speech.enabled && this.speech.available) {
-      this.startTtsRead(0);            // voice drives the reveal
-    } else {
-      this.scheduleTick();             // silent: timer drives the reveal
-    }
-  }
-
-  private buildWordStarts(): void {
-    let offset = 0;
-    this.wordStarts = this.words.map(w => {
-      const start = offset;
-      offset += w.length + 1;
-      return start;
-    });
-  }
-
-  /**
-   * Speak words[from..] and reveal each word the instant the voice reaches it so the
-   * text and audio stay in lockstep; the buzz window opens when the voice finishes.
-   * Falls back to the timer if the voice emits no word-boundary events.
-   */
-  private startTtsRead(from: number): void {
-    this.clearTimer();
-    this.clearWatchdog();
-    const slice = this.words.slice(from);
-    let offset = 0;
-    const starts = slice.map(w => { const s = offset; offset += w.length + 1; return s; });
-    this.boundaryFired = false;
-    this.speech.speak(slice.join(' '), this.readingSpeed, {
-      onBoundary: (charIndex) => {
-        this.boundaryFired = true;
-        this.clearWatchdog();
-        let local = 0;
-        for (let i = 0; i < starts.length; i++) {
-          if (starts[i] <= charIndex) { local = i; } else { break; }
-        }
-        const reveal = from + local + 1;
-        if (reveal > this.revealedCount) {
-          this.revealedCount = reveal;
-        }
-      },
-      onEnd: () => {
-        if (!this.hasBuzzed && !this.isCompleted) {
-          this.revealedCount = this.words.length;
-          this.startBuzzWindow();
-        }
-      }
-    });
-    this.watchdog = setTimeout(() => { if (!this.boundaryFired) { this.scheduleTick(); } }, 1400);
-  }
-
-  private clearWatchdog(): void {
-    if (this.watchdog) {
-      clearTimeout(this.watchdog);
-      this.watchdog = null;
+    this.scheduleTick();                          // text reveals at a fixed rate
+    if (this.readAloud) {
+      this.speech.speak(this.words.join(' '), this.readingSpeed);   // read aloud on this device
     }
   }
 

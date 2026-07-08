@@ -73,12 +73,12 @@
               </button>
               <div class="reader-tools">
                 @if (speech.available) {
-                  <button mat-icon-button type="button" (click)="toggleTts()"
-                          [color]="speech.enabled ? 'primary' : undefined"
-                          [attr.aria-pressed]="speech.enabled"
-                          [attr.aria-label]="speech.enabled ? 'Turn off read-aloud' : 'Turn on read-aloud'"
-                          [matTooltip]="speech.enabled ? 'Read-aloud on' : 'Read-aloud off'">
-                    <mat-icon aria-hidden="true">{{ speech.enabled ? 'volume_up' : 'volume_off' }}</mat-icon>
+                  <button mat-icon-button type="button" (click)="toggleReadAloud()"
+                          [color]="readAloud ? 'primary' : undefined"
+                          [attr.aria-pressed]="readAloud"
+                          [attr.aria-label]="readAloud ? 'Turn off read-aloud' : 'Turn on read-aloud'"
+                          [matTooltip]="readAloud ? 'Read-aloud on' : 'Read-aloud off'">
+                    <mat-icon aria-hidden="true">{{ readAloud ? 'volume_up' : 'volume_off' }}</mat-icon>
                   </button>
                 }
                 <div class="speed-control" role="group" aria-label="Reading speed">
