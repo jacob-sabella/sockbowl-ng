@@ -147,6 +147,54 @@
   }
 }
 
+/* ===== MATERIAL EXPANSION PANEL / ACCORDION ===== */
+.mat-expansion-panel {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-subtle);
+
+  &:not([class*='mat-elevation-z']) {
+    box-shadow: none !important;
+  }
+
+  .mat-expansion-panel-header {
+    background: var(--surface) !important;
+    height: auto;
+
+    &:hover,
+    &.cdk-keyboard-focused,
+    &.cdk-program-focused {
+      background: var(--surface-hover) !important;
+    }
+
+    &[aria-disabled='true'] {
+      color: var(--text-muted) !important;
+    }
+  }
+
+  &.mat-expanded > .mat-expansion-panel-header {
+    background: var(--bg-elevated) !important;
+  }
+
+  .mat-expansion-panel-header-title {
+    color: var(--text-primary) !important;
+  }
+
+  .mat-expansion-panel-header-description {
+    color: var(--text-secondary) !important;
+  }
+
+  .mat-expansion-indicator::after {
+    color: var(--text-secondary) !important;
+    border-color: var(--text-secondary) !important;
+  }
+
+  .mat-expansion-panel-body {
+    background: var(--surface) !important;
+    color: var(--text-primary) !important;
+  }
+}
+
 /* ===== MATERIAL ICONS ===== */
 mat-icon {
   overflow: visible !important;
