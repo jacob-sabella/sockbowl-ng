@@ -241,7 +241,7 @@
 
           &.mat-focused .mat-mdc-text-field-wrapper {
             border-color: var(--accent-primary) !important;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 10%, transparent) !important;
           }
 
           .mat-mdc-select-value-text,

@@ -142,8 +142,8 @@
   border-radius: 50%;
   background: var(--text-muted, var(--text-secondary));
 
-  &.ok { background: var(--success, #2e9e5b); }
-  &.fail { background: var(--error, var(--danger, #d0453f)); }
+  &.ok { background: var(--success, #10b981); }
+  &.fail { background: var(--error, #ef4444); }
 }
 
 .clips-player {

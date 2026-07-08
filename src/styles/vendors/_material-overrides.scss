@@ -11,6 +11,13 @@
   border: 1px solid var(--border-subtle) !important;
 }
 
+/* ===== MATERIAL CARD SUBTITLE ===== */
+/* MDC's own internal color var wins over the blanket .mat-mdc-card { color }
+   rule above, so mat-card-subtitle needs its own override. */
+.mat-mdc-card-subtitle {
+  color: var(--text-secondary) !important;
+}
+
 /* ===== MATERIAL DIALOGS ===== */
 .mat-mdc-dialog-container {
   background: var(--bg-elevated) !important;
@@ -99,13 +106,18 @@
   }
 
   &.mdc-list-item--selected {
-    background: rgba(99, 102, 241, 0.15) !important;
+    background: color-mix(in srgb, var(--accent-primary) 15%, transparent) !important;
     color: var(--text-primary) !important;
   }
 
   .mdc-list-item__primary-text {
     color: var(--text-primary) !important;
   }
+}
+
+/* Optgroup label */
+.mat-mdc-optgroup-label {
+  color: var(--text-secondary) !important;
 }
 
 .mat-mdc-select {
@@ -155,12 +167,12 @@
 
 /* ===== MATERIAL CHIPS ===== */
 .mat-mdc-chip {
-  background-color: rgba(99, 102, 241, 0.1) !important;
+  background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border-medium) !important;
 
   &:hover {
-    background-color: rgba(99, 102, 241, 0.15) !important;
+    background-color: color-mix(in srgb, var(--accent-primary) 15%, transparent) !important;
   }
 
   .mat-mdc-chip-action-label {
@@ -172,6 +184,91 @@
   .mat-mdc-chip {
     --mat-chip-container-shape-radius: 8px;
   }
+}
+
+/* ===== MATERIAL MENU ===== */
+.mat-mdc-menu-panel {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-medium);
+}
+.mat-mdc-menu-item {
+  color: var(--text-primary) !important;
+
+  &:hover,
+  &.cdk-focused,
+  &.cdk-program-focused {
+    background: var(--surface-hover) !important;
+  }
+
+  &[disabled] {
+    color: var(--text-muted) !important;
+  }
+
+  .mat-icon {
+    color: var(--text-secondary) !important;
+  }
+}
+
+/* ===== MATERIAL AUTOCOMPLETE ===== */
+.mat-mdc-autocomplete-panel {
+  background: var(--bg-elevated) !important;
+}
+
+/* ===== MATERIAL TABS ===== */
+.mat-mdc-tab-header {
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.mdc-tab:not(.mdc-tab--active) .mdc-tab__text-label {
+  color: var(--text-secondary) !important;
+}
+.mdc-tab--active .mdc-tab__text-label {
+  color: var(--text-primary) !important;
+}
+.mdc-tab-indicator__content--underline {
+  border-color: var(--accent-primary) !important;
+}
+
+/* ===== MATERIAL DIVIDER ===== */
+/* MDC default rgba(0,0,0,.12) is invisible on dark surfaces. */
+.mat-divider {
+  border-top-color: var(--border-subtle) !important;
+}
+
+/* ===== MATERIAL CHECKBOX ===== */
+.mat-mdc-checkbox .mdc-checkbox__background {
+  border-color: var(--border-strong) !important;
+}
+.mat-mdc-checkbox .mdc-checkbox__native-control:checked ~ .mdc-checkbox__background {
+  background-color: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+}
+.mat-mdc-checkbox label {
+  color: var(--text-primary) !important;
+}
+
+/* ===== MATERIAL SLIDE TOGGLE ===== */
+.mat-mdc-slide-toggle {
+  .mdc-switch__track {
+    &::before {
+      background: var(--surface-active) !important;
+    }
+    &::after {
+      background: color-mix(in srgb, var(--accent-primary) 60%, transparent) !important;
+    }
+  }
+  .mdc-switch__handle::after {
+    background: var(--border-medium) !important;
+  }
+  &.mat-mdc-slide-toggle-checked .mdc-switch__handle::after {
+    background: var(--accent-primary) !important;
+  }
+}
+
+/* ===== MATERIAL TOOLTIP ===== */
+.mdc-tooltip__surface {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
 }
 
 /* ===== MATERIAL EXPANSION PANEL / ACCORDION ===== */
@@ -238,8 +335,8 @@ mat-icon {
 .error-snackbar {
   .mdc-snackbar__surface {
     background-color: var(--error) !important;
-    border: 1px solid rgba(220, 38, 38, 0.5) !important;
-    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4) !important;
+    border: 1px solid color-mix(in srgb, var(--error) 50%, transparent) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
   }
 
   .mdc-snackbar__label {
