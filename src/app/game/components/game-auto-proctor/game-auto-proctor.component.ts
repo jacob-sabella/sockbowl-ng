@@ -43,9 +43,16 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   private static readonly ADVANCE_DELAY = 6;
   advanceSecondsLeft: number | null = null;
 
+  /** Fallback grace window (seconds) to buzz once the read finishes, when no tossup timer is configured. */
+  private static readonly BUZZ_WINDOW_FALLBACK = 8;
+  buzzSecondsLeft: number | null = null;
+  /** True once the buzz window has expired for this tossup (until the server's completed-round update arrives). */
+  buzzTimedOut = false;
+
   private sub?: Subscription;
   private readingTimer: any = null;
   private advanceTimer: any = null;
+  private buzzTimer: any = null;
   private currentRoundKey = '';
   private lastCompletedKey = '';
   private lastAnswerKey = '';
@@ -82,6 +89,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearTimer();
     this.clearAdvanceTimer();
+    this.clearBuzzTimer();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -356,12 +364,16 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
         this.startReading();           // new tossup
       } else if (!this.isReadingActive() && this.revealedCount < this.words.length) {
         this.resumeReading();          // resume after a wrong buzz reopened play
+      } else if (this.readingComplete && !this.buzzTimer) {
+        this.startBuzzWindow();        // wrong buzz reopened play after the reveal had already finished
       }
     } else if (this.isBonus) {
       this.clearTimer();
+      this.clearBuzzTimer();
       this.maybeSpeakBonus();          // read each bonus part to the eligible team
     } else {
       this.clearTimer();               // someone is answering, or the round is over
+      this.clearBuzzTimer();
       this.speech.cancel();
       this.lastSpokenBonusKey = '';
       if (this.isCompleted) {
@@ -402,6 +414,8 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   private startReading(): void {
     this.clearTimer();
+    this.clearBuzzTimer();
+    this.buzzTimedOut = false;
     this.speech.cancel();
     this.answerText = '';
     this.revealedCount = 0;
@@ -438,8 +452,50 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
         this.revealedCount++;
       } else {
         this.clearTimer();
+        this.startBuzzWindow();        // reveal finished with nobody in — start the buzz-timeout countdown
       }
     }, this.intervalMs());
+  }
+
+  /** Length of the post-reveal buzz window: the configured tossup timer, or a fallback. */
+  private get buzzWindowSeconds(): number {
+    return this.gameSession?.gameSettings?.timerSettings?.tossupTimerSeconds
+      || GameAutoProctorComponent.BUZZ_WINDOW_FALLBACK;
+  }
+
+  /** After the read finishes with nobody buzzed, count down; on expiry, the owner ends the tossup. */
+  private startBuzzWindow(): void {
+    if (!this.isBuzzable || this.buzzTimer) {
+      return;
+    }
+    this.buzzTimedOut = false;
+    this.buzzSecondsLeft = this.buzzWindowSeconds;
+    this.buzzTimer = setInterval(() => {
+      if (this.buzzSecondsLeft !== null) {
+        this.buzzSecondsLeft--;
+      }
+      if (this.buzzSecondsLeft !== null && this.buzzSecondsLeft <= 0) {
+        this.expireBuzzWindow();
+      }
+    }, 1000);
+  }
+
+  /** Buzz window elapsed with no buzz. The owner's client closes the tossup for everyone;
+   *  other clients just show "Time." and wait for the resulting round update. */
+  private expireBuzzWindow(): void {
+    this.clearBuzzTimer();
+    this.buzzTimedOut = true;
+    if (this.isOwner) {
+      this.gameStateService.sendTimeoutRound();
+    }
+  }
+
+  private clearBuzzTimer(): void {
+    if (this.buzzTimer) {
+      clearInterval(this.buzzTimer);
+      this.buzzTimer = null;
+    }
+    this.buzzSecondsLeft = null;
   }
 
   private intervalMs(): number {

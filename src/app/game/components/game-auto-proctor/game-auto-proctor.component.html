@@ -15,6 +15,10 @@
             <span class="status-dot status-dot--judge"></span> You buzzed. Type your answer.
           } @else if (someoneBuzzed) {
             <span class="status-dot status-dot--judge"></span> {{ buzzerName }}@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering.
+          } @else if (buzzTimedOut) {
+            <span class="status-dot status-dot--wait"></span> Time. Closing out the tossup.
+          } @else if (buzzSecondsLeft !== null) {
+            <span class="status-dot status-dot--wait"></span> Reading complete. Buzz within {{ buzzSecondsLeft }} seconds.
           } @else if (isBuzzable) {
             <span class="status-dot status-dot--wait"></span> Buzzing is open.
           }
@@ -76,6 +80,12 @@
         <!-- Controls -->
         <div class="button-container">
           @if (isBuzzable) {
+            @if (buzzSecondsLeft !== null) {
+              <div class="countdown" [class.countdown--urgent]="buzzSecondsLeft <= 3"
+                   role="status" aria-live="assertive">
+                <strong>{{ buzzSecondsLeft }}</strong> seconds left to buzz
+              </div>
+            }
             <div class="ap-controls">
               <button mat-raised-button class="buzz-btn" (click)="buzz()" [disabled]="!canBuzz"
                       [attr.aria-label]="canBuzz ? 'Buzz in now'
