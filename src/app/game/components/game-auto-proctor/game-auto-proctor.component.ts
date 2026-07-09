@@ -20,54 +20,50 @@ import {SpeechService} from '../../services/speech.service';
 export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   protected readonly RoundState = RoundState;
-  private static readonly SPEED_KEY = 'sockbowl_reading_speed';
   private static readonly READER_KEY = 'ap_reader_mode';
+
+  /** Fixed TTS reader rate. Reading pace itself is now server-driven (readingWordsPerSecond). */
+  private static readonly READER_SPEECH_RATE = 6;
 
   @ViewChild('answerInput') answerInput?: ElementRef<HTMLInputElement>;
 
   gameSession!: GameSession;
   answerText = '';
-  readingSpeed = 5;
 
   /**
    * "Reader" role: when this device opts in, it reads the tossup aloud for the whole
    * room (a shared TV / Discord stream). Off by default so individual phones stay
-   * silent — only the designated screen speaks. The text always reveals at a fixed rate.
+   * silent, only the designated screen speaks. The text reveals at a server-driven pace.
    */
   readerMode = false;
 
-  words: string[] = [];
-  revealedCount = 0;
-
-  /** Seconds shown on the "next tossup in…" pause after a round completes. */
+  /** Seconds shown on the "next tossup in" pause after a round completes. */
   private static readonly ADVANCE_DELAY = 6;
   advanceSecondsLeft: number | null = null;
 
-  /** Fallback grace window (seconds) to buzz once the read finishes, when no tossup timer is configured. */
-  private static readonly BUZZ_WINDOW_FALLBACK = 8;
+  /** Server-driven tossup buzz countdown, sourced from remainingTossupTimerSeconds. */
   buzzSecondsLeft: number | null = null;
-  /** True once the buzz window has expired for this tossup (until the server's completed-round update arrives). */
-  buzzTimedOut = false;
 
   private sub?: Subscription;
-  private readingTimer: any = null;
   private advanceTimer: any = null;
-  private buzzTimer: any = null;
-  private currentRoundKey = '';
   private lastCompletedKey = '';
   private lastAnswerKey = '';
   private lastSpokenBonusKey = '';
 
+  /** Last cumulative revealed text spoken by the TTS reader, to compute the delta on each new chunk. */
+  private lastSpokenRevealedText = '';
+
   constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
-  /** Make this device the room's reader (or stop). The text keeps revealing at a fixed rate. */
+  /** Make this device the room's reader (or stop). The reveal pace itself is server-driven. */
   toggleReader(): void {
     this.readerMode = !this.readerMode;
     localStorage.setItem(GameAutoProctorComponent.READER_KEY, String(this.readerMode));
     if (!this.readerMode) {
       this.speech.cancel();
     } else if (this.isBuzzable && !this.readingComplete) {
-      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
+      this.lastSpokenRevealedText = ''; // re-speak everything revealed so far when turning reader on
+      this.speakNewRevealIfReaderMode();
     } else if (this.isBonus) {
       this.lastSpokenBonusKey = '';
       this.maybeSpeakBonus();
@@ -75,10 +71,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const saved = Number(localStorage.getItem(GameAutoProctorComponent.SPEED_KEY));
-    if (saved >= 1 && saved <= 10) {
-      this.readingSpeed = saved;
-    }
     this.readerMode = localStorage.getItem(GameAutoProctorComponent.READER_KEY) === 'true';
     this.sub = this.gameStateService.gameSession$.subscribe(gs => {
       this.gameSession = gs;
@@ -87,9 +79,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.clearTimer();
     this.clearAdvanceTimer();
-    this.clearBuzzTimer();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -203,11 +193,12 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   get revealedText(): string {
-    return this.words.slice(0, this.revealedCount).join(' ');
+    return this.round?.question || '';
   }
 
   get readingComplete(): boolean {
-    return this.words.length > 0 && this.revealedCount >= this.words.length;
+    const total = this.round?.totalWordCount ?? 0;
+    return total > 0 && (this.round?.revealedWordCount ?? 0) >= total;
   }
 
   private get lastBuzz(): any {
@@ -255,24 +246,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     return this.gameSession?.currentMatch?.packet?.tossups?.length || 0;
   }
 
-  /** Reading-speed presets (map the 1..10 rate to three friendly choices). */
-  readonly speedPresets = [
-    { key: 'Slow', value: 3 },
-    { key: 'Normal', value: 6 },
-    { key: 'Fast', value: 9 },
-  ];
-
-  get activePreset(): string {
-    if (this.readingSpeed <= 4) return 'Slow';
-    if (this.readingSpeed <= 7) return 'Normal';
-    return 'Fast';
-  }
-
-  setSpeed(value: number): void {
-    this.readingSpeed = value;
-    this.onSpeedChange();
-  }
-
   /* ------------------------------ actions ------------------------------- */
 
   buzz(): void {
@@ -303,16 +276,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSpeedChange(): void {
-    localStorage.setItem(GameAutoProctorComponent.SPEED_KEY, String(this.readingSpeed));
-    if (this.isBuzzable && !this.readingComplete && this.readingTimer) {
-      this.scheduleTick();   // re-pace the fixed-rate reveal
-      if (this.readerMode) {
-        this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
-      }
-    }
-  }
-
   /** The reader device reads the current bonus part (with the preamble on part 1), once per part. */
   private maybeSpeakBonus(): void {
     if (!this.readerMode) {
@@ -330,7 +293,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     parts.push(this.tokenize(this.bonusPartQuestion).join(' '));
     const text = parts.join(' ').trim();
     if (text) {
-      this.speech.speak(text, this.readingSpeed);
+      this.speech.speak(text, GameAutoProctorComponent.READER_SPEECH_RATE);
     }
   }
 
@@ -339,10 +302,8 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   private syncToRound(): void {
     const r = this.round;
     if (!r) {
-      this.clearTimer();
       return;
     }
-    const key = `${r.roundNumber}:${(r.question || '').length}`;
 
     // Clear + focus the answer box the moment I become the answerer (a tossup buzz or a bonus part).
     const answerKey = this.iAmBuzzer ? `buzz:${this.currentBuzz?.playerId}`
@@ -359,23 +320,18 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     }
 
     if (this.isBuzzable) {
-      if (key !== this.currentRoundKey) {
-        this.currentRoundKey = key;
-        this.startReading();           // new tossup
-      } else if (!this.isReadingActive() && this.revealedCount < this.words.length) {
-        this.resumeReading();          // resume after a wrong buzz reopened play
-      } else if (this.readingComplete && !this.buzzTimer) {
-        this.startBuzzWindow();        // wrong buzz reopened play after the reveal had already finished
-      }
+      // Server-driven reveal: speak only the newly-arrived increment.
+      this.speakNewRevealIfReaderMode();
+      // Server-driven buzz countdown: mirror the TimerUpdate-fed remainingTossupTimerSeconds.
+      this.buzzSecondsLeft = r.remainingTossupTimerSeconds ?? null;
     } else if (this.isBonus) {
-      this.clearTimer();
-      this.clearBuzzTimer();
+      this.buzzSecondsLeft = null;
       this.maybeSpeakBonus();          // read each bonus part to the eligible team
     } else {
-      this.clearTimer();               // someone is answering, or the round is over
-      this.clearBuzzTimer();
+      this.buzzSecondsLeft = null;
       this.speech.cancel();
       this.lastSpokenBonusKey = '';
+      this.lastSpokenRevealedText = '';
       if (this.isCompleted) {
         // Pause on the result (answer + who got it) before moving on.
         const ckey = String(r.roundNumber);
@@ -384,6 +340,22 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
           this.startAdvanceCountdown();
         }
       }
+    }
+  }
+
+  /** Reader mode speaks only the words that just arrived in this reveal tick, not the whole text again. */
+  private speakNewRevealIfReaderMode(): void {
+    if (!this.readerMode) {
+      return;
+    }
+    const current = this.revealedText;
+    if (current.length <= this.lastSpokenRevealedText.length) {
+      return; // nothing new (a new round reset is handled by the else branch above clearing this)
+    }
+    const delta = current.slice(this.lastSpokenRevealedText.length).trim();
+    this.lastSpokenRevealedText = current;
+    if (delta) {
+      this.speech.speak(delta, GameAutoProctorComponent.READER_SPEECH_RATE);
     }
   }
 
@@ -410,103 +382,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
       this.advanceTimer = null;
     }
     this.advanceSecondsLeft = null;
-  }
-
-  private startReading(): void {
-    this.clearTimer();
-    this.clearBuzzTimer();
-    this.buzzTimedOut = false;
-    this.speech.cancel();
-    this.answerText = '';
-    this.revealedCount = 0;
-    this.lastSpokenBonusKey = '';
-    this.words = this.tokenize(this.round?.question || '');
-    if (this.words.length === 0) {
-      return;
-    }
-    this.scheduleTick();                          // text reveals at a fixed rate
-    if (this.readerMode) {
-      this.speech.speak(this.words.join(' '), this.readingSpeed);   // the reader reads aloud
-    }
-  }
-
-  /** Continue a partially-read tossup from the current word (after a wrong buzz reopened play). */
-  private resumeReading(): void {
-    if (this.revealedCount >= this.words.length) {
-      return;
-    }
-    this.scheduleTick();
-    if (this.readerMode) {
-      this.speech.speak(this.words.slice(this.revealedCount).join(' '), this.readingSpeed);
-    }
-  }
-
-  private isReadingActive(): boolean {
-    return !!this.readingTimer;
-  }
-
-  private scheduleTick(): void {
-    this.clearTimer();
-    this.readingTimer = setInterval(() => {
-      if (this.revealedCount < this.words.length) {
-        this.revealedCount++;
-      } else {
-        this.clearTimer();
-        this.startBuzzWindow();        // reveal finished with nobody in — start the buzz-timeout countdown
-      }
-    }, this.intervalMs());
-  }
-
-  /** Length of the post-reveal buzz window: the configured tossup timer, or a fallback. */
-  private get buzzWindowSeconds(): number {
-    return this.gameSession?.gameSettings?.timerSettings?.tossupTimerSeconds
-      || GameAutoProctorComponent.BUZZ_WINDOW_FALLBACK;
-  }
-
-  /** After the read finishes with nobody buzzed, count down; on expiry, the owner ends the tossup. */
-  private startBuzzWindow(): void {
-    if (!this.isBuzzable || this.buzzTimer) {
-      return;
-    }
-    this.buzzTimedOut = false;
-    this.buzzSecondsLeft = this.buzzWindowSeconds;
-    this.buzzTimer = setInterval(() => {
-      if (this.buzzSecondsLeft !== null) {
-        this.buzzSecondsLeft--;
-      }
-      if (this.buzzSecondsLeft !== null && this.buzzSecondsLeft <= 0) {
-        this.expireBuzzWindow();
-      }
-    }, 1000);
-  }
-
-  /** Buzz window elapsed with no buzz. The owner's client closes the tossup for everyone;
-   *  other clients just show "Time." and wait for the resulting round update. */
-  private expireBuzzWindow(): void {
-    this.clearBuzzTimer();
-    this.buzzTimedOut = true;
-    if (this.isOwner) {
-      this.gameStateService.sendTimeoutRound();
-    }
-  }
-
-  private clearBuzzTimer(): void {
-    if (this.buzzTimer) {
-      clearInterval(this.buzzTimer);
-      this.buzzTimer = null;
-    }
-    this.buzzSecondsLeft = null;
-  }
-
-  private intervalMs(): number {
-    return Math.round(520 - (this.readingSpeed - 1) * 50);
-  }
-
-  private clearTimer(): void {
-    if (this.readingTimer) {
-      clearInterval(this.readingTimer);
-      this.readingTimer = null;
-    }
   }
 
   private tokenize(html: string): string[] {

@@ -38,7 +38,8 @@ export class GameMessageService {
       'RoundUpdate',
       'PlayerBuzzed',
       'BonusUpdate',
-      'TimerUpdate'
+      'TimerUpdate',
+      'ReadingUpdate'
     ];
 
     // Initialize BehaviorSubjects and Observables for each expected message type

@@ -26,6 +26,7 @@ import { GameMode,
   PlayerMode,
   PlayerRosterUpdate,
   ProcessError,
+  ReadingUpdate,
   RoundUpdate,
   SetMatchPacket,
   SetProctor,
@@ -217,6 +218,23 @@ export class GameStateService {
             this.gameSessionState.currentMatch.currentRound.remainingBonusTimerSeconds =
               msg.remainingSeconds;
           }
+
+          // Emit updated state
+          this.gameSessionSubject.next(this.gameSessionState);
+        })
+      )
+      .subscribe();
+
+    // Subscribe to ReadingUpdate messages (AUTO_PROCTOR server-driven reveal)
+    this.gameMessageService.gameEventObservables["ReadingUpdate"]
+      .pipe(
+        filter(msg => !!msg),
+        tap((msg: ReadingUpdate) => {
+          // The revealed text IS the round's question for AUTO_PROCTOR, the server
+          // never sends unrevealed text, so just replace it directly.
+          this.gameSessionState.currentMatch.currentRound.question = msg.revealedText;
+          this.gameSessionState.currentMatch.currentRound.revealedWordCount = msg.revealedWordCount;
+          this.gameSessionState.currentMatch.currentRound.totalWordCount = msg.totalWordCount;
 
           // Emit updated state
           this.gameSessionSubject.next(this.gameSessionState);

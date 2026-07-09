@@ -377,6 +377,19 @@ export class TimerUpdate extends SockbowlOutMessage {
   }
 }
 
+export class ReadingUpdate extends SockbowlOutMessage {
+  revealedText: string;
+  revealedWordCount: number;
+  totalWordCount: number;
+
+  constructor(data: ReadingUpdate) {
+    super(data);
+    this.revealedText = data.revealedText;
+    this.revealedWordCount = data.revealedWordCount;
+    this.totalWordCount = data.totalWordCount;
+  }
+}
+
 export class Buzz {
   playerId: string;
   teamId: string;
@@ -415,11 +428,13 @@ export class TimerSettings {
   tossupTimerSeconds: number;
   bonusTimerSeconds: number;
   autoTimerEnabled: boolean;
+  readingWordsPerSecond: number;
 
   constructor(data?: Partial<TimerSettings>) {
     this.tossupTimerSeconds = data?.tossupTimerSeconds ?? 5;
     this.bonusTimerSeconds = data?.bonusTimerSeconds ?? 5;
     this.autoTimerEnabled = data?.autoTimerEnabled ?? true;
+    this.readingWordsPerSecond = data?.readingWordsPerSecond ?? 4;
   }
 }
 
@@ -509,6 +524,9 @@ export class Round {
   remainingTossupTimerSeconds?: number;
   remainingBonusTimerSeconds?: number;
   timerStartedAtMillis?: number;
+  // Reveal fields (AUTO_PROCTOR only)
+  revealedWordCount?: number;
+  totalWordCount?: number;
 
   constructor(data: Round) {
     this.roundState = data.roundState;
@@ -530,6 +548,8 @@ export class Round {
     this.remainingTossupTimerSeconds = data.remainingTossupTimerSeconds;
     this.remainingBonusTimerSeconds = data.remainingBonusTimerSeconds;
     this.timerStartedAtMillis = data.timerStartedAtMillis;
+    this.revealedWordCount = data.revealedWordCount;
+    this.totalWordCount = data.totalWordCount;
   }
 }
 

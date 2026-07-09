@@ -15,8 +15,6 @@
             <span class="status-dot status-dot--judge"></span> You buzzed. Type your answer.
           } @else if (someoneBuzzed) {
             <span class="status-dot status-dot--judge"></span> {{ buzzerName }}@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering.
-          } @else if (buzzTimedOut) {
-            <span class="status-dot status-dot--wait"></span> Time. Closing out the tossup.
           } @else if (buzzSecondsLeft !== null) {
             <span class="status-dot status-dot--wait"></span> Reading complete. Buzz within {{ buzzSecondsLeft }} seconds.
           } @else if (isBuzzable) {
@@ -105,17 +103,6 @@
                     {{ readerMode ? 'Reading aloud' : 'Read aloud' }}
                   </button>
                 }
-                <div class="speed-control" role="group" aria-label="Reading speed">
-                  <span class="speed-label">Speed</span>
-                  <div class="speed-presets">
-                    @for (preset of speedPresets; track preset.key) {
-                      <button type="button" class="speed-preset" [class.active]="activePreset === preset.key"
-                              (click)="setSpeed(preset.value)" [attr.aria-pressed]="activePreset === preset.key">
-                        {{ preset.key }}
-                      </button>
-                    }
-                  </div>
-                </div>
               </div>
             </div>
           }

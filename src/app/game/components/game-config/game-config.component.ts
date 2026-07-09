@@ -38,6 +38,7 @@ export class GameConfigComponent implements OnInit {
   tossupTimerSeconds: number = 5;
   bonusTimerSeconds: number = 5;
   autoTimerEnabled: boolean = true;
+  readingWordsPerSecond: number = 4;
 
   // Cast-related observables
   castAvailable$: Observable<boolean>;
@@ -71,6 +72,7 @@ export class GameConfigComponent implements OnInit {
         this.tossupTimerSeconds = gameSession.gameSettings.timerSettings.tossupTimerSeconds;
         this.bonusTimerSeconds = gameSession.gameSettings.timerSettings.bonusTimerSeconds;
         this.autoTimerEnabled = gameSession.gameSettings.timerSettings.autoTimerEnabled;
+        this.readingWordsPerSecond = gameSession.gameSettings.timerSettings.readingWordsPerSecond;
       }
 
       // Fetch full packet data with bonuses if packet is set AND we don't already have it
@@ -234,11 +236,20 @@ export class GameConfigComponent implements OnInit {
   /* ─── Timer Settings ────────────────────────────────────────────────────── */
 
   /**
-   * Update timer settings in game state (only if current player is proctor)
+   * Whether the current player may edit Timer Settings. Classic mode: proctor only.
+   * AUTO_PROCTOR has no proctor role, so the game owner edits instead (mirrors the
+   * backend's existing proctorless-owner authorization in updateGameSettings).
+   */
+  canEditTimerSettings(): boolean {
+    return this.gameStateService.isSelfProctor()
+      || (this.gameStateService.isAutoProctor() && this.gameStateService.isCurrentPlayerGameOwner());
+  }
+
+  /**
+   * Update timer settings in game state (only if current player may edit them)
    */
   updateTimerSettings(): void {
-    // Only proctor can update settings
-    if (!this.gameStateService.isSelfProctor()) {
+    if (!this.canEditTimerSettings()) {
       return;
     }
 
@@ -249,7 +260,8 @@ export class GameConfigComponent implements OnInit {
       timerSettings: {
         tossupTimerSeconds: this.tossupTimerSeconds,
         bonusTimerSeconds: this.bonusTimerSeconds,
-        autoTimerEnabled: this.autoTimerEnabled
+        autoTimerEnabled: this.autoTimerEnabled,
+        readingWordsPerSecond: this.readingWordsPerSecond
       }
     });
 

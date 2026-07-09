@@ -189,7 +189,7 @@
             Timer Settings
           </mat-card-title>
           <mat-card-subtitle>
-            @if (gameStateService.isSelfProctor()) {
+            @if (canEditTimerSettings()) {
               Configure timer durations and behavior.
             } @else {
               Current timer configuration (read-only).
@@ -205,7 +205,7 @@
                 type="number"
                 [(ngModel)]="tossupTimerSeconds"
                 (ngModelChange)="updateTimerSettings()"
-                [disabled]="!gameStateService.isSelfProctor()"
+                [disabled]="!canEditTimerSettings()"
                 min="1"
                 max="60"
                 step="1"
@@ -218,16 +218,31 @@
                 type="number"
                 [(ngModel)]="bonusTimerSeconds"
                 (ngModelChange)="updateTimerSettings()"
-                [disabled]="!gameStateService.isSelfProctor()"
+                [disabled]="!canEditTimerSettings()"
                 min="1"
                 max="60"
                 step="1"
                 >
             </mat-form-field>
+            @if (gameStateService.isAutoProctor()) {
+              <mat-form-field appearance="outline" class="timer-field">
+                <mat-label>Reading Speed (words/sec)</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  [(ngModel)]="readingWordsPerSecond"
+                  (ngModelChange)="updateTimerSettings()"
+                  [disabled]="!canEditTimerSettings()"
+                  min="1"
+                  max="10"
+                  step="1"
+                  >
+              </mat-form-field>
+            }
             <mat-slide-toggle
               [(ngModel)]="autoTimerEnabled"
               (ngModelChange)="updateTimerSettings()"
-              [disabled]="!gameStateService.isSelfProctor()"
+              [disabled]="!canEditTimerSettings()"
               color="primary"
               class="auto-timer-toggle">
               Auto-Timeout When Timer Expires
