@@ -108,6 +108,18 @@ export class GameSessionComponent {
     this.submitCreateGame();
   }
 
+  /**
+   * Hosts a free-for-all game (one-player teams auto-created on join, answers
+   * auto-judged, no proctor). Lands in config to pick a packet, then start.
+   */
+  startFreeForAllGame(): void {
+    this.createGameRequest.gameSettings.gameMode = GameMode.FREE_FOR_ALL;
+    if (!this.joinGameRequest.name) {
+      this.joinGameRequest.name = this.authService.getUserProfile()?.name || 'Host';
+    }
+    this.submitCreateGame();
+  }
+
   submitCreateGame(): void {
     this.gameSessionService.createNewGame(this.createGameRequest).subscribe(response => {
       console.log("Create game response");

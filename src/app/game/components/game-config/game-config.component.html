@@ -70,11 +70,11 @@
     <section class="launch">
       @if (gameStateService.isProctorless()) {
         <div class="launch__proctor">
-          <mat-icon class="launch__icon">{{ gameStateService.isAutoProctor() ? 'groups' : 'person' }}</mat-icon>
+          <mat-icon class="launch__icon">{{ gameStateService.isAutoProctor() ? 'groups' : (gameStateService.isFreeForAll() ? 'person_off' : 'person') }}</mat-icon>
           <div class="launch__meta">
             <span class="launch__label">Mode</span>
             <span class="launch__name">
-              {{ gameStateService.isAutoProctor() ? 'Auto-judged, no proctor' : 'Solo practice, answers auto-judged' }}
+              {{ gameStateService.isAutoProctor() ? 'Auto-judged, no proctor' : (gameStateService.isFreeForAll() ? 'Free for all, everyone for themselves' : 'Solo practice, answers auto-judged') }}
             </span>
           </div>
         </div>
@@ -224,7 +224,7 @@
                 step="1"
                 >
             </mat-form-field>
-            @if (gameStateService.isAutoProctor()) {
+            @if (gameStateService.isAutoJudgedMultiplayer()) {
               <mat-form-field appearance="outline" class="timer-field">
                 <mat-label>Reading Speed (words/sec)</mat-label>
                 <input
@@ -251,53 +251,77 @@
         </mat-card-content>
       </mat-card>
       <!-- Teams -->
-      <mat-card class="card card--span2">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>groups</mat-icon>
-            Teams
-          </mat-card-title>
-          <mat-card-subtitle>Join a team or switch to spectating.</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="teams">
-            @for (team of gameSession.teamList; track trackByTeamId($index, team)) {
-              <div
-                class="team"
-                >
-                <div class="team__header">
-                  <h3 class="team__name">
-                    {{ team.teamName }}
-                    <span class="team__count">{{ team.teamPlayers.length || 0 }}</span>
-                  </h3>
+      @if (!gameStateService.isFreeForAll()) {
+        <mat-card class="card card--span2">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>groups</mat-icon>
+              Teams
+            </mat-card-title>
+            <mat-card-subtitle>Join a team or switch to spectating.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="teams">
+              @for (team of gameSession.teamList; track trackByTeamId($index, team)) {
+                <div
+                  class="team"
+                  >
+                  <div class="team__header">
+                    <h3 class="team__name">
+                      {{ team.teamName }}
+                      <span class="team__count">{{ team.teamPlayers.length || 0 }}</span>
+                    </h3>
+                  </div>
+                  <div class="team__players">
+                    @for (player of team.teamPlayers; track trackByPlayerId($index, player)) {
+                      <div
+                        class="player"
+                        >
+                        <mat-icon class="player__avatar">face</mat-icon>
+                        <span class="player__name">{{ player.name }}</span>
+                      </div>
+                    }
+                  </div>
+                  <div class="team__actions">
+                    @if (!gameStateService.isSelfOnTeam(team.teamId)) {
+                      <button
+                        mat-stroked-button
+                        color="primary"
+                        (click)="joinTeam(team)"
+                        >
+                        <mat-icon>login</mat-icon>
+                        Join {{ team.teamName }}
+                      </button>
+                    }
+                  </div>
                 </div>
-                <div class="team__players">
-                  @for (player of team.teamPlayers; track trackByPlayerId($index, player)) {
-                    <div
-                      class="player"
-                      >
-                      <mat-icon class="player__avatar">face</mat-icon>
-                      <span class="player__name">{{ player.name }}</span>
-                    </div>
-                  }
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+      <!-- Free for all: flat player list, no join/spectate switching -->
+      @if (gameStateService.isFreeForAll()) {
+        <mat-card class="card card--span2">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>person_off</mat-icon>
+              Players
+            </mat-card-title>
+            <mat-card-subtitle>Everyone plays for themselves.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="teams">
+              @for (player of gameSession.playerList; track trackByPlayerId($index, player)) {
+                <div class="player">
+                  <mat-icon class="player__avatar">face</mat-icon>
+                  <span class="player__name">{{ player.name }}</span>
                 </div>
-                <div class="team__actions">
-                  @if (!gameStateService.isSelfOnTeam(team.teamId)) {
-                    <button
-                      mat-stroked-button
-                      color="primary"
-                      (click)="joinTeam(team)"
-                      >
-                      <mat-icon>login</mat-icon>
-                      Join {{ team.teamName }}
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
       <!-- Spectators -->
       <mat-card class="card card--span2">
         <mat-card-header>

@@ -61,6 +61,15 @@
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
 
+        <button class="lobby-action" (click)="startFreeForAllGame()">
+          <mat-icon>person_off</mat-icon>
+          <span class="lobby-action-text">
+            <span class="lobby-action-label">Free for all</span>
+            <span class="lobby-action-hint">Everyone plays for themselves, answers auto-judged</span>
+          </span>
+          <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
+        </button>
+
         <button class="lobby-action" (click)="onCreateGame()">
           <mat-icon>stadium</mat-icon>
           <span class="lobby-action-text">

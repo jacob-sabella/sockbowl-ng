@@ -14,7 +14,7 @@
           } @else if (iAmBuzzer) {
             <span class="status-dot status-dot--judge"></span> You buzzed. Type your answer.
           } @else if (someoneBuzzed) {
-            <span class="status-dot status-dot--judge"></span> {{ buzzerName }}@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering.
+            <span class="status-dot status-dot--judge"></span> {{ buzzerName }}@if (buzzerTeam && !gameStateService.isFreeForAll()) { ({{ buzzerTeam }}) } is answering.
           } @else if (buzzSecondsLeft !== null) {
             <span class="status-dot status-dot--wait"></span> Reading complete. Buzz within {{ buzzSecondsLeft }} seconds.
           } @else if (isBuzzable) {
@@ -57,7 +57,7 @@
             <div class="verdict-line" [class.verdict-line--wrong]="!wasCorrect">
               <mat-icon aria-hidden="true">{{ wasCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
               @if (wasCorrect) {
-                <span><strong>{{ resultPlayer }}</strong>@if (resultTeam) { ({{ resultTeam }}) } got it right, +{{ roundPoints }}</span>
+                <span><strong>{{ resultPlayer }}</strong>@if (resultTeam && !gameStateService.isFreeForAll()) { ({{ resultTeam }}) } got it right, +{{ roundPoints }}</span>
               } @else {
                 <span>No one got it right</span>
               }
@@ -71,7 +71,7 @@
         @if (someoneBuzzed && !iAmBuzzer) {
           <div class="active-buzz-info" role="status" aria-live="polite">
             <mat-icon aria-hidden="true">notifications_active</mat-icon>
-            <p><strong>{{ buzzerName }}</strong>@if (buzzerTeam) { ({{ buzzerTeam }}) } is answering.</p>
+            <p><strong>{{ buzzerName }}</strong>@if (buzzerTeam && !gameStateService.isFreeForAll()) { ({{ buzzerTeam }}) } is answering.</p>
           </div>
         }
 
@@ -88,7 +88,7 @@
               <button mat-raised-button class="buzz-btn" (click)="buzz()" [disabled]="!canBuzz"
                       [attr.aria-label]="canBuzz ? 'Buzz in now'
                         : (!gameStateService.isSelfOnAnyTeam() ? 'Buzzer disabled, you are spectating'
-                        : 'Buzzer locked, your team has already buzzed')">
+                        : (gameStateService.isFreeForAll() ? 'Buzzer locked, you already buzzed' : 'Buzzer locked, your team has already buzzed'))">
                 <mat-icon aria-hidden="true">sports_esports</mat-icon> Buzz
               </button>
               <div class="reader-tools">

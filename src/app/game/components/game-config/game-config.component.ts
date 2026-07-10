@@ -148,7 +148,7 @@ export class GameConfigComponent implements OnInit {
   canManageConfig(): boolean {
     return this.gameStateService.isSelfProctor()
       || this.gameStateService.isSinglePlayer()
-      || (this.gameStateService.isAutoProctor() && this.gameStateService.isCurrentPlayerGameOwner());
+      || (this.gameStateService.isAutoJudgedMultiplayer() && this.gameStateService.isCurrentPlayerGameOwner());
   }
 
   becomeProctor(): void {
@@ -242,7 +242,7 @@ export class GameConfigComponent implements OnInit {
    */
   canEditTimerSettings(): boolean {
     return this.gameStateService.isSelfProctor()
-      || (this.gameStateService.isAutoProctor() && this.gameStateService.isCurrentPlayerGameOwner());
+      || (this.gameStateService.isAutoJudgedMultiplayer() && this.gameStateService.isCurrentPlayerGameOwner());
   }
 
   /**

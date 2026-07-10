@@ -55,7 +55,7 @@ export class GameCanvasComponent {
 
   shouldShowAutoProctorComponent(): boolean {
     return this.gameStateService.getMatchState() == MatchState.IN_GAME
-      && this.gameStateService.isAutoProctor()
+      && this.gameStateService.isAutoJudgedMultiplayer()
       && this.gameStateService.isSelfOnAnyTeam();
   }
 

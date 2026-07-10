@@ -498,9 +498,19 @@ export class GameStateService {
     return this.gameSessionState?.gameSettings?.gameMode === GameMode.AUTO_PROCTOR;
   }
 
+  /** Whether the current game is free-for-all (one-player teams, auto-judged, no proctor). */
+  public isFreeForAll(): boolean {
+    return this.gameSessionState?.gameSettings?.gameMode === GameMode.FREE_FOR_ALL;
+  }
+
+  /** Auto-judged multiplayer modes (team-based auto-proctor and one-seat-per-team free-for-all). */
+  public isAutoJudgedMultiplayer(): boolean {
+    return this.isAutoProctor() || this.isFreeForAll();
+  }
+
   /** Modes with no human proctor. */
   public isProctorless(): boolean {
-    return this.isSinglePlayer() || this.isAutoProctor();
+    return this.isSinglePlayer() || this.isAutoJudgedMultiplayer();
   }
 
   /**
