@@ -54,6 +54,11 @@
     margin-top: 8px;
   }
 
+  &__difficulty-readonly {
+    color: var(--text-muted);
+    margin: 8px 0 0;
+  }
+
   &__index {
     font-weight: 600;
     color: var(--accent-primary);

@@ -180,6 +180,19 @@ export class PacketBuilderComponent implements OnInit {
 
   /* --------------------------------- header --------------------------------- */
 
+  /**
+   * Single choke point for every mutating control in this component's
+   * template: admins and packet:manage-any holders can manage any packet;
+   * legacy/anonymous packets (no owner recorded) are managed by any
+   * authoring-tier user (grandfather rule); otherwise only the owner.
+   */
+  get canManagePacket(): boolean {
+    return this.auth.isAdmin()
+      || this.auth.hasPermission('packet:manage-any')
+      || !this.packet?.owner
+      || this.packet.owner.id === this.auth.getCurrentUserId();
+  }
+
   get sortedTossups(): TossupElement[] {
     return [...(this.packet?.tossups ?? [])].sort((a, b) => a.order - b.order);
   }

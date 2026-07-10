@@ -10,6 +10,16 @@ export interface Packet {
     id:         string;
     name:       string;
     tossups:    TossupElement[];
+    // Interim hand-added stub pending backend schema regeneration
+    // (./gradlew generateModelSchema + npm run codegen). Remove this
+    // comment once codegen produces the real owner field.
+    owner?:     PacketOwner | null;
+    [property: string]: any;
+}
+
+export interface PacketOwner {
+    id:   string;
+    name: string;
     [property: string]: any;
 }
 

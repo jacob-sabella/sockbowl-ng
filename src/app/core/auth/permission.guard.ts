@@ -7,9 +7,9 @@ import { AuthService } from './auth.service';
  * given fine-grained permission (realm role), e.g. `packet:create` or
  * `admin:access`.
  *
- * In guest mode (auth disabled) `hasPermission` always returns false, so
- * routes guarded this way are effectively admin/authoring-only and will
- * redirect guests back to the lobby.
+ * In guest mode (auth disabled) `hasPermission` always returns true, so
+ * routes guarded this way are fully open to guests as well; the guard only
+ * bites once auth is enabled and the signed-in user lacks the permission.
  */
 export function permissionGuard(permission: string): CanActivateFn {
   return () => {

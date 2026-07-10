@@ -12,9 +12,11 @@
         <div class="packet-builder__name-row">
           @if (!editingName) {
             <h1 class="packet-builder__name">{{ packet.name }}</h1>
-            <button mat-icon-button aria-label="Edit name" (click)="startEditName()">
-              <mat-icon aria-hidden="true">edit</mat-icon>
-            </button>
+            @if (auth.hasPermission('packet:update') && canManagePacket) {
+              <button mat-icon-button aria-label="Edit name" (click)="startEditName()">
+                <mat-icon aria-hidden="true">edit</mat-icon>
+              </button>
+            }
           } @else {
             <mat-form-field appearance="outline" class="packet-builder__name-field">
               <mat-label>Packet name</mat-label>
@@ -28,21 +30,25 @@
             </button>
           }
 
-          @if (auth.hasPermission('packet:delete')) {
+          @if (auth.hasPermission('packet:delete') && canManagePacket) {
             <button mat-icon-button color="warn" class="packet-builder__delete-btn" aria-label="Delete packet" (click)="deletePacket()">
               <mat-icon aria-hidden="true">delete</mat-icon>
             </button>
           }
         </div>
 
-        <mat-form-field appearance="outline" class="packet-builder__difficulty-field">
-          <mat-label>Difficulty</mat-label>
-          <mat-select [ngModel]="packet.difficulty?.id" (selectionChange)="onDifficultyChange($event.value)">
-            @for (d of difficulties; track d.id) {
-              <mat-option [value]="d.id">{{ d.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        @if (auth.hasPermission('packet:update') && canManagePacket) {
+          <mat-form-field appearance="outline" class="packet-builder__difficulty-field">
+            <mat-label>Difficulty</mat-label>
+            <mat-select [ngModel]="packet.difficulty?.id" (selectionChange)="onDifficultyChange($event.value)">
+              @for (d of difficulties; track d.id) {
+                <mat-option [value]="d.id">{{ d.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <p class="packet-builder__difficulty-readonly">Difficulty: {{ packet.difficulty?.name ?? 'Unset' }}</p>
+        }
       </mat-card-content>
     </mat-card>
 
@@ -90,7 +96,7 @@
                       }
                     </mat-select>
                   </mat-form-field>
-                  @if (auth.hasPermission('taxonomy:manage')) {
+                  @if (auth.hasPermission('taxonomy:manage') && canManagePacket) {
                     <button mat-icon-button aria-label="Create new subcategory"
                             (click)="openTaxonomyForm(id => tossupDrafts[te.tossup.id].subcategoryId = id)">
                       <mat-icon aria-hidden="true">add_circle_outline</mat-icon>
@@ -98,24 +104,26 @@
                   }
                 </div>
 
-                <div class="packet-builder__row-actions">
-                  <button mat-icon-button aria-label="Move up" [disabled]="first" (click)="moveTossup(te, -1)">
-                    <mat-icon aria-hidden="true">arrow_upward</mat-icon>
-                  </button>
-                  <button mat-icon-button aria-label="Move down" [disabled]="last" (click)="moveTossup(te, 1)">
-                    <mat-icon aria-hidden="true">arrow_downward</mat-icon>
-                  </button>
-                  <span class="packet-builder__spacer"></span>
-                  @if (auth.hasPermission('packet:delete')) {
-                    <button mat-icon-button color="warn" aria-label="Remove tossup" (click)="removeTossup(te)">
-                      <mat-icon aria-hidden="true">delete</mat-icon>
+                @if (canManagePacket) {
+                  <div class="packet-builder__row-actions">
+                    <button mat-icon-button aria-label="Move up" [disabled]="first" (click)="moveTossup(te, -1)">
+                      <mat-icon aria-hidden="true">arrow_upward</mat-icon>
                     </button>
-                  }
-                  <button mat-raised-button class="packet-builder__save-btn" (click)="saveTossup(te)">
-                    <mat-icon aria-hidden="true">save</mat-icon>
-                    Save
-                  </button>
-                </div>
+                    <button mat-icon-button aria-label="Move down" [disabled]="last" (click)="moveTossup(te, 1)">
+                      <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                    </button>
+                    <span class="packet-builder__spacer"></span>
+                    @if (auth.hasPermission('packet:delete')) {
+                      <button mat-icon-button color="warn" aria-label="Remove tossup" (click)="removeTossup(te)">
+                        <mat-icon aria-hidden="true">delete</mat-icon>
+                      </button>
+                    }
+                    <button mat-raised-button class="packet-builder__save-btn" (click)="saveTossup(te)">
+                      <mat-icon aria-hidden="true">save</mat-icon>
+                      Save
+                    </button>
+                  </div>
+                }
               </div>
             </mat-expansion-panel>
           }
@@ -163,13 +171,13 @@
         </mat-accordion>
 
         <div class="packet-builder__section-actions">
-          @if (!newTossupOpen) {
+          @if (!newTossupOpen && canManagePacket) {
             <button mat-stroked-button (click)="openNewTossup()">
               <mat-icon aria-hidden="true">add</mat-icon>
               Add Tossup
             </button>
           }
-          @if (auth.hasPermission('question:generate')) {
+          @if (auth.hasPermission('question:generate') && canManagePacket) {
             @if (!genOpen) {
               <button mat-stroked-button (click)="openGenerate()">
                 <mat-icon aria-hidden="true">auto_awesome</mat-icon>
@@ -179,7 +187,7 @@
           }
         </div>
 
-        @if (genOpen) {
+        @if (genOpen && canManagePacket) {
           <div class="packet-builder__generate-form">
             <mat-form-field appearance="outline" class="packet-builder__field">
               <mat-label>Topic</mat-label>
@@ -254,7 +262,7 @@
                       }
                     </mat-select>
                   </mat-form-field>
-                  @if (auth.hasPermission('taxonomy:manage')) {
+                  @if (auth.hasPermission('taxonomy:manage') && canManagePacket) {
                     <button mat-icon-button aria-label="Create new subcategory"
                             (click)="openTaxonomyForm(id => bonusDrafts[be.bonus.id].subcategoryId = id)">
                       <mat-icon aria-hidden="true">add_circle_outline</mat-icon>
@@ -262,24 +270,26 @@
                   }
                 </div>
 
-                <div class="packet-builder__row-actions">
-                  <button mat-icon-button aria-label="Move up" [disabled]="first" (click)="moveBonus(be, -1)">
-                    <mat-icon aria-hidden="true">arrow_upward</mat-icon>
-                  </button>
-                  <button mat-icon-button aria-label="Move down" [disabled]="last" (click)="moveBonus(be, 1)">
-                    <mat-icon aria-hidden="true">arrow_downward</mat-icon>
-                  </button>
-                  <span class="packet-builder__spacer"></span>
-                  @if (auth.hasPermission('packet:delete')) {
-                    <button mat-icon-button color="warn" aria-label="Remove bonus" (click)="removeBonus(be)">
-                      <mat-icon aria-hidden="true">delete</mat-icon>
+                @if (canManagePacket) {
+                  <div class="packet-builder__row-actions">
+                    <button mat-icon-button aria-label="Move up" [disabled]="first" (click)="moveBonus(be, -1)">
+                      <mat-icon aria-hidden="true">arrow_upward</mat-icon>
                     </button>
-                  }
-                  <button mat-raised-button class="packet-builder__save-btn" (click)="saveBonus(be)">
-                    <mat-icon aria-hidden="true">save</mat-icon>
-                    Save
-                  </button>
-                </div>
+                    <button mat-icon-button aria-label="Move down" [disabled]="last" (click)="moveBonus(be, 1)">
+                      <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                    </button>
+                    <span class="packet-builder__spacer"></span>
+                    @if (auth.hasPermission('packet:delete')) {
+                      <button mat-icon-button color="warn" aria-label="Remove bonus" (click)="removeBonus(be)">
+                        <mat-icon aria-hidden="true">delete</mat-icon>
+                      </button>
+                    }
+                    <button mat-raised-button class="packet-builder__save-btn" (click)="saveBonus(be)">
+                      <mat-icon aria-hidden="true">save</mat-icon>
+                      Save
+                    </button>
+                  </div>
+                }
 
                 <!-- Bonus parts -->
                 <div class="packet-builder__parts">
@@ -295,24 +305,26 @@
                           <mat-label>Answer</mat-label>
                           <textarea matInput rows="2" [(ngModel)]="bonusPartDrafts[pe.bonusPart.id].answer"></textarea>
                         </mat-form-field>
-                        <div class="packet-builder__row-actions">
-                          <button mat-icon-button aria-label="Move part up" [disabled]="partFirst" (click)="movePart(be, pe, -1)">
-                            <mat-icon aria-hidden="true">arrow_upward</mat-icon>
-                          </button>
-                          <button mat-icon-button aria-label="Move part down" [disabled]="partLast" (click)="movePart(be, pe, 1)">
-                            <mat-icon aria-hidden="true">arrow_downward</mat-icon>
-                          </button>
-                          <span class="packet-builder__spacer"></span>
-                          @if (auth.hasPermission('packet:delete')) {
-                            <button mat-icon-button color="warn" aria-label="Remove part" (click)="removePart(be, pe)">
-                              <mat-icon aria-hidden="true">delete</mat-icon>
+                        @if (canManagePacket) {
+                          <div class="packet-builder__row-actions">
+                            <button mat-icon-button aria-label="Move part up" [disabled]="partFirst" (click)="movePart(be, pe, -1)">
+                              <mat-icon aria-hidden="true">arrow_upward</mat-icon>
                             </button>
-                          }
-                          <button mat-raised-button class="packet-builder__save-btn" (click)="savePart(be, pe)">
-                            <mat-icon aria-hidden="true">save</mat-icon>
-                            Save
-                          </button>
-                        </div>
+                            <button mat-icon-button aria-label="Move part down" [disabled]="partLast" (click)="movePart(be, pe, 1)">
+                              <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+                            </button>
+                            <span class="packet-builder__spacer"></span>
+                            @if (auth.hasPermission('packet:delete')) {
+                              <button mat-icon-button color="warn" aria-label="Remove part" (click)="removePart(be, pe)">
+                                <mat-icon aria-hidden="true">delete</mat-icon>
+                              </button>
+                            }
+                            <button mat-raised-button class="packet-builder__save-btn" (click)="savePart(be, pe)">
+                              <mat-icon aria-hidden="true">save</mat-icon>
+                              Save
+                            </button>
+                          </div>
+                        }
                       </div>
                     }
 
@@ -338,7 +350,7 @@
                     }
                   </div>
 
-                  @if (!newPartOpen[be.bonus.id]) {
+                  @if (!newPartOpen[be.bonus.id] && canManagePacket) {
                     <button mat-stroked-button (click)="openNewPart(be)">
                       <mat-icon aria-hidden="true">add</mat-icon>
                       Add Part
@@ -350,12 +362,14 @@
           }
         </mat-accordion>
 
-        <div class="packet-builder__section-actions">
-          <button mat-stroked-button [disabled]="addingBonus" (click)="addBonus()">
-            <mat-icon aria-hidden="true">add</mat-icon>
-            Add Bonus
-          </button>
-        </div>
+        @if (canManagePacket) {
+          <div class="packet-builder__section-actions">
+            <button mat-stroked-button [disabled]="addingBonus" (click)="addBonus()">
+              <mat-icon aria-hidden="true">add</mat-icon>
+              Add Bonus
+            </button>
+          </div>
+        }
       </mat-card-content>
     </mat-card>
 

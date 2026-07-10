@@ -26,6 +26,7 @@ export class PacketListComponent implements OnInit {
   searching = false;
 
   searchQuery = '';
+  showMineOnly = false;
 
   showCreateForm = false;
   creating = false;
@@ -56,6 +57,23 @@ export class PacketListComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  /** Client-side "my packets" filter over the already-fetched list. */
+  get filteredPackets(): Packet[] {
+    if (!this.showMineOnly) {
+      return this.packets;
+    }
+    const userId = this.auth.getCurrentUserId();
+    return this.packets.filter(p => p.owner?.id === userId);
+  }
+
+  /** Whether the current user may edit/delete this packet. */
+  canManage(packet: Packet): boolean {
+    return this.auth.isAdmin()
+      || this.auth.hasPermission('packet:manage-any')
+      || !packet.owner
+      || packet.owner.id === this.auth.getCurrentUserId();
   }
 
   search(): void {

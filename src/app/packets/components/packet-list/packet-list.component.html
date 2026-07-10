@@ -50,28 +50,35 @@
         </button>
       </div>
 
+      <div class="packet-list__filter">
+        <mat-checkbox [(ngModel)]="showMineOnly">Show my packets only</mat-checkbox>
+      </div>
+
       @if (loading) {
         <div class="packet-list__status">
           <mat-spinner diameter="32"></mat-spinner>
         </div>
-      } @else if (packets.length === 0) {
+      } @else if (filteredPackets.length === 0) {
         <p class="packet-list__empty">No packets found.</p>
       } @else {
         <div class="packet-list__items">
-          @for (packet of packets; track packet.id) {
+          @for (packet of filteredPackets; track packet.id) {
             <div class="packet-list__item">
               <div class="packet-list__item-info">
                 <span class="packet-list__item-name">{{ packet.name }}</span>
                 @if (packet.difficulty?.name) {
                   <span class="packet-list__item-chip">{{ packet.difficulty.name }}</span>
                 }
+                <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
               </div>
               <div class="packet-list__item-actions">
-                <button mat-button [routerLink]="['/packets', packet.id, 'edit']" aria-label="Edit packet">
-                  <mat-icon aria-hidden="true">edit</mat-icon>
-                  Edit
-                </button>
-                @if (auth.hasPermission('packet:delete')) {
+                @if (auth.hasPermission('packet:update') && canManage(packet)) {
+                  <button mat-button [routerLink]="['/packets', packet.id, 'edit']" aria-label="Edit packet">
+                    <mat-icon aria-hidden="true">edit</mat-icon>
+                    Edit
+                  </button>
+                }
+                @if (auth.hasPermission('packet:delete') && canManage(packet)) {
                   <button mat-icon-button color="warn" aria-label="Delete packet" (click)="deletePacket(packet)">
                     <mat-icon aria-hidden="true">delete</mat-icon>
                   </button>

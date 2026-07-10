@@ -73,6 +73,11 @@
     flex: 1 1 auto;
   }
 
+  &__filter {
+    margin-bottom: 12px;
+    color: var(--text-muted);
+  }
+
   &__status {
     display: flex;
     justify-content: center;
@@ -124,6 +129,12 @@
     background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
     color: var(--accent-primary);
     border: 1px solid var(--border-subtle);
+    white-space: nowrap;
+  }
+
+  &__item-owner {
+    font-size: 0.8rem;
+    color: var(--text-muted);
     white-space: nowrap;
   }
 

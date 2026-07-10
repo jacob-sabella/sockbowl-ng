@@ -79,6 +79,10 @@ export class SockbowlQuestionsService {
             id
             name
           }
+          owner {
+            id
+            name
+          }
           bonuses {
             id
           }
@@ -109,6 +113,10 @@ export class SockbowlQuestionsService {
           id
           name
           difficulty {
+            id
+            name
+          }
+          owner {
             id
             name
           }
@@ -175,6 +183,10 @@ export class SockbowlQuestionsService {
           id
           name
           difficulty {
+            id
+            name
+          }
+          owner {
             id
             name
           }

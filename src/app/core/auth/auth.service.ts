@@ -204,6 +204,14 @@ export class AuthService {
   }
 
   /**
+   * Get the current user's Keycloak id (the `sub` claim), or null if there
+   * is no authenticated user (guest mode, or no profile loaded yet).
+   */
+  public getCurrentUserId(): string | null {
+    return this.getUserProfile()?.sub ?? null;
+  }
+
+  /**
    * Update user profile from ID token claims
    */
   private updateUserProfile(): void {
