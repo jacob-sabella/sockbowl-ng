@@ -8,6 +8,8 @@
         <div class="proctor-status" role="status" aria-live="polite">
           @if (isCompleted) {
             <span class="status-dot status-dot--done"></span> Round complete
+          } @else if (isBonusPending) {
+            <span class="status-dot status-dot--done"></span> Tossup won. Bonus starting soon.
           } @else if (isBonus) {
             <span class="status-dot status-dot--read"></span>
             Bonus for {{ bonusTeamName }}, part {{ bonusPartIndex + 1 }} of {{ bonusPartCount }}<span class="bonus-tally">{{ bonusScore }}/{{ bonusPartCount * 10 }}</span>.@if (bonusEligible) { <strong>&nbsp;Your team is answering.</strong> }
@@ -39,7 +41,7 @@
         <!-- Question -->
         <div class="info-section question-section">
           <div class="info-label">Question</div>
-          @if (isCompleted) {
+          @if (isCompleted || isBonusPending) {
             <div class="info-value font-serif" [innerHTML]="round.question"></div>
           } @else if (isBonus) {
             @if (bonusPreamble) { <div class="info-value font-serif" [innerHTML]="bonusPreamble"></div> }
@@ -52,7 +54,7 @@
         </div>
 
         <!-- Result (on completion): who got it + the answer -->
-        @if (isCompleted) {
+        @if (isCompleted || isBonusPending) {
           <div class="info-section answer-section" [class.answer-section--wrong]="!wasCorrect" aria-live="polite">
             <div class="verdict-line" [class.verdict-line--wrong]="!wasCorrect">
               <mat-icon aria-hidden="true">{{ wasCorrect ? 'check_circle' : 'cancel' }}</mat-icon>
@@ -137,6 +139,19 @@
                 </button>
               } @else {
                 <span class="waiting-hint">Host will advance.</span>
+              }
+            </div>
+          }
+
+          @if (isBonusPending) {
+            <div class="bonus-pending-bar">
+              @if (canStartBonus) {
+                <button mat-raised-button color="primary" (click)="startBonus()"
+                        aria-label="Start the bonus question">
+                  Start bonus
+                </button>
+              } @else {
+                <span class="waiting-hint">Waiting for {{ bonusTeamName }} to start the bonus.</span>
               }
             </div>
           }

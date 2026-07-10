@@ -106,6 +106,11 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     return this.roundState === RoundState.COMPLETED;
   }
 
+  /** Tossup won, bonus set up but not yet started — the pause requiring an explicit Start bonus press. */
+  get isBonusPending(): boolean {
+    return this.roundState === RoundState.BONUS_PENDING;
+  }
+
   /** Buzzing is open (mid-read or awaiting a buzz). */
   get isBuzzable(): boolean {
     return this.roundState === RoundState.AWAITING_BUZZ || this.roundState === RoundState.PROCTOR_READING;
@@ -188,6 +193,16 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
       ? (this.gameStateService.getTeamNameById(this.round.bonusEligibleTeamId) || 'A team') : '';
   }
 
+  /** Whether I'm on the team that won the bonus, independent of round state (works during BONUS_PENDING too). */
+  get isOnBonusEligibleTeam(): boolean {
+    return !!this.round?.bonusEligibleTeamId && this.round.bonusEligibleTeamId === this.myTeamId;
+  }
+
+  /** During BONUS_PENDING, the eligible team's players or the game owner may press Start bonus. */
+  get canStartBonus(): boolean {
+    return this.isBonusPending && (this.isOnBonusEligibleTeam || this.isOwner);
+  }
+
   get isOwner(): boolean {
     return this.gameStateService.isCurrentPlayerGameOwner();
   }
@@ -259,6 +274,12 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     if (this.canSubmit) {
       this.gameStateService.sendSubmitAnswer(this.answerText.trim());
       this.answerText = '';
+    }
+  }
+
+  startBonus(): void {
+    if (this.canStartBonus) {
+      this.gameStateService.sendStartBonus();
     }
   }
 

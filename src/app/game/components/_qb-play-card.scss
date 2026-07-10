@@ -346,6 +346,14 @@
   flex-wrap: wrap;
 }
 
+/* pause between the tossup result and the bonus starting */
+.bonus-pending-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .advance-countdown {
   display: inline-flex;
   align-items: center;

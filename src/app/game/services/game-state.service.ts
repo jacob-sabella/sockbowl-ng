@@ -30,6 +30,7 @@ import { GameMode,
   RoundUpdate,
   SetMatchPacket,
   SetProctor,
+  StartBonus,
   StartMatch,
   Team,
   TimeoutBonusPart,
@@ -372,6 +373,14 @@ export class GameStateService {
   public sendTimeoutBonusPart(): void {
     const timeoutBonusPart = new TimeoutBonusPart({});
     this.gameMessageService.sendMessage(`/app/game/timeout-bonus-part`, timeoutBonusPart);
+  }
+
+  /**
+   * Sends a StartBonus message.
+   */
+  public sendStartBonus(): void {
+    const startBonus = new StartBonus({});
+    this.gameMessageService.sendMessage(`/app/game/start-bonus`, startBonus);
   }
 
   /**

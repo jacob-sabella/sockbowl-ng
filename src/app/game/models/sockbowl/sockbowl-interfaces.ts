@@ -219,6 +219,13 @@ export class TimeoutBonusPart extends SockbowlInMessage {
   }
 }
 
+export class StartBonus extends SockbowlInMessage {
+
+  constructor(data: StartBonus) {
+    super(data);
+  }
+}
+
 export class StartMatch extends SockbowlInMessage {
 
   constructor(data: StartMatch) {
@@ -619,6 +626,7 @@ export enum RoundState {
   PROCTOR_READING = "PROCTOR_READING",
   AWAITING_BUZZ = "AWAITING_BUZZ",
   AWAITING_ANSWER = "AWAITING_ANSWER",
+  BONUS_PENDING = "BONUS_PENDING",
   BONUS_READING_PREAMBLE = "BONUS_READING_PREAMBLE",
   BONUS_READING_PART = "BONUS_READING_PART",
   BONUS_AWAITING_ANSWER = "BONUS_AWAITING_ANSWER",
