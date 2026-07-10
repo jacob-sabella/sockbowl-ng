@@ -1,5 +1,6 @@
 import { Component, HostListener } from '@angular/core';
 import { ThemeService } from './core/services/theme.service';
+import { VersionCheckService } from './core/version-check.service';
 
 @Component({
     selector: 'app-root',
@@ -17,8 +18,9 @@ export class AppComponent {
   /**
    * Initialize ThemeService to apply theme on app startup
    */
-  constructor(private themeService: ThemeService) {
+  constructor(private themeService: ThemeService, versionCheck: VersionCheckService) {
     // Theme is automatically initialized in ThemeService constructor
+    versionCheck.start();
   }
 
   /** Watch for the secret word "clips" typed outside any text field. */
