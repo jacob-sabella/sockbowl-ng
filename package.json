@@ -52,5 +52,9 @@
     "karma-jasmine-html-reporter": "~2.2.0",
     "quicktype": "^23.0.0",
     "typescript": "~5.9.3"
+  },
+  "overrides": {
+    "http-proxy-middleware": "^3.0.7",
+    "@babel/core": "^7.29.7"
   }
 }
