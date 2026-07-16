@@ -1,7 +1,8 @@
 import {GameSinglePlayerComponent} from './game/components/game-single-player/game-single-player.component';
 import {GameAutoProctorComponent} from './game/components/game-auto-proctor/game-auto-proctor.component';
-import { NgModule } from '@angular/core';
+import { NgModule, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { ServiceWorkerModule } from '@angular/service-worker';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -97,7 +98,13 @@ import { PacketBuilderComponent } from './packets/components/packet-builder/pack
         MatAutocompleteModule,
         MatMenuModule,
         // OAuth2/OIDC Module
-        OAuthModule.forRoot()], providers: [
+        OAuthModule.forRoot(),
+        // PWA service worker — enabled only in production builds. Registers
+        // after the app stabilizes so it never delays first paint.
+        ServiceWorkerModule.register('ngsw-worker.js', {
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
+        })], providers: [
         // HTTP Interceptor for adding JWT tokens
         {
             provide: HTTP_INTERCEPTORS,

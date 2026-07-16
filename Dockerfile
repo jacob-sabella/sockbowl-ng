@@ -17,20 +17,9 @@ COPY ./dist/sockbowl-ng .
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Create a custom Nginx config file
-RUN echo 'server {' \
-        'listen       80;' \
-        'server_name  localhost;' \
-        'location / {' \
-            'root   /usr/share/nginx/html;' \
-            'index  index.html index.htm;' \
-            'try_files $uri $uri/ /index.html;' \
-        '}' \
-        'error_page   500 502 503 504  /50x.html;' \
-        'location = /50x.html {' \
-            'root   /usr/share/nginx/html;' \
-        '}' \
-    '}' > /etc/nginx/conf.d/default.conf
+# Nginx server config: SPA fallback + PWA-correct headers (manifest media type,
+# no-cache on the service worker / app shell / runtime config).
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80
