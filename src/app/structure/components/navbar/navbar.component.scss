@@ -135,20 +135,61 @@
 .navbar__auth-guest {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
 
+  /* "Playing as Guest" reads as an intentional status pill, not loose text:
+     a muted dot + label in a hairline capsule. */
   .navbar__guest-label {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    color: var(--text-muted);
+    font-size: 0.8rem;
     font-weight: 500;
     white-space: nowrap;
+
+    &::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
   }
 
+  /* The Sign In button is the continuity anchor: it mirrors the primary button
+     on the branded Keycloak page (indigo gradient, glow-on-hover, display font),
+     so the redirect to sign in reads as one continuous surface. */
   button {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
+    border-radius: var(--radius-full);
+    background: linear-gradient(180deg, var(--accent-primary), #4f46e5) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 18px var(--glow-primary);
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+
+    .navbar__btn-label {
+      font-family: var(--font-display);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    &:hover {
+      background: linear-gradient(180deg, var(--accent-primary-hover), var(--accent-primary)) !important;
+      box-shadow: 0 10px 26px var(--glow-primary);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
   }
 }
 
