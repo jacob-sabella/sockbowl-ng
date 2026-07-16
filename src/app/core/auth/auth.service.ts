@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, filter } from 'rxjs';
 import { authConfig } from './auth.config';
 import { environment } from '../../../environments/environment';
+import { ThemeService } from '../services/theme.service';
 
 /**
  * Authentication service for managing Keycloak OAuth2/OIDC authentication.
@@ -27,7 +28,8 @@ export class AuthService {
 
   constructor(
     private oauthService: OAuthService,
-    private router: Router
+    private router: Router,
+    private themeService: ThemeService
   ) {
     if (environment.authEnabled) {
       this.configure();
@@ -91,7 +93,9 @@ export class AuthService {
       console.warn('Authentication is disabled');
       return;
     }
-    this.oauthService.initCodeFlow();
+    // Carry the user's current theme through to the Keycloak login page so it
+    // matches the app (the sockbowl login theme reads ?ui_theme via a head script).
+    this.oauthService.initCodeFlow('', { ui_theme: this.themeService.getResolvedTheme() });
   }
 
   /**
