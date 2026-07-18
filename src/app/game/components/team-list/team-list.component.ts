@@ -32,12 +32,18 @@ export class TeamListComponent {
     let score = 0;
 
     // Calculate score from previous rounds
-    this.previousRoundList.forEach(round => {
-      score += round.buzzList.filter(buzz => buzz.playerId === playerId && buzz.correct).length * 10;
-    });
+    if (this.previousRoundList) {
+      this.previousRoundList.forEach(round => {
+        score += round.buzzList.filter(buzz => buzz.playerId === playerId && buzz.correct).length * 10;
+      });
+    }
 
-    // Add score from the current buzz if it's correct and belongs to the player
-    score += this.currentRound.buzzList.filter(buzz => buzz.playerId === playerId && buzz.correct).length * 10;
+    // Add score from the current buzz if it's correct and belongs to the player.
+    // currentRound is null between rounds / post-match, so guard it like the sibling
+    // score methods (getTeamBonusScore, hasTeamBuzzed) already do.
+    if (this.currentRound && this.currentRound.buzzList) {
+      score += this.currentRound.buzzList.filter(buzz => buzz.playerId === playerId && buzz.correct).length * 10;
+    }
 
     return score;
   }
