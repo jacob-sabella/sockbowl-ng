@@ -210,13 +210,19 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: TimerUpdate) => {
+          // Guard the round: a stray/late timer tick can arrive while currentRound is
+          // null (round transition, or a tick in flight after the round completed). An
+          // NPE thrown here would terminate this subscription permanently — no more
+          // timer updates for the rest of the session.
+          const round = this.gameSessionState?.currentMatch?.currentRound;
+          if (!round) {
+            return;
+          }
           // Update the timer state in the current round
           if (msg.timerType === 'TOSSUP') {
-            this.gameSessionState.currentMatch.currentRound.remainingTossupTimerSeconds =
-              msg.remainingSeconds;
+            round.remainingTossupTimerSeconds = msg.remainingSeconds;
           } else if (msg.timerType === 'BONUS') {
-            this.gameSessionState.currentMatch.currentRound.remainingBonusTimerSeconds =
-              msg.remainingSeconds;
+            round.remainingBonusTimerSeconds = msg.remainingSeconds;
           }
 
           // Emit updated state
@@ -230,11 +236,17 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: ReadingUpdate) => {
+          // Guard the round like the TimerUpdate handler: an NPE here would kill the
+          // subscription and freeze the server-driven reveal for the rest of the game.
+          const round = this.gameSessionState?.currentMatch?.currentRound;
+          if (!round) {
+            return;
+          }
           // The revealed text IS the round's question for AUTO_PROCTOR, the server
           // never sends unrevealed text, so just replace it directly.
-          this.gameSessionState.currentMatch.currentRound.question = msg.revealedText;
-          this.gameSessionState.currentMatch.currentRound.revealedWordCount = msg.revealedWordCount;
-          this.gameSessionState.currentMatch.currentRound.totalWordCount = msg.totalWordCount;
+          round.question = msg.revealedText;
+          round.revealedWordCount = msg.revealedWordCount;
+          round.totalWordCount = msg.totalWordCount;
 
           // Emit updated state
           this.gameSessionSubject.next(this.gameSessionState);
