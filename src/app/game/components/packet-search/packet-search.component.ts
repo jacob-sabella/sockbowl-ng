@@ -175,7 +175,23 @@ export class PacketSearchComponent implements OnInit {
     this.loadSavedApiKey();
 
     // Live "how many match" preview for the Generate tab (debounced).
-    this.countSubject.pipe(debounceTime(350)).subscribe(() => this.refreshAvailability());
+    // switchMap so a slow count response for an earlier filter set can't overwrite
+    // the count for the current filters (same race as the name search above).
+    this.countSubject.pipe(
+      debounceTime(350),
+      switchMap(() => this.sockbowlQuestionsService.countBankAvailable(this.buildRandomBody()).pipe(
+        catchError(() => of(null))
+      ))
+    ).subscribe(r => {
+      if (r) {
+        this.availTossups = r.tossups;
+        this.availBonuses = r.bonuses;
+      } else {
+        this.availTossups = null;
+        this.availBonuses = null;
+      }
+      this.countingAvail = false;
+    });
     this.loadFilters();
     this.queueCount();
     this.sockbowlQuestionsService.getBankTaxonomyCounts().subscribe({
@@ -265,14 +281,6 @@ export class PacketSearchComponent implements OnInit {
     this.filterSubs('');
     this.filterAlts('');
     this.queueCount();
-  }
-
-  private refreshAvailability(): void {
-    const body = this.buildRandomBody();
-    this.sockbowlQuestionsService.countBankAvailable(body).subscribe({
-      next: (r) => { this.availTossups = r.tossups; this.availBonuses = r.bonuses; this.countingAvail = false; },
-      error: () => { this.availTossups = null; this.availBonuses = null; this.countingAvail = false; }
-    });
   }
 
   selectPacket(packet: Packet): void {
