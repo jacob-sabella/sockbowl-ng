@@ -1,4 +1,5 @@
-import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import {
@@ -49,6 +50,8 @@ export class GameConfigComponent implements OnInit {
 
   @ViewChild('packetSearchModal') packetSearchModal!: TemplateRef<any>;
 
+  private destroyRef = inject(DestroyRef);
+
   constructor(
     public gameStateService: GameStateService,
     private gameMessageService: GameMessageService,
@@ -64,7 +67,7 @@ export class GameConfigComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.gameSessionObs.subscribe((gameSession) => {
+    this.gameSessionObs.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((gameSession) => {
       this.gameSession = gameSession;
 
       // Initialize timer settings from game session
@@ -99,11 +102,13 @@ export class GameConfigComponent implements OnInit {
     });
 
     // Subscribe to ProcessError messages to show error toasts
-    this.gameMessageService.gameEventObservables['ProcessError']?.subscribe((error: ProcessError) => {
-      if (error?.error) {
-        this.snack.open(error.error, 'Dismiss', { duration: 5000 });
-      }
-    });
+    this.gameMessageService.gameEventObservables['ProcessError']
+      ?.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((error: ProcessError) => {
+        if (error?.error) {
+          this.snack.open(error.error, 'Dismiss', { duration: 5000 });
+        }
+      });
   }
 
   /* ─── Teams ─────────────────────────────────────────────────────────────── */
