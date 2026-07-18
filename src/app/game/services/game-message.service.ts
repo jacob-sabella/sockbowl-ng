@@ -146,8 +146,6 @@ export class GameMessageService {
       return bonus;
     }
 
-    console.log('[GameMessageService] Flattening bonus, original bonusParts:', bonus.bonusParts);
-
     // First, extract and pair each bonusPart with its order
     const partsWithOrder = bonus.bonusParts.map((hasBonusPart: any) => ({
       order: hasBonusPart.order || 0,
@@ -159,9 +157,6 @@ export class GameMessageService {
 
     // Extract just the parts
     const flattenedParts = partsWithOrder.map((item: any) => item.part);
-
-    console.log('[GameMessageService] Flattened bonusParts:', flattenedParts);
-    console.log('[GameMessageService] First part detail:', flattenedParts[0]);
 
     const flattened = {
       ...bonus,

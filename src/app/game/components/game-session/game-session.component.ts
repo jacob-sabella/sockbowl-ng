@@ -122,9 +122,6 @@ export class GameSessionComponent {
 
   submitCreateGame(): void {
     this.gameSessionService.createNewGame(this.createGameRequest).subscribe(response => {
-      console.log("Create game response");
-      console.log(response);
-
       // Populate the join code from the create game response
       this.joinGameRequest.joinCode = response.joinCode;
 
@@ -154,8 +151,7 @@ export class GameSessionComponent {
         "playerSessionId": response.playerSessionId
       };
 
-      this.router.navigate(["/game", navigationParams])
-        .then(r => console.log(r));
+      this.router.navigate(["/game", navigationParams]);
     });
   }
 

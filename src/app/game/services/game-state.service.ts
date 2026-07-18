@@ -87,7 +87,6 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: GameSessionUpdate) => {
-          console.log(msg.gameSession);
           this.gameSessionState = msg.gameSession;
           this.gameSessionSubject.next(this.gameSessionState);
         })
