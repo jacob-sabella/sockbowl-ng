@@ -107,7 +107,10 @@ export class MatchSummaryComponent implements OnInit {
       if (score > highestScore) {
         highestScore = score;
         winningTeams = [team];
-      } else if (score === highestScore) {
+      } else if (score === highestScore && highestScore > 0) {
+        // Only a positive score counts as a tie. Without the `> 0` guard every
+        // team "ties" at the initial 0, so a game where nobody scored would
+        // announce a tie (or a false winner) instead of "No team has scored."
         winningTeams.push(team);
       }
     });
