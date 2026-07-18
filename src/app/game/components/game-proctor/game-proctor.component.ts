@@ -1,4 +1,5 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, DestroyRef, inject, OnInit} from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Observable} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
@@ -21,6 +22,8 @@ export class GameProctorComponent implements OnInit {
   castAvailable$: Observable<boolean>;
   castConnectionState$: Observable<PresentationConnectionState>;
 
+  private destroyRef = inject(DestroyRef);
+
   constructor(
     public gameStateService: GameStateService,
     private presentationConnectionService: PresentationConnectionService,
@@ -32,7 +35,7 @@ export class GameProctorComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.gameSessionObs.subscribe(gameSession => {
+    this.gameSessionObs.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(gameSession => {
       this.gameSession = gameSession;
     });
   }

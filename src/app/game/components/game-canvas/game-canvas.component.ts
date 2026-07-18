@@ -1,4 +1,5 @@
-import {Component} from '@angular/core';
+import {Component, DestroyRef, inject} from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from "@angular/router";
 import {GameStateService} from "../../services/game-state.service";
 import {Observable} from "rxjs";
@@ -14,12 +15,14 @@ export class GameCanvasComponent {
 
   gameSession$: Observable<GameSession>;
 
+  private destroyRef = inject(DestroyRef);
+
   constructor(private route: ActivatedRoute, private gameStateService: GameStateService) {
     this.gameSession$ = this.gameStateService.gameSession$;
   }
 
   ngOnInit() {
-    this.route.paramMap.subscribe(params => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
 
       let gameSessionId: string = params.get("gameSessionId") || '';
       let playerSecret: string = params.get("playerSecret") || '';
