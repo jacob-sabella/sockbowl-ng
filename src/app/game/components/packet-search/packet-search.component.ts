@@ -4,8 +4,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { OpenAiModelService } from '../../services/openai-model.service';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
-import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Subject, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
@@ -147,12 +147,28 @@ export class PacketSearchComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Set up debounced search
+    // Set up debounced search. switchMap cancels the in-flight request when a newer
+    // query arrives, so a slow response for an earlier query can never overwrite the
+    // results of a later one (the classic search race).
     this.searchSubject.pipe(
       debounceTime(300),
-      distinctUntilChanged()
-    ).subscribe(query => {
-      this.performSearch(query);
+      distinctUntilChanged(),
+      switchMap(query => {
+        if (!query || query.length < 2) {
+          this.isSearching = false;
+          return of([] as Packet[]);
+        }
+        this.isSearching = true;
+        return this.sockbowlQuestionsService.searchPacketsByName(query).pipe(
+          catchError(error => {
+            console.error('Search error:', error);
+            return of([] as Packet[]);
+          })
+        );
+      })
+    ).subscribe(results => {
+      this.searchResults = results;
+      this.isSearching = false;
     });
 
     // Load saved API key if available
@@ -257,26 +273,6 @@ export class PacketSearchComponent implements OnInit {
       next: (r) => { this.availTossups = r.tossups; this.availBonuses = r.bonuses; this.countingAvail = false; },
       error: () => { this.availTossups = null; this.availBonuses = null; this.countingAvail = false; }
     });
-  }
-
-  private performSearch(query: string): void {
-    if (query && query.length >= 2) {
-      this.isSearching = true;
-      this.sockbowlQuestionsService.searchPacketsByName(query).subscribe({
-        next: (results) => {
-          this.searchResults = results;
-          this.isSearching = false;
-        },
-        error: (error) => {
-          console.error('Search error:', error);
-          this.searchResults = [];
-          this.isSearching = false;
-        }
-      });
-    } else {
-      this.searchResults = [];
-      this.isSearching = false;
-    }
   }
 
   selectPacket(packet: Packet): void {
