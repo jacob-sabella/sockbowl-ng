@@ -151,6 +151,7 @@
                 <mat-slide-toggle
                   [(ngModel)]="bonusesEnabled"
                   (change)="toggleBonuses()"
+                  [disabled]="!canEditTimerSettings()"
                   color="primary"
                   class="bonus-toggle">
                   Enable Bonuses

@@ -221,6 +221,14 @@ export class GameConfigComponent implements OnInit {
    * Toggle bonuses enabled setting
    */
   toggleBonuses(): void {
+    // Only the proctor (or the owner in proctorless modes) may change settings;
+    // the backend rejects anyone else, so guard here too — matching
+    // updateTimerSettings — instead of firing a doomed round-trip. Revert the
+    // optimistic ngModel flip so the toggle doesn't show a state that won't stick.
+    if (!this.canEditTimerSettings()) {
+      this.bonusesEnabled = !this.bonusesEnabled;
+      return;
+    }
     const updatedSettings = new GameSettings({
       proctorType: this.gameSession.gameSettings.proctorType,
       gameMode: this.gameSession.gameSettings.gameMode,
