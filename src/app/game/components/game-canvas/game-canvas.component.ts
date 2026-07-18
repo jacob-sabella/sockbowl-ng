@@ -26,8 +26,6 @@ export class GameCanvasComponent {
       let playerSessionId: string = params.get("playerSessionId") || '';
       let accessToken: string | undefined = params.get("accessToken") || undefined;
 
-      console.log(gameSessionId, playerSecret, playerSessionId, accessToken);
-
       this.gameStateService.initialize(gameSessionId, playerSecret, playerSessionId, accessToken);
     });
   }

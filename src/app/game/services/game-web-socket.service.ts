@@ -53,18 +53,14 @@ export class GameWebSocketService {
     this.stompClient = new Client({
       brokerURL: environment.wsUrl,
       onConnect: () => {
-        console.log("connected");
-
         // Subscribe to a specific queue for game and player session events
         this.stompClient.subscribe(`/queue/event/${gameSessionId}/${playerSessionId}`, message => {
-          console.log(`Received: ${message.body}`);
           // Notify all subscribers of the new message
           this.messageSubject.next(message);
         });
 
         // Subscribe to a general queue for game session events
         this.stompClient.subscribe(`/queue/event/${gameSessionId}`, message => {
-          console.log(`Received: ${message.body}`);
           // Notify all subscribers of the new message
           this.messageSubject.next(message);
         });
@@ -96,8 +92,6 @@ export class GameWebSocketService {
   }
 
   public sendMessage(path: string, value: SockbowlInMessage){
-    console.log(JSON.stringify(value))
-
     const headers: any = {
       gameSessionId: this.gameSessionId,
       playerSessionId: this.playerSessionId
