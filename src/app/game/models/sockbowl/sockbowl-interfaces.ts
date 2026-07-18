@@ -585,8 +585,6 @@ export enum GameMode {
   QUIZ_BOWL_CLASSIC = "QUIZ_BOWL_CLASSIC",
   SINGLE_PLAYER = "SINGLE_PLAYER",
   AUTO_PROCTOR = "AUTO_PROCTOR",
-  // TODO: hand-added ahead of backend GameMode.java (B1) landing; replace with
-  // the regenerated version of this file once the backend enum ships.
   FREE_FOR_ALL = "FREE_FOR_ALL",
 }
 
