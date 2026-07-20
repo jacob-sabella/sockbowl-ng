@@ -44,7 +44,7 @@
     "@playwright/test": "^1.61.1",
     "@types/jasmine": "^6.0.0",
     "@types/sockjs-client": "^1.5.4",
-    "graphql": "^16.14.2",
+    "graphql": "^17.0.2",
     "jasmine-core": "~6.3.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
