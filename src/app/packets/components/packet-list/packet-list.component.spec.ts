@@ -77,4 +77,19 @@ describe('PacketListComponent', () => {
     expect(component.canManage(othersPacket)).toBeTrue();
     expect(component.canManage(ownerlessPacket)).toBeTrue();
   });
+
+  it('canManage is false for a redacted owner.id:null packet while the current user id has not resolved yet (NG-R2-04)', () => {
+    // A non-owner's read redacts owner.id to null (D2). Before
+    // updateUserProfile resolves, getCurrentUserId() can also be null — a
+    // naive `packet.owner.id === userId` would wrongly match null === null.
+    configure([], null);
+    const redactedPacket = { id: 'p4', name: 'Someone else’s', owner: { id: null, name: null } } as unknown as Packet;
+    expect(component.canManage(redactedPacket)).toBeFalse();
+  });
+
+  it('"My packets" is empty rather than matching redacted owners while the current user id has not resolved yet (NG-R2-04)', () => {
+    configure([], null);
+    component.showMineOnly = true;
+    expect(component.filteredPackets).toEqual([]);
+  });
 });
