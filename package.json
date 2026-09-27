@@ -12,7 +12,8 @@
     "gen:cast-tokens": "sass src/cast-theme-tokens.scss src/cast-theme-tokens.css --style=compressed --no-source-map",
     "e2e": "playwright test --project=chromium",
     "clips": "node scripts/build-clips.mjs",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "test:headers": "bash scripts/test-headers.sh"
   },
   "private": true,
   "engines": {

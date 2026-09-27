@@ -1,0 +1,16 @@
+# Security headers snippet, rendered from this template by docker-entrypoint.sh
+# (envsubst) into /etc/nginx/snippets/security-headers.conf.
+#
+# `add_header` in a location block replaces the whole set of headers it would
+# otherwise inherit from the server block, and several locations in nginx.conf
+# already set their own `add_header Cache-Control ...`. So this snippet is
+# `include`d in EVERY location block (not just the server block) — see
+# nginx.conf and AUTH-21 / plans/m2-auth.md §2.9.
+#
+# `always` makes nginx send these headers on error responses too (4xx/5xx),
+# not just 2xx/3xx.
+add_header Content-Security-Policy "${CSP_HEADER_VALUE}" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "DENY" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
