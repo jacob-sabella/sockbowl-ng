@@ -300,17 +300,6 @@ export class AuthService {
   }
 
   /**
-   * Whether the current user is an administrator.
-   *
-   * @deprecated Use {@link hasPermission} with a fine-grained permission
-   *   (e.g. `admin:access`, `packet:manage-any`). Kept only until the
-   *   remaining UI callers move to permissions (WP-N2), which deletes it.
-   */
-  public isAdmin(): boolean {
-    return this.hasRole('admin');
-  }
-
-  /**
    * Whether the current user holds the given fine-grained permission (realm role).
    *
    * Keycloak expands composite roles into `realm_access.roles`, so a
@@ -354,7 +343,6 @@ export class AuthService {
         name: claims['name'] || claims['preferred_username'] || claims['email'] || 'User',
         preferredUsername: claims['preferred_username'],
         roles,
-        isAdmin: roles.includes('admin'),
       };
       this.userProfileSubject.next(profile);
     }

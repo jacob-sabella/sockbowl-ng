@@ -121,10 +121,6 @@ describe('AuthService', () => {
     expect(service.hasPermission('packet:create')).toBeFalse();
   });
 
-  it('isAdmin is false when the admin role is absent', () => {
-    expect(service.isAdmin()).toBeFalse();
-  });
-
   describe('configuration', () => {
     it('uses the refresh-token flow, not the silent-refresh iframe', () => {
       expect(authConfig.useSilentRefresh).toBeFalse();
