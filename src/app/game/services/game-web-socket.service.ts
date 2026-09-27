@@ -28,6 +28,18 @@ export interface SocketCredentials {
 export const BASE_RECONNECT_DELAY_MS = 2000;
 /** Cap for the exponential reconnect backoff. */
 export const MAX_RECONNECT_DELAY_MS = 30000;
+/** How long a connection must stay up before a RATE_LIMITED backoff resets (M4-UI-02). */
+export const RATE_LIMIT_STABLE_MS = 60000;
+/** Extra random delay added on top of each RATE_LIMITED backoff step, as a fraction of it. */
+export const RATE_LIMIT_JITTER_RATIO = 0.2;
+
+/** Source of the jitter fraction (`[0, 1)`) added to a RATE_LIMITED reconnect delay. Swapped for a fixed value in tests. */
+export type RateLimitJitterFn = () => number;
+
+export const RATE_LIMIT_JITTER = new InjectionToken<RateLimitJitterFn>('RATE_LIMIT_JITTER', {
+  providedIn: 'root',
+  factory: () => () => Math.random(),
+});
 
 /**
  * GameWebSocketService
@@ -49,6 +61,7 @@ export const MAX_RECONNECT_DELAY_MS = 30000;
 export class GameWebSocketService {
   private authService = inject(AuthService);
   private clientFactory = inject(STOMP_CLIENT_FACTORY);
+  private rateLimitJitter = inject(RATE_LIMIT_JITTER);
 
   // Stomp.js client for handling STOMP over WebSocket
   private stompClient?: Client;
@@ -74,6 +87,16 @@ export class GameWebSocketService {
   /** Whether the one token-refresh reconnect was spent since the last CONNECTED. */
   private tokenRetryUsed = false;
 
+  /**
+   * The current RATE_LIMITED backoff step in ms, or null when the connection
+   * is stable (no reconnect currently owed to a rate limit). Doubles (capped
+   * at {@link MAX_RECONNECT_DELAY_MS}) on each RATE_LIMITED that lands before
+   * {@link RATE_LIMIT_STABLE_MS} of stable connection resets it to null.
+   */
+  private rateLimitBackoffMs: number | null = null;
+  private rateLimitReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private rateLimitStableTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     // Connection is deferred until initialize() supplies the session context.
     const sub = this.authService.tokenChanges$?.subscribe(token => {
@@ -97,6 +120,7 @@ export class GameWebSocketService {
    */
   public initialize(gameSessionId: string, playerSessionId: string, credentials: SocketCredentials = {}) {
     this.stompClient?.deactivate();
+    this.clearRateLimitTimers();
 
     this.gameSessionId = gameSessionId;
     this.playerSessionId = playerSessionId;
@@ -104,6 +128,7 @@ export class GameWebSocketService {
     this.lastSentToken = null;
     this.latestToken = null;
     this.tokenRetryUsed = false;
+    this.rateLimitBackoffMs = null;
 
     const client = this.clientFactory({
       brokerURL: environment.wsUrl,
@@ -122,6 +147,7 @@ export class GameWebSocketService {
 
   /** Stops the connection and any reconnect attempts. */
   public disconnect(): void {
+    this.clearRateLimitTimers();
     const client = this.stompClient;
     if (client) {
       client.reconnectDelay = 0;
@@ -181,6 +207,15 @@ export class GameWebSocketService {
   private onConnected(client: Client): void {
     this.tokenRetryUsed = false;
 
+    // A RATE_LIMITED backoff is still owed until the connection proves it's
+    // stable; only then does the next RATE_LIMITED start over from scratch.
+    if (this.rateLimitBackoffMs !== null) {
+      this.rateLimitStableTimer = setTimeout(() => {
+        this.rateLimitStableTimer = null;
+        this.rateLimitBackoffMs = null;
+      }, RATE_LIMIT_STABLE_MS);
+    }
+
     // Subscribe to a specific queue for game and player session events
     client.subscribe(`/queue/event/${this.gameSessionId}/${this.playerSessionId}`, message => {
       this.messageSubject.next(message);
@@ -230,9 +265,62 @@ export class GameWebSocketService {
       return;
     }
 
+    if (error.code === 'RATE_LIMITED') {
+      this.scheduleRateLimitedReconnect(client, error);
+      return;
+    }
+
     // INTERNAL (or a code this build doesn't know): the socket closes and the
     // client reconnects with exponential backoff.
     this.errorsSubject.next({...error, fatal: false});
+  }
+
+  /**
+   * A hard RATE_LIMITED rejection (M4-UI-02, e.g. the `stomp-flood` bucket):
+   * the server already closed the socket. Reconnect after a delay that
+   * starts at the server's `retryAfterSeconds`, doubles (with jitter) on each
+   * RATE_LIMITED that lands before the connection is stable again, and is
+   * capped at {@link MAX_RECONNECT_DELAY_MS}. `onConnected` clears the
+   * backoff once the connection has stayed up for {@link RATE_LIMIT_STABLE_MS}.
+   */
+  private scheduleRateLimitedReconnect(client: Client, error: StompError): void {
+    this.clearRateLimitTimers();
+
+    const floorMs = Math.max(error.retryAfterSeconds ?? 1, 1) * 1000;
+    const nextDelayMs = Math.min(
+      this.rateLimitBackoffMs !== null ? this.rateLimitBackoffMs * 2 : floorMs,
+      MAX_RECONNECT_DELAY_MS,
+    );
+    this.rateLimitBackoffMs = nextDelayMs;
+
+    const jitterMs = nextDelayMs * RATE_LIMIT_JITTER_RATIO * this.rateLimitJitter();
+    const delayMs = Math.min(nextDelayMs + jitterMs, MAX_RECONNECT_DELAY_MS);
+
+    // We drive the reconnect ourselves; stop stompjs' own retry so the two
+    // don't race.
+    client.reconnectDelay = 0;
+    client.deactivate();
+    this.errorsSubject.next({...error, fatal: false});
+
+    this.rateLimitReconnectTimer = setTimeout(() => {
+      this.rateLimitReconnectTimer = null;
+      if (client !== this.stompClient) {
+        return;
+      }
+      client.reconnectDelay = BASE_RECONNECT_DELAY_MS;
+      client.activate();
+    }, delayMs);
+  }
+
+  private clearRateLimitTimers(): void {
+    if (this.rateLimitReconnectTimer) {
+      clearTimeout(this.rateLimitReconnectTimer);
+      this.rateLimitReconnectTimer = null;
+    }
+    if (this.rateLimitStableTimer) {
+      clearTimeout(this.rateLimitStableTimer);
+      this.rateLimitStableTimer = null;
+    }
   }
 
   private async refreshAndReconnect(client: Client, error: StompError): Promise<void> {
