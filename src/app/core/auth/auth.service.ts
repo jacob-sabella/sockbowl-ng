@@ -334,10 +334,19 @@ export class AuthService {
 
   /**
    * Get the current user's Keycloak id (the `sub` claim), or null if there
-   * is no authenticated user (guest mode, or no profile loaded yet).
+   * is no authenticated user (guest mode).
+   *
+   * Falls back to decoding `sub` straight out of the access token when the
+   * ID-token-derived profile hasn't loaded yet: `updateUserProfile` resolves
+   * asynchronously after login, and a caller (e.g. an ownership check) can
+   * run before it does. Without the fallback, `getCurrentUserId()` returned
+   * null during that window, and since a non-owned packet's `owner.id` is
+   * also null (D2's answer-free projection redacts it), an ownership
+   * comparison against a not-yet-loaded id could spuriously match
+   * `null === null` (NG-R2-04).
    */
   public getCurrentUserId(): string | null {
-    return this.getUserProfile()?.sub ?? null;
+    return this.getUserProfile()?.sub ?? this.getAccessTokenPayload()?.sub ?? null;
   }
 
   /**
