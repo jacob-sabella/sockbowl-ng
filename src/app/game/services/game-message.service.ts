@@ -52,7 +52,7 @@ export class GameMessageService {
     }
   }
 
-  /** STOMP errors (fatal ERROR frames and non-fatal `/user/queue/errors`). */
+  /** STOMP errors (ERROR frames and `/user/queue/errors` items; `fatal` when the seat is over). */
   public get errors$(): Observable<StompError> {
     return this.gameWebSocketService.errors$;
   }
