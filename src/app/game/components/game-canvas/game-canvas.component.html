@@ -1,3 +1,5 @@
+<!-- Socket errors: fatal ones persist until dismissed, non-fatal ones for 5s. -->
+<app-stomp-error-banner [error]="latestStompError"></app-stomp-error-banner>
 <!-- Game Session Container -->
 @if (gameSession$ | async) {
   <div>
