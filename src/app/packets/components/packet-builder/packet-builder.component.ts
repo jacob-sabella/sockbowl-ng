@@ -12,6 +12,8 @@ import {
 } from '../../../game/models/sockbowl/packet-types.generated';
 import { Category, Difficulty, Subcategory } from '../../models/packet-authoring.models';
 import { AuthService } from '../../../core/auth/auth.service';
+import { describeGraphqlError } from '../../../core/graphql/graphql-errors';
+import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 
 interface TossupDraft {
   question: string;
@@ -49,7 +51,7 @@ interface SubcategoryGroup {
   changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
-export class PacketBuilderComponent implements OnInit {
+export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private sockbowlQuestionsService = inject(SockbowlQuestionsService);
@@ -607,6 +609,17 @@ export class PacketBuilderComponent implements OnInit {
   }
 
   extractError(err: any): string {
-    return err?.error?.errors?.[0]?.message || 'Something went wrong.';
+    return describeGraphqlError(err);
+  }
+
+  /**
+   * `canDeactivate` hook for {@link unsavedChangesGuard} (D6). Every
+   * mutation here saves immediately (no local draft state yet), so there is
+   * nothing to lose on navigation. TODO(N2): back this with
+   * `PacketDraftStore.dirtyCount > 0` once per-card drafts and Save all
+   * exist (plan 3.3.2, fixes PB-03).
+   */
+  hasUnsavedChanges(): boolean {
+    return false;
   }
 }
