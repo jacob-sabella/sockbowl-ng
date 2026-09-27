@@ -26,6 +26,11 @@ RUN chmod +x /docker-entrypoint.sh
 # no-cache on the service worker / app shell / runtime config).
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
+# Security headers (CSP + friends): the template is rendered per-deploy by
+# docker-entrypoint.sh (envsubst) into the snippets dir nginx.conf includes.
+RUN mkdir -p /etc/nginx/snippets
+COPY ./security-headers.conf.template /etc/nginx/security-headers.conf.template
+
 # Expose port 80
 EXPOSE 80
 

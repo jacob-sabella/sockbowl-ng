@@ -50,6 +50,11 @@
           "configurations": {
             "production": {
               "serviceWorker": "ngsw-config.json",
+              "optimization": {
+                "styles": {
+                  "inlineCritical": false
+                }
+              },
               "budgets": [
                 {
                   "type": "initial",
