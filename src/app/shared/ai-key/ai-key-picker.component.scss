@@ -1,9 +1,75 @@
+/* Extracted from packet-search-generate.component.scss (M3 N5) so the
+ * shared picker carries its own styling wherever it's embedded, and so
+ * packet-search's own stylesheet stays comfortably under its budget. */
 .ai-key-picker {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 
-  &__key, &__model {
+  &__key,
+  &__model {
     width: 100%;
+
+    ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        background: var(--bg-secondary) !important;
+        border-radius: 12px !important;
+        border: 1px solid var(--border-medium) !important;
+      }
+
+      &.mat-focused .mat-mdc-text-field-wrapper {
+        border-color: var(--accent-primary) !important;
+      }
+
+      input,
+      .mat-mdc-select {
+        color: var(--text-primary) !important;
+
+        &::placeholder {
+          color: var(--text-muted) !important;
+          opacity: 0.8;
+        }
+      }
+
+      label {
+        color: var(--text-secondary) !important;
+      }
+
+      .mat-mdc-form-field-hint.ai-key-picker__error-hint {
+        color: var(--error) !important;
+        font-weight: 500;
+      }
+
+      .mat-mdc-form-field-icon-suffix mat-spinner {
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
+  &__remember {
+    margin: -0.5rem 0 0.5rem 0;
+    font-size: 0.9rem;
+
+    ::ng-deep {
+      .mdc-checkbox__background {
+        border-color: var(--border-medium) !important;
+      }
+
+      .mdc-checkbox--selected .mdc-checkbox__background {
+        background-color: var(--accent-primary) !important;
+        border-color: var(--accent-primary) !important;
+      }
+
+      .mdc-label {
+        color: var(--text-secondary) !important;
+      }
+    }
+  }
+
+  &__fetch-btn {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.75rem;
+    min-height: auto;
+    line-height: normal;
   }
 }
