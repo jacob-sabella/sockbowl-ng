@@ -16,22 +16,19 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x]
+        # 20.x reached end-of-life 2026-04-30; 24.x is the current active LTS
+        # (matches package.json's engines range and ships npm 11 already, so
+        # the old "pin npm to 11" workaround below is no longer needed).
+        node-version: [24.x]
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
-
-      # package-lock.json is authored by npm 11 (local dev). node-20 ships npm
-      # 10, which mis-reads that lockfile as out-of-sync ("Missing: chokidar...")
-      # and fails `npm ci`. Pin npm to 11 so CI matches the lockfile author.
-      - name: Pin npm to 11
-        run: npm install -g npm@11
 
       - name: Install dependencies
         run: npm ci
@@ -47,10 +44,10 @@ jobs:
 
       # Docker steps
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

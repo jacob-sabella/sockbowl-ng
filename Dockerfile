@@ -1,5 +1,8 @@
-# Use official nginx image as the base image
-FROM nginx:latest
+# Use official nginx image as the base image (pinned - see GOAL.md guardrails;
+# :latest is unstable for production. 1.31.6 is the current stable release as
+# of this upgrade; the Debian-based (non-alpine) tag is used deliberately so
+# `apt-get`/gettext-base below keeps working without switching to apk).
+FROM nginx:1.31.6
 
 # Install envsubst (part of gettext-base package)
 RUN apt-get update && apt-get install -y gettext-base && rm -rf /var/lib/apt/lists/*
