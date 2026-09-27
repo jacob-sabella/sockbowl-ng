@@ -235,7 +235,7 @@ const STATIC_SCREENS: Screen[] = [
 
     test(`buzzer + spectator · ${vp.name}`, async ({ browser }) => {
       const game = await createGame();
-      const packetId = await importQbreaderPacket('2021 SMH', 1);
+      const packetId = await importQbreaderPacket();
       const pj = await joinByCode(game.joinCode, 'Proctor');
       const proctor = new SockbowlBot('Proctor', pj.gameSessionId, pj.playerSecret, pj.playerSessionId);
       await proctor.connect();

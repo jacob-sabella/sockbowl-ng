@@ -36,13 +36,26 @@ export async function joinByCode(joinCode: string, name: string): Promise<JoinRe
   return (await res.json()) as JoinResult;
 }
 
-/** Import a real qbreader packet and return its id (for a match with genuine questions). */
-export async function importQbreaderPacket(setName: string, packetNumber: number): Promise<string> {
-  const res = await fetch(`${QUESTIONS_BASE}/api/qbreader/import`, {
+/**
+ * Generate a packet from the local question bank and return its id, for a match
+ * with genuine questions. Backed by `POST /api/qbreader/import-random` (D15),
+ * which is guest-allowed in both auth modes: with auth off it returns an
+ * ownerless DRAFT packet as before; with auth on and no bearer (the harness
+ * never sends one) it returns an ownerless, game-only EPHEMERAL packet, usable
+ * only via `SetMatchPacket`. The now-removed `/api/qbreader/import` (a
+ * setName/packetNumber lookup against the real qbreader.org) is gone —
+ * questions come from the local bank, selected by count instead of by set.
+ */
+export async function importQbreaderPacket(
+  tossupCount = 13,
+  bonusCount = 5,
+  name?: string,
+): Promise<string> {
+  const res = await fetch(`${QUESTIONS_BASE}/api/qbreader/import-random`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ setName, packetNumber }),
+    body: JSON.stringify({ tossupCount, bonusCount, name }),
   });
-  if (!res.ok) throw new Error(`importPacket ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`importRandomPacket ${res.status}: ${await res.text()}`);
   return (await res.json()).id;
 }

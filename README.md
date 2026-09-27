@@ -55,9 +55,19 @@ SOCKBOWL_APP=http://localhost npm run e2e:auth
 ```
 
 `auth-refresh-logout.spec.ts` needs a short access-token lifespan to reach a
-refresh in a reasonable time; start the stack with
-`KC_ACCESS_TOKEN_LIFESPAN=60` (and pass the same value to Playwright as the
-env var of the same name if you change it) to exercise that spec.
+refresh in a reasonable time. **Set `KC_ACCESS_TOKEN_LIFESPAN=60` on the
+docker compose environment that starts Keycloak** (`rbac-init`'s and
+`sockbowl-game`/`sockbowl-questions`), not only as a Playwright-side env var
+here — a stack still running at the default 300s lifespan will make the spec
+wait 75s for a refresh that Keycloak never actually issues, since nothing
+requires one yet at that point. Pass the same value to Playwright too
+(`KC_ACCESS_TOKEN_LIFESPAN=60 SOCKBOWL_APP=http://localhost npm run e2e:auth`),
+since the spec also uses it to size its wait and to sanity-check the token's
+own `exp - iat`.
+
+Before pointing either suite at a stack built from a local branch, run
+`npm run buildprod` first (the compose image copies the prebuilt `dist/`; a
+stale or missing build serves stale or missing app code, not a build error).
 
 **Known gap (M3 follow-up):** the packet-search "Generate" tab (bank-random,
 D15) reads local `:BankTossup`/`:BankBonus` nodes that this compose stack's
@@ -74,13 +84,17 @@ a multiplayer match through to the match summary). The pre-existing guest
 and so still hit this gap when pointed at a local stack instead of the live
 site they default to; they aren't rewritten here (`bonus.spec.ts` also has an
 independent, hardcoded dependency on the production GraphQL endpoint for its
-answer lookup). Likewise, `e2e/`'s bot harness (`npm run full-match`) imports
-its packet via `POST /api/qbreader/import`, a different endpoint from the
-"Generate" tab's `import-random` — under M2 that endpoint isn't in the
-security config's public allow-list and now requires authentication, which
-the harness (guest-only bots; login support is deferred to M3 E1/M4 E1 per
-`tests-auth/helpers/login.ts`'s contract note) can't yet provide, so it fails
-with 401 against an `AUTH_ENABLED=true` stack until that support lands.
+answer lookup).
+
+`e2e/`'s bot harness (`npm run full-match`) now imports its packet the same
+way the "Generate" tab does: `POST /api/qbreader/import-random`, generating
+from the local question bank by tossup/bonus count instead of a qbreader.org
+set/packet-number lookup (the old `/api/qbreader/import` this harness used to
+call doesn't exist any more). `import-random` is guest-allowed in both auth
+modes (D15: with `AUTH_ENABLED=true` and no bearer it returns an ownerless,
+game-only EPHEMERAL packet instead of an owned DRAFT; the harness's bots are
+guest-only and never send one), so `full-match` passes against both an
+auth-on and an auth-off stack with no login support needed in the harness.
 
 Traces, screenshots and videos for `tests-auth/` land under
 `artifacts/m2-auth/` (see `playwright.auth.config.ts`'s `outputDir`).

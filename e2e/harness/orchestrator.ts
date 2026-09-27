@@ -17,13 +17,15 @@ export interface StagedMatch {
  * Stand up a fully configured, ready-to-start match: a proctor, a real imported
  * packet, and N players split across the two teams — all connected over STOMP.
  */
-export async function stageMatch(opts: { set?: string; packet?: number; playerNames?: string[] } = {}): Promise<StagedMatch> {
-  const set = opts.set ?? '2021 SMH';
-  const packetNum = opts.packet ?? 1;
+export async function stageMatch(
+  opts: { tossupCount?: number; bonusCount?: number; playerNames?: string[] } = {},
+): Promise<StagedMatch> {
+  const tossupCount = opts.tossupCount ?? 13;
+  const bonusCount = opts.bonusCount ?? 5;
   const playerNames = opts.playerNames ?? ['Ada', 'Blaise', 'Cleo', 'Dov'];
 
   const game = await createGame();
-  const packetId = await importQbreaderPacket(set, packetNum);
+  const packetId = await importQbreaderPacket(tossupCount, bonusCount);
 
   const hostJoin = await joinByCode(game.joinCode, 'Proctor');
   const proctor = new SockbowlBot('Proctor', hostJoin.gameSessionId, hostJoin.playerSecret, hostJoin.playerSessionId);
