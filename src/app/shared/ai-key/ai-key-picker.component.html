@@ -1,0 +1,25 @@
+<!-- TODO(N5): bring in the model dropdown, OpenAiModelService.fetchModels and load-error UI from packet-search.component.html. -->
+<div class="ai-key-picker">
+  <mat-form-field appearance="outline" class="ai-key-picker__key">
+    <mat-label>OpenAI API key</mat-label>
+    <input
+      matInput
+      type="password"
+      autocomplete="off"
+      [ngModel]="apiKey"
+      (ngModelChange)="onApiKeyChange($event)"
+    />
+  </mat-form-field>
+  <mat-checkbox [ngModel]="rememberKey" (ngModelChange)="onRememberChange($event)">
+    Remember key on this device
+  </mat-checkbox>
+  <mat-form-field appearance="outline" class="ai-key-picker__model">
+    <mat-label>Model</mat-label>
+    <input
+      matInput
+      placeholder="gpt-4o-mini"
+      [ngModel]="model"
+      (ngModelChange)="onModelChange($event)"
+    />
+  </mat-form-field>
+</div>

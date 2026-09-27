@@ -1,0 +1,9 @@
+.ai-key-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__key, &__model {
+    width: 100%;
+  }
+}
