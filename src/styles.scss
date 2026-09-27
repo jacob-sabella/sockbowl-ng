@@ -29,6 +29,7 @@
 @use 'styles/utilities/animations' as *;
 @use 'styles/utilities/helpers' as *;
 @use 'styles/utilities/shadows' as *;
+@use 'styles/utilities/print' as *;
 
 /* ===== VENDOR OVERRIDES ===== */
 @use 'styles/vendors/material-overrides' as *;
