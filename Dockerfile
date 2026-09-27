@@ -13,8 +13,9 @@ WORKDIR /usr/share/nginx/html
 # Remove default nginx static assets
 RUN rm -rf ./*
 
-# Copy static assets from your local Angular build
-COPY ./dist/sockbowl-ng .
+# Copy static assets from your local Angular build (the application builder
+# nests browser output under "browser/")
+COPY ./dist/sockbowl-ng/browser .
 
 # Copy the entrypoint script
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
