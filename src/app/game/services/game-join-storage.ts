@@ -48,3 +48,23 @@ export function clearGameJoin(gameSessionId: string): void {
     // ignore
   }
 }
+
+/**
+ * Remove every stored seat in this tab. Called when the signed-in session ends
+ * (logout, or the tokens became unusable) so a later user of the tab cannot
+ * resume a seat joined by the previous one.
+ */
+export function clearAllGameJoins(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith(GAME_JOIN_STORAGE_PREFIX)) {
+        keys.push(key);
+      }
+    }
+    keys.forEach(key => sessionStorage.removeItem(key));
+  } catch {
+    // ignore
+  }
+}
