@@ -6,32 +6,32 @@
  */
 
 /* ===== ABSTRACTS (Variables, Mixins, Functions) ===== */
-@import 'styles/abstracts/variables';
-@import 'styles/abstracts/breakpoints';
-@import 'styles/abstracts/mixins';
+@use 'styles/abstracts/variables' as *;
+@use 'styles/abstracts/breakpoints' as *;
+@use 'styles/abstracts/mixins' as *;
 
 /* ===== BASE (Reset, Typography, etc.) ===== */
-@import 'styles/base/typography';
-@import 'styles/base/scrollbar';
+@use 'styles/base/typography' as *;
+@use 'styles/base/scrollbar' as *;
 
 /* ===== THEMES ===== */
 // All available themes
-@import 'styles/themes/dark';
-@import 'styles/themes/light';
-@import 'styles/themes/nord';
-@import 'styles/themes/monokai';
-@import 'styles/themes/catppuccin';
-@import 'styles/themes/dracula';
-@import 'styles/themes/solarized-dark';
-@import 'styles/themes/solarized-light';
+@use 'styles/themes/dark' as *;
+@use 'styles/themes/light' as *;
+@use 'styles/themes/nord' as *;
+@use 'styles/themes/monokai' as *;
+@use 'styles/themes/catppuccin' as *;
+@use 'styles/themes/dracula' as *;
+@use 'styles/themes/solarized-dark' as *;
+@use 'styles/themes/solarized-light' as *;
 
 /* ===== UTILITIES ===== */
-@import 'styles/utilities/animations';
-@import 'styles/utilities/helpers';
-@import 'styles/utilities/shadows';
+@use 'styles/utilities/animations' as *;
+@use 'styles/utilities/helpers' as *;
+@use 'styles/utilities/shadows' as *;
 
 /* ===== VENDOR OVERRIDES ===== */
-@import 'styles/vendors/material-overrides';
+@use 'styles/vendors/material-overrides' as *;
 
 /* ===== BASE HTML ELEMENTS ===== */
 html, body {
