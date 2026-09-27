@@ -647,6 +647,9 @@ export type StompErrorCode =
   | 'IDENTITY_MISMATCH'
   | 'FORBIDDEN_DESTINATION'
   | 'INTERNAL'
+  | 'RATE_LIMITED'
+  | 'QUOTA_EXCEEDED'
+  | 'IP_BANNED'
   | (string & {});
 
 /**
@@ -661,6 +664,12 @@ export interface StompError {
   code: StompErrorCode;
   message?: string | null;
   retryAfterSeconds?: number | null;
+  /** M4: the policy that was charged (e.g. `stomp-buzz`, `stomp-flood`). */
+  policy?: string | null;
+  /** M4: the same wait, in milliseconds, for callers that need sub-second precision. */
+  retryAfterMs?: number | null;
+  /** M4: the destination of a soft-dropped message, when the server includes it. */
+  droppedDestination?: string | null;
   /**
    * Set by the client, not the server: true when the error came from an
    * ERROR frame and the client stopped reconnecting.
