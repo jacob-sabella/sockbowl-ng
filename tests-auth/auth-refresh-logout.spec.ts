@@ -101,9 +101,16 @@ test('An access-token refresh mid-game keeps the socket and REST calls alive, th
 
   // And the wire proof: a SEND made after the wait actually carried the new
   // bearer (GameWebSocketService.tokenChanges$ -> "once" contract), not just
-  // that the UI happened to keep rendering.
+  // that the UI happened to keep rendering. (NG-R2-03: the previous version
+  // of this check matched *any* frame with an "Authorization:" substring —
+  // it never restricted to SEND, never compared the token's actual value,
+  // and never ruled out a reconnect CONNECT, which also carries
+  // Authorization and would pass just as easily on a stale token.)
   const framesAfterWait = sentFrames.slice(framesSentBeforeWait);
-  expect(framesAfterWait.some(f => f.includes('Authorization:'))).toBe(true);
+  const sendFramesAfterWait = framesAfterWait.filter(f => f.startsWith('SEND\n'));
+  expect(sendFramesAfterWait.length).toBeGreaterThan(0);
+  expect(sendFramesAfterWait.some(f => f.includes(`Authorization:Bearer ${tokenAfterWait}`))).toBe(true);
+  expect(framesAfterWait.some(f => f.startsWith('CONNECT\n'))).toBe(false);
 
   // Play it normally too: buzz, answer, and see the verdict, with no fatal
   // ERROR banner, proving the refreshed socket auth keeps working going forward.

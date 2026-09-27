@@ -30,15 +30,16 @@ test.describe('RBAC-gated navigation and routes', () => {
     await expect(page.locator('button[aria-label="Admin"]')).toBeHidden();
 
     // /packets/:id/edit (packet:update): the guard shows the snackbar and
-    // redirects, same as the other permission-gated routes below. Check the
-    // snackbar text here once rather than on every route, to avoid stacking
-    // several dismissible snackbars across one fast loop.
-    await page.goto('/packets/00000000-0000-0000-0000-000000000000/edit');
-    await expect(page.locator('.mat-mdc-snack-bar-label')).toHaveText(PERMISSION_DENIED_MESSAGE, { timeout: 5_000 });
-    await page.waitForURL('**/game-session**', { timeout: 10_000 });
-
-    for (const path of ['/packets', '/admin', '/admin/bans']) {
+    // redirects. Each route below is gated by its own permissionGuard()
+    // instance (a distinct closure per route in app-routing.module.ts), so
+    // checking the snackbar on every iteration doesn't stack multiple
+    // dismissible snackbars from the *same* guard — permissionGuard dedupes
+    // that case on its own (NG-R2-01) — and gives every denied route an
+    // actual denial signal instead of just a URL check that a router default
+    // could satisfy by accident (NG-R2-05).
+    for (const path of ['/packets/00000000-0000-0000-0000-000000000000/edit', '/packets', '/admin', '/admin/bans']) {
       await page.goto(path);
+      await expect(page.locator('.mat-mdc-snack-bar-label')).toHaveText(PERMISSION_DENIED_MESSAGE, { timeout: 5_000 });
       await page.waitForURL('**/game-session**', { timeout: 10_000 });
     }
 
@@ -64,6 +65,7 @@ test.describe('RBAC-gated navigation and routes', () => {
     await expect(page.locator('.admin-bans')).toBeVisible();
 
     await page.goto('/admin');
+    await expect(page.locator('.mat-mdc-snack-bar-label')).toHaveText(PERMISSION_DENIED_MESSAGE, { timeout: 5_000 });
     await page.waitForURL('**/game-session**', { timeout: 10_000 });
   });
 
@@ -83,6 +85,7 @@ test.describe('RBAC-gated navigation and routes', () => {
 
     await page.goto('/packets');
     await expect(page).toHaveURL(/\/packets$/);
+    await expect(page.locator('.packet-list')).toBeVisible();
   });
 
   test('author (testuser): Packets and New Packet visible; Moderation and Admin hidden', async ({ page }) => {
