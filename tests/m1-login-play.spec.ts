@@ -62,5 +62,8 @@ test('Demo user logs in via Keycloak and plays a solo tossup', async ({ page }) 
   await page.locator('.answer-form button[type="submit"]').click();
 
   await expect(page.locator('.answer-section')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('.verdict-line')).toBeVisible({ timeout: 15_000 });
+  // Solo practice renders its verdict via game-single-player's
+  // `.proctor-status` banner (status-dot--done + verdict text), not the
+  // `.verdict-line` markup used by the multiplayer auto-proctor view.
+  await expect(page.locator('.proctor-status .status-dot--done')).toBeVisible({ timeout: 15_000 });
 });
