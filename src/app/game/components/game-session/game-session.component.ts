@@ -1,6 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, inject } from '@angular/core';
 import {GameSessionService} from "../../services/game-session.service";
-import {Router} from "@angular/router";
+import {ActivatedRoute, Router} from "@angular/router";
 import {
   CreateGameRequest,
   GameMode,
@@ -11,6 +11,7 @@ import {
 import {AuthService} from "../../../core/auth/auth.service";
 import {environment} from "../../../../environments/environment";
 import {saveGameJoin} from "../../services/game-join-storage";
+import {PendingPacketService} from "../../services/pending-packet.service";
 
 
 @Component({
@@ -20,14 +21,33 @@ import {saveGameJoin} from "../../services/game-join-storage";
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class GameSessionComponent {
+export class GameSessionComponent implements OnInit {
   private gameSessionService = inject(GameSessionService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private pendingPacketService = inject(PendingPacketService);
   authService = inject(AuthService);
 
   showCreateForm = false;
   showJoinForm = false;
   showModeSelect = false;
+
+  /**
+   * The builder's "Play test" (PB-15) lands here with `?mode=single&packetId=…`.
+   * The packet id is stashed for `GameConfigComponent` to pick up once the
+   * match is in CONFIG; `mode=single` preselects and launches the solo flow
+   * directly, so "Play test" is a single click from the builder into a game.
+   */
+  ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const packetId = params.get('packetId');
+    if (packetId) {
+      this.pendingPacketService.set(packetId);
+    }
+    if (params.get('mode') === 'single') {
+      this.startSoloGame();
+    }
+  }
 
   onNewGame(): void {
     this.showModeSelect = true;
