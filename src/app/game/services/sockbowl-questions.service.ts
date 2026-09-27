@@ -183,6 +183,14 @@ export class SockbowlQuestionsService {
         getPacketById(id: $id) {
           id
           name
+          version
+          visibility
+          validation {
+            playable
+            tossupCount
+            bonusCount
+            issues { severity code message tossupId bonusId }
+          }
           difficulty {
             id
             name
