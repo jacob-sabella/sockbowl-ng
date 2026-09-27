@@ -113,6 +113,13 @@ export class GameConfigComponent implements OnInit {
       } else if (sessionPacket?.id && GameConfigComponent.hasQuestions(sessionPacket)
           && !GameConfigComponent.hasQuestions(this.selectedPacket)) {
         this.selectedPacket = sessionPacket;
+      } else if (!sessionPacket?.id && this.selectedPacketId) {
+        // A proctor seat change or mode change cleared the packet
+        // (MatchPacketUpdate{packetId:null, tossupCount:0}); drop our stale
+        // display so the config UI doesn't keep showing a packet that no
+        // longer exists on the session.
+        this.selectedPacketId = '';
+        this.selectedPacket = null;
       }
 
       if (this.previewPending && sessionPacket?.id && GameConfigComponent.hasQuestions(sessionPacket)) {
