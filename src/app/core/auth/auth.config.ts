@@ -43,10 +43,15 @@ export const authConfig: AuthConfig = {
   sessionChecksEnabled: false,
   clearHashAfterLogin: true,
 
-  // Silent refresh
-  silentRefreshRedirectUri: window.location.origin + '/silent-refresh.html',
-  useSilentRefresh: true,
-  silentRefreshTimeout: 600000, // 10 minutes to avoid interfering with long AI generation requests
+  // Refresh-token flow (AUTH-13). The silent-refresh iframe is gone: Keycloak
+  // issues refresh tokens to public code-flow clients and rotates them
+  // (revokeRefreshToken=true), so AuthService drives refreshToken() itself on
+  // `token_expires` and on 401s, deduplicating concurrent refreshes.
+  useSilentRefresh: false,
+
+  // Where Keycloak sends the browser after RP-initiated logout. Must be listed
+  // in the client's post.logout.redirect.uris.
+  postLogoutRedirectUri: environment.keycloak.postLogoutRedirectUri,
 
   // PKCE (enabled by default for code flow, but making it explicit)
   disablePKCE: false,

@@ -30,7 +30,6 @@
               "src/favicon.ico",
               "src/assets",
               "src/manifest.webmanifest",
-              "src/silent-refresh.html",
               "src/cast-receiver.html",
               "src/cast-receiver.js",
               "src/cast-receiver.css",
@@ -110,7 +109,6 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              "src/silent-refresh.html",
               "src/cast-receiver.html",
               "src/cast-receiver.js",
               "src/cast-receiver.css",
