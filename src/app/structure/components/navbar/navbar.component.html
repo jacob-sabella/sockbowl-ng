@@ -52,13 +52,19 @@
                 <mat-icon aria-hidden="true">person</mat-icon>
                 <span class="navbar__btn-label">Profile</span>
               </button>
-              @if ((userProfile$ | async)?.isAdmin) {
-                <button mat-button [routerLink]="['/admin/bans']" aria-label="Admin">
+              @if ((userProfile$ | async) && authService.hasPermission('user:ban')) {
+                <button mat-button [routerLink]="['/admin/bans']" aria-label="Moderation">
                   <mat-icon aria-hidden="true">gavel</mat-icon>
+                  <span class="navbar__btn-label">Moderation</span>
+                </button>
+              }
+              @if ((userProfile$ | async) && authService.hasPermission('admin:access')) {
+                <button mat-button [routerLink]="['/admin']" aria-label="Admin">
+                  <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
                   <span class="navbar__btn-label">Admin</span>
                 </button>
               }
-              @if ((userProfile$ | async) && authService.hasPermission('packet:update')) {
+              @if ((userProfile$ | async) && authService.hasPermission('packet:create')) {
                 <button mat-button [routerLink]="['/packets']" aria-label="Packet Builder">
                   <mat-icon aria-hidden="true">edit_note</mat-icon>
                   <span class="navbar__btn-label">Packets</span>

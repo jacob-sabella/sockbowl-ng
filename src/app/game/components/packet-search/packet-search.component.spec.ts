@@ -12,8 +12,13 @@ import { AuthService } from '../../../core/auth/auth.service';
 describe('PacketSearchComponent', () => {
   let component: PacketSearchComponent;
   let fixture: ComponentFixture<PacketSearchComponent>;
+  let authSpy: jasmine.SpyObj<AuthService>;
 
-  beforeEach(() => {
+  function configure(permissions: string[]): void {
+    authSpy = jasmine.createSpyObj('AuthService', ['hasPermission', 'isAuthenticated']);
+    authSpy.hasPermission.and.callFake((p: string) => permissions.includes(p));
+    authSpy.isAuthenticated.and.returnValue(false);
+
     TestBed.configureTestingModule({
       declarations: [PacketSearchComponent],
       providers: [
@@ -25,7 +30,7 @@ describe('PacketSearchComponent', () => {
             countBankAvailable: () => of({ tossups: 0, bonuses: 0 }),
         } },
         { provide: OpenAiModelService, useValue: {} },
-        { provide: AuthService, useValue: { hasPermission: () => false, isAuthenticated: () => false } },
+        { provide: AuthService, useValue: authSpy },
       ],
       // Template uses Angular Material elements not declared in this unit test.
       schemas: [NO_ERRORS_SCHEMA]
@@ -33,9 +38,29 @@ describe('PacketSearchComponent', () => {
     fixture = TestBed.createComponent(PacketSearchComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-  });
+  }
 
   it('should create', () => {
+    configure([]);
     expect(component).toBeTruthy();
+  });
+
+  it('hides the AI generate tab without question:generate', () => {
+    configure([]);
+    const aiTab = (fixture.nativeElement as HTMLElement).querySelector('.generate-container');
+    expect(aiTab).toBeNull();
+  });
+
+  it('shows the AI generate tab with question:generate', () => {
+    configure(['question:generate']);
+    const aiTab = (fixture.nativeElement as HTMLElement).querySelector('.generate-container');
+    expect(aiTab).not.toBeNull();
+  });
+
+  it('keeps the local-bank Generate tab available to a guest with no permissions (D15 preserves guest UX)', () => {
+    configure([]);
+    const bankTab = (fixture.nativeElement as HTMLElement).querySelector('.qb-content');
+    expect(bankTab).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Build a packet from the question bank');
   });
 });

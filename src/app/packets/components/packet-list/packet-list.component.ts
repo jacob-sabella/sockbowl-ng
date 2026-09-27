@@ -67,12 +67,14 @@ export class PacketListComponent implements OnInit {
     return this.packets.filter(p => p.owner?.id === userId);
   }
 
-  /** Whether the current user may edit/delete this packet. */
+  /**
+   * Whether the current user may edit/delete this packet: manage-any
+   * holders can manage anything, otherwise only the owner (D3 — ownerless
+   * packets are manage-any only, no grandfather rule).
+   */
   canManage(packet: Packet): boolean {
-    return this.auth.isAdmin()
-      || this.auth.hasPermission('packet:manage-any')
-      || !packet.owner
-      || packet.owner.id === this.auth.getCurrentUserId();
+    return this.auth.hasPermission('packet:manage-any')
+      || (!!packet.owner && packet.owner.id === this.auth.getCurrentUserId());
   }
 
   search(): void {

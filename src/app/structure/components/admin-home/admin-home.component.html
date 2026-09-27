@@ -1,0 +1,32 @@
+<div class="admin-home">
+  <h1 class="admin-home__title">
+    <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
+    Admin
+  </h1>
+
+  <div class="admin-home__cards">
+    @if (auth.hasPermission('user:ban')) {
+      <a class="admin-home__card admin-home__card-link" [routerLink]="['/admin/bans']" aria-label="Open ban management">
+        <mat-card class="admin-home__card-inner">
+          <mat-card-content class="admin-home__card-content">
+            <mat-icon aria-hidden="true">gavel</mat-icon>
+            <div class="admin-home__card-body">
+              <div class="admin-home__card-title">Bans</div>
+              <div class="admin-home__card-desc">View, add, and remove user bans.</div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </a>
+    }
+
+    <mat-card class="admin-home__card admin-home__card--disabled">
+      <mat-card-content class="admin-home__card-content">
+        <mat-icon aria-hidden="true">insights</mat-icon>
+        <div class="admin-home__card-body">
+          <div class="admin-home__card-title">Usage</div>
+          <div class="admin-home__card-desc">Per-user quotas and generation usage. Coming soon.</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
