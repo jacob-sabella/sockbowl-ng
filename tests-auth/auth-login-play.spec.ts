@@ -11,12 +11,30 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
 
   await page.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
 
-  // Host: sign in as the author demo user. The navbar shows the signed-in name.
+  // Host: sign in as the author demo user. The navbar shows the signed-in
+  // name — assert it's actually HOST's name, not just that some text rendered.
   await loginAs(page, HOST);
-  await expect(page.locator('.navbar__user-name')).toBeVisible();
+  await expect(page.locator('.navbar__user-name')).toHaveText(new RegExp(HOST, 'i'));
 
+  // The host is authenticated too, so "Auto-judged match" drives the same
+  // create -> join-game-session-authenticated flow as the player's join
+  // below (game-session.component.ts's submitCreateGame -> submitJoinGame).
+  // Assert that call actually went through the authenticated endpoint and
+  // bound the host's own seat to their Keycloak identity, not just that the
+  // page eventually landed on /game.
+  const hostJoinResponse = page.waitForResponse(resp =>
+    resp.url().includes('join-game-session-authenticated') && resp.request().method() === 'POST'
+  );
   await page.getByRole('button', { name: /New game/ }).click();
   await page.getByRole('button', { name: /Auto-judged match/ }).click();
+  const hostJoinResp = await hostJoinResponse;
+  expect(hostJoinResp.status()).toBe(200);
+  const hostJoinBody = await hostJoinResp.json();
+  expect(hostJoinBody.joinStatus).toBe('SUCCESS');
+  // userId is populated only for an authenticated join (SessionService's
+  // addAuthenticatedUserToGameSession) — a guest join never sets it. That's
+  // the actual proof the host's own seat was bound to their Keycloak identity.
+  expect(hostJoinBody.userId).toBeTruthy();
   await page.waitForURL('**/game;**', { timeout: 25_000 });
 
   const code = (await page.locator('.code-value').innerText()).trim();
@@ -28,6 +46,7 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
   const playerPage = await playerCtx.newPage();
   await playerPage.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
   await loginAs(playerPage, PLAYER);
+  await expect(playerPage.locator('.navbar__user-name')).toHaveText(new RegExp(PLAYER, 'i'));
 
   await playerPage.getByRole('button', { name: /Join with a code/ }).click();
   await playerPage.getByLabel('Join Code').fill(code);
@@ -36,7 +55,11 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
     resp.url().includes('join-game-session-authenticated') && resp.request().method() === 'POST'
   );
   await playerPage.getByRole('button', { name: 'Join', exact: true }).click();
-  expect((await joinResponse).status()).toBe(200);
+  const joinResp = await joinResponse;
+  expect(joinResp.status()).toBe(200);
+  const joinBody = await joinResp.json();
+  expect(joinBody.joinStatus).toBe('SUCCESS');
+  expect(joinBody.userId).toBeTruthy();
 
   await playerPage.waitForURL('**/game;**', { timeout: 25_000 });
   await playerPage.locator('.team__actions button').last().click();
