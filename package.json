@@ -58,7 +58,7 @@
     "karma-jasmine-html-reporter": "~2.3.0",
     "quicktype": "^26.0.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "8.69.0"
+    "typescript-eslint": "8.70.1"
   },
   "overrides": {
     "http-proxy-middleware": "^3.0.7",
