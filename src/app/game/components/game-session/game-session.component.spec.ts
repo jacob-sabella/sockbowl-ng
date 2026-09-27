@@ -1,5 +1,5 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 
@@ -9,6 +9,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { environment } from '../../../../environments/environment';
 import { gameJoinStorageKey } from '../../services/game-join-storage';
 import { JoinGameResponse } from '../../models/sockbowl/sockbowl-interfaces';
+import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 
 describe('GameSessionComponent join flow', () => {
   let component: GameSessionComponent;
@@ -122,5 +123,57 @@ describe('GameSessionComponent join flow', () => {
 
     expect(gameSessionService.joinGame).toHaveBeenCalled();
     expect(gameSessionService.joinGameAuthenticated).not.toHaveBeenCalled();
+  });
+});
+
+describe('GameSessionComponent M4-UI-01 session-create cooldown', () => {
+  let fixture: ComponentFixture<GameSessionComponent>;
+  let component: GameSessionComponent;
+  let rateLimitState: RateLimitStateService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [GameSessionComponent],
+      providers: [
+        { provide: GameSessionService, useValue: jasmine.createSpyObj('GameSessionService',
+          ['createNewGame', 'joinGame', 'joinGameAuthenticated']) },
+        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+        { provide: AuthService, useValue: { isAuthenticated: () => false, getUserProfile: () => null } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameSessionComponent);
+    component = fixture.componentInstance;
+    rateLimitState = TestBed.inject(RateLimitStateService);
+  });
+
+  it('disables the create button while session-create cools down, and re-enables on recovery', () => {
+    component.showModeSelect = true;
+    fixture.detectChanges();
+
+    const soloButton = (fixture.nativeElement as HTMLElement).querySelector(
+      '.lobby-action.primary') as HTMLButtonElement;
+    expect(soloButton.disabled).toBeFalse();
+
+    rateLimitState.setCooldown('session-create', 20);
+    fixture.detectChanges();
+    expect(soloButton.disabled).toBeTrue();
+
+    rateLimitState.clearCooldown('session-create');
+    fixture.detectChanges();
+    expect(soloButton.disabled).toBeFalse();
+  });
+
+  it('disables the create-form "Create" button too, since it shares the same policy', () => {
+    component.showCreateForm = true;
+    fixture.detectChanges();
+    rateLimitState.setCooldown('session-create', 5);
+    fixture.detectChanges();
+
+    const createButtons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button')
+    ).filter(b => b.textContent?.trim() === 'Create') as HTMLButtonElement[];
+    expect(createButtons.length).toBeGreaterThan(0);
+    createButtons.forEach(b => expect(b.disabled).toBeTrue());
   });
 });

@@ -43,7 +43,7 @@
     @if (showModeSelect && !showCreateForm && !showJoinForm) {
       <div class="lobby-hero">
       <div class="lobby-actions">
-        <button class="lobby-action primary" (click)="startSoloGame()">
+        <button class="lobby-action primary" [disabled]="sessionCreateLocked()" (click)="startSoloGame()">
           <mat-icon>person</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Solo practice</span>
@@ -52,7 +52,7 @@
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
 
-        <button class="lobby-action" (click)="startAutoProctorGame()">
+        <button class="lobby-action" [disabled]="sessionCreateLocked()" (click)="startAutoProctorGame()">
           <mat-icon>groups</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Auto-judged match</span>
@@ -61,7 +61,7 @@
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
 
-        <button class="lobby-action" (click)="startFreeForAllGame()">
+        <button class="lobby-action" [disabled]="sessionCreateLocked()" (click)="startFreeForAllGame()">
           <mat-icon>person_off</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Free for all</span>
@@ -107,7 +107,7 @@
             Signed in as <strong>{{ currentUsername }}</strong>
           </p>
         }
-        <button mat-raised-button color="accent" (click)="submitCreateGame()">Create</button>
+        <button mat-raised-button color="accent" [disabled]="sessionCreateLocked()" (click)="submitCreateGame()">Create</button>
       </div>
     }
 
