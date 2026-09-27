@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject } from '@angular/core';
 import {GameSessionService} from "../../services/game-session.service";
 import {Router} from "@angular/router";
 import {
@@ -11,6 +11,7 @@ import {
 import {AuthService} from "../../../core/auth/auth.service";
 import {environment} from "../../../../environments/environment";
 import {saveGameJoin} from "../../services/game-join-storage";
+import {RateLimitStateService} from "../../../core/http/rate-limit-state.service";
 
 
 @Component({
@@ -23,11 +24,19 @@ import {saveGameJoin} from "../../services/game-join-storage";
 export class GameSessionComponent {
   private gameSessionService = inject(GameSessionService);
   private router = inject(Router);
+  private rateLimitState = inject(RateLimitStateService);
   authService = inject(AuthService);
 
   showCreateForm = false;
   showJoinForm = false;
   showModeSelect = false;
+
+  /**
+   * True while the `session-create` policy is cooling down after a 429
+   * (M4-UI-01). Every quick-launch and form path funnels through
+   * {@link submitCreateGame}, so all of them share this one cooldown.
+   */
+  readonly sessionCreateLocked = computed(() => this.rateLimitState.cooldown('session-create')() > 0);
 
   onNewGame(): void {
     this.showModeSelect = true;

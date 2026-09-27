@@ -244,8 +244,16 @@ export class SockbowlQuestionsService {
   /**
    * Generate a packet using AI.
    *
-   * @param topic Main topic for the packet
-   * @param additionalContext Additional context or constraints
+   * M4 moves this from GET to POST with a JSON body (`GeneratePacketRequest`,
+   * plan §2.6), so the AI-cost rate limit/quota guard on the server can
+   * validate and charge a single well-formed request instead of a
+   * query-string GET. The `X-API-Key`/`X-Model`/`X-Temperature…` headers are
+   * unchanged. A 429/503 from the limiter is surfaced globally by
+   * `RateLimitInterceptor`; callers only need to handle the AI-provider-
+   * specific statuses (400/401/502).
+   *
+   * @param topic Main topic for the packet (server clamps to <=200 chars)
+   * @param additionalContext Additional context or constraints (server clamps to <=2000 chars)
    * @param apiKey User-provided OpenAI API key
    * @param model User-provided OpenAI model
    * @param questionCount Number of tossups/bonuses to generate (1-30, default 5)
@@ -269,15 +277,17 @@ export class SockbowlQuestionsService {
     presencePenalty?: number
   ): Observable<Packet> {
     const url = `${environment.sockbowlQuestionsApiUrl}api/packets/generate`;
-    const params: any = { topic };
+    const body: {
+      topic: string; additionalContext?: string; questionCount?: number; generateBonuses?: boolean;
+    } = { topic };
     if (additionalContext) {
-      params.additionalContext = additionalContext;
+      body.additionalContext = additionalContext;
     }
     if (questionCount !== undefined && questionCount !== null) {
-      params.questionCount = questionCount;
+      body.questionCount = questionCount;
     }
     if (generateBonuses !== undefined && generateBonuses !== null) {
-      params.generateBonuses = generateBonuses;
+      body.generateBonuses = generateBonuses;
     }
 
     // Build headers with API key, model, and optional LLM parameters
@@ -302,7 +312,7 @@ export class SockbowlQuestionsService {
 
     // Set timeout to 11 minutes (660000ms) for AI generation with bonuses
     // Server-side timeout is 10 minutes, so we give it extra buffer
-    return this.http.get<Packet>(url, { params, headers }).pipe(
+    return this.http.post<Packet>(url, body, { headers }).pipe(
       timeout(660000),
       // Returns the packet in the canonical GraphQL relationship shape
       // (tossups: ContainsTossup[], bonuses: ContainsBonus[] with nested
