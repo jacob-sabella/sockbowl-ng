@@ -630,3 +630,40 @@ export enum RoundState {
   BONUS_COMPLETED = "BONUS_COMPLETED",
   COMPLETED = "COMPLETED",
 }
+
+/**
+ * STOMP error codes the game server sends (M2 plan section 2.5). Always
+ * UPPER_SNAKE on the wire and never renamed. Later milestones append codes
+ * (M4: RATE_LIMITED, QUOTA_EXCEEDED, IP_BANNED), so consumers must treat any
+ * other string as a known-unknown rather than failing.
+ */
+export type StompErrorCode =
+  | 'AUTH_REQUIRED'
+  | 'INVALID_CREDENTIALS'
+  | 'TOKEN_EXPIRED'
+  | 'BANNED'
+  | 'SESSION_NOT_FOUND'
+  | 'PLAYER_NOT_IN_SESSION'
+  | 'IDENTITY_MISMATCH'
+  | 'FORBIDDEN_DESTINATION'
+  | 'INTERNAL'
+  | (string & {});
+
+/**
+ * A STOMP-level error from the game server. It arrives either as the JSON body
+ * of an ERROR frame (fatal: the server closes the socket) or as a message on
+ * `/user/queue/errors` (non-fatal: the socket stays open). The body may gain
+ * optional additive fields later (M4 adds `policy`, `retryAfterMs`,
+ * `droppedDestination`); unknown fields are ignored.
+ */
+export interface StompError {
+  messageType?: 'StompError' | string;
+  code: StompErrorCode;
+  message?: string | null;
+  retryAfterSeconds?: number | null;
+  /**
+   * Set by the client, not the server: true when the error came from an
+   * ERROR frame and the client stopped reconnecting.
+   */
+  fatal?: boolean;
+}

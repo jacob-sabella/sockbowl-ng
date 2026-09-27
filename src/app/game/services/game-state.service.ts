@@ -37,8 +37,11 @@ import { GameMode,
   TimeoutRound,
   TimerUpdate,
   UpdateGameSettings,
-  UpdatePlayerTeam
+  UpdatePlayerTeam,
+  StompError,
+  SockbowlInMessage
 } from '../models/sockbowl/sockbowl-interfaces';
+import {SocketCredentials} from './game-web-socket.service';
 
 @Injectable({
   providedIn: 'root'
@@ -62,10 +65,38 @@ export class GameStateService {
   // Expose the current state as an Observable
   public gameSession$: Observable<GameSession> = this.gameSessionSubject.asObservable();
 
-  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string, accessToken?: string) {
+  private messagesSubscribed = false;
+
+  /** STOMP errors from the game socket (see GameWebSocketService.errors$). */
+  public get errors$(): Observable<StompError> {
+    return this.gameMessageService.errors$;
+  }
+
+  /**
+   * Connects to a game seat.
+   *
+   * @param gameSessionId the game session
+   * @param playerSessionId the player's seat
+   * @param credentials `playerSecret` for a guest seat; empty for a seat bound
+   *   to the signed-in account. Never pass an access token here: the socket
+   *   asks AuthService for a fresh one at every CONNECT.
+   */
+  public initialize(gameSessionId: string, playerSessionId: string, credentials: SocketCredentials = {}) {
     this._playerSessionId = playerSessionId;
-    this.gameMessageService.initialize(gameSessionId, playerSecret, playerSessionId, accessToken);
-    this.subscribeToGameMessages();
+    this.gameMessageService.initialize(gameSessionId, playerSessionId, credentials);
+    if (!this.messagesSubscribed) {
+      this.messagesSubscribed = true;
+      this.subscribeToGameMessages();
+    }
+  }
+
+  /**
+   * Ask the server to resend the full session state. The server sanitizes it
+   * for this seat, so a proctor gets the full packet (with answers) this way
+   * instead of reading it from the questions service (D2).
+   */
+  public requestGameSession(): void {
+    this.gameMessageService.sendMessage('/app/game/config/get-game', new SockbowlInMessage());
   }
 
 
