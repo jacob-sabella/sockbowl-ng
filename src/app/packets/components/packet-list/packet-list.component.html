@@ -71,7 +71,7 @@
                 @if (packet.difficulty?.name) {
                   <span class="packet-list__item-chip">{{ packet.difficulty.name }}</span>
                 }
-                <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
+                <span class="packet-list__item-owner">{{ packet.ownerDisplayName ?? 'Anonymous' }}</span>
               </div>
               <div class="packet-list__item-actions">
                 @if (auth.hasPermission('packet:update') && canManage(packet)) {
