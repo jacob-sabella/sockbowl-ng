@@ -7,7 +7,7 @@ DIR="src/app/game/models/sockbowl"
 SCHEMA="$DIR/questions-models.schema.json"
 OUT="$DIR/packet-types.generated.ts"
 
-npx --yes quicktype@23 --src-lang schema --lang typescript --just-types --top-level Packet "$SCHEMA" \
+npx --yes quicktype@26 --src-lang schema --lang typescript --just-types --top-level Packet "$SCHEMA" \
   | sed -E 's/\?:/:/g' | sed -E '/^=== .* ===$/d' > /tmp/packet-types.body.ts
 
 {
@@ -16,6 +16,8 @@ npx --yes quicktype@23 --src-lang schema --lang typescript --just-types --top-le
   echo "// Source of truth: sockbowl-questions (./gradlew generateModelSchema)."
   echo "// Regenerate: npm run codegen. Optionals stripped to match the API's"
   echo "// always-present response shape."
+  echo "// quicktype 26 emits index signatures as [property: string]: unknown"
+  echo "// (was: any) - narrow before use."
   echo ""
   cat /tmp/packet-types.body.ts
 } > "$OUT"
