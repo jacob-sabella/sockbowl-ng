@@ -11,7 +11,11 @@ import { AuthService } from '../../../core/auth/auth.service';
 @Component({
     selector: 'app-packet-search',
     templateUrl: './packet-search.component.html',
-    styleUrls: ['./packet-search.component.scss'],
+    styleUrls: [
+        './packet-search.component.scss',
+        './packet-search-generate.component.scss',
+        './packet-search-qbreader.component.scss',
+    ],
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
