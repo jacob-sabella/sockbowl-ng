@@ -13,7 +13,19 @@ Two layers:
    matches (reads → buzzes → judging → bonuses → completion) with no browser.
 2. **Playwright capture** — real browsers join a bot-staged match via the app's
    `/game;gameSessionId=…;playerSecret=…;playerSessionId=…` deep-link, are
-   driven to genuine round states, and screenshot the redesigned UI.
+   driven to genuine round states, and screenshot the redesigned UI. The app
+   moves the secret into sessionStorage and scrubs it from the address bar.
+
+**STOMP auth (M2).** Credentials travel only in the CONNECT frame: a guest bot
+sends `gameSessionId`, `playerSessionId` and `playerSecret`; a bot built with an
+`accessToken` (a seat joined via `join-game-session-authenticated`) sends
+`Authorization: Bearer <jwt>` instead. SEND frames carry only the two ids. The
+server answers a bad CONNECT with an ERROR frame whose JSON body is
+`{"code":"INVALID_CREDENTIALS",…}`; `connect()` rejects with a
+`StompConnectError` carrying that code, and `bot.errors` records every ERROR
+frame and `/user/queue/errors` item. `npm run smoke` also checks that a wrong
+secret is refused (`SOCKBOWL_SMOKE_SKIP_AUTH_PROBE=1` skips that against a
+pre-M2 server).
 
 ## Layout
 

@@ -5,38 +5,108 @@ import { WS_URL } from './config.js';
 type Listener = () => void;
 
 /**
+ * A STOMP error from the game server: the JSON body of an ERROR frame (the
+ * server then closes the socket) or a message on /user/queue/errors.
+ * `code` is UPPER_SNAKE (AUTH_REQUIRED, INVALID_CREDENTIALS, TOKEN_EXPIRED,
+ * BANNED, SESSION_NOT_FOUND, PLAYER_NOT_IN_SESSION, IDENTITY_MISMATCH,
+ * FORBIDDEN_DESTINATION, INTERNAL, and later milestones' additions).
+ */
+export interface BotStompError {
+  code: string;
+  message?: string | null;
+  retryAfterSeconds?: number | null;
+  fatal: boolean;
+}
+
+/** Thrown from connect() when the server answers CONNECT with an ERROR frame. */
+export class StompConnectError extends Error {
+  constructor(public readonly botName: string, public readonly stompError: BotStompError) {
+    super(`[${botName}] STOMP ${stompError.code}${stompError.message ? ': ' + stompError.message : ''}`);
+  }
+}
+
+function parseStompError(body: string | undefined, headers: Record<string, string>, fatal: boolean): BotStompError {
+  let parsed: any = null;
+  try { parsed = body ? JSON.parse(body) : null; } catch { parsed = null; }
+  const code = (parsed && typeof parsed.code === 'string' && parsed.code)
+    || headers['x-sockbowl-error']
+    || headers['message']
+    || 'INTERNAL';
+  return { code, message: parsed?.message ?? (parsed ? null : body ?? null), retryAfterSeconds: parsed?.retryAfterSeconds ?? null, fatal };
+}
+
+/**
  * A headless Sockbowl game client. Speaks the same STOMP protocol the Angular
- * app does — connects, subscribes to the private + broadcast queues, tracks the
- * latest game session state, and exposes every player/proctor action. Used to
- * fill player/team seats and drive full matches without a browser.
+ * app does — authenticates in the CONNECT frame (guest `playerSecret`, or a
+ * Keycloak access token for a seat joined as an account), subscribes to the
+ * private + broadcast queues and /user/queue/errors, tracks the latest game
+ * session state, and exposes every player/proctor action. Used to fill
+ * player/team seats and drive full matches without a browser.
  */
 export class SockbowlBot {
   private client!: Client;
   gameSession: any = null;
+  /** Every STOMP error seen (fatal ERROR frames and /user/queue/errors). */
+  readonly errors: BotStompError[] = [];
   private listeners: Listener[] = [];
 
+  /**
+   * @param playerSecret guest seat secret (sent only in CONNECT)
+   * @param accessToken  for a seat joined via join-game-session-authenticated:
+   *   the Keycloak access token sent as `Authorization: Bearer` in CONNECT
+   *   instead of the secret
+   */
   constructor(
     public readonly name: string,
     public readonly gameSessionId: string,
     public readonly playerSecret: string,
     public readonly playerSessionId: string,
+    public readonly accessToken?: string,
   ) {}
+
+  /** Headers of the CONNECT frame: the only frame that carries credentials. */
+  connectHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      gameSessionId: this.gameSessionId,
+      playerSessionId: this.playerSessionId,
+    };
+    if (this.accessToken) headers['Authorization'] = `Bearer ${this.accessToken}`;
+    else headers['playerSecret'] = this.playerSecret;
+    return headers;
+  }
+
+  /** The most recent STOMP error, if any. */
+  get lastError(): BotStompError | undefined { return this.errors[this.errors.length - 1]; }
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      let connected = false;
       this.client = new Client({
         webSocketFactory: () => new WebSocket(WS_URL) as any,
+        connectHeaders: this.connectHeaders(),
         reconnectDelay: 0,
         heartbeatIncoming: 0,
         heartbeatOutgoing: 0,
         onConnect: () => {
+          connected = true;
           this.client.subscribe(`/queue/event/${this.gameSessionId}/${this.playerSessionId}`, (m) => this.handle(m));
           this.client.subscribe(`/queue/event/${this.gameSessionId}`, (m) => this.handle(m));
+          this.client.subscribe('/user/queue/errors', (m) => {
+            this.errors.push(parseStompError(m.body, m.headers, false));
+            this.listeners.forEach((l) => l());
+          });
           this.publish('/app/game/config/get-game', {});
           resolve();
         },
-        onStompError: (f) => reject(new Error(`[${this.name}] STOMP error: ${f.body}`)),
-        onWebSocketError: (e) => reject(new Error(`[${this.name}] WS error: ${e?.message ?? e}`)),
+        onStompError: (f) => {
+          const error = parseStompError(f.body, f.headers, true);
+          this.errors.push(error);
+          // ERROR frames are fatal: the server closes the socket. Never retry.
+          this.client.deactivate();
+          if (!connected) reject(new StompConnectError(this.name, error));
+          else this.listeners.forEach((l) => l());
+        },
+        onWebSocketError: (e) => { if (!connected) reject(new Error(`[${this.name}] WS error: ${e?.message ?? e}`)); },
       });
       this.client.activate();
     });
@@ -59,10 +129,11 @@ export class SockbowlBot {
     this.client.publish({
       destination,
       body: JSON.stringify(body ?? {}),
+      // SEND frames carry only the seat ids; the server binds the identity
+      // proven at CONNECT to the socket.
       headers: {
         gameSessionId: this.gameSessionId,
         playerSessionId: this.playerSessionId,
-        playerSecret: this.playerSecret,
       },
     });
   }
