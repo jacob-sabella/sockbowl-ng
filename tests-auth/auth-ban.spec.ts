@@ -9,14 +9,11 @@ const MODERATOR = process.env.E2E_MODERATOR || 'moderator';
 const TARGET = process.env.E2E_BAN_TARGET || 'player3';
 
 // Note on "returned to the lobby": GameSessionInjectionResolver re-checks
-// bans on every message for an already-connected player, but (per its own
-// doc comment) that rejection is deliberately non-fatal — it reports on
-// `/user/queue/errors` and the socket stays open, unlike a CONNECT-time
-// rejection (which is fatal and does navigate away). So this spec asserts
-// the banner the banned player sees on their next in-game action, then
-// separately drives them back to the lobby to prove hosting is now refused
-// too, rather than asserting an automatic navigation that this design does
-// not perform for an already-open connection.
+// bans on every message for an already-connected player and reports BANNED on
+// `/user/queue/errors`. The client treats a fatal code there like a fatal
+// ERROR frame (plan m2-auth.md section 2.5): it stops reconnecting and the
+// game canvas navigates back to /game-session. The spec then reloads the
+// lobby to prove hosting is now refused too.
 test('A moderator bans a player mid-lobby; the ban is enforced and then lifted', async ({ page, browser }) => {
   test.setTimeout(90_000);
 
@@ -45,10 +42,11 @@ test('A moderator bans a player mid-lobby; the ban is enforced and then lifted',
     await expect(banRow).toBeVisible({ timeout: 10_000 });
     banned = true;
 
-    // The banned player's next STOMP action surfaces the ban.
+    // The banned player's next STOMP action surfaces the ban, which is fatal:
+    // the socket stops and the player is sent back to the lobby.
     await targetPage.locator('.team__actions button').first().click();
-    await expect(targetPage.locator('[data-testid="stomp-error-banner"]'))
-      .toContainText(/banned/i, { timeout: 5_000 });
+    await targetPage.waitForURL('**/game-session**', { timeout: 10_000 });
+    await expect(targetPage.getByText(/banned/i).first()).toBeVisible({ timeout: 5_000 });
 
     // Back at the lobby, hosting is now refused over REST (403) with a snackbar.
     await targetPage.goto('/game-session');
