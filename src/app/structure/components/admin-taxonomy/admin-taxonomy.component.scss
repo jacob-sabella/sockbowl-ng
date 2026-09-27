@@ -2,4 +2,115 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 1.5rem;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__hint {
+    color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 1rem;
+  }
+
+  &__status {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+  }
+
+  &__error {
+    color: #b00020;
+  }
+
+  &__card {
+    margin-top: 1rem;
+  }
+
+  &__create-form {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+
+    &--sub {
+      margin-top: 0.5rem;
+      margin-bottom: 0;
+    }
+  }
+
+  &__create-field {
+    flex: 1;
+  }
+
+  &__empty {
+    color: rgba(0, 0, 0, 0.6);
+
+    &--sub {
+      margin: 0.25rem 0 0.5rem 2.5rem;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__node {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.25rem 0;
+
+    &--sub {
+      margin-left: 2.5rem;
+      border-bottom-style: dashed;
+    }
+  }
+
+  &__node-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  &__node-name {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  &__expand {
+    flex: 0 0 auto;
+  }
+
+  &__rename-field {
+    flex: 1;
+  }
+
+  &__collision {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    margin: 0.25rem 0;
+    background: rgba(176, 0, 32, 0.06);
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  &__merge-form {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    margin: 0.25rem 0;
+  }
+
+  &__merge-field {
+    flex: 1;
+    max-width: 260px;
+  }
+
+  &__subcategories {
+    padding-bottom: 0.5rem;
+  }
 }
