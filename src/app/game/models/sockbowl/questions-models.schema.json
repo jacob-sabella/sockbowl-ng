@@ -4,13 +4,30 @@
     "Bonus" : {
       "type" : "object",
       "properties" : {
+        "aiModel" : {
+          "type" : "string"
+        },
         "bonusParts" : {
           "type" : "array",
           "items" : {
             "$ref" : "#/$defs/HasBonusPart"
           }
         },
+        "createdAt" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "createdBy" : {
+          "type" : "string"
+        },
         "id" : {
+          "type" : "string"
+        },
+        "lastModifiedAt" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "lastModifiedBy" : {
           "type" : "string"
         },
         "preamble" : {
@@ -18,6 +35,9 @@
         },
         "remoteId" : {
           "type" : "string"
+        },
+        "source" : {
+          "$ref" : "#/$defs/ContentSource"
         },
         "subcategory" : {
           "$ref" : "#/$defs/Subcategory"
@@ -27,14 +47,34 @@
     "BonusPart" : {
       "type" : "object",
       "properties" : {
+        "aiModel" : {
+          "type" : "string"
+        },
         "answer" : {
+          "type" : "string"
+        },
+        "createdAt" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "createdBy" : {
           "type" : "string"
         },
         "id" : {
           "type" : "string"
         },
+        "lastModifiedAt" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "lastModifiedBy" : {
+          "type" : "string"
+        },
         "question" : {
           "type" : "string"
+        },
+        "source" : {
+          "$ref" : "#/$defs/ContentSource"
         }
       }
     },
@@ -77,6 +117,10 @@
         }
       }
     },
+    "ContentSource" : {
+      "type" : "string",
+      "enum" : [ "AUTHORED", "QBREADER_IMPORT", "AI_GENERATED", "TEXT_IMPORT", "CLONED" ]
+    },
     "Difficulty" : {
       "type" : "object",
       "properties" : {
@@ -102,6 +146,10 @@
         }
       }
     },
+    "PacketVisibility" : {
+      "type" : "string",
+      "enum" : [ "DRAFT", "PUBLISHED", "EPHEMERAL" ]
+    },
     "Subcategory" : {
       "type" : "object",
       "properties" : {
@@ -119,10 +167,27 @@
     "Tossup" : {
       "type" : "object",
       "properties" : {
+        "aiModel" : {
+          "type" : "string"
+        },
         "answer" : {
           "type" : "string"
         },
+        "createdAt" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "createdBy" : {
+          "type" : "string"
+        },
         "id" : {
+          "type" : "string"
+        },
+        "lastModifiedAt" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "lastModifiedBy" : {
           "type" : "string"
         },
         "question" : {
@@ -130,6 +195,9 @@
         },
         "remoteId" : {
           "type" : "string"
+        },
+        "source" : {
+          "$ref" : "#/$defs/ContentSource"
         },
         "subcategory" : {
           "$ref" : "#/$defs/Subcategory"
@@ -139,11 +207,24 @@
   },
   "type" : "object",
   "properties" : {
+    "aiModel" : {
+      "type" : "string"
+    },
+    "answersRedacted" : {
+      "type" : "boolean"
+    },
     "bonuses" : {
       "type" : "array",
       "items" : {
         "$ref" : "#/$defs/ContainsBonus"
       }
+    },
+    "createdAt" : {
+      "type" : "string",
+      "format" : "date-time"
+    },
+    "createdBy" : {
+      "type" : "string"
     },
     "difficulty" : {
       "$ref" : "#/$defs/Difficulty"
@@ -151,14 +232,33 @@
     "id" : {
       "type" : "string"
     },
+    "lastModifiedAt" : {
+      "type" : "string",
+      "format" : "date-time"
+    },
+    "lastModifiedBy" : {
+      "type" : "string"
+    },
     "name" : {
       "type" : "string"
+    },
+    "ownerDisplayName" : {
+      "type" : "string"
+    },
+    "ownerId" : {
+      "type" : "string"
+    },
+    "source" : {
+      "$ref" : "#/$defs/ContentSource"
     },
     "tossups" : {
       "type" : "array",
       "items" : {
         "$ref" : "#/$defs/ContainsTossup"
       }
+    },
+    "visibility" : {
+      "$ref" : "#/$defs/PacketVisibility"
     }
   },
   "title" : "Packet"

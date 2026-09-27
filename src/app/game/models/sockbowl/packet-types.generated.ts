@@ -3,87 +3,111 @@
 // Source of truth: sockbowl-questions (./gradlew generateModelSchema).
 // Regenerate: npm run codegen. Optionals stripped to match the API's
 // always-present response shape.
+// quicktype 26 emits index signatures as [property: string]: unknown
+// (was: any) - narrow before use.
 
 export interface Packet {
-    bonuses:    BonusElement[];
-    difficulty: Difficulty;
-    id:         string;
-    name:       string;
-    tossups:    TossupElement[];
-    // Interim hand-added stub pending backend schema regeneration
-    // (./gradlew generateModelSchema + npm run codegen). Remove this
-    // comment once codegen produces the real owner field.
-    owner?:     PacketOwner | null;
-    [property: string]: any;
-}
-
-export interface PacketOwner {
-    id:   string;
-    name: string;
-    [property: string]: any;
+    aiModel:          string;
+    answersRedacted:  boolean;
+    bonuses:          BonusElement[];
+    createdAt:        Date;
+    createdBy:        string;
+    difficulty:       Difficulty;
+    id:               string;
+    lastModifiedAt:   Date;
+    lastModifiedBy:   string;
+    name:             string;
+    ownerDisplayName: string;
+    ownerId:          string;
+    source:           Source;
+    tossups:          TossupElement[];
+    visibility:       Visibility;
+    [property: string]: unknown;
 }
 
 export interface BonusElement {
     bonus: Bonus;
     id:    number;
     order: number;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface Bonus {
-    bonusParts:  BonusPartElement[];
-    id:          string;
-    preamble:    string;
-    remoteId:    string;
-    subcategory: Subcategory;
-    [property: string]: any;
+    aiModel:        string;
+    bonusParts:     BonusPartElement[];
+    createdAt:      Date;
+    createdBy:      string;
+    id:             string;
+    lastModifiedAt: Date;
+    lastModifiedBy: string;
+    preamble:       string;
+    remoteId:       string;
+    source:         Source;
+    subcategory:    Subcategory;
+    [property: string]: unknown;
 }
 
 export interface BonusPartElement {
     bonusPart: BonusPart;
     id:        number;
     order:     number;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface BonusPart {
-    answer:   string;
-    id:       string;
-    question: string;
-    [property: string]: any;
+    aiModel:        string;
+    answer:         string;
+    createdAt:      Date;
+    createdBy:      string;
+    id:             string;
+    lastModifiedAt: Date;
+    lastModifiedBy: string;
+    question:       string;
+    source:         Source;
+    [property: string]: unknown;
 }
+
+export type Source = "AUTHORED" | "QBREADER_IMPORT" | "AI_GENERATED" | "TEXT_IMPORT" | "CLONED";
 
 export interface Subcategory {
     category: Category;
     id:       string;
     name:     string;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface Category {
     id:   string;
     name: string;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface Difficulty {
     id:   string;
     name: string;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface TossupElement {
     id:     number;
     order:  number;
     tossup: Tossup;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface Tossup {
-    answer:      string;
-    id:          string;
-    question:    string;
-    remoteId:    string;
-    subcategory: Subcategory;
-    [property: string]: any;
+    aiModel:        string;
+    answer:         string;
+    createdAt:      Date;
+    createdBy:      string;
+    id:             string;
+    lastModifiedAt: Date;
+    lastModifiedBy: string;
+    question:       string;
+    remoteId:       string;
+    source:         Source;
+    subcategory:    Subcategory;
+    [property: string]: unknown;
 }
+
+export type Visibility = "DRAFT" | "PUBLISHED" | "EPHEMERAL";
