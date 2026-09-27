@@ -6,6 +6,7 @@ import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { authConfig } from './auth.config';
 import { environment } from '../../../environments/environment';
 import { ThemeService } from '../services/theme.service';
+import { clearAllGameJoins } from '../../game/services/game-join-storage';
 
 /** OAuth events that mean the session is gone and the user must sign in again. */
 const SESSION_ENDING_EVENTS: ReadonlySet<string> = new Set([
@@ -36,6 +37,8 @@ export const SESSION_ENDED_MESSAGE = 'Your session ended. Sign in again.';
  *   `isAuthenticated$` to false and prompt the user to sign in again.
  * - {@link logout} revokes the tokens and ends the Keycloak session, which
  *   sends the browser to `postLogoutRedirectUri`.
+ * - Both logout and a session end clear the tab's stored game seats
+ *   (`sockbowl.join.*`).
  */
 @Injectable({
   providedIn: 'root'
@@ -154,6 +157,7 @@ export class AuthService {
       return;
     }
     this.refreshInFlight = null;
+    clearAllGameJoins();
     this.oauthService.logOut(true);
     this.isAuthenticatedSubject.next(false);
     this.userProfileSubject.next(null);
@@ -193,6 +197,8 @@ export class AuthService {
     if (!environment.authEnabled) {
       return;
     }
+    // Stored seats belong to this session; don't leave them for the next user.
+    clearAllGameJoins();
     if (!this.oauthService.getAccessToken()) {
       // revokeTokenAndLogout is a no-op without an access token.
       this.oauthService.logOut();
@@ -306,11 +312,15 @@ export class AuthService {
    * fine-grained permission like `packet:create` or `user:ban` is just
    * membership in that same array. When auth is disabled (self-hosted
    * single-user mode) every feature permission is granted, so the app is
-   * fully usable without Keycloak; otherwise it is role membership.
+   * fully usable without Keycloak; otherwise it is role membership in a
+   * still-valid access token (an expired token grants nothing).
    */
   public hasPermission(permission: string): boolean {
     if (!environment.authEnabled) {
       return true;
+    }
+    if (!this.oauthService.hasValidAccessToken()) {
+      return false;
     }
     return this.getRoles().includes(permission);
   }

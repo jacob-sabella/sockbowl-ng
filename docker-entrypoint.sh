@@ -28,7 +28,13 @@ GAME_WS_ORIGIN="${WS_PROTOCOL}://${APP_HOST}:${SOCKBOWL_GAME_PORT}"
 QUESTIONS_ORIGIN="${APP_PROTOCOL}://${APP_HOST}:${SOCKBOWL_QUESTIONS_PORT}"
 KEYCLOAK_ORIGIN="${APP_PROTOCOL}://${APP_HOST}:${KEYCLOAK_PORT}"
 
-export CSP_HEADER_VALUE="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${GAME_HTTP_ORIGIN} ${GAME_WS_ORIGIN} ${QUESTIONS_ORIGIN} ${KEYCLOAK_ORIGIN} ${CSP_EXTRA_CONNECT_SRC}; worker-src 'self'; frame-src ${KEYCLOAK_ORIGIN}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${KEYCLOAK_ORIGIN}; object-src 'none'"
+# connect-src also lists the Google Fonts origins: once the Angular service
+# worker controls the page, it re-fetches the cross-origin font stylesheets and
+# font files with fetch(), which is governed by the worker's connect-src rather
+# than style-src/font-src. Without them every font and Material Icon 504s.
+FONT_CONNECT_SRC="https://fonts.googleapis.com https://fonts.gstatic.com"
+
+export CSP_HEADER_VALUE="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${GAME_HTTP_ORIGIN} ${GAME_WS_ORIGIN} ${QUESTIONS_ORIGIN} ${KEYCLOAK_ORIGIN} ${FONT_CONNECT_SRC} ${CSP_EXTRA_CONNECT_SRC}; worker-src 'self'; frame-src ${KEYCLOAK_ORIGIN}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${KEYCLOAK_ORIGIN}; object-src 'none'"
 
 echo "Generating security headers snippet..."
 mkdir -p /etc/nginx/snippets

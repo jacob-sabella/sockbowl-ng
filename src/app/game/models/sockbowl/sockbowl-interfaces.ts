@@ -652,7 +652,8 @@ export type StompErrorCode =
 /**
  * A STOMP-level error from the game server. It arrives either as the JSON body
  * of an ERROR frame (fatal: the server closes the socket) or as a message on
- * `/user/queue/errors` (non-fatal: the socket stays open). The body may gain
+ * `/user/queue/errors` (non-fatal unless the code is fatal, e.g. BANNED
+ * mid-game). The body may gain
  * optional additive fields later (M4 adds `policy`, `retryAfterMs`,
  * `droppedDestination`); unknown fields are ignored.
  */
@@ -663,7 +664,8 @@ export interface StompError {
   retryAfterSeconds?: number | null;
   /**
    * Set by the client, not the server: true when the error came from an
-   * ERROR frame and the client stopped reconnecting.
+   * ERROR frame or carried a fatal code on `/user/queue/errors`, and the
+   * client stopped reconnecting.
    */
   fatal?: boolean;
 }

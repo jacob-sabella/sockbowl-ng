@@ -114,11 +114,59 @@ describe('AuthService', () => {
   });
 
   it('hasPermission is true for a role present in realm_access.roles', () => {
+    oauthServiceSpy.hasValidAccessToken.and.returnValue(true);
     expect(service.hasPermission('packet:read')).toBeTrue();
   });
 
   it('hasPermission is false for a role not present in realm_access.roles', () => {
+    oauthServiceSpy.hasValidAccessToken.and.returnValue(true);
     expect(service.hasPermission('packet:create')).toBeFalse();
+  });
+
+  it('hasPermission is false once the access token is no longer valid, even for a held role', () => {
+    oauthServiceSpy.hasValidAccessToken.and.returnValue(false);
+    expect(service.hasPermission('packet:read')).toBeFalse();
+    expect(service.hasPermission('game:host')).toBeFalse();
+  });
+
+  describe('stored game seats (sockbowl.join.*)', () => {
+    beforeEach(() => {
+      sessionStorage.setItem('sockbowl.join.g1', JSON.stringify({ playerSessionId: 'p1', authenticated: true }));
+      sessionStorage.setItem('sockbowl.join.g2', JSON.stringify({ playerSessionId: 'p2', playerSecret: 's', authenticated: false }));
+      sessionStorage.setItem('unrelated.key', 'keep');
+    });
+
+    afterEach(() => {
+      sessionStorage.removeItem('sockbowl.join.g1');
+      sessionStorage.removeItem('sockbowl.join.g2');
+      sessionStorage.removeItem('unrelated.key');
+    });
+
+    it('are cleared on logout', async () => {
+      oauthServiceSpy.revokeTokenAndLogout.and.returnValue(Promise.resolve());
+
+      await service.logout();
+
+      expect(sessionStorage.getItem('sockbowl.join.g1')).toBeNull();
+      expect(sessionStorage.getItem('sockbowl.join.g2')).toBeNull();
+      expect(sessionStorage.getItem('unrelated.key')).toBe('keep');
+    });
+
+    it('are cleared when the session ends', () => {
+      events$.next(new OAuthErrorEvent('token_refresh_error', {}));
+
+      expect(sessionStorage.getItem('sockbowl.join.g1')).toBeNull();
+      expect(sessionStorage.getItem('sockbowl.join.g2')).toBeNull();
+      expect(sessionStorage.getItem('unrelated.key')).toBe('keep');
+    });
+
+    it('are kept when auth is off (logout is a no-op)', async () => {
+      environment.authEnabled = false;
+
+      await service.logout();
+
+      expect(sessionStorage.getItem('sockbowl.join.g1')).not.toBeNull();
+    });
   });
 
   describe('configuration', () => {
