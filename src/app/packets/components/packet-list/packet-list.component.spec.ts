@@ -15,9 +15,9 @@ describe('PacketListComponent', () => {
   let component: PacketListComponent;
   let authSpy: jasmine.SpyObj<AuthService>;
 
-  const ownedPacket: Packet = { id: 'p1', name: 'Mine', owner: { id: 'user-1', name: 'Me' } } as Packet;
-  const othersPacket: Packet = { id: 'p2', name: 'Theirs', owner: { id: 'user-2', name: 'Them' } } as Packet;
-  const ownerlessPacket: Packet = { id: 'p3', name: 'Ownerless', owner: null } as Packet;
+  const ownedPacket: Packet = { id: 'p1', name: 'Mine', ownerId: 'user-1', ownerDisplayName: 'Me' } as Packet;
+  const othersPacket: Packet = { id: 'p2', name: 'Theirs', ownerId: 'user-2', ownerDisplayName: 'Them' } as Packet;
+  const ownerlessPacket: Packet = { id: 'p3', name: 'Ownerless' } as Packet;
 
   function configure(permissions: string[], currentUserId: string | null): void {
     authSpy = jasmine.createSpyObj('AuthService', ['hasPermission', 'getCurrentUserId']);

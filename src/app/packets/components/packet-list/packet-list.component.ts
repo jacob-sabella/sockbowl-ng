@@ -64,7 +64,7 @@ export class PacketListComponent implements OnInit {
       return this.packets;
     }
     const userId = this.auth.getCurrentUserId();
-    return this.packets.filter(p => p.owner?.id === userId);
+    return this.packets.filter(p => p.ownerId === userId);
   }
 
   /**
@@ -74,7 +74,7 @@ export class PacketListComponent implements OnInit {
    */
   canManage(packet: Packet): boolean {
     return this.auth.hasPermission('packet:manage-any')
-      || (!!packet.owner && packet.owner.id === this.auth.getCurrentUserId());
+      || (!!packet.ownerId && packet.ownerId === this.auth.getCurrentUserId());
   }
 
   search(): void {

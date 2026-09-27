@@ -187,7 +187,7 @@ export class PacketBuilderComponent implements OnInit {
    */
   get canManagePacket(): boolean {
     return this.auth.hasPermission('packet:manage-any')
-      || (!!this.packet?.owner && this.packet.owner.id === this.auth.getCurrentUserId());
+      || (!!this.packet?.ownerId && this.packet.ownerId === this.auth.getCurrentUserId());
   }
 
   get sortedTossups(): TossupElement[] {
