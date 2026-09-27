@@ -100,8 +100,66 @@
             }
           </div>
         }
+
+        <!-- Publish / duplicate / export / preview / play test (plan 3.3.3) -->
+        <div class="packet-builder__actions-row">
+          <span class="packet-builder__visibility-chip"
+                [class.packet-builder__visibility-chip--published]="packet.visibility === 'PUBLISHED'">
+            {{ packet.visibility === 'PUBLISHED' ? 'Published' : 'Draft' }}
+          </span>
+
+          @if (canManagePacket) {
+            <button mat-stroked-button
+                    (click)="setVisibility(packet.visibility === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED')">
+              <mat-icon aria-hidden="true">{{ packet.visibility === 'PUBLISHED' ? 'unpublished' : 'public' }}</mat-icon>
+              {{ packet.visibility === 'PUBLISHED' ? 'Unpublish' : 'Publish' }}
+            </button>
+
+            @if (auth.hasPermission('packet:create')) {
+              <button mat-stroked-button (click)="duplicatePacket()">
+                <mat-icon aria-hidden="true">content_copy</mat-icon>
+                Duplicate
+              </button>
+            }
+          }
+
+          <button mat-stroked-button [matMenuTriggerFor]="exportMenu">
+            <mat-icon aria-hidden="true">download</mat-icon>
+            Export
+          </button>
+          <mat-menu #exportMenu="matMenu">
+            <button mat-menu-item (click)="exportPlaintext()">Plaintext (.txt)</button>
+            <button mat-menu-item (click)="exportJson()">JSON</button>
+            <button mat-menu-item (click)="printPacket()">Print</button>
+          </mat-menu>
+
+          <button mat-stroked-button (click)="togglePreview()">
+            <mat-icon aria-hidden="true">{{ showPreview ? 'edit' : 'visibility' }}</mat-icon>
+            {{ showPreview ? 'Edit' : 'Preview' }}
+          </button>
+
+          <span class="packet-builder__spacer"></span>
+
+          <button mat-raised-button class="packet-builder__save-btn" [disabled]="!validation?.playable"
+                  [matTooltip]="validation?.playable ? '' : 'Fix the playability errors above first'"
+                  (click)="playTest()">
+            <mat-icon aria-hidden="true">play_arrow</mat-icon>
+            Play test
+          </button>
+        </div>
       </mat-card-content>
     </mat-card>
+
+    <!-- Preview (PB-07): the read-only reading view, reused by "Print" (marked print-area, PB-06) -->
+    @if (showPreview) {
+      <mat-card class="packet-builder__preview-card">
+        <mat-card-content>
+          <div class="print-area">
+            <app-packet-reading-view [packet]="packet"></app-packet-reading-view>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @else {
 
     <!-- Tossups -->
     <mat-card class="packet-builder__tossups">
@@ -109,11 +167,12 @@
         <mat-card-title>Tossups</mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <mat-accordion>
+        <mat-accordion cdkDropList (cdkDropListDropped)="dropTossup($event)">
           @for (te of sortedTossups; track te.tossup.id; let first = $first; let last = $last) {
-            <mat-expansion-panel>
+            <mat-expansion-panel cdkDrag>
               <mat-expansion-panel-header>
                 <mat-panel-title>
+                  <mat-icon cdkDragHandle class="packet-builder__drag-handle" aria-label="Reorder tossup" title="Drag to reorder">drag_indicator</mat-icon>
                   <span class="packet-builder__index">#{{ te.order + 1 }}</span>
                   @if (tossupDraftStore.isDirty(te.tossup.id)) {
                     <span class="packet-builder__dirty-dot" aria-label="Unsaved changes" title="Unsaved changes"></span>
@@ -262,6 +321,15 @@
 
         @if (genOpen && canManagePacket) {
           <div class="packet-builder__generate-form">
+            <app-ai-key-picker
+              [apiKey]="genDraft.apiKey"
+              (apiKeyChange)="genDraft.apiKey = $event"
+              [model]="genDraft.model"
+              (modelChange)="genDraft.model = $event"
+              ></app-ai-key-picker>
+            @if (!genDraft.apiKey) {
+              <p class="packet-builder__taxonomy-hint">An OpenAI API key is required to generate a question.</p>
+            }
             <mat-form-field appearance="outline" class="packet-builder__field">
               <mat-label>Topic</mat-label>
               <input matInput [(ngModel)]="genDraft.topic" />
@@ -286,7 +354,9 @@
             <div class="packet-builder__row-actions">
               <span class="packet-builder__spacer"></span>
               <button mat-button (click)="cancelGenerate()">Cancel</button>
-              <button mat-raised-button class="packet-builder__save-btn" [disabled]="genSubmitting" (click)="generateTossup()">
+              <button mat-raised-button class="packet-builder__save-btn"
+                      [disabled]="genSubmitting || !genDraft.topic.trim() || !genDraft.apiKey"
+                      (click)="generateTossup()">
                 <mat-icon aria-hidden="true">auto_awesome</mat-icon>
                 Generate
               </button>
@@ -302,11 +372,12 @@
         <mat-card-title>Bonuses</mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <mat-accordion>
+        <mat-accordion cdkDropList (cdkDropListDropped)="dropBonus($event)">
           @for (be of sortedBonuses; track be.bonus.id; let first = $first; let last = $last) {
-            <mat-expansion-panel [expanded]="isJustAdded(be)">
+            <mat-expansion-panel cdkDrag [expanded]="isJustAdded(be)">
               <mat-expansion-panel-header>
                 <mat-panel-title>
+                  <mat-icon cdkDragHandle class="packet-builder__drag-handle" aria-label="Reorder bonus" title="Drag to reorder">drag_indicator</mat-icon>
                   <span class="packet-builder__index">#{{ be.order + 1 }}</span>
                   @if (bonusDraftStore.isDirty(be.bonus.id)) {
                     <span class="packet-builder__dirty-dot" aria-label="Unsaved changes" title="Unsaved changes"></span>
@@ -386,9 +457,10 @@
                 <!-- Bonus parts -->
                 <div class="packet-builder__parts">
                   <h4 class="packet-builder__parts-title">Parts</h4>
-                  <div class="packet-builder__parts-list">
+                  <div class="packet-builder__parts-list" cdkDropList (cdkDropListDropped)="dropPart(be, $event)">
                     @for (pe of sortedParts(be); track pe.bonusPart.id; let partFirst = $first; let partLast = $last) {
-                      <div class="packet-builder__part">
+                      <div class="packet-builder__part" cdkDrag>
+                        <mat-icon cdkDragHandle class="packet-builder__drag-handle" aria-label="Reorder part" title="Drag to reorder">drag_indicator</mat-icon>
                         @if (bonusPartDraftStore.isDirty(pe.bonusPart.id)) {
                           <span class="packet-builder__dirty-dot" aria-label="Unsaved changes" title="Unsaved changes"></span>
                         }
@@ -577,6 +649,8 @@
           </mat-card-content>
         </mat-card>
       </div>
+    }
+
     }
   }
 </div>

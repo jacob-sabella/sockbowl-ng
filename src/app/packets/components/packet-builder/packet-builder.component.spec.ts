@@ -2,6 +2,7 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { of, throwError } from 'rxjs';
 
 import { PacketBuilderComponent } from './packet-builder.component';
@@ -9,6 +10,7 @@ import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questi
 import { PacketAuthoringService } from '../../services/packet-authoring.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
+import { PendingPacketService } from '../../../game/services/pending-packet.service';
 import { GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 import { AuthoringPacket } from '../../models/packet-authoring.models';
 
@@ -52,9 +54,16 @@ describe('PacketBuilderComponent', () => {
   let authSpy: jasmine.SpyObj<AuthService>;
   let confirmSpy: jasmine.SpyObj<ConfirmDialogService>;
   let snackBarSpy: jasmine.SpyObj<MatSnackBar>;
+  let routerSpy: jasmine.SpyObj<Router>;
+  let pendingPacketSpy: jasmine.SpyObj<PendingPacketService>;
 
-  function configure(packet: AuthoringPacket, permissions: string[] = ['packet:update', 'packet:delete'], currentUserId: string | null = 'user-1'): void {
-    questionsSpy = jasmine.createSpyObj('SockbowlQuestionsService', ['getPacketById']);
+  function configure(
+    packet: AuthoringPacket,
+    permissions: string[] = ['packet:update', 'packet:delete'],
+    currentUserId: string | null = 'user-1',
+    confirmResult = true
+  ): void {
+    questionsSpy = jasmine.createSpyObj('SockbowlQuestionsService', ['getPacketById', 'exportPacket']);
     questionsSpy.getPacketById.and.returnValue(of(packet));
 
     authoringSpy = jasmine.createSpyObj('PacketAuthoringService', [
@@ -63,7 +72,8 @@ describe('PacketBuilderComponent', () => {
       'updateTossup', 'addTossupToPacket', 'removeTossupFromPacket', 'reorderTossup', 'setTossupSubcategory',
       'updateBonus', 'addBonusToPacket', 'removeBonusFromPacket', 'reorderBonus', 'setBonusSubcategory',
       'updateBonusPart', 'addBonusPart', 'removeBonusPart', 'reorderBonusPart',
-      'createCategory', 'createSubcategory', 'generateAndAddTossup'
+      'createCategory', 'createSubcategory', 'generateAndAddTossup',
+      'setPacketVisibility', 'clonePacket'
     ]);
     authoringSpy.getAllDifficulties.and.returnValue(of([]));
     authoringSpy.getAllCategories.and.returnValue(of([]));
@@ -74,19 +84,23 @@ describe('PacketBuilderComponent', () => {
     authSpy.getCurrentUserId.and.returnValue(currentUserId);
 
     confirmSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
-    confirmSpy.confirm.and.returnValue(of(true));
+    confirmSpy.confirm.and.returnValue(of(confirmResult));
 
     snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
+    routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    pendingPacketSpy = jasmine.createSpyObj('PendingPacketService', ['set', 'get', 'clear']);
 
     TestBed.configureTestingModule({
       declarations: [PacketBuilderComponent],
+      imports: [MatMenuModule],
       providers: [
         { provide: SockbowlQuestionsService, useValue: questionsSpy },
         { provide: PacketAuthoringService, useValue: authoringSpy },
         { provide: AuthService, useValue: authSpy },
         { provide: ConfirmDialogService, useValue: confirmSpy },
         { provide: MatSnackBar, useValue: snackBarSpy },
-        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+        { provide: Router, useValue: routerSpy },
+        { provide: PendingPacketService, useValue: pendingPacketSpy },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => (key === 'id' ? 'p1' : null) } } } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -283,5 +297,210 @@ describe('PacketBuilderComponent', () => {
   it('canManagePacket is false for another owned packet', () => {
     configure(makePacket({ owner: { id: 'user-2', name: 'Them' } }), [], 'user-1');
     expect(component.canManagePacket).toBeFalse();
+  });
+
+  describe('drag-and-drop reorder (PB-20)', () => {
+    it('a tossup drop renumbers locally and calls reorderTossup once with the target index', () => {
+      configure(makePacket());
+      authoringSpy.reorderTossup.and.returnValue(of('t1'));
+
+      component.dropTossup({ previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(authoringSpy.reorderTossup).toHaveBeenCalledTimes(1);
+      expect(authoringSpy.reorderTossup).toHaveBeenCalledWith('p1', 't1', 1, jasmine.any(Number));
+      expect(component.sortedTossups[0].tossup.id).toBe('t2');
+      expect(component.sortedTossups[1].tossup.id).toBe('t1');
+    });
+
+    it('a failed tossup drop rolls back to the original order', () => {
+      configure(makePacket());
+      authoringSpy.reorderTossup.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'boom', classification: 'INTERNAL_ERROR' }))
+      );
+
+      component.dropTossup({ previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(component.sortedTossups[0].tossup.id).toBe('t1');
+      expect(component.sortedTossups[1].tossup.id).toBe('t2');
+      expect(snackBarSpy.open).toHaveBeenCalled();
+    });
+
+    it('a no-op drop (same index) does not call reorderTossup', () => {
+      configure(makePacket());
+      component.dropTossup({ previousIndex: 0, currentIndex: 0 } as any);
+      expect(authoringSpy.reorderTossup).not.toHaveBeenCalled();
+    });
+
+    it('a bonus drop calls reorderBonus once with the target index; an error rolls back', () => {
+      const packet = makePacket();
+      packet.bonuses.push({
+        id: 2,
+        order: 1,
+        bonus: { id: 'b2', preamble: 'P2', remoteId: '', subcategory: null as any, bonusParts: [] }
+      } as any);
+      configure(packet);
+      authoringSpy.reorderBonus.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'boom', classification: 'INTERNAL_ERROR' }))
+      );
+
+      component.dropBonus({ previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(authoringSpy.reorderBonus).toHaveBeenCalledWith('p1', 'b1', 1, jasmine.any(Number));
+      // Rolled back: b1 is order 0 again.
+      expect(component.sortedBonuses[0].bonus.id).toBe('b1');
+    });
+
+    it('a bonus-part drop calls reorderBonusPart once with the target index', () => {
+      const packet = makePacket();
+      packet.bonuses[0].bonus.bonusParts!.push({
+        id: 2,
+        order: 1,
+        bonusPart: { id: 'bp2', question: 'PQ2', answer: 'PA2' }
+      } as any);
+      configure(packet);
+      authoringSpy.reorderBonusPart.and.returnValue(of('bp1'));
+
+      const be = component.sortedBonuses[0];
+      component.dropPart(be, { previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(authoringSpy.reorderBonusPart).toHaveBeenCalledWith('b1', 'bp1', 1, jasmine.any(Number));
+      expect(component.sortedParts(be)[0].bonusPart.id).toBe('bp2');
+      expect(component.sortedParts(be)[1].bonusPart.id).toBe('bp1');
+    });
+  });
+
+  describe('AI-assist generate (PB-08)', () => {
+    it('sends the apiKey/model the AiKeyPickerComponent bound into genDraft', () => {
+      configure(makePacket());
+      authoringSpy.generateAndAddTossup.and.returnValue(of('new-tossup-id'));
+
+      component.openGenerate();
+      component.genDraft.topic = 'Ancient Rome';
+      // Simulates AiKeyPickerComponent's (apiKeyChange)/(modelChange) outputs.
+      component.genDraft.apiKey = 'sk-test-key';
+      component.genDraft.model = 'gpt-4o';
+
+      component.generateTossup();
+
+      expect(authoringSpy.generateAndAddTossup).toHaveBeenCalledTimes(1);
+      const [packetId, input] = authoringSpy.generateAndAddTossup.calls.mostRecent().args;
+      expect(packetId).toBe('p1');
+      expect(input.apiKey).toBe('sk-test-key');
+      expect(input.model).toBe('gpt-4o');
+    });
+
+    it('refuses to submit without an API key', () => {
+      configure(makePacket());
+      component.openGenerate();
+      component.genDraft.topic = 'Ancient Rome';
+
+      component.generateTossup();
+
+      expect(authoringSpy.generateAndAddTossup).not.toHaveBeenCalled();
+      expect(snackBarSpy.open).toHaveBeenCalled();
+    });
+  });
+
+  describe('publish toggle (plan 3.3.3)', () => {
+    it('publishing a playable packet does not ask for confirmation', () => {
+      configure(makePacket({ visibility: 'DRAFT', validation: { playable: true, tossupCount: 2, bonusCount: 1, issues: [] } }));
+      authoringSpy.setPacketVisibility.and.returnValue(of('p1'));
+
+      component.setVisibility('PUBLISHED');
+
+      expect(confirmSpy.confirm).not.toHaveBeenCalled();
+      expect(authoringSpy.setPacketVisibility).toHaveBeenCalledWith('p1', 'PUBLISHED', jasmine.any(Number));
+    });
+
+    it('publishing an unplayable packet confirms first and lists the ERRORs', () => {
+      configure(makePacket({
+        visibility: 'DRAFT',
+        validation: { playable: false, tossupCount: 0, bonusCount: 0, issues: [{ severity: 'ERROR', code: 'NO_TOSSUPS', message: 'Packet has no tossups' }] }
+      }));
+      authoringSpy.setPacketVisibility.and.returnValue(of('p1'));
+
+      component.setVisibility('PUBLISHED');
+
+      expect(confirmSpy.confirm).toHaveBeenCalled();
+      expect(authoringSpy.setPacketVisibility).toHaveBeenCalledWith('p1', 'PUBLISHED', jasmine.any(Number));
+    });
+
+    it('declining the confirmation does not publish', () => {
+      configure(
+        makePacket({
+          visibility: 'DRAFT',
+          validation: { playable: false, tossupCount: 0, bonusCount: 0, issues: [{ severity: 'ERROR', code: 'NO_TOSSUPS', message: 'Packet has no tossups' }] }
+        }),
+        ['packet:update', 'packet:delete'],
+        'user-1',
+        false
+      );
+
+      component.setVisibility('PUBLISHED');
+
+      expect(confirmSpy.confirm).toHaveBeenCalled();
+      expect(authoringSpy.setPacketVisibility).not.toHaveBeenCalled();
+    });
+
+    it('un-publishing never asks for confirmation, even when unplayable', () => {
+      configure(makePacket({
+        visibility: 'PUBLISHED',
+        validation: { playable: false, tossupCount: 0, bonusCount: 0, issues: [] }
+      }));
+      authoringSpy.setPacketVisibility.and.returnValue(of('p1'));
+
+      component.setVisibility('DRAFT');
+
+      expect(confirmSpy.confirm).not.toHaveBeenCalled();
+      expect(authoringSpy.setPacketVisibility).toHaveBeenCalledWith('p1', 'DRAFT', jasmine.any(Number));
+    });
+  });
+
+  describe('duplicate, export, and play test', () => {
+    it('Duplicate calls clonePacket and navigates to the new builder', () => {
+      configure(makePacket());
+      authoringSpy.clonePacket.and.returnValue(of('new-packet-id'));
+
+      component.duplicatePacket();
+
+      expect(authoringSpy.clonePacket).toHaveBeenCalledWith('p1');
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/packets', 'new-packet-id', 'edit']);
+    });
+
+    it('exporting plaintext calls exportPacket and triggers a Blob download', () => {
+      configure(makePacket());
+      questionsSpy.exportPacket.and.returnValue(of('1. Some question\nANSWER: Some answer\n'));
+      const createObjectURLSpy = spyOn(URL, 'createObjectURL').and.returnValue('blob:fake-url');
+      const revokeObjectURLSpy = spyOn(URL, 'revokeObjectURL');
+      spyOn(HTMLAnchorElement.prototype, 'click'); // avoid a real navigation attempt in the test browser
+
+      component.exportPlaintext();
+
+      expect(questionsSpy.exportPacket).toHaveBeenCalledWith('p1');
+      expect(createObjectURLSpy).toHaveBeenCalled();
+      expect(revokeObjectURLSpy).toHaveBeenCalled();
+    });
+
+    it('exporting JSON downloads the current packet without another fetch', () => {
+      configure(makePacket());
+      const createObjectURLSpy = spyOn(URL, 'createObjectURL').and.returnValue('blob:fake-url');
+      spyOn(URL, 'revokeObjectURL');
+      spyOn(HTMLAnchorElement.prototype, 'click');
+
+      component.exportJson();
+
+      expect(createObjectURLSpy).toHaveBeenCalled();
+      // ngOnInit's own fetch only; JSON export reuses the already-loaded packet.
+      expect(questionsSpy.getPacketById).toHaveBeenCalledTimes(1);
+    });
+
+    it('Play test sets the pending packet and navigates to /game-session with the mode/packetId query params', () => {
+      configure(makePacket());
+
+      component.playTest();
+
+      expect(pendingPacketSpy.set).toHaveBeenCalledWith('p1');
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/game-session'], { queryParams: { mode: 'single', packetId: 'p1' } });
+    });
   });
 });

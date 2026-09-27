@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectionStrategy, HostListener, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { switchMap, tap } from 'rxjs/operators';
 import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questions.service';
@@ -16,6 +17,7 @@ import {
   Category,
   Difficulty,
   PacketValidation,
+  PacketVisibility,
   Subcategory
 } from '../../models/packet-authoring.models';
 import { PACKET_LIMITS } from '../../models/packet-limits';
@@ -23,6 +25,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { describeGraphqlError, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
+import { PendingPacketService } from '../../../game/services/pending-packet.service';
 import { DraftEntitySource, PacketDraftStore } from './packet-draft-store';
 
 interface TossupDraft {
@@ -87,6 +90,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   private packetAuthoring = inject(PacketAuthoringService);
   private snackBar = inject(MatSnackBar);
   private confirmDialog = inject(ConfirmDialogService);
+  private pendingPacket = inject(PendingPacketService);
   auth = inject(AuthService);
 
   limits = PACKET_LIMITS;
@@ -104,6 +108,9 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   staleDraftIds = new Set<string>();
 
   savingAll = false;
+
+  /** Preview tab toggle (PB-07): swaps the editor cards for {@link PacketReadingViewComponent}. */
+  showPreview = false;
 
   difficulties: Difficulty[] = [];
   categories: Category[] = [];
@@ -132,10 +139,11 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   newPartOpen: Record<string, boolean> = {};
   newPartDrafts: Record<string, NewBonusPartDraft> = {};
 
-  // AI-assist form.
+  // AI-assist form. apiKey/model are owned by the embedded AiKeyPickerComponent
+  // (PB-08, N5's shared/ai-key), which seeds them from AiKeyService on init.
   genOpen = false;
   genSubmitting = false;
-  genDraft = { topic: '', additionalContext: '', subcategoryId: null as string | null };
+  genDraft = { topic: '', additionalContext: '', subcategoryId: null as string | null, apiKey: '', model: '' };
 
   // Inline "create new subcategory" affordance, shared by every subcategory picker.
   taxonomyFormOpen = false;
@@ -411,6 +419,182 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       });
   }
 
+  /* --------------------- preview / publish / export / clone ------------------ */
+
+  /** Preview toggle (PB-07): swaps the tossup/bonus editor cards for the read-only reading view. */
+  togglePreview(): void {
+    this.showPreview = !this.showPreview;
+  }
+
+  /**
+   * Draft/Published toggle (plan 3.3.3). Publishing an unplayable packet is
+   * allowed by the server, but the UI asks for confirmation first and lists
+   * the blocking ERRORs; un-publishing never needs confirmation.
+   */
+  setVisibility(next: PacketVisibility): void {
+    if (!this.packet) {
+      return;
+    }
+    const proceed = (): void => {
+      this.packetAuthoring.setPacketVisibility(this.packetId, next, this.packetVersion).subscribe({
+        next: () => {
+          this.bumpLocalVersion();
+          this.refetch();
+          this.snackBar.open(next === 'PUBLISHED' ? 'Packet published' : 'Packet set back to draft', 'Dismiss', { duration: 2500 });
+        },
+        error: (err) => this.handleMutationError(err)
+      });
+    };
+
+    if (next === 'PUBLISHED' && this.validation && !this.validation.playable) {
+      const errors = this.validation.issues.filter(i => i.severity === 'ERROR').map(i => i.message);
+      this.confirmDialog
+        .confirm({
+          title: 'Publish an unplayable packet?',
+          message: `This packet isn't playable yet: ${errors.join('; ')}. It can still be published, but it won't work in a game until fixed.`,
+          confirmText: 'Publish anyway',
+          destructive: false
+        })
+        .subscribe(confirmed => {
+          if (confirmed) {
+            proceed();
+          }
+        });
+    } else {
+      proceed();
+    }
+  }
+
+  /** "Duplicate" (plan 3.3.3): clones this packet and jumps straight into the new copy's builder. */
+  duplicatePacket(): void {
+    if (!this.packet) {
+      return;
+    }
+    this.packetAuthoring.clonePacket(this.packetId).subscribe({
+      next: (newId) => {
+        this.snackBar.open('Packet duplicated', 'Dismiss', { duration: 2500 });
+        this.router.navigate(['/packets', newId, 'edit']);
+      },
+      error: (err) => this.handleMutationError(err)
+    });
+  }
+
+  /** Export menu: "Plaintext (.txt)" (PB-06). */
+  exportPlaintext(): void {
+    if (!this.packet) {
+      return;
+    }
+    this.sockbowlQuestionsService.exportPacket(this.packetId).subscribe({
+      next: (text) => downloadTextFile(`${slugify(this.packet!.name)}.txt`, text, 'text/plain;charset=utf-8'),
+      error: (err) => this.handleMutationError(err)
+    });
+  }
+
+  /** Export menu: "JSON" (PB-06) — the already-fetched full packet, pretty-printed. */
+  exportJson(): void {
+    if (!this.packet) {
+      return;
+    }
+    downloadTextFile(`${slugify(this.packet.name)}.json`, JSON.stringify(this.packet, null, 2), 'application/json;charset=utf-8');
+  }
+
+  /**
+   * Export menu: "Print" (PB-06/PB-07). Switches to the preview tab (whose
+   * reading view carries the `print-area` marker the global print
+   * stylesheet targets) and prints on the next tick, so the DOM has updated
+   * before the browser's print dialog opens.
+   */
+  printPacket(): void {
+    this.showPreview = true;
+    setTimeout(() => window.print(), 0);
+  }
+
+  /** "Play test" (PB-15): disabled by the template when the packet isn't playable. */
+  playTest(): void {
+    if (!this.packet) {
+      return;
+    }
+    this.pendingPacket.set(this.packetId);
+    this.router.navigate(['/game-session'], { queryParams: { mode: 'single', packetId: this.packetId } });
+  }
+
+  /* -------------------------------- drag and drop ---------------------------- */
+
+  /**
+   * Drag-and-drop reorder (PB-20). Applied optimistically (the dropped
+   * entity's `order` — and every entity after it — is renumbered locally
+   * before the server responds) and rolled back to the pre-drop order on
+   * error. The up/down buttons remain for keyboard use.
+   */
+  dropTossup(event: CdkDragDrop<TossupElement[]>): void {
+    if (!this.packet || event.previousIndex === event.currentIndex) {
+      return;
+    }
+    const items = this.sortedTossups;
+    const moved = items[event.previousIndex];
+    const newOrder = event.currentIndex;
+    const originalOrders = new Map(items.map(t => [t.tossup.id, t.order]));
+    moveItemInArray(items, event.previousIndex, event.currentIndex);
+    items.forEach((t, i) => (t.order = i));
+
+    this.packetAuthoring.reorderTossup(this.packetId, moved.tossup.id, newOrder, this.packetVersion).subscribe({
+      next: () => {
+        this.bumpLocalVersion();
+        this.refetch();
+      },
+      error: (err) => {
+        items.forEach(t => (t.order = originalOrders.get(t.tossup.id)!));
+        this.handleMutationError(err);
+      }
+    });
+  }
+
+  dropBonus(event: CdkDragDrop<BonusElement[]>): void {
+    if (!this.packet || event.previousIndex === event.currentIndex) {
+      return;
+    }
+    const items = this.sortedBonuses;
+    const moved = items[event.previousIndex];
+    const newOrder = event.currentIndex;
+    const originalOrders = new Map(items.map(b => [b.bonus.id, b.order]));
+    moveItemInArray(items, event.previousIndex, event.currentIndex);
+    items.forEach((b, i) => (b.order = i));
+
+    this.packetAuthoring.reorderBonus(this.packetId, moved.bonus.id, newOrder, this.packetVersion).subscribe({
+      next: () => {
+        this.bumpLocalVersion();
+        this.refetch();
+      },
+      error: (err) => {
+        items.forEach(b => (b.order = originalOrders.get(b.bonus.id)!));
+        this.handleMutationError(err);
+      }
+    });
+  }
+
+  dropPart(be: BonusElement, event: CdkDragDrop<BonusPartElement[]>): void {
+    if (!this.packet || event.previousIndex === event.currentIndex) {
+      return;
+    }
+    const items = this.sortedParts(be);
+    const moved = items[event.previousIndex];
+    const newOrder = event.currentIndex;
+    const originalOrders = new Map(items.map(p => [p.bonusPart.id, p.order]));
+    moveItemInArray(items, event.previousIndex, event.currentIndex);
+    items.forEach((p, i) => (p.order = i));
+
+    this.packetAuthoring.reorderBonusPart(be.bonus.id, moved.bonusPart.id, newOrder, this.packetVersion).subscribe({
+      next: () => {
+        this.bumpLocalVersion();
+        this.refetch();
+      },
+      error: (err) => {
+        items.forEach(p => (p.order = originalOrders.get(p.bonusPart.id)!));
+        this.handleMutationError(err);
+      }
+    });
+  }
+
   /* -------------------------- error / conflict handling ---------------------- */
 
   private bumpLocalVersion(): void {
@@ -538,7 +722,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
 
   openGenerate(): void {
     this.genOpen = true;
-    this.genDraft = { topic: '', additionalContext: '', subcategoryId: null };
+    this.genDraft = { topic: '', additionalContext: '', subcategoryId: null, apiKey: '', model: '' };
   }
 
   cancelGenerate(): void {
@@ -550,11 +734,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       this.snackBar.open('A topic is required', 'Dismiss', { duration: 3000 });
       return;
     }
+    if (!this.genDraft.apiKey.trim()) {
+      this.snackBar.open('An OpenAI API key is required to generate a question', 'Dismiss', { duration: 3000 });
+      return;
+    }
     this.genSubmitting = true;
     this.packetAuthoring.generateAndAddTossup(this.packetId, {
       topic: this.genDraft.topic.trim(),
       additionalContext: this.genDraft.additionalContext.trim() || null,
-      subcategoryId: this.genDraft.subcategoryId
+      subcategoryId: this.genDraft.subcategoryId,
+      apiKey: this.genDraft.apiKey.trim(),
+      model: this.genDraft.model || null
     }, null, this.packetVersion).subscribe({
       next: () => {
         this.genSubmitting = false;
@@ -985,4 +1175,28 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   extractError(err: unknown): string {
     return describeGraphqlError(err);
   }
+}
+
+/** Lowercase, hyphenated filename stem from a packet name, never empty (mirrors `packet-list`'s helper). */
+function slugify(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'packet';
+}
+
+/** Triggers a browser download of `text` as a file named `filename` (export menu, PB-06). */
+function downloadTextFile(filename: string, text: string, mimeType: string): void {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
