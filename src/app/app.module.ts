@@ -42,6 +42,7 @@ import {MatChipsModule} from "@angular/material/chips";
 import {MatSnackBarModule} from "@angular/material/snack-bar";
 import {MatTooltipModule} from "@angular/material/tooltip";
 import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
+import {MatProgressBarModule} from "@angular/material/progress-bar";
 import {MatTabsModule} from "@angular/material/tabs";
 import {MatAutocompleteModule} from "@angular/material/autocomplete";
 import {MatMenuModule} from "@angular/material/menu";
@@ -98,6 +99,7 @@ import { StompErrorBannerComponent } from './game/components/stomp-error-banner/
         MatSnackBarModule,
         MatTooltipModule,
         MatProgressSpinnerModule,
+        MatProgressBarModule,
         MatTabsModule,
         MatAutocompleteModule,
         MatMenuModule,
