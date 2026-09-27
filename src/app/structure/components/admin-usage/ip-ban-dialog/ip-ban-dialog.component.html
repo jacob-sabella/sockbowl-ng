@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>Ban IP</h2>
+
+<mat-dialog-content class="ip-ban-dialog__content">
+  <mat-form-field appearance="outline" class="ip-ban-dialog__field">
+    <mat-label>CIDR or IP address</mat-label>
+    <input matInput name="cidr" [(ngModel)]="cidr" required />
+    @if (cidrError) {
+      <mat-error>{{ cidrError }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="ip-ban-dialog__field">
+    <mat-label>Reason</mat-label>
+    <input matInput name="reason" [(ngModel)]="reason" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="ip-ban-dialog__field">
+    <mat-label>Duration</mat-label>
+    <mat-select name="ttl" [(ngModel)]="ttlSeconds">
+      @for (opt of ttlOptions; track opt.seconds) {
+        <mat-option [value]="opt.seconds">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-raised-button color="warn" (click)="confirm()">Ban IP</button>
+</mat-dialog-actions>

@@ -1,0 +1,27 @@
+<h2 mat-dialog-title>Edit {{ metricLabel }} quota</h2>
+
+<mat-dialog-content class="edit-quota-dialog__content">
+  <mat-checkbox name="unlimited" [(ngModel)]="unlimited">Unlimited</mat-checkbox>
+
+  @if (!unlimited) {
+    <mat-form-field appearance="outline" class="edit-quota-dialog__field">
+      <mat-label>Limit</mat-label>
+      <input matInput type="number" name="limitValue" min="0" [(ngModel)]="limitValue" />
+    </mat-form-field>
+  }
+
+  @if (data.overridden) {
+    <p class="edit-quota-dialog__note">This user has a custom override for this metric.</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (data.overridden) {
+    <button mat-button (click)="resetToDefault()">
+      <mat-icon>restart_alt</mat-icon>
+      Reset to role default
+    </button>
+  }
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="save()">Save</button>
+</mat-dialog-actions>
