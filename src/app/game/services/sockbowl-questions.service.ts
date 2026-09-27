@@ -2,14 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Packet } from '../models/sockbowl/packet-types.generated';
+import { PacketFilter, PacketPage } from '../../packets/models/packet-authoring.models';
 import {environment} from "../../../environments/environment";
 import {map, timeout} from "rxjs/operators";
+import { GraphqlClientService } from '../../core/graphql/graphql-client.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SockbowlQuestionsService {
   private http = inject(HttpClient);
+  private graphqlClient = inject(GraphqlClientService);
 
 
   private graphqlUrl: string = environment.sockbowlQuestionsApiUrl + "graphql";
@@ -90,13 +93,9 @@ export class SockbowlQuestionsService {
       }
     `;
 
-    return this.http.post<{ data: { searchPacketsByName: Packet[] } }>(this.graphqlUrl, {
-      query,
-      variables: { name }
-    }).pipe(
-      // Transform the response to only return the packets array
-      map(response => response.data.searchPacketsByName)
-    );
+    return this.graphqlClient
+      .request<{ searchPacketsByName: Packet[] }>(this.graphqlUrl, query, { name })
+      .pipe(map(data => data.searchPacketsByName));
   }
 
   /**
@@ -104,6 +103,10 @@ export class SockbowlQuestionsService {
    * by the packet builder's list view as the fallback when no search text
    * has been entered.
    *
+   * @deprecated use {@link listPackets}, the paginated, policy-filtered,
+   * answer-free summary projection (PB-19). Kept for now for any caller not
+   * yet migrated; the server deprecates the underlying `getAllPackets` field
+   * the same way.
    * @return Observable of Packet array
    */
   getAllPackets(): Observable<Packet[]> {
@@ -163,11 +166,9 @@ export class SockbowlQuestionsService {
       }
     `;
 
-    return this.http.post<{ data: { getAllPackets: Packet[] } }>(this.graphqlUrl, {
-      query
-    }).pipe(
-      map(response => response.data.getAllPackets.map(p => sortPacketRelationships(p) as Packet))
-    );
+    return this.graphqlClient
+      .request<{ getAllPackets: Packet[] }>(this.graphqlUrl, query)
+      .pipe(map(data => data.getAllPackets.map(p => sortPacketRelationships(p) as Packet)));
   }
 
   /**
@@ -233,12 +234,54 @@ export class SockbowlQuestionsService {
       }
     `;
 
-    return this.http.post<{ data: { getPacketById: Packet | null } }>(this.graphqlUrl, {
-      query,
-      variables: { id }
-    }).pipe(
-      map(response => sortPacketRelationships(response.data.getPacketById))
-    );
+    return this.graphqlClient
+      .request<{ getPacketById: Packet | null }>(this.graphqlUrl, query, { id })
+      .pipe(map(data => sortPacketRelationships(data.getPacketById)));
+  }
+
+  /**
+   * Paginated, answer-free, policy-filtered packet list (PB-19, M3 plan
+   * 3.1.9): counts and a playable flag, never question/answer text.
+   */
+  listPackets(filter?: PacketFilter, page = 0, size = 25): Observable<PacketPage> {
+    const query = `
+      query ($filter: PacketFilter, $page: Int, $size: Int) {
+        packets(filter: $filter, page: $page, size: $size) {
+          items {
+            id
+            name
+            difficulty { id name }
+            owner { id name }
+            visibility
+            version
+            tossupCount
+            bonusCount
+            playable
+          }
+          total
+          page
+          size
+        }
+      }
+    `;
+    return this.graphqlClient
+      .request<{ packets: PacketPage }>(this.graphqlUrl, query, { filter: filter ?? null, page, size })
+      .pipe(map(data => data.packets));
+  }
+
+  /**
+   * Plaintext export (PB-06, D5's round-trippable format). NOT_FOUND for an
+   * invisible packet, FORBIDDEN for a visible one the caller can't fully read.
+   */
+  exportPacket(id: string, format: 'PLAINTEXT' = 'PLAINTEXT'): Observable<string> {
+    const query = `
+      query ($id: ID!, $format: PacketExportFormat) {
+        exportPacket(id: $id, format: $format)
+      }
+    `;
+    return this.graphqlClient
+      .request<{ exportPacket: string }>(this.graphqlUrl, query, { id, format })
+      .pipe(map(data => data.exportPacket));
   }
 
   /**

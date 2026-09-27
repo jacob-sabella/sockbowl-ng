@@ -7,6 +7,7 @@ import { PacketAuthoringService } from '../../services/packet-authoring.service'
 import { Packet } from '../../../game/models/sockbowl/packet-types.generated';
 import { Difficulty } from '../../models/packet-authoring.models';
 import { AuthService } from '../../../core/auth/auth.service';
+import { describeGraphqlError } from '../../../core/graphql/graphql-errors';
 
 /**
  * Packet list / landing page for the packet builder feature. Lists existing
@@ -141,6 +142,6 @@ export class PacketListComponent implements OnInit {
   }
 
   private extractError(err: any): string {
-    return err?.error?.errors?.[0]?.message || 'Something went wrong.';
+    return describeGraphqlError(err);
   }
 }
