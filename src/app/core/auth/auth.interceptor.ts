@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -20,14 +20,12 @@ import { environment } from '../../../environments/environment';
  */
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
+  private oauthService = inject(OAuthService, { optional: true });
+  private snackBar = inject(MatSnackBar, { optional: true });
+
 
   /** Origins of our own backends; the bearer is attached only to these. */
   private readonly allowedOrigins: string[] = AuthInterceptor.buildAllowedOrigins();
-
-  constructor(
-    @Optional() private oauthService: OAuthService,
-    @Optional() private snackBar: MatSnackBar
-  ) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     // Only add token if auth is enabled AND the request targets our backend.

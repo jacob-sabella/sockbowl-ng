@@ -1,4 +1,4 @@
-import {Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy} from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy, inject } from '@angular/core';
 import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
@@ -18,6 +18,9 @@ import {SpeechService} from '../../services/speech.service';
   standalone: false
 })
 export class GameSinglePlayerComponent implements OnInit, OnDestroy {
+  gameStateService = inject(GameStateService);
+  speech = inject(SpeechService);
+
 
   protected readonly RoundState = RoundState;
   private static readonly SPEED_KEY = 'sockbowl_reading_speed';
@@ -48,8 +51,6 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   private readingTimer: any = null;
   private buzzTimer: any = null;
   private currentRoundKey = '';
-
-  constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
   /** Toggle reading the tossup aloud on this device; the text keeps revealing at a fixed rate. */
   toggleReadAloud(): void {

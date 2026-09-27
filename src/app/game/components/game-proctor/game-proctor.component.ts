@@ -15,6 +15,10 @@ import {PresentationConnectionState} from '../../models/cast-interfaces';
     standalone: false
 })
 export class GameProctorComponent implements OnInit {
+  gameStateService = inject(GameStateService);
+  private presentationConnectionService = inject(PresentationConnectionService);
+  private castStateService = inject(CastStateService);
+
 
   gameSessionObs!: Observable<GameSession>;
   gameSession!: GameSession;
@@ -25,11 +29,7 @@ export class GameProctorComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
-  constructor(
-    public gameStateService: GameStateService,
-    private presentationConnectionService: PresentationConnectionService,
-    private castStateService: CastStateService // Injecting initializes state subscription
-  ) {
+  constructor() {
     this.gameSessionObs = this.gameStateService.gameSession$;
     this.castAvailable$ = this.presentationConnectionService.isAvailable$;
     this.castConnectionState$ = this.presentationConnectionService.connectionState$;

@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
@@ -20,23 +20,30 @@ import { AuthService } from '../../../core/auth/auth.service';
     standalone: false
 })
 export class PacketSearchComponent implements OnInit {
+  private dialogRef = inject<MatDialogRef<PacketSearchComponent>>(MatDialogRef);
+  private sockbowlQuestionsService = inject(SockbowlQuestionsService);
+  private openAiModelService = inject(OpenAiModelService);
+  private snackBar = inject(MatSnackBar);
+  auth = inject(AuthService);
+  data = inject(MAT_DIALOG_DATA);
+
   // Search tab properties
-  searchQuery: string = "";
+  searchQuery = "";
   searchResults: Packet[] = [];
-  selectedPacketId: String = "";
-  isSearching: boolean = false;
+  selectedPacketId = "";
+  isSearching = false;
   private searchSubject = new Subject<string>();
 
   // Generate tab properties
-  generateTopic: string = "";
-  generateContext: string = "";
-  questionCount: number = 5;  // Default to 5, max 30
-  generateBonuses: boolean = true;  // Default to true
-  isGenerating: boolean = false;
+  generateTopic = "";
+  generateContext = "";
+  questionCount = 5;  // Default to 5, max 30
+  generateBonuses = true;  // Default to true
+  isGenerating = false;
   generatedPacket: Packet | null = null;
 
   // Generate-tab state
-  qbImporting: boolean = false;
+  qbImporting = false;
 
   // The 12 canonical qbreader categories. ("Pop Culture" is qbreader's name for
   // what quizbowl traditionally calls "Trash" — the earlier 'Trash' label was
@@ -52,7 +59,7 @@ export class PacketSearchComponent implements OnInit {
   // filtering them by subcategory is redundant with the category chip. NOTE: Math,
   // Astronomy, etc. are qbreader ALTERNATE subcategories, a separate dimension —
   // not listed here.
-  readonly qbSubcategoriesByCategory: { [category: string]: string[] } = {
+  readonly qbSubcategoriesByCategory: Record<string, string[]> = {
     'Literature': ['American Literature', 'British Literature', 'Classical Literature',
                    'European Literature', 'World Literature', 'Other Literature'],
     'History': ['American History', 'Ancient History', 'European History',
@@ -62,7 +69,7 @@ export class PacketSearchComponent implements OnInit {
     'Pop Culture': ['Movies', 'Music', 'Sports', 'Television', 'Video Games', 'Other Pop Culture']
   };
   // qbreader's ALTERNATE subcategories — a finer, separate filter dimension.
-  readonly qbAlternateByCategory: { [category: string]: string[] } = {
+  readonly qbAlternateByCategory: Record<string, string[]> = {
     'Literature': ['Drama', 'Long Fiction', 'Poetry', 'Short Fiction', 'Misc Literature'],
     'Science': ['Math', 'Astronomy', 'Computer Science', 'Earth Science', 'Engineering', 'Misc Science'],
     'Fine Arts': ['Architecture', 'Dance', 'Film', 'Jazz', 'Musicals', 'Opera', 'Photography', 'Misc Arts'],
@@ -78,12 +85,12 @@ export class PacketSearchComponent implements OnInit {
   ];
   qbSelectedCategories: string[] = [];
   qbSelectedTiers: string[] = ['Regular HS'];
-  qbTossupCount: number = 20;
-  qbBonusCount: number = 20;
-  qbRandomName: string = '';
+  qbTossupCount = 20;
+  qbBonusCount = 20;
+  qbRandomName = '';
 
   // Advanced qbreader filters (all optional).
-  qbShowAdvanced: boolean = false;
+  qbShowAdvanced = false;
   readonly qbAllDifficulties: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   qbIndividualDifficulties: number[] = []; // if any selected, overrides the coarse tiers
   qbSelectedSubcategories: string[] = [];  // picked from the taxonomy above
@@ -93,38 +100,38 @@ export class PacketSearchComponent implements OnInit {
   altFiltered: string[] = [];
   qbMinYear: number | null = null;
   qbMaxYear: number | null = null;
-  qbStandardOnly: boolean = false;
+  qbStandardOnly = false;
   // Spread the mix across categories instead of a pure random draw.
-  qbBalanced: boolean = false;
+  qbBalanced = false;
   // De-dupe against questions this account has already seen (logged-in only).
-  qbAvoidRepeats: boolean = true;
+  qbAvoidRepeats = true;
 
   // API configuration properties
-  apiKey: string = '';
-  selectedModel: string = '';
-  rememberApiKey: boolean = false;
+  apiKey = '';
+  selectedModel = '';
+  rememberApiKey = false;
   availableModels: string[] = [];
-  isLoadingModels: boolean = false;
+  isLoadingModels = false;
   modelLoadError: string | null = null;
   validationError: string | null = null;
-  showApiKey: boolean = false;
+  showApiKey = false;
 
   // LLM parameter properties with defaults
-  temperature: number = 1.0;
-  topP: number = 1.0;
-  frequencyPenalty: number = 0.0;
-  presencePenalty: number = 0.0;
+  temperature = 1.0;
+  topP = 1.0;
+  frequencyPenalty = 0.0;
+  presencePenalty = 0.0;
 
   // Parameter visibility flags
-  supportsTemperature: boolean = true;
-  supportsTopP: boolean = true;
-  supportsFrequencyPenalty: boolean = true;
-  supportsPresencePenalty: boolean = true;
+  supportsTemperature = true;
+  supportsTopP = true;
+  supportsFrequencyPenalty = true;
+  supportsPresencePenalty = true;
 
   private readonly STORAGE_KEY = 'openai_api_key';
 
   // Model parameter support mapping
-  private readonly MODEL_PARAMS: { [key: string]: string[] } = {
+  private readonly MODEL_PARAMS: Record<string, string[]> = {
     // GPT-4 models support all parameters
     'gpt-4': ['temperature', 'topP', 'frequencyPenalty', 'presencePenalty'],
     'gpt-4-turbo': ['temperature', 'topP', 'frequencyPenalty', 'presencePenalty'],
@@ -141,15 +148,6 @@ export class PacketSearchComponent implements OnInit {
     // Default for unknown models - support all
     'default': ['temperature', 'topP', 'frequencyPenalty', 'presencePenalty']
   };
-
-  constructor(
-    private dialogRef: MatDialogRef<PacketSearchComponent>,
-    private sockbowlQuestionsService: SockbowlQuestionsService,
-    private openAiModelService: OpenAiModelService,
-    private snackBar: MatSnackBar,
-    public auth: AuthService,
-    @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
 
   ngOnInit(): void {
     // Set up debounced search. switchMap cancels the in-flight request when a newer
@@ -219,9 +217,9 @@ export class PacketSearchComponent implements OnInit {
   availTossups: number | null = null;
   availBonuses: number | null = null;
   countingAvail = false;
-  categoryCounts: { [category: string]: number } = {};
-  subCounts: { [subcategory: string]: number } = {};
-  altCounts: { [alternate: string]: number } = {};
+  categoryCounts: Record<string, number> = {};
+  subCounts: Record<string, number> = {};
+  altCounts: Record<string, number> = {};
 
   private static readonly FILTERS_KEY = 'sockbowl_gen_filters';
 
@@ -566,7 +564,7 @@ export class PacketSearchComponent implements OnInit {
     return this.optionsFor(this.qbAlternateByCategory);
   }
 
-  private optionsFor(map: { [category: string]: string[] }): string[] {
+  private optionsFor(map: Record<string, string[]>): string[] {
     if (this.qbSelectedCategories.length) {
       return this.qbSelectedCategories.reduce<string[]>((acc, c) => acc.concat(map[c] || []), []);
     }
@@ -697,7 +695,7 @@ export class PacketSearchComponent implements OnInit {
   private afterRandomImport(res: { id: string; usedRemoteIds?: string[] }): void {
     // Record what this account was served, so future generations avoid it. Fire-and-forget.
     if (this.qbDedupActive && res.usedRemoteIds && res.usedRemoteIds.length) {
-      this.sockbowlQuestionsService.recordUsedQuestionIds(res.usedRemoteIds).subscribe({ error: () => {} });
+      this.sockbowlQuestionsService.recordUsedQuestionIds(res.usedRemoteIds).subscribe({ error: () => { /* best-effort; ignore */ } });
     }
     this.useImportedPacket(res.id);
   }

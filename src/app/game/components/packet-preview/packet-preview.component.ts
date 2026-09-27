@@ -1,4 +1,4 @@
-import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
 
@@ -14,10 +14,9 @@ import { Packet } from '../../models/sockbowl/packet-types.generated';
   standalone: false,
 })
 export class PacketPreviewComponent {
-  constructor(
-    public dialogRef: MatDialogRef<PacketPreviewComponent>,
-    @Inject(MAT_DIALOG_DATA) public packet: Packet,
-  ) {}
+  dialogRef = inject<MatDialogRef<PacketPreviewComponent>>(MatDialogRef);
+  packet = inject<Packet>(MAT_DIALOG_DATA);
+
 
   private byOrder = (a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0);
 

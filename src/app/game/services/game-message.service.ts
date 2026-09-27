@@ -1,6 +1,6 @@
 import {GameWebSocketService} from "./game-web-socket.service";
 import {BehaviorSubject, Observable} from "rxjs";
-import {Injectable} from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import {SockbowlInMessage} from "../models/sockbowl/sockbowl-interfaces";
 
 /**
@@ -14,15 +14,17 @@ import {SockbowlInMessage} from "../models/sockbowl/sockbowl-interfaces";
   providedIn: 'root',
 })
 export class GameMessageService {
+  private gameWebSocketService = inject(GameWebSocketService);
+
   // Holds BehaviorSubjects for each type of message content
   // Key: messageContentType, Value: BehaviorSubject
-  private gameEventSubjects: { [messageContentType: string]: BehaviorSubject<any> } = {};
+  private gameEventSubjects: Record<string, BehaviorSubject<any>> = {};
 
   // Exposes Observables for each type of message content
   // Key: messageContentType, Value: Observable
-  public gameEventObservables: { [messageContentType: string]: Observable<any> } = {};
+  public gameEventObservables: Record<string, Observable<any>> = {};
 
-  constructor(private gameWebSocketService: GameWebSocketService) {
+  constructor() {
     this.initializeSubjectsAndObservables()
   }
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -13,10 +13,10 @@ import { Ban, CreateBanRequest } from '../models/ban-models';
   providedIn: 'root'
 })
 export class BanService {
+  private http = inject(HttpClient);
+
   private readonly baseUrl: string =
     `${environment.apiBaseUrl || 'http://localhost:7000'}/api/v1/admin/bans`;
-
-  constructor(private http: HttpClient) {}
 
   listBans(): Observable<Ban[]> {
     return this.http.get<Ban[]>(this.baseUrl);

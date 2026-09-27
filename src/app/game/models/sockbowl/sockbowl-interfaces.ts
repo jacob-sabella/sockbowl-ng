@@ -1,4 +1,3 @@
-/* tslint:disable */
 /* eslint-disable */
 
 // Gameplay / message types for the live game (sourced from the game backend).

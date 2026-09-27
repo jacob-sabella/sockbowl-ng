@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CastGameState, PresentationConnectionState } from '../models/cast-interfaces';
@@ -29,6 +29,8 @@ declare global {
   providedIn: 'root'
 })
 export class PresentationConnectionService {
+  private snackBar = inject(MatSnackBar);
+
   /** Observable for whether the Presentation API is available in this browser */
   public readonly isAvailable$: Observable<boolean>;
   private readonly isAvailableSubject: BehaviorSubject<boolean>;
@@ -46,7 +48,7 @@ export class PresentationConnectionService {
   /** URL of the receiver page (served from same origin as main app) */
   private readonly receiverUrl = '/cast-receiver.html';
 
-  constructor(private snackBar: MatSnackBar) {
+  constructor() {
     // Check if Presentation API is available
     const available = 'PresentationRequest' in window;
     this.isAvailableSubject = new BehaviorSubject<boolean>(available);
@@ -161,7 +163,7 @@ export class PresentationConnectionService {
     if (!this.presentationRequest) return;
 
     // Monitor for connection availability changes
-    this.presentationRequest.addEventListener('connectionavailable', (event: any) => {
+    this.presentationRequest.addEventListener('connectionavailable', (_event: any) => {
       console.log('Presentation connection available');
     });
   }

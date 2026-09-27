@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Packet } from '../models/sockbowl/packet-types.generated';
@@ -9,6 +9,8 @@ import {map, timeout} from "rxjs/operators";
   providedIn: 'root'
 })
 export class SockbowlQuestionsService {
+  private http = inject(HttpClient);
+
 
   private graphqlUrl: string = environment.sockbowlQuestionsApiUrl + "graphql";
   private qbreaderUrl: string = environment.sockbowlQuestionsApiUrl + "api/qbreader";
@@ -16,8 +18,6 @@ export class SockbowlQuestionsService {
   // sockbowlGameApiUrl is session-scoped (…/api/v1/session), so swap the tail for the user API.
   private gameUserUrl: string =
     environment.sockbowlGameApiUrl.replace(/api\/v1\/session\/?$/, "api/v1/user");
-
-  constructor(private http: HttpClient) { }
 
   /** Generate a packet from the local question bank (all filter fields optional). */
   importQbreaderRandom(body: {
@@ -32,9 +32,9 @@ export class SockbowlQuestionsService {
 
   /** Bank tossup counts per category, subcategory, and alternate subcategory. */
   getBankTaxonomyCounts(): Observable<{
-    categories: { [k: string]: number };
-    subcategories: { [k: string]: number };
-    alternates: { [k: string]: number };
+    categories: Record<string, number>;
+    subcategories: Record<string, number>;
+    alternates: Record<string, number>;
   }> {
     return this.http
       .get<{ categories: any; subcategories: any; alternates: any }>(`${this.qbreaderUrl}/taxonomy-counts`)
@@ -258,11 +258,11 @@ export class SockbowlQuestionsService {
    */
   generatePacket(
     topic: string,
-    additionalContext: string = '',
+    additionalContext = '',
     apiKey: string,
     model: string,
-    questionCount: number = 5,
-    generateBonuses: boolean = true,
+    questionCount = 5,
+    generateBonuses = true,
     temperature?: number,
     topP?: number,
     frequencyPenalty?: number,

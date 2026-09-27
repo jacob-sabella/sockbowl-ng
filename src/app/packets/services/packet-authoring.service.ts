@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map, timeout } from 'rxjs/operators';
@@ -26,10 +26,10 @@ import {
   providedIn: 'root'
 })
 export class PacketAuthoringService {
+  private http = inject(HttpClient);
+
 
   private graphqlUrl: string = environment.sockbowlQuestionsApiUrl + 'graphql';
-
-  constructor(private http: HttpClient) {}
 
   private post<T>(query: string, variables: any): Observable<T> {
     return this.http.post<{ data: T }>(this.graphqlUrl, { query, variables }).pipe(

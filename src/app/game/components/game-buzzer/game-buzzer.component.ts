@@ -12,6 +12,8 @@ import {GameStateService} from '../../services/game-state.service';
     standalone: false
 })
 export class GameBuzzerComponent implements OnInit {
+  gameStateService = inject(GameStateService);
+
 
   protected readonly RoundState = RoundState;
 
@@ -20,7 +22,7 @@ export class GameBuzzerComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
-  constructor(public gameStateService: GameStateService) {
+  constructor() {
     this.gameSessionObs = this.gameStateService.gameSession$;
   }
 

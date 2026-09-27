@@ -17,9 +17,9 @@ describe('PacketSearchComponent', () => {
     TestBed.configureTestingModule({
       declarations: [PacketSearchComponent],
       providers: [
-        { provide: MatDialogRef, useValue: { close: () => {} } },
+        { provide: MatDialogRef, useValue: { close: () => { /* noop test double */ } } },
         { provide: MAT_DIALOG_DATA, useValue: {} },
-        { provide: MatSnackBar, useValue: { open: () => {} } },
+        { provide: MatSnackBar, useValue: { open: () => { /* noop test double */ } } },
         { provide: SockbowlQuestionsService, useValue: {
             getBankTaxonomyCounts: () => of({ categories: {}, subcategories: {}, alternates: {} }),
             countBankAvailable: () => of({ tossups: 0, bonuses: 0 }),

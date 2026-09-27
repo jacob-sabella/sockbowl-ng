@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { forkJoin } from 'rxjs';
@@ -50,6 +50,13 @@ interface SubcategoryGroup {
   standalone: false
 })
 export class PacketBuilderComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private sockbowlQuestionsService = inject(SockbowlQuestionsService);
+  private packetAuthoring = inject(PacketAuthoringService);
+  private snackBar = inject(MatSnackBar);
+  auth = inject(AuthService);
+
   packetId = '';
   packet: Packet | null = null;
   loading = true;
@@ -65,20 +72,20 @@ export class PacketBuilderComponent implements OnInit {
   savingName = false;
 
   // Tossup edit buffers, keyed by tossup entity id.
-  tossupDrafts: { [tossupId: string]: TossupDraft } = {};
+  tossupDrafts: Record<string, TossupDraft> = {};
   newTossupOpen = false;
   newTossupDraft: TossupDraft = { question: '', answer: '', subcategoryId: null };
   addingTossup = false;
 
   // Bonus edit buffers, keyed by bonus entity id.
-  bonusDrafts: { [bonusId: string]: BonusDraft } = {};
+  bonusDrafts: Record<string, BonusDraft> = {};
   addingBonus = false;
   justAddedBonusId: string | null = null;
 
   // Bonus part edit buffers, keyed by bonus part entity id.
-  bonusPartDrafts: { [bonusPartId: string]: BonusPartDraft } = {};
-  newPartOpen: { [bonusId: string]: boolean } = {};
-  newPartDrafts: { [bonusId: string]: BonusPartDraft } = {};
+  bonusPartDrafts: Record<string, BonusPartDraft> = {};
+  newPartOpen: Record<string, boolean> = {};
+  newPartDrafts: Record<string, BonusPartDraft> = {};
 
   // AI-assist form.
   genOpen = false;
@@ -92,15 +99,6 @@ export class PacketBuilderComponent implements OnInit {
   taxonomyNewCategoryName = '';
   taxonomyNewSubcategoryName = '';
   private taxonomyTarget: ((subcategoryId: string) => void) | null = null;
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private sockbowlQuestionsService: SockbowlQuestionsService,
-    private packetAuthoring: PacketAuthoringService,
-    private snackBar: MatSnackBar,
-    public auth: AuthService
-  ) {}
 
   ngOnInit(): void {
     this.packetId = this.route.snapshot.paramMap.get('id') || '';

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, inject } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { SpeechService } from '../../services/speech.service';
 import { GameSession, Round, RoundState, Team } from '../../models/sockbowl/sockbowl-interfaces';
@@ -12,6 +12,9 @@ import { Subscription } from 'rxjs';
     standalone: false
 })
 export class GameSpectatorComponent implements OnInit, OnDestroy {
+  gameStateService = inject(GameStateService);
+  speech = inject(SpeechService);
+
   gameSession: GameSession | null = null;
   currentRound: Round | null = null;
   previousRounds: Round[] = [];
@@ -36,8 +39,6 @@ export class GameSpectatorComponent implements OnInit, OnDestroy {
   private lastSpokenBonus = '';
 
   private gameSessionSubscription?: Subscription;
-
-  constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
   ngOnInit(): void {
     const saved = Number(localStorage.getItem('sockbowl_reading_speed'));

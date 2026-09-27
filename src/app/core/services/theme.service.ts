@@ -1,4 +1,4 @@
-import { Injectable, Inject, DOCUMENT } from '@angular/core';
+import { Injectable, DOCUMENT, inject } from '@angular/core';
 import { BehaviorSubject, Observable, fromEvent } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -25,6 +25,8 @@ const THEME_STORAGE_KEY = 'sockbowl-theme-preference';
   providedIn: 'root'
 })
 export class ThemeService {
+  private document = inject<Document>(DOCUMENT);
+
   private mediaQuery: MediaQueryList;
   private themeSubject: BehaviorSubject<Theme>;
   private resolvedThemeSubject: BehaviorSubject<ResolvedTheme>;
@@ -39,7 +41,7 @@ export class ThemeService {
    */
   public resolvedTheme$: Observable<ResolvedTheme>;
 
-  constructor(@Inject(DOCUMENT) private document: Document) {
+  constructor() {
     // Initialize mediaQuery first (needed for resolveTheme)
     this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 

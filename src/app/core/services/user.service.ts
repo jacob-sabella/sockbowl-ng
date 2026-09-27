@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -12,9 +12,9 @@ import {
   providedIn: 'root'
 })
 export class UserService {
-  private baseUrl: string = environment.apiBaseUrl || 'http://localhost:7000';
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  private baseUrl: string = environment.apiBaseUrl || 'http://localhost:7000';
 
   /**
    * Get current user information
@@ -40,7 +40,7 @@ export class UserService {
    * @param page Page number (0-indexed)
    * @param size Number of items per page
    */
-  getUserHistory(page: number = 0, size: number = 10): Observable<UserGameHistoryResponse> {
+  getUserHistory(page = 0, size = 10): Observable<UserGameHistoryResponse> {
     const url = `${this.baseUrl}/api/v1/user/history`;
     const params = new HttpParams()
       .set('page', page.toString())

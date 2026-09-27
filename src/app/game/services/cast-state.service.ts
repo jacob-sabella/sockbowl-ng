@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, take } from 'rxjs/operators';
 import { GameStateService } from './game-state.service';
@@ -24,6 +24,10 @@ import { GameSession, Team, RoundState, MatchState } from '../models/sockbowl/so
   providedIn: 'root'
 })
 export class CastStateService implements OnDestroy {
+  private gameStateService = inject(GameStateService);
+  private presentationConnectionService = inject(PresentationConnectionService);
+  private themeService = inject(ThemeService);
+
   /** Subscription to game state updates */
   private gameSessionSubscription?: Subscription;
 
@@ -39,11 +43,7 @@ export class CastStateService implements OnDestroy {
   /** Latest resolved theme, mirrored onto the cast board. */
   private currentTheme = 'dark';
 
-  constructor(
-    private gameStateService: GameStateService,
-    private presentationConnectionService: PresentationConnectionService,
-    private themeService: ThemeService,
-  ) {
+  constructor() {
     this.themeService.resolvedTheme$.subscribe(t => (this.currentTheme = t));
     this.initialize();
   }

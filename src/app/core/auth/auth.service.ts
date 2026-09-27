@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { OAuthService, OAuthEvent } from 'angular-oauth2-oidc';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, filter } from 'rxjs';
+import { BehaviorSubject, filter } from 'rxjs';
 import { authConfig } from './auth.config';
 import { environment } from '../../../environments/environment';
 import { ThemeService } from '../services/theme.service';
@@ -20,17 +20,17 @@ import { ThemeService } from '../services/theme.service';
   providedIn: 'root'
 })
 export class AuthService {
+  private oauthService = inject(OAuthService);
+  private router = inject(Router);
+  private themeService = inject(ThemeService);
+
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
   private userProfileSubject = new BehaviorSubject<any>(null);
   public userProfile$ = this.userProfileSubject.asObservable();
 
-  constructor(
-    private oauthService: OAuthService,
-    private router: Router,
-    private themeService: ThemeService
-  ) {
+  constructor() {
     if (environment.authEnabled) {
       this.configure();
     }

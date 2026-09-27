@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { ThemeService, Theme } from '../../../core/services/theme.service';
 import { Observable } from 'rxjs';
 
@@ -22,6 +22,8 @@ interface ThemeOption {
     standalone: false
 })
 export class ThemeSelectorComponent {
+  private themeService = inject(ThemeService);
+
   theme$: Observable<Theme>;
 
   /**
@@ -75,7 +77,7 @@ export class ThemeSelectorComponent {
     }
   ];
 
-  constructor(private themeService: ThemeService) {
+  constructor() {
     this.theme$ = this.themeService.theme$;
   }
 

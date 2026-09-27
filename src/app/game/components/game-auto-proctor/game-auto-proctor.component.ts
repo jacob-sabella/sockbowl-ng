@@ -1,4 +1,4 @@
-import {Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy} from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy, inject } from '@angular/core';
 import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
@@ -19,6 +19,9 @@ import {SpeechService} from '../../services/speech.service';
   standalone: false
 })
 export class GameAutoProctorComponent implements OnInit, OnDestroy {
+  gameStateService = inject(GameStateService);
+  speech = inject(SpeechService);
+
 
   protected readonly RoundState = RoundState;
   private static readonly READER_KEY = 'ap_reader_mode';
@@ -53,8 +56,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   /** Last cumulative revealed text spoken by the TTS reader, to compute the delta on each new chunk. */
   private lastSpokenRevealedText = '';
-
-  constructor(public gameStateService: GameStateService, public speech: SpeechService) {}
 
   /** Make this device the room's reader (or stop). The reveal pace itself is server-driven. */
   toggleReader(): void {

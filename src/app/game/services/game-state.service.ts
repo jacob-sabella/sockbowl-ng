@@ -1,4 +1,4 @@
-import {Injectable} from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import {ReplaySubject, Observable} from 'rxjs';
 import {filter, tap} from 'rxjs/operators';
 import {MatSnackBar} from '@angular/material/snack-bar';
@@ -44,7 +44,10 @@ import { GameMode,
   providedIn: 'root'
 })
 export class GameStateService {
-  private _playerSessionId: string = '';
+  private gameMessageService = inject(GameMessageService);
+  private snackBar = inject(MatSnackBar);
+
+  private _playerSessionId = '';
 
   get playerSessionId(): string {
     return this._playerSessionId;
@@ -54,16 +57,10 @@ export class GameStateService {
   private gameSessionState: GameSession = {} as GameSession;
 
   // Create a ReplaySubject to hold the current state (only emits after first update)
-  private gameSessionSubject: ReplaySubject<GameSession> = new ReplaySubject(1);
+  private gameSessionSubject = new ReplaySubject<GameSession>(1);
 
   // Expose the current state as an Observable
   public gameSession$: Observable<GameSession> = this.gameSessionSubject.asObservable();
-
-  constructor(
-    private gameMessageService: GameMessageService,
-    private snackBar: MatSnackBar
-  ) {
-  }
 
   public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string, accessToken?: string) {
     this._playerSessionId = playerSessionId;
@@ -109,7 +106,7 @@ export class GameStateService {
     this.gameMessageService.gameEventObservables["GameStartedMessage"]
       .pipe(
         filter(msg => !!msg),
-        tap((msg: GameStartedMessage) => {
+        tap((_msg: GameStartedMessage) => {
           this.gameSessionState.currentMatch.matchState = MatchState.IN_GAME;
           this.gameSessionSubject.next(this.gameSessionState);
         })
@@ -262,7 +259,7 @@ export class GameStateService {
    */
   public updateTeamSelf(targetTeam: string) {
 
-    let updatePlayerTeam: UpdatePlayerTeam = new UpdatePlayerTeam({
+    const updatePlayerTeam: UpdatePlayerTeam = new UpdatePlayerTeam({
       targetPlayer: this._playerSessionId,
       targetTeam: targetTeam
     });
@@ -274,7 +271,7 @@ export class GameStateService {
    * Set current player id as proctor
    */
   public setSelfProctor() {
-    let setProctor: SetProctor = new SetProctor({
+    const setProctor: SetProctor = new SetProctor({
       targetPlayer: this._playerSessionId
     });
     this.gameMessageService.sendMessage("/app/game/config/set-proctor", setProctor);
@@ -284,8 +281,8 @@ export class GameStateService {
    * Sets the match packet to the specified packet ID.
    * @param packetId The ID of the packet to set.
    */
-  public setMatchPacket(packetId: String): void {
-    let setMatchPacket: SetMatchPacket = new SetMatchPacket({
+  public setMatchPacket(packetId: string): void {
+    const setMatchPacket: SetMatchPacket = new SetMatchPacket({
       packetId: packetId
     });
 
@@ -294,7 +291,7 @@ export class GameStateService {
 
 
   public startMatch(): void {
-    let startMatch: StartMatch = new StartMatch({});
+    const startMatch: StartMatch = new StartMatch({});
     this.gameMessageService.sendMessage("/app/game/progression/start-match", startMatch);
   }
 
@@ -302,7 +299,7 @@ export class GameStateService {
    * Ends the match
    */
   public endMatch(): void {
-    let endMatch: EndMatch = new EndMatch({});
+    const endMatch: EndMatch = new EndMatch({});
     this.gameMessageService.sendMessage("/app/game/progression/end-match", endMatch);
   }
 

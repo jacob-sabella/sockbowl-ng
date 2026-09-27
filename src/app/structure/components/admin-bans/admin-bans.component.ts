@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BanService } from '../../../core/services/ban.service';
 import { Ban, CreateBanRequest } from '../../../core/models/ban-models';
@@ -16,6 +16,10 @@ import { AuthService } from '../../../core/auth/auth.service';
   standalone: false
 })
 export class AdminBansComponent implements OnInit {
+  private banService = inject(BanService);
+  private snackBar = inject(MatSnackBar);
+  auth = inject(AuthService);
+
   bans: Ban[] = [];
   loading = true;
   error: string | null = null;
@@ -26,12 +30,6 @@ export class AdminBansComponent implements OnInit {
     reason: '',
     expiresAt: null
   };
-
-  constructor(
-    private banService: BanService,
-    private snackBar: MatSnackBar,
-    public auth: AuthService
-  ) {}
 
   ngOnInit(): void {
     this.loadBans();

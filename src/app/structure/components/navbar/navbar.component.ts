@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -14,16 +14,16 @@ import { DomSanitizer } from '@angular/platform-browser';
     standalone: false
 })
 export class NavbarComponent implements OnInit {
+  authService = inject(AuthService);
+  private router = inject(Router);
+  private matIconRegistry = inject(MatIconRegistry);
+  private domSanitizer = inject(DomSanitizer);
+
   isAuthenticated$!: Observable<boolean>;
   userProfile$!: Observable<any>;
   authEnabled = environment.authEnabled;
 
-  constructor(
-    public authService: AuthService,
-    private router: Router,
-    private matIconRegistry: MatIconRegistry,
-    private domSanitizer: DomSanitizer
-  ) {
+  constructor() {
     this.registerCustomIcons();
   }
 

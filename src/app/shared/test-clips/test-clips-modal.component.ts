@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, HostListener, OnInit, Output, ChangeDetectionStrategy, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 interface Clip {
@@ -26,14 +26,14 @@ interface ClipGroup {
   standalone: false
 })
 export class TestClipsModalComponent implements OnInit {
+  private http = inject(HttpClient);
+
   @Output() closed = new EventEmitter<void>();
 
   clips: Clip[] | null = null;
   groups: ClipGroup[] = [];
   selected: Clip | null = null;
   error = false;
-
-  constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
     this.http.get<{ clips: Clip[] }>('/assets/test-clips/manifest.json').subscribe({

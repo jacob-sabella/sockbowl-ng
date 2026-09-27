@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { forkJoin } from 'rxjs';
@@ -21,6 +21,12 @@ import { AuthService } from '../../../core/auth/auth.service';
   standalone: false
 })
 export class PacketListComponent implements OnInit {
+  private sockbowlQuestionsService = inject(SockbowlQuestionsService);
+  private packetAuthoring = inject(PacketAuthoringService);
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
+  auth = inject(AuthService);
+
   packets: Packet[] = [];
   difficulties: Difficulty[] = [];
   loading = true;
@@ -33,14 +39,6 @@ export class PacketListComponent implements OnInit {
   creating = false;
   newPacketName = '';
   newPacketDifficultyId: string | null = null;
-
-  constructor(
-    private sockbowlQuestionsService: SockbowlQuestionsService,
-    private packetAuthoring: PacketAuthoringService,
-    private router: Router,
-    private snackBar: MatSnackBar,
-    public auth: AuthService
-  ) {}
 
   ngOnInit(): void {
     this.loading = true;

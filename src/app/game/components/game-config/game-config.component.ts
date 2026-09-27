@@ -8,8 +8,7 @@ import {
   Packet,
   PlayerMode,
   ProcessError,
-  Team,
-  TimerSettings
+  Team
 } from '../../models/sockbowl/sockbowl-interfaces';
 import { Observable } from 'rxjs';
 import { GameStateService } from '../../services/game-state.service';
@@ -29,18 +28,26 @@ import { PresentationConnectionState } from '../../models/cast-interfaces';
     standalone: false
 })
 export class GameConfigComponent implements OnInit {
+  gameStateService = inject(GameStateService);
+  private gameMessageService = inject(GameMessageService);
+  private sockbowlQuestionsService = inject(SockbowlQuestionsService);
+  private dialog = inject(MatDialog);
+  private snack = inject(MatSnackBar);
+  private presentationConnectionService = inject(PresentationConnectionService);
+  private castStateService = inject(CastStateService);
+
   gameSessionObs!: Observable<GameSession>;
   gameSession!: GameSession;
-  packetId: String = '';
-  selectedPacketId: String = '';
-  bonusesEnabled: boolean = false;
+  packetId = '';
+  selectedPacketId = '';
+  bonusesEnabled = false;
   selectedPacket: Packet | null = null;
 
   // Timer settings
-  tossupTimerSeconds: number = 5;
-  bonusTimerSeconds: number = 5;
-  autoTimerEnabled: boolean = true;
-  readingWordsPerSecond: number = 4;
+  tossupTimerSeconds = 5;
+  bonusTimerSeconds = 5;
+  autoTimerEnabled = true;
+  readingWordsPerSecond = 4;
 
   // Cast-related observables
   castAvailable$: Observable<boolean>;
@@ -53,15 +60,7 @@ export class GameConfigComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
-  constructor(
-    public gameStateService: GameStateService,
-    private gameMessageService: GameMessageService,
-    private sockbowlQuestionsService: SockbowlQuestionsService,
-    private dialog: MatDialog,
-    private snack: MatSnackBar,
-    private presentationConnectionService: PresentationConnectionService,
-    private castStateService: CastStateService // Injecting initializes state subscription
-  ) {
+  constructor() {
     this.gameSessionObs = this.gameStateService.gameSession$;
     this.castAvailable$ = this.presentationConnectionService.isAvailable$;
     this.castConnectionState$ = this.presentationConnectionService.connectionState$;

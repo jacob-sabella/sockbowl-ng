@@ -77,8 +77,13 @@
                 @for (packet of searchResults; track packet; let i = $index) {
                   <div
                     class="result-item"
+                    role="button"
+                    tabindex="0"
                     (click)="selectPacket(packet)"
+                    (keydown.enter)="selectPacket(packet)"
+                    (keydown.space)="$event.preventDefault(); selectPacket(packet)"
                     [class.selected]="packet.id === selectedPacketId"
+                    [attr.aria-pressed]="packet.id === selectedPacketId"
                     [attr.data-index]="i"
                     >
                     <div class="result-content">

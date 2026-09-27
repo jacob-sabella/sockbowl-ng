@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, inject } from '@angular/core';
 import { Team, Buzz, Round } from '../../models/sockbowl/sockbowl-interfaces';
 import { GameStateService } from '../../services/game-state.service';
 
@@ -10,12 +10,12 @@ import { GameStateService } from '../../services/game-state.service';
     standalone: false
 })
 export class TeamListComponent {
+  private gameStateService = inject(GameStateService);
+
   @Input() teams!: Team[];
   @Input() currentBuzz!: Buzz;
   @Input() currentRound!: Round
   @Input() previousRoundList!: Round[];
-
-  constructor(private gameStateService: GameStateService) {}
 
   isCurrentPlayer(playerId: string): boolean {
     return this.gameStateService.getCurrentPlayer()?.playerId === playerId;

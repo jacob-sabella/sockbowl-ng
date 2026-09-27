@@ -1,4 +1,4 @@
-import {Injectable, NgZone} from '@angular/core';
+import { Injectable, NgZone, inject } from '@angular/core';
 import {MatSnackBar} from '@angular/material/snack-bar';
 
 /**
@@ -14,6 +14,9 @@ import {MatSnackBar} from '@angular/material/snack-bar';
  */
 @Injectable({providedIn: 'root'})
 export class VersionCheckService {
+  private snackBar = inject(MatSnackBar);
+  private zone = inject(NgZone);
+
 
   private static readonly CHECK_INTERVAL_MS = 3 * 60 * 1000;
   private static readonly BUNDLE_PATTERN = /main[.-][a-z0-9]+\.js/i;
@@ -21,8 +24,6 @@ export class VersionCheckService {
   private runningBundle: string | null = null;
   private notified = false;
   private started = false;
-
-  constructor(private snackBar: MatSnackBar, private zone: NgZone) {}
 
   start(): void {
     if (this.started || typeof document === 'undefined') {

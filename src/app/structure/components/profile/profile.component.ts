@@ -1,12 +1,10 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { AuthService } from '../../../core/auth/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { Observable, forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
 import {
   User,
   UserStatsResponse,
-  UserGameHistoryResponse,
   UserGameHistory
 } from '../../../core/models/user-models';
 
@@ -18,6 +16,9 @@ import {
     standalone: false
 })
 export class ProfileComponent implements OnInit {
+  private authService = inject(AuthService);
+  private userService = inject(UserService);
+
   user$!: Observable<User>;
   stats$!: Observable<UserStatsResponse>;
   gameHistory: UserGameHistory[] = [];
@@ -30,11 +31,6 @@ export class ProfileComponent implements OnInit {
   pageSize = 10;
   totalPages = 0;
   totalElements = 0;
-
-  constructor(
-    private authService: AuthService,
-    private userService: UserService
-  ) {}
 
   ngOnInit(): void {
     this.loadUserData();

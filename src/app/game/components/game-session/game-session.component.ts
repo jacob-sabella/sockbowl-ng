@@ -1,4 +1,4 @@
-import {Component, ChangeDetectionStrategy} from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import {GameSessionService} from "../../services/game-session.service";
 import {Router} from "@angular/router";
 import {
@@ -20,6 +20,10 @@ import {environment} from "../../../../environments/environment";
     standalone: false
 })
 export class GameSessionComponent {
+  private gameSessionService = inject(GameSessionService);
+  private router = inject(Router);
+  authService = inject(AuthService);
+
   showCreateForm = false;
   showJoinForm = false;
   showModeSelect = false;
@@ -44,13 +48,6 @@ export class GameSessionComponent {
   ProctorTypes = ProctorType;
   GameModes = GameMode;
   PlayerModes = PlayerMode;
-
-  constructor(
-    private gameSessionService: GameSessionService,
-    private router: Router,
-    public authService: AuthService
-  ) {
-  }
 
   get isAuthenticated(): boolean {
     return environment.authEnabled && this.authService.isAuthenticated();

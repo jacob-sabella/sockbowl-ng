@@ -1,4 +1,9 @@
+<!-- Click-outside-to-close backdrop; keyboard users dismiss via the global
+     Escape handler in the component (@HostListener('document:keydown.escape')),
+     so this is deliberately not a second, redundant focusable/keyboard target. -->
+<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
 <div class="clips-backdrop" (click)="close()">
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
   <div class="clips-modal" role="dialog" aria-label="UI test gallery" aria-modal="true"
        (click)="$event.stopPropagation()">
     <div class="clips-head">

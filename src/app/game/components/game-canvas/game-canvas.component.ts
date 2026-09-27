@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, ChangeDetectionStrategy} from '@angular/core';
+import {Component, DestroyRef, inject, ChangeDetectionStrategy, OnInit} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from "@angular/router";
 import {GameStateService} from "../../services/game-state.service";
@@ -12,23 +12,26 @@ import {GameSession, MatchState} from "../../models/sockbowl/sockbowl-interfaces
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class GameCanvasComponent {
+export class GameCanvasComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private gameStateService = inject(GameStateService);
+
 
   gameSession$: Observable<GameSession>;
 
   private destroyRef = inject(DestroyRef);
 
-  constructor(private route: ActivatedRoute, private gameStateService: GameStateService) {
+  constructor() {
     this.gameSession$ = this.gameStateService.gameSession$;
   }
 
   ngOnInit() {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
 
-      let gameSessionId: string = params.get("gameSessionId") || '';
-      let playerSecret: string = params.get("playerSecret") || '';
-      let playerSessionId: string = params.get("playerSessionId") || '';
-      let accessToken: string | undefined = params.get("accessToken") || undefined;
+      const gameSessionId: string = params.get("gameSessionId") || '';
+      const playerSecret: string = params.get("playerSecret") || '';
+      const playerSessionId: string = params.get("playerSessionId") || '';
+      const accessToken: string | undefined = params.get("accessToken") || undefined;
 
       this.gameStateService.initialize(gameSessionId, playerSecret, playerSessionId, accessToken);
     });

@@ -1,4 +1,4 @@
-import { Component, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { Component, HostListener, ChangeDetectionStrategy, inject } from '@angular/core';
 import { ThemeService } from './core/services/theme.service';
 import { VersionCheckService } from './core/version-check.service';
 
@@ -10,6 +10,8 @@ import { VersionCheckService } from './core/version-check.service';
     standalone: false
 })
 export class AppComponent {
+  private themeService = inject(ThemeService);
+
   title = 'sockbowl-ng';
 
   /** Secret UI-test gallery, opened by typing the word "clips" (see TestClipsModalComponent). */
@@ -19,7 +21,9 @@ export class AppComponent {
   /**
    * Initialize ThemeService to apply theme on app startup
    */
-  constructor(private themeService: ThemeService, versionCheck: VersionCheckService) {
+  constructor() {
+    const versionCheck = inject(VersionCheckService);
+
     // Theme is automatically initialized in ThemeService constructor
     versionCheck.start();
   }

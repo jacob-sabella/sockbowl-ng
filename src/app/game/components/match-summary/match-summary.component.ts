@@ -12,13 +12,15 @@ import {GameStateService} from "../../services/game-state.service";
     standalone: false
 })
 export class MatchSummaryComponent implements OnInit {
+  gameStateService = inject(GameStateService);
+
 
   gameSessionObs!: Observable<GameSession>;
   gameSession!: GameSession;
 
   private destroyRef = inject(DestroyRef);
 
-  constructor(public gameStateService: GameStateService) {
+  constructor() {
     this.gameSessionObs = this.gameStateService.gameSession$;
   }
 

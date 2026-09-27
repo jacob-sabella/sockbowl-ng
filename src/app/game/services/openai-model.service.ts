@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -19,6 +19,8 @@ interface OpenAIModelsResponse {
   providedIn: 'root'
 })
 export class OpenAiModelService {
+  private http = inject(HttpClient);
+
   private readonly OPENAI_API_URL = 'https://api.openai.com/v1/models';
 
   // Fallback models if API fetch fails
@@ -30,8 +32,6 @@ export class OpenAiModelService {
     'gpt-3.5-turbo',
     'gpt-3.5-turbo-16k'
   ];
-
-  constructor(private http: HttpClient) {}
 
   /**
    * Fetch available models from OpenAI API

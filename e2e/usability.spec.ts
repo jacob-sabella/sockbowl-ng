@@ -147,7 +147,7 @@ async function checkOverlayAbove(page: Page, loc: Locator, label: string): Promi
 
 // ------------------------------- screens ---------------------------------
 
-type Screen = { name: string; go: (p: Page) => Promise<void>; controls: (p: Page) => { label: string; loc: Locator }[]; overlay?: (p: Page) => Locator };
+interface Screen { name: string; go: (p: Page) => Promise<void>; controls: (p: Page) => { label: string; loc: Locator }[]; overlay?: (p: Page) => Locator }
 
 const STATIC_SCREENS: Screen[] = [
   {

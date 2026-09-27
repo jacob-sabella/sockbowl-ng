@@ -32,7 +32,7 @@
       @if (authEnabled) {
         <div class="navbar__auth">
           <!-- Not authenticated -->
-          @if (!(isAuthenticated$ | async) && !isInGame()) {
+          @if ((isAuthenticated$ | async) === false && !isInGame()) {
             <div class="navbar__auth-guest">
               <span class="navbar__guest-label">Playing as Guest</span>
               <button mat-raised-button color="primary" (click)="login()">
