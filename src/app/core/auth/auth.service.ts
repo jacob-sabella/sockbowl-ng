@@ -1,20 +1,41 @@
 import { Injectable, inject } from '@angular/core';
 import { OAuthService, OAuthEvent } from 'angular-oauth2-oidc';
 import { Router } from '@angular/router';
-import { BehaviorSubject, filter } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { authConfig } from './auth.config';
 import { environment } from '../../../environments/environment';
 import { ThemeService } from '../services/theme.service';
 
+/** OAuth events that mean the session is gone and the user must sign in again. */
+const SESSION_ENDING_EVENTS: ReadonlySet<string> = new Set([
+  'token_refresh_error',
+  'token_error',
+  'session_terminated',
+  'session_error',
+]);
+
+/** A token with fewer than this many ms left is refreshed before use. */
+const MIN_TOKEN_VALIDITY_MS = 30_000;
+
+/** Message shown when the session ends underneath the user (AUTH-13). */
+export const SESSION_ENDED_MESSAGE = 'Your session ended. Sign in again.';
+
 /**
  * Authentication service for managing Keycloak OAuth2/OIDC authentication.
  *
- * Features:
- * - Login/logout via Keycloak
- * - Token management (access token, ID token, refresh token)
- * - User profile extraction from ID token
- * - Authentication state management
- * - Silent token refresh
+ * Token lifecycle (AUTH-13):
+ * - Authorization code flow with PKCE, then the refresh-token flow (no
+ *   silent-refresh iframe). Keycloak rotates refresh tokens and allows no
+ *   reuse, so every refresh in the app goes through {@link refreshToken},
+ *   which shares a single in-flight request between concurrent callers.
+ * - `token_expires` (the library's timer at 75% of the token lifetime)
+ *   triggers a refresh.
+ * - `token_refresh_error`, `token_error`, `session_terminated` and
+ *   `session_error` end the session locally (`logOut(true)`), flip
+ *   `isAuthenticated$` to false and prompt the user to sign in again.
+ * - {@link logout} revokes the tokens and ends the Keycloak session, which
+ *   sends the browser to `postLogoutRedirectUri`.
  */
 @Injectable({
   providedIn: 'root'
@@ -23,12 +44,26 @@ export class AuthService {
   private oauthService = inject(OAuthService);
   private router = inject(Router);
   private themeService = inject(ThemeService);
+  private snackBar = inject(MatSnackBar, { optional: true });
 
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
   private userProfileSubject = new BehaviorSubject<any>(null);
   public userProfile$ = this.userProfileSubject.asObservable();
+
+  private tokenChangesSubject = new Subject<string>();
+  /**
+   * Emits the new access token each time it is refreshed. Long-lived
+   * consumers that hold a token outside HTTP (the STOMP socket) listen here.
+   */
+  public readonly tokenChanges$: Observable<string> = this.tokenChangesSubject.asObservable();
+
+  /** The refresh currently on the wire, shared by every concurrent caller. */
+  private refreshInFlight: Promise<string | null> | null = null;
+
+  /** Set once the "session ended" prompt is shown; cleared by a new token. */
+  private sessionEndNotified = false;
 
   constructor() {
     if (environment.authEnabled) {
@@ -37,37 +72,27 @@ export class AuthService {
   }
 
   /**
-   * Configure OAuth2 service and set up automatic token refresh
+   * Configure the OAuth2 service, wire up the token lifecycle and process a
+   * login callback if this page load is one.
    */
   private configure(): void {
     this.oauthService.configure(authConfig);
 
-    // Listen to token events
-    this.oauthService.events
-      .pipe(filter((e: OAuthEvent) => e.type === 'token_received'))
-      .subscribe(() => {
-        this.isAuthenticatedSubject.next(true);
-        this.updateUserProfile();
-      });
+    this.oauthService.events.subscribe((e: OAuthEvent) => this.onOAuthEvent(e));
 
-    this.oauthService.events
-      .pipe(filter((e: OAuthEvent) => e.type === 'token_refreshed'))
-      .subscribe(() => {
-        this.isAuthenticatedSubject.next(true);
-        this.updateUserProfile();
-      });
-
-    this.oauthService.events
-      .pipe(filter((e: OAuthEvent) => e.type === 'logout'))
-      .subscribe(() => {
-        this.isAuthenticatedSubject.next(false);
-        this.userProfileSubject.next(null);
-      });
+    // Whether this page load is the redirect back from Keycloak.
+    const isLoginCallback = window.location.search.includes('code=');
 
     // Load discovery document and try to login
     this.oauthService.loadDiscoveryDocument().then(() => {
       return this.oauthService.tryLoginCodeFlow();
-    }).then(() => {
+    }).then(async () => {
+      if (!this.oauthService.hasValidAccessToken() && this.oauthService.getRefreshToken()) {
+        // Page reload after the access token expired: the refresh token may
+        // still be good. A failure ends the session via token_refresh_error.
+        await this.refreshToken().catch(() => undefined);
+      }
+
       if (this.oauthService.hasValidAccessToken()) {
         this.isAuthenticatedSubject.next(true);
         this.updateUserProfile();
@@ -76,37 +101,109 @@ export class AuthService {
         if (window.location.href.includes('code=')) {
           window.history.replaceState({}, document.title, window.location.pathname);
         }
-      }
 
-      // Setup automatic silent refresh AFTER handling the callback
-      this.oauthService.setupAutomaticSilentRefresh();
+        if (isLoginCallback) {
+          this.navigateToLoginTarget();
+        }
+      }
     }).catch(error => {
       console.error('[AuthService] Authentication error:', error);
     });
   }
 
+  private onOAuthEvent(e: OAuthEvent): void {
+    switch (e.type) {
+      case 'token_received':
+        this.sessionEndNotified = false;
+        this.isAuthenticatedSubject.next(true);
+        this.updateUserProfile();
+        break;
+      case 'token_refreshed': {
+        this.isAuthenticatedSubject.next(true);
+        this.updateUserProfile();
+        const token = this.oauthService.getAccessToken();
+        if (token) {
+          this.tokenChangesSubject.next(token);
+        }
+        break;
+      }
+      case 'token_expires':
+        if ((e as OAuthEvent & { info?: unknown }).info === 'access_token') {
+          this.refreshToken().catch(() => this.handleSessionEnded());
+        }
+        break;
+      case 'logout':
+        this.isAuthenticatedSubject.next(false);
+        this.userProfileSubject.next(null);
+        break;
+      default:
+        if (SESSION_ENDING_EVENTS.has(e.type)) {
+          this.handleSessionEnded();
+        }
+    }
+  }
+
   /**
-   * Initiate login flow (redirect to Keycloak)
+   * Ends the session locally after the tokens became unusable (refresh
+   * failed, the IdP ended the session, or the backend kept rejecting the
+   * token). Clears the stored tokens without a redirect, flips the auth
+   * state, and prompts once to sign in again. Idempotent.
    */
-  public login(): void {
+  public handleSessionEnded(): void {
+    if (!environment.authEnabled) {
+      return;
+    }
+    this.refreshInFlight = null;
+    this.oauthService.logOut(true);
+    this.isAuthenticatedSubject.next(false);
+    this.userProfileSubject.next(null);
+
+    if (!this.sessionEndNotified) {
+      this.sessionEndNotified = true;
+      this.snackBar
+        ?.open(SESSION_ENDED_MESSAGE, 'Sign in', { duration: 10000 })
+        ?.onAction()
+        .subscribe(() => this.login(this.router.url));
+    }
+  }
+
+  /**
+   * Initiate login flow (redirect to Keycloak).
+   *
+   * @param targetUrl app path to return to after login (e.g. the guarded
+   *   route that sent the user here). Only same-app paths are honoured.
+   */
+  public login(targetUrl?: string): void {
     if (!environment.authEnabled) {
       console.warn('Authentication is disabled');
       return;
     }
+    const state = AuthService.isSafeAppPath(targetUrl) ? targetUrl : '';
     // Carry the user's current theme through to the Keycloak login page so it
     // matches the app (the sockbowl login theme reads ?ui_theme via a head script).
-    this.oauthService.initCodeFlow('', { ui_theme: this.themeService.getResolvedTheme() });
+    this.oauthService.initCodeFlow(state, { ui_theme: this.themeService.getResolvedTheme() });
   }
 
   /**
-   * Logout and clear tokens
+   * Log out: revoke the access and refresh tokens, then end the Keycloak
+   * session. Keycloak redirects the browser to `postLogoutRedirectUri`.
+   * If revocation fails, the plain end-session redirect still runs.
    */
-  public logout(): void {
+  public async logout(): Promise<void> {
     if (!environment.authEnabled) {
       return;
     }
-    this.oauthService.logOut();
-    this.router.navigate(['/game-session']);
+    if (!this.oauthService.getAccessToken()) {
+      // revokeTokenAndLogout is a no-op without an access token.
+      this.oauthService.logOut();
+      return;
+    }
+    try {
+      await this.oauthService.revokeTokenAndLogout();
+    } catch (error) {
+      console.warn('[AuthService] Token revocation failed; ending session anyway', error);
+      this.oauthService.logOut();
+    }
   }
 
   /**
@@ -120,13 +217,38 @@ export class AuthService {
   }
 
   /**
-   * Get access token
+   * Get the current access token as stored (it may be close to expiry; use
+   * {@link getFreshAccessToken} for long-lived channels like STOMP CONNECT).
    */
   public getAccessToken(): string | null {
     if (!environment.authEnabled) {
       return null;
     }
     return this.oauthService.getAccessToken();
+  }
+
+  /**
+   * An access token with at least 30s of validity left, refreshing first
+   * when needed. Resolves to null when auth is off, nobody is signed in, or
+   * the refresh fails.
+   */
+  public async getFreshAccessToken(): Promise<string | null> {
+    if (!environment.authEnabled) {
+      return null;
+    }
+    const token = this.oauthService.getAccessToken();
+    const expiresAt = this.oauthService.getAccessTokenExpiration();
+    if (token && (!expiresAt || expiresAt - Date.now() > MIN_TOKEN_VALIDITY_MS)) {
+      return token;
+    }
+    if (!this.oauthService.getRefreshToken()) {
+      return token && this.oauthService.hasValidAccessToken() ? token : null;
+    }
+    try {
+      return await this.refreshToken();
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -179,6 +301,10 @@ export class AuthService {
 
   /**
    * Whether the current user is an administrator.
+   *
+   * @deprecated Use {@link hasPermission} with a fine-grained permission
+   *   (e.g. `admin:access`, `packet:manage-any`). Kept only until the
+   *   remaining UI callers move to permissions (WP-N2), which deletes it.
    */
   public isAdmin(): boolean {
     return this.hasRole('admin');
@@ -235,12 +361,56 @@ export class AuthService {
   }
 
   /**
-   * Manually refresh token
+   * Refresh the access token with the refresh token. Concurrent callers
+   * share one request: Keycloak rotates refresh tokens with no reuse, so two
+   * parallel refreshes would invalidate each other and end the session.
+   *
+   * Resolves to the new access token; rejects when there is no refresh token
+   * or the token endpoint refuses it (the library then emits
+   * `token_refresh_error`, which ends the session).
    */
-  public async refreshToken(): Promise<OAuthEvent> {
+  public refreshToken(): Promise<string | null> {
     if (!environment.authEnabled) {
-      return Promise.resolve({} as OAuthEvent);
+      return Promise.resolve(null);
     }
-    return this.oauthService.silentRefresh();
+    if (!this.refreshInFlight) {
+      if (!this.oauthService.getRefreshToken()) {
+        return Promise.reject(new Error('No refresh token available'));
+      }
+      const inFlight = this.oauthService.refreshToken()
+        .then(() => this.oauthService.getAccessToken() || null)
+        .finally(() => {
+          if (this.refreshInFlight === inFlight) {
+            this.refreshInFlight = null;
+          }
+        });
+      this.refreshInFlight = inFlight;
+    }
+    return this.refreshInFlight;
+  }
+
+  /**
+   * After the login callback, return to the route that asked for login
+   * (passed as the OAuth `state`). Only same-app paths are followed.
+   */
+  private navigateToLoginTarget(): void {
+    const raw = this.oauthService.state;
+    if (!raw) {
+      return;
+    }
+    let target: string;
+    try {
+      target = decodeURIComponent(raw);
+    } catch {
+      return;
+    }
+    if (AuthService.isSafeAppPath(target)) {
+      this.router.navigateByUrl(target);
+    }
+  }
+
+  /** A path inside this app: starts with a single '/', no scheme or host. */
+  private static isSafeAppPath(url: string | undefined | null): url is string {
+    return !!url && url.startsWith('/') && !url.startsWith('//') && !url.startsWith('/\\');
   }
 }

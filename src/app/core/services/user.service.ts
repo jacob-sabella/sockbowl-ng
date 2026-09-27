@@ -14,7 +14,7 @@ import {
 export class UserService {
   private http = inject(HttpClient);
 
-  private baseUrl: string = environment.apiBaseUrl || 'http://localhost:7000';
+  private baseUrl: string = environment.apiBaseUrl;
 
   /**
    * Get current user information

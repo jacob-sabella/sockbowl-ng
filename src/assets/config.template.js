@@ -1,6 +1,7 @@
 // Runtime configuration template
 // Environment variables will be substituted at container startup
 window.__env = {
+  apiBaseUrl: "${APP_PROTOCOL}://${APP_HOST}:${SOCKBOWL_GAME_PORT}",
   sockbowlGameApiUrl:
     "${APP_PROTOCOL}://${APP_HOST}:${SOCKBOWL_GAME_PORT}/api/v1/session",
   sockbowlQuestionsApiUrl:
@@ -15,5 +16,6 @@ window.__env = {
     responseType: "code",
     showDebugInformation: false,
     requireHttps: "${APP_PROTOCOL}" === "https",
+    postLogoutRedirectUri: window.location.origin + "/game-session",
   },
 };

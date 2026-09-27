@@ -1,5 +1,6 @@
 // Development configuration
 window.__env = {
+  apiBaseUrl: 'http://localhost:7000',
   sockbowlGameApiUrl: 'http://localhost:7000/api/v1/session',
   sockbowlQuestionsApiUrl: 'http://localhost:7009/',
   wsUrl: 'ws://localhost:7000/sockbowl-game',
@@ -11,6 +12,7 @@ window.__env = {
     scope: 'openid profile email',
     responseType: 'code',
     showDebugInformation: true,
-    requireHttps: false
+    requireHttps: false,
+    postLogoutRedirectUri: window.location.origin + '/game-session'
   }
 };
