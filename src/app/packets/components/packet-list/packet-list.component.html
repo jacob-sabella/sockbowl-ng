@@ -4,10 +4,12 @@
       <mat-icon aria-hidden="true">edit_note</mat-icon>
       Packet Builder
     </h1>
-    <button mat-raised-button class="packet-list__new-btn" (click)="toggleCreateForm()">
-      <mat-icon aria-hidden="true">add</mat-icon>
-      New Packet
-    </button>
+    @if (auth.hasPermission('packet:create')) {
+      <button mat-raised-button class="packet-list__new-btn" (click)="toggleCreateForm()">
+        <mat-icon aria-hidden="true">add</mat-icon>
+        New Packet
+      </button>
+    }
   </div>
 
   @if (showCreateForm) {
