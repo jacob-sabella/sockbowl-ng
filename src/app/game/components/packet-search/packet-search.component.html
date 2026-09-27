@@ -9,6 +9,60 @@
       <!-- Search Existing Packets Tab -->
       <mat-tab label="Search Existing">
         <div class="tab-content">
+          @if (auth.isAuthenticated()) {
+            <div class="my-packets-section">
+              <div class="my-packets-header">My packets</div>
+              @if (myPacketsLoading) {
+                <div class="my-packets-loading"><mat-spinner diameter="24"></mat-spinner></div>
+              }
+              @if (!myPacketsLoading && myPackets.length === 0) {
+                <div class="hint my-packets-empty">You haven't created any packets yet.</div>
+              }
+              @if (!myPacketsLoading && myPackets.length > 0) {
+                <div class="search-results">
+                  @for (packet of myPackets; track packet.id) {
+                    <div
+                      class="result-item"
+                      [class.unplayable]="!packet.playable"
+                      role="button"
+                      tabindex="0"
+                      [attr.aria-disabled]="!packet.playable"
+                      [attr.title]="!packet.playable ? 'Not playable yet: add tossups and resolve validation issues.' : null"
+                      (click)="packet.playable && selectPacket(packet)"
+                      (keydown.enter)="packet.playable && selectPacket(packet)"
+                      (keydown.space)="$event.preventDefault(); packet.playable && selectPacket(packet)"
+                      [class.selected]="packet.id === selectedPacketId"
+                      [attr.aria-pressed]="packet.id === selectedPacketId"
+                      >
+                      <div class="result-content">
+                        <mat-icon class="result-icon">description</mat-icon>
+                        <div class="result-details">
+                          <div class="result-name">{{ packet.name }}</div>
+                          <div class="result-meta">
+                            <span>{{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses</span>
+                            @if (packet.visibility === 'DRAFT') {
+                              <span class="draft-hint">Draft (only you can play)</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      <div class="result-actions">
+                        @if (!packet.playable) {
+                          <span class="not-playable-badge">Not playable</span>
+                        }
+                        <a class="edit-link" [href]="'/packets/' + packet.id + '/edit'" target="_blank" rel="noopener"
+                           (click)="$event.stopPropagation()">Edit in builder</a>
+                        @if (packet.id === selectedPacketId) {
+                          <mat-icon class="check-icon">check_circle</mat-icon>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
           <div class="search-container">
             <mat-form-field class="search-field" appearance="outline">
               <mat-icon matPrefix class="search-icon">search</mat-icon>
@@ -74,14 +128,17 @@
             <!-- Results list -->
             @if (searchResults.length > 0 && !isSearching) {
               <div class="search-results">
-                @for (packet of searchResults; track packet; let i = $index) {
+                @for (packet of searchResults; track packet.id; let i = $index) {
                   <div
                     class="result-item"
+                    [class.unplayable]="!packet.playable"
                     role="button"
                     tabindex="0"
-                    (click)="selectPacket(packet)"
-                    (keydown.enter)="selectPacket(packet)"
-                    (keydown.space)="$event.preventDefault(); selectPacket(packet)"
+                    [attr.aria-disabled]="!packet.playable"
+                    [attr.title]="!packet.playable ? 'Not playable yet: add tossups and resolve validation issues.' : null"
+                    (click)="packet.playable && selectPacket(packet)"
+                    (keydown.enter)="packet.playable && selectPacket(packet)"
+                    (keydown.space)="$event.preventDefault(); packet.playable && selectPacket(packet)"
                     [class.selected]="packet.id === selectedPacketId"
                     [attr.aria-pressed]="packet.id === selectedPacketId"
                     [attr.data-index]="i"
@@ -91,13 +148,21 @@
                       <div class="result-details">
                         <div class="result-name">{{ packet.name }}</div>
                         <div class="result-meta">
-                          <span class="packet-id">ID: {{ packet.id }}</span>
+                          <span>{{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses</span>
+                          @if (packet.visibility === 'DRAFT') {
+                            <span class="draft-hint">Draft (only you can play)</span>
+                          }
                         </div>
                       </div>
                     </div>
-                    @if (packet.id === selectedPacketId) {
-                      <mat-icon class="check-icon">check_circle</mat-icon>
-                    }
+                    <div class="result-actions">
+                      @if (!packet.playable) {
+                        <span class="not-playable-badge">Not playable</span>
+                      }
+                      @if (packet.id === selectedPacketId) {
+                        <mat-icon class="check-icon">check_circle</mat-icon>
+                      }
+                    </div>
                   </div>
                 }
               </div>
@@ -131,78 +196,13 @@
                   </div>
                 }
 
-                <!-- API Key Field -->
-                <mat-form-field class="api-key-field" appearance="outline" floatLabel="always">
-                  <mat-label>OpenAI API Key</mat-label>
-                  <input
-                    matInput
-                    [type]="showApiKey ? 'text' : 'password'"
-                    [(ngModel)]="apiKey"
-                    (ngModelChange)="onApiKeyChange()"
-                    (blur)="onApiKeyBlur()"
-                    placeholder="sk-..."
-                    required
-                    autocomplete="off"
-                    >
-                  <button
-                    mat-icon-button
-                    matSuffix
-                    (click)="toggleApiKeyVisibility()"
-                    [attr.aria-label]="'Hide API key'"
-                    type="button"
-                    >
-                    <mat-icon>{{ showApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
-                  </button>
-                  <mat-hint>Your OpenAI API key (never shared or stored on server)</mat-hint>
-                </mat-form-field>
-
-                <!-- Remember API Key Checkbox -->
-                @if (apiKey) {
-                  <mat-checkbox
-                    class="remember-checkbox"
-                    [(ngModel)]="rememberApiKey"
-                    (change)="onRememberChange()"
-                    >
-                    Remember API key (stored locally in browser)
-                  </mat-checkbox>
-                }
-
-                <!-- Model Dropdown -->
-                <mat-form-field class="model-field" appearance="outline" floatLabel="always">
-                  <mat-label>Model</mat-label>
-                  <mat-select
-                    [(ngModel)]="selectedModel"
-                    (ngModelChange)="updateParameterVisibility()"
-                    [disabled]="isLoadingModels || availableModels.length === 0"
-                    required
-                    >
-                    @for (model of availableModels; track model) {
-                      <mat-option [value]="model">{{ model }}</mat-option>
-                    }
-                  </mat-select>
-                  @if (isLoadingModels) {
-                    <mat-spinner matSuffix diameter="20"></mat-spinner>
-                  }
-                  @if (modelLoadError) {
-                    <mat-hint class="error-hint">{{ modelLoadError }}</mat-hint>
-                  }
-                  @if (!isLoadingModels && !modelLoadError && availableModels.length === 0 && apiKey) {
-                    <mat-hint>
-                      <button
-                        mat-button
-                        color="primary"
-                        (click)="fetchAvailableModels()"
-                        type="button"
-                        class="fetch-models-btn"
-                        >
-                        Fetch Models
-                      </button>
-                    </mat-hint>
-                  }
-                  @if (!apiKey) {
-                    <mat-hint>Enter API key first to load models</mat-hint>
-                  }
-                </mat-form-field>
+                <!-- API key + model (PB-08, shared/ai-key) -->
+                <app-ai-key-picker
+                  [apiKey]="apiKey"
+                  (apiKeyChange)="apiKey = $event"
+                  [model]="selectedModel"
+                  (modelChange)="onGenerateModelChange($event)"
+                  ></app-ai-key-picker>
 
                 <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
                   <mat-label>Topic</mat-label>
@@ -654,11 +654,15 @@
     <button
       mat-raised-button
       color="primary"
-      [disabled]="!selectedPacketId && !generatedPacket"
+      [disabled]="(!selectedPacketId && !generatedPacket) || selectionLoading"
       (click)="confirmSelection()"
       class="select-btn"
       >
-      <mat-icon>check</mat-icon>
+      @if (selectionLoading) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <mat-icon>check</mat-icon>
+      }
       Use Packet
     </button>
   </mat-dialog-actions>

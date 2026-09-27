@@ -34,9 +34,8 @@
     }
   }
 
-  // API key field with visibility toggle
-  .api-key-field,
-  .model-field,
+  // Remaining text fields (the API key + model fields moved into
+  // shared/ai-key/ai-key-picker.component.scss with the picker, M3 N5).
   .topic-field,
   .context-field {
     width: 100%;
@@ -53,8 +52,7 @@
       }
 
       input,
-      textarea,
-      .mat-mdc-select {
+      textarea {
         color: var(--text-primary) !important;
 
         &::placeholder {
@@ -64,38 +62,6 @@
       }
 
       label {
-        color: var(--text-secondary) !important;
-      }
-
-      // Error hint styling
-      .mat-mdc-form-field-hint.error-hint {
-        color: var(--error) !important;
-        font-weight: 500;
-      }
-
-      // Suffix spinner for model loading
-      .mat-mdc-form-field-icon-suffix mat-spinner {
-        margin-right: 0.5rem;
-      }
-    }
-  }
-
-  // Remember checkbox styling
-  .remember-checkbox {
-    margin: -0.5rem 0 0.5rem 0;
-    font-size: 0.9rem;
-
-    ::ng-deep {
-      .mdc-checkbox__background {
-        border-color: var(--border-medium) !important;
-      }
-
-      .mdc-checkbox--selected .mdc-checkbox__background {
-        background-color: var(--accent-primary) !important;
-        border-color: var(--accent-primary) !important;
-      }
-
-      .mdc-label {
         color: var(--text-secondary) !important;
       }
     }
@@ -120,14 +86,6 @@
         color: var(--text-secondary) !important;
       }
     }
-  }
-
-  // Fetch models button
-  .fetch-models-btn {
-    font-size: 0.85rem;
-    padding: 0.25rem 0.75rem;
-    min-height: auto;
-    line-height: normal;
   }
 
   // Advanced options expansion panel

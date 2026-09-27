@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   GameSession,
   GameSettings,
+  MatchState,
   Packet,
   PlayerMode,
   ProcessError,
@@ -14,6 +15,7 @@ import { Observable } from 'rxjs';
 import { GameStateService } from '../../services/game-state.service';
 import { GameMessageService } from '../../services/game-message.service';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
+import { PendingPacketService } from '../../services/pending-packet.service';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
@@ -34,6 +36,7 @@ export class GameConfigComponent implements OnInit {
   gameStateService = inject(GameStateService);
   private gameMessageService = inject(GameMessageService);
   private sockbowlQuestionsService = inject(SockbowlQuestionsService);
+  private pendingPacketService = inject(PendingPacketService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private presentationConnectionService = inject(PresentationConnectionService);
@@ -77,6 +80,7 @@ export class GameConfigComponent implements OnInit {
   ngOnInit(): void {
     this.gameSessionObs.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((gameSession) => {
       this.gameSession = gameSession;
+      this.applyPendingPacketIfReady(gameSession);
 
       // Initialize timer settings from game session
       if (gameSession.gameSettings?.timerSettings) {
@@ -186,6 +190,32 @@ export class GameConfigComponent implements OnInit {
 
   setPacket(): void {
     this.gameStateService.setMatchPacket(this.packetId);
+  }
+
+  /**
+   * Consume the builder's "Play test" pending packet (PB-15), if any, once
+   * the match is in CONFIG and the local player may set it — the owner in a
+   * proctorless mode, or the proctor. Clears the pending id immediately so
+   * this only ever fires once, even though later session updates (including
+   * the echo of our own setMatchPacket call) re-run this same subscription.
+   */
+  private applyPendingPacketIfReady(gameSession: GameSession): void {
+    const pendingPacketId = this.pendingPacketService.get();
+    if (!pendingPacketId) return;
+    if (gameSession.currentMatch?.matchState !== MatchState.CONFIG) return;
+    if (!this.mayApplyPendingPacket()) return;
+
+    this.pendingPacketService.clear();
+    this.gameStateService.setMatchPacket(pendingPacketId);
+    this.sockbowlQuestionsService.getPacketById(pendingPacketId).subscribe({
+      next: (packet) => this.snack.open(`Packet '${packet?.name ?? pendingPacketId}' selected.`, 'OK', { duration: 2500 }),
+      error: () => this.snack.open('Packet selected.', 'OK', { duration: 2500 }),
+    });
+  }
+
+  private mayApplyPendingPacket(): boolean {
+    return this.gameStateService.isSelfProctor()
+      || (this.gameStateService.isProctorless() && this.gameStateService.isCurrentPlayerGameOwner());
   }
 
   /**

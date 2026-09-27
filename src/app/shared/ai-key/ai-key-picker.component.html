@@ -1,25 +1,71 @@
-<!-- TODO(N5): bring in the model dropdown, OpenAiModelService.fetchModels and load-error UI from packet-search.component.html. -->
 <div class="ai-key-picker">
-  <mat-form-field appearance="outline" class="ai-key-picker__key">
-    <mat-label>OpenAI API key</mat-label>
+  <mat-form-field class="ai-key-picker__key" appearance="outline" floatLabel="always">
+    <mat-label>OpenAI API Key</mat-label>
     <input
       matInput
-      type="password"
-      autocomplete="off"
+      [type]="showApiKey ? 'text' : 'password'"
       [ngModel]="apiKey"
       (ngModelChange)="onApiKeyChange($event)"
-    />
+      (blur)="onApiKeyBlur()"
+      placeholder="sk-..."
+      required
+      autocomplete="off"
+      >
+    <button
+      mat-icon-button
+      matSuffix
+      (click)="toggleApiKeyVisibility()"
+      [attr.aria-label]="showApiKey ? 'Hide API key' : 'Show API key'"
+      type="button"
+      >
+      <mat-icon>{{ showApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
+    </button>
+    <mat-hint>Your OpenAI API key (never shared or stored on server)</mat-hint>
   </mat-form-field>
-  <mat-checkbox [ngModel]="rememberKey" (ngModelChange)="onRememberChange($event)">
-    Remember key on this device
-  </mat-checkbox>
-  <mat-form-field appearance="outline" class="ai-key-picker__model">
+
+  @if (apiKey) {
+    <mat-checkbox
+      class="ai-key-picker__remember"
+      [ngModel]="rememberKey"
+      (ngModelChange)="onRememberChange($event)"
+      >
+      Remember API key (stored locally in browser)
+    </mat-checkbox>
+  }
+
+  <mat-form-field class="ai-key-picker__model" appearance="outline" floatLabel="always">
     <mat-label>Model</mat-label>
-    <input
-      matInput
-      placeholder="gpt-4o-mini"
+    <mat-select
       [ngModel]="model"
       (ngModelChange)="onModelChange($event)"
-    />
+      [disabled]="isLoadingModels || availableModels.length === 0"
+      required
+      >
+      @for (m of availableModels; track m) {
+        <mat-option [value]="m">{{ m }}</mat-option>
+      }
+    </mat-select>
+    @if (isLoadingModels) {
+      <mat-spinner matSuffix diameter="20"></mat-spinner>
+    }
+    @if (modelLoadError) {
+      <mat-hint class="ai-key-picker__error-hint">{{ modelLoadError }}</mat-hint>
+    }
+    @if (!isLoadingModels && !modelLoadError && availableModels.length === 0 && apiKey) {
+      <mat-hint>
+        <button
+          mat-button
+          color="primary"
+          (click)="fetchAvailableModels()"
+          type="button"
+          class="ai-key-picker__fetch-btn"
+          >
+          Fetch Models
+        </button>
+      </mat-hint>
+    }
+    @if (!apiKey) {
+      <mat-hint>Enter API key first to load models</mat-hint>
+    }
   </mat-form-field>
 </div>
