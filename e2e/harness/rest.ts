@@ -59,3 +59,53 @@ export async function importQbreaderPacket(
   if (!res.ok) throw new Error(`importRandomPacket ${res.status}: ${await res.text()}`);
   return (await res.json()).id;
 }
+
+async function graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${QUESTIONS_BASE}/graphql`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (!res.ok) throw new Error(`graphql ${res.status}: ${await res.text()}`);
+  const body: any = await res.json();
+  if (body.errors?.length) throw new Error(`graphql errors: ${JSON.stringify(body.errors)}`);
+  return body.data as T;
+}
+
+export interface SeededPacket { id: string; name: string; tossupCount: number; bonusCount: number; }
+
+/**
+ * Look up a real, already-seeded PUBLISHED packet by (exact) name via
+ * `searchPacketsByName`, then fetch its full tossup/bonus counts. Used by
+ * `full-match` in place of `importQbreaderPacket`: import-random draws from
+ * a separate bank of `:BankTossup`/`:BankBonus` nodes this compose stack
+ * doesn't seed (a reported M3 follow-up), while this queries the same
+ * imported-packet bank the ng Playwright specs use via "Search Existing"
+ * (NG-R2-02).
+ */
+export async function findSeededPacket(name: string): Promise<SeededPacket> {
+  const searchQuery = `query($name: String!) { searchPacketsByName(name: $name) { id name } }`;
+  const { searchPacketsByName } = await graphql<{ searchPacketsByName: { id: string; name: string }[] }>(
+    searchQuery,
+    { name },
+  );
+  const match = searchPacketsByName.find((p) => p.name === name) ?? searchPacketsByName[0];
+  if (!match) {
+    throw new Error(`findSeededPacket: no packet found matching "${name}"`);
+  }
+
+  const detailQuery = `query($id: ID!) { getPacketById(id: $id) { id name tossups { order } bonuses { order } } }`;
+  const { getPacketById } = await graphql<{
+    getPacketById: { id: string; name: string; tossups: unknown[]; bonuses: unknown[] } | null;
+  }>(detailQuery, { id: match.id });
+  if (!getPacketById) {
+    throw new Error(`findSeededPacket: getPacketById(${match.id}) returned null`);
+  }
+
+  return {
+    id: getPacketById.id,
+    name: getPacketById.name,
+    tossupCount: getPacketById.tossups.length,
+    bonusCount: getPacketById.bonuses.length,
+  };
+}
