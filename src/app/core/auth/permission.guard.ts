@@ -20,6 +20,14 @@ export const PERMISSION_DENIED_MESSAGE = "You don't have permission to view that
  *   `/game-session` with a snackbar, rather than a silent block.
  */
 export function permissionGuard(permission: string): CanActivateFn {
+  // Angular can evaluate a route's guards more than once for a single
+  // navigation (e.g. a redirect chain re-running canActivate). Without this,
+  // each evaluation called snackBar.open() again, and two denial snackbars
+  // could briefly coexist mid-animation — enough to break a strict-mode
+  // Playwright locator (NG-R2-01). Track the one this guard opened and skip
+  // opening another while it's still showing.
+  let openSnackBarRef: ReturnType<MatSnackBar['open']> | null = null;
+
   return (_route, state: RouterStateSnapshot) => {
     const auth = inject(AuthService);
     const router = inject(Router);
@@ -32,7 +40,10 @@ export function permissionGuard(permission: string): CanActivateFn {
       auth.login(state.url);
       return false;
     }
-    snackBar.open(PERMISSION_DENIED_MESSAGE, 'Dismiss', { duration: 4000 });
+    if (!openSnackBarRef) {
+      openSnackBarRef = snackBar.open(PERMISSION_DENIED_MESSAGE, 'Dismiss', { duration: 4000 });
+      openSnackBarRef.afterDismissed().subscribe(() => { openSnackBarRef = null; });
+    }
     return router.createUrlTree(['/game-session']);
   };
 }
