@@ -47,6 +47,7 @@ import {MatMenuModule} from "@angular/material/menu";
 import { ProfileComponent } from './structure/components/profile/profile.component';
 import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
 import { AdminBansComponent } from './structure/components/admin-bans/admin-bans.component';
+import { AdminHomeComponent } from './structure/components/admin-home/admin-home.component';
 import { PacketListComponent } from './packets/components/packet-list/packet-list.component';
 import { PacketBuilderComponent } from './packets/components/packet-builder/packet-builder.component';
 
@@ -68,6 +69,7 @@ import { PacketBuilderComponent } from './packets/components/packet-builder/pack
         ProfileComponent,
         ThemeSelectorComponent,
         AdminBansComponent,
+        AdminHomeComponent,
         PacketListComponent,
         PacketBuilderComponent,
         TestClipsModalComponent
