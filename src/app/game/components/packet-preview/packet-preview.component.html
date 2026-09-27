@@ -21,7 +21,7 @@
                 <div class="q__question" [innerHTML]="ct.tossup?.question || '(no question)'"></div>
                 <div class="q__answer">
                   <span class="q__label">Answer</span>
-                  <span [innerHTML]="ct.tossup?.answer"></span>
+                  <span [innerHTML]="$safeNavigationMigration(ct.tossup?.answer)"></span>
                 </div>
               </div>
             </article>
@@ -40,11 +40,11 @@
                   <div class="q__part">
                     <div class="q__part-q">
                       <span class="q__label">[10]</span>
-                      <span [innerHTML]="hp.bonusPart?.question"></span>
+                      <span [innerHTML]="$safeNavigationMigration(hp.bonusPart?.question)"></span>
                     </div>
                     <div class="q__answer">
                       <span class="q__label">Answer</span>
-                      <span [innerHTML]="hp.bonusPart?.answer"></span>
+                      <span [innerHTML]="$safeNavigationMigration(hp.bonusPart?.answer)"></span>
                     </div>
                   </div>
                 }

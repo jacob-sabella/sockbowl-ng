@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { forkJoin } from 'rxjs';
@@ -46,6 +46,7 @@ interface SubcategoryGroup {
   selector: 'app-packet-builder',
   templateUrl: './packet-builder.component.html',
   styleUrls: ['./packet-builder.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class PacketBuilderComponent implements OnInit {

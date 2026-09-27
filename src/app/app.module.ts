@@ -12,7 +12,7 @@ import { GameSessionComponent } from './game/components/game-session/game-sessio
 import {MatButtonModule} from "@angular/material/button";
 import {MatInputModule} from "@angular/material/input";
 import {FormsModule} from "@angular/forms";
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, withXhr } from "@angular/common/http";
 import {MatIconModule} from "@angular/material/icon";
 import { OAuthModule } from 'angular-oauth2-oidc';
 import { AuthInterceptor } from './core/auth/auth.interceptor';
@@ -111,6 +111,6 @@ import { PacketBuilderComponent } from './packets/components/packet-builder/pack
             useClass: AuthInterceptor,
             multi: true
         },
-        provideHttpClient(withInterceptorsFromDi())
+        provideHttpClient(withXhr(), withInterceptorsFromDi())
     ] })
 export class AppModule { }

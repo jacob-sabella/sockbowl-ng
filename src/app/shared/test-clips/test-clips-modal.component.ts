@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 interface Clip {
@@ -22,6 +22,7 @@ interface ClipGroup {
   selector: 'app-test-clips-modal',
   templateUrl: './test-clips-modal.component.html',
   styleUrls: ['./test-clips-modal.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class TestClipsModalComponent implements OnInit {

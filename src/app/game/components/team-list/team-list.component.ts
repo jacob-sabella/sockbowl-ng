@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { Team, Buzz, Round } from '../../models/sockbowl/sockbowl-interfaces';
 import { GameStateService } from '../../services/game-state.service';
 
@@ -6,6 +6,7 @@ import { GameStateService } from '../../services/game-state.service';
     selector: 'app-team-list',
     templateUrl: './team-list.component.html',
     styleUrls: ['./team-list.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class TeamListComponent {

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { SpeechService } from '../../services/speech.service';
 import { GameSession, Round, RoundState, Team } from '../../models/sockbowl/sockbowl-interfaces';
@@ -8,6 +8,7 @@ import { Subscription } from 'rxjs';
     selector: 'app-game-spectator',
     templateUrl: './game-spectator.component.html',
     styleUrls: ['./game-spectator.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameSpectatorComponent implements OnInit, OnDestroy {

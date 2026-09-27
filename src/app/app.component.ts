@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { ThemeService } from './core/services/theme.service';
 import { VersionCheckService } from './core/version-check.service';
 
@@ -6,6 +6,7 @@ import { VersionCheckService } from './core/version-check.service';
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class AppComponent {

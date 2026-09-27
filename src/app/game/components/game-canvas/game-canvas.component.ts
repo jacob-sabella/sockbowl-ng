@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject} from '@angular/core';
+import {Component, DestroyRef, inject, ChangeDetectionStrategy} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from "@angular/router";
 import {GameStateService} from "../../services/game-state.service";
@@ -9,6 +9,7 @@ import {GameSession, MatchState} from "../../models/sockbowl/sockbowl-interfaces
     selector: 'app-game-canvas',
     templateUrl: './game-canvas.component.html',
     styleUrls: ['./game-canvas.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameCanvasComponent {

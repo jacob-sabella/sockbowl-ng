@@ -40,7 +40,7 @@
         @if (auth.hasPermission('packet:update') && canManagePacket) {
           <mat-form-field appearance="outline" class="packet-builder__difficulty-field">
             <mat-label>Difficulty</mat-label>
-            <mat-select [ngModel]="packet.difficulty?.id" (selectionChange)="onDifficultyChange($event.value)">
+            <mat-select [ngModel]="$safeNavigationMigration(packet.difficulty?.id)" (selectionChange)="onDifficultyChange($event.value)">
               @for (d of difficulties; track d.id) {
                 <mat-option [value]="d.id">{{ d.name }}</mat-option>
               }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ThemeService, Theme } from '../../../core/services/theme.service';
 import { Observable } from 'rxjs';
 
@@ -18,6 +18,7 @@ interface ThemeOption {
     selector: 'app-theme-selector',
     templateUrl: './theme-selector.component.html',
     styleUrls: ['./theme-selector.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ThemeSelectorComponent {

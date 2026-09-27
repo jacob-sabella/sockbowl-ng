@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, OnInit} from '@angular/core';
+import {Component, DestroyRef, inject, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Observable} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
@@ -8,6 +8,7 @@ import {GameStateService} from '../../services/game-state.service';
     selector: 'app-game-buzzer',
     templateUrl: './game-buzzer.component.html',
     styleUrls: ['./game-buzzer.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameBuzzerComponent implements OnInit {

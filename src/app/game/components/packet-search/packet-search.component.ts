@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
@@ -12,6 +12,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     selector: 'app-packet-search',
     templateUrl: './packet-search.component.html',
     styleUrls: ['./packet-search.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class PacketSearchComponent implements OnInit {

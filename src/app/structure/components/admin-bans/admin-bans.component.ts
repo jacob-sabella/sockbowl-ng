@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BanService } from '../../../core/services/ban.service';
 import { Ban, CreateBanRequest } from '../../../core/models/ban-models';
@@ -12,6 +12,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   selector: 'app-admin-bans',
   templateUrl: './admin-bans.component.html',
   styleUrls: ['./admin-bans.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class AdminBansComponent implements OnInit {

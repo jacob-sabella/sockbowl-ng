@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {GameSessionService} from "../../services/game-session.service";
 import {Router} from "@angular/router";
 import {
@@ -16,6 +16,7 @@ import {environment} from "../../../../environments/environment";
     selector: 'app-game-session',
     templateUrl: './game-session.component.html',
     styleUrls: ['./game-session.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameSessionComponent {

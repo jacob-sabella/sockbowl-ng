@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, TemplateRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -25,6 +25,7 @@ import { PresentationConnectionState } from '../../models/cast-interfaces';
     selector: 'app-game-config',
     templateUrl: './game-config.component.html',
     styleUrls: ['./game-config.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameConfigComponent implements OnInit {

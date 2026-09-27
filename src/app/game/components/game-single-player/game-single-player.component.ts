@@ -1,4 +1,4 @@
-import {Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy} from '@angular/core';
 import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
@@ -14,6 +14,7 @@ import {SpeechService} from '../../services/speech.service';
   selector: 'app-game-single-player',
   templateUrl: './game-single-player.component.html',
   styleUrls: ['./game-single-player.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class GameSinglePlayerComponent implements OnInit, OnDestroy {
