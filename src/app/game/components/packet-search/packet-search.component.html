@@ -466,7 +466,15 @@
       </mat-tab>
       }
 
-      <!-- ============================ Generate (local bank) ============================ -->
+      <!--
+        ============================ Generate (local bank) ============================
+        Deliberately NOT permission-gated (D15 amends D3): guests and players
+        keep this tab so `import-random` keeps working for them. Without
+        `packet:create` the backend now returns an EPHEMERAL, game-only
+        packet instead of an owned DRAFT (WP-Q4); callers with `packet:create`
+        still get the D3 owned-DRAFT behavior. Gating this tab on
+        `packet:create` would silently break guest/player packet generation.
+      -->
       <mat-tab label="Generate">
         <div class="tab-content qb-content">
           <div class="qb-intro">
