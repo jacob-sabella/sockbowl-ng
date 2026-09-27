@@ -4,6 +4,7 @@
  * questions-schema.graphqls) and are hand-written (not generated) since they
  * are request-only shapes, not response shapes.
  */
+import { Packet, PacketOwner } from '../../game/models/sockbowl/packet-types.generated';
 
 export interface CreatePacketInput {
   name: string;
@@ -55,3 +56,127 @@ export interface Subcategory {
   name: string;
   category?: Category;
 }
+
+/* ------------------------------ M3 additions ------------------------------ */
+// Mirrors questions' `schema.graphqls` M3 block (plan 3.1.11).
+
+/** `PacketVisibility` (M2's enum; M3 reads/writes it but doesn't own it). */
+export type PacketVisibility = 'DRAFT' | 'PUBLISHED';
+
+/** `IssueSeverity`. */
+export type IssueSeverity = 'ERROR' | 'WARNING' | 'INFO';
+
+/** `ValidationIssue`. */
+export interface ValidationIssue {
+  severity: IssueSeverity;
+  code: string;
+  message: string;
+  tossupId?: string | null;
+  bonusId?: string | null;
+}
+
+/** `PacketValidation`. `playable` is true exactly when there are no ERROR issues. */
+export interface PacketValidation {
+  playable: boolean;
+  tossupCount: number;
+  bonusCount: number;
+  issues: ValidationIssue[];
+}
+
+/** `PacketFilter` input. */
+export interface PacketFilter {
+  mine?: boolean;
+  nameContains?: string;
+  difficultyId?: string | null;
+  visibility?: PacketVisibility;
+  playableOnly?: boolean;
+}
+
+/** `PacketSummary`, the answer-free, paginated list projection (PB-19). */
+export interface PacketSummary {
+  id: string;
+  name: string;
+  difficulty?: Difficulty | null;
+  owner?: PacketOwner | null;
+  visibility: PacketVisibility;
+  version: number;
+  tossupCount: number;
+  bonusCount: number;
+  playable: boolean;
+}
+
+/** `PacketPage`. */
+export interface PacketPage {
+  items: PacketSummary[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+/** `PacketExportFormat`. Only PLAINTEXT exists in M3. */
+export type PacketExportFormat = 'PLAINTEXT';
+
+/** `ImportPacketInput`. `dryRun` defaults to true server-side; callers should pass it explicitly. */
+export interface ImportPacketInput {
+  text: string;
+  name?: string | null;
+  difficultyId?: string | null;
+  dryRun?: boolean;
+  skipInvalid?: boolean;
+}
+
+/** `ImportIssue`. */
+export interface ImportIssue {
+  severity: IssueSeverity;
+  line?: number | null;
+  message: string;
+}
+
+export interface ParsedBonusPart {
+  line: number;
+  question: string;
+  answer: string;
+}
+
+export interface ParsedTossup {
+  number?: number | null;
+  line: number;
+  question: string;
+  answer: string;
+  categoryTag?: string | null;
+  subcategory?: Subcategory | null;
+}
+
+export interface ParsedBonus {
+  number?: number | null;
+  line: number;
+  preamble?: string | null;
+  parts: ParsedBonusPart[];
+  categoryTag?: string | null;
+  subcategory?: Subcategory | null;
+}
+
+/** `ParsedPacket`, the dry-run preview of an import before anything is committed. */
+export interface ParsedPacket {
+  suggestedName?: string | null;
+  tossups: ParsedTossup[];
+  bonuses: ParsedBonus[];
+}
+
+/** `ImportPacketResult`. `packet` is only set when `committed` is true. */
+export interface ImportPacketResult {
+  committed: boolean;
+  packet?: { id: string } | null;
+  parsed: ParsedPacket;
+  issues: ImportIssue[];
+}
+
+/**
+ * A packet as returned to an authenticated authoring caller: the base
+ * `Packet` shape plus the M3 fields every authoring read now carries.
+ */
+export type AuthoringPacket = Packet & {
+  version: number;
+  visibility: PacketVisibility;
+  validation: PacketValidation;
+};
