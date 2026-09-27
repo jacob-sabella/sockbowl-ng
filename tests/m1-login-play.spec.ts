@@ -4,6 +4,12 @@ import { test, expect } from '@playwright/test';
 // CREATE_DEMO_ACCOUNTS=true) and play at least one tossup solo. Proves the
 // full authenticated flow — navbar Sign In -> Keycloak hosted login page ->
 // redirect back authenticated -> solo practice game -> buzz -> answer -> verdict.
+//
+// Credentials come from env vars so the well-known demo password isn't
+// hardcoded here; they default to the seeded demo account's values.
+const E2E_USER = process.env.E2E_USER || 'player2';
+const E2E_PASSWORD = process.env.E2E_PASSWORD || 'demo123';
+
 test('Demo user logs in via Keycloak and plays a solo tossup', async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
   await page.goto('/game-session');
@@ -14,8 +20,8 @@ test('Demo user logs in via Keycloak and plays a solo tossup', async ({ page }) 
 
   // Keycloak's hosted login page (authorization code flow redirect)
   await page.waitForURL('**/realms/sockbowl/protocol/openid-connect/auth**', { timeout: 20_000 });
-  await page.locator('#username').fill('player2');
-  await page.locator('#password').fill('demo123');
+  await page.locator('#username').fill(E2E_USER);
+  await page.locator('#password').fill(E2E_PASSWORD);
   await page.locator('#kc-login').click();
 
   // Back on the app, authenticated as the demo player
@@ -56,4 +62,5 @@ test('Demo user logs in via Keycloak and plays a solo tossup', async ({ page }) 
   await page.locator('.answer-form button[type="submit"]').click();
 
   await expect(page.locator('.answer-section')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.verdict-line')).toBeVisible({ timeout: 15_000 });
 });
