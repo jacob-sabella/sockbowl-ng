@@ -10,6 +10,7 @@ import {
 } from "../../models/sockbowl/sockbowl-interfaces";
 import {AuthService} from "../../../core/auth/auth.service";
 import {environment} from "../../../../environments/environment";
+import {saveGameJoin} from "../../services/game-join-storage";
 
 
 @Component({
@@ -134,24 +135,29 @@ export class GameSessionComponent {
     });
   }
 
+  /**
+   * Join the game by code. A signed-in user joins as their account
+   * (`join-game-session-authenticated`, which binds the seat to the Keycloak
+   * id so ownership and bans apply); everyone else joins as a guest. The seat's
+   * credentials go to sessionStorage, never the URL: the route carries only
+   * the session and seat ids, and the socket authenticates at CONNECT with the
+   * guest's playerSecret or a fresh access token.
+   */
   submitJoinGame(): void {
-    // We always join via the guest endpoint (the player is a guest in the game
-    // session; login adds per-account features over HTTP, not in-game identity).
-    // IMPORTANT: do NOT pass the JWT to the game WebSocket — with backend auth
-    // enabled, the session resolver rejects a JWT presented for a guest player
-    // ("Cannot use authentication token for guest player session"), which blanks
-    // the game canvas. Guests authenticate the socket with playerSecret only.
-    // The de-dup HTTP calls still carry the bearer via the auth interceptor.
-    this.gameSessionService.joinGame(this.joinGameRequest).subscribe(response => {
-      const navigationParams: any = {
-        "gameSessionId": response.gameSessionId,
-        "playerSecret": response.playerSecret,
-        "playerSessionId": response.playerSessionId
-      };
+    const authenticated = this.isAuthenticated;
+    const join$ = authenticated
+      ? this.gameSessionService.joinGameAuthenticated(this.joinGameRequest)
+      : this.gameSessionService.joinGame(this.joinGameRequest);
 
-      this.router.navigate(["/game", navigationParams]);
+    join$.subscribe(response => {
+      saveGameJoin(response.gameSessionId, authenticated
+        ? {playerSessionId: response.playerSessionId, authenticated: true}
+        : {playerSessionId: response.playerSessionId, playerSecret: response.playerSecret, authenticated: false});
+
+      this.router.navigate(["/game", {
+        "gameSessionId": response.gameSessionId,
+        "playerSessionId": response.playerSessionId
+      }]);
     });
   }
-
-  
 }
