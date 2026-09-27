@@ -2,6 +2,7 @@
 declare global {
   interface Window {
     __env?: {
+      /** Origin of the game backend REST API (bans, users, auth/me). */
       apiBaseUrl: string;
       sockbowlGameApiUrl: string;
       sockbowlQuestionsApiUrl: string;
@@ -15,6 +16,8 @@ declare global {
         responseType: string;
         showDebugInformation: boolean;
         requireHttps: boolean;
+        /** Where Keycloak sends the browser after end-session (RP-initiated logout). */
+        postLogoutRedirectUri?: string;
       };
     };
   }
@@ -35,9 +38,29 @@ const runtimeConfig = window.__env || {
     responseType: 'code',
     showDebugInformation: true,
     requireHttps: false,
+    postLogoutRedirectUri: window.location.origin + '/game-session',
   },
 };
 
+/**
+ * Origin of a URL, or '' if it cannot be parsed. Used to derive `apiBaseUrl`
+ * from `sockbowlGameApiUrl` when an older runtime config (generated before
+ * `apiBaseUrl` existed) is served; nothing downstream falls back to localhost.
+ */
+function originOf(url: string | undefined): string {
+  try {
+    return url ? new URL(url).origin : '';
+  } catch {
+    return '';
+  }
+}
+
 export const environment = {
   ...runtimeConfig,
+  apiBaseUrl: runtimeConfig.apiBaseUrl || originOf(runtimeConfig.sockbowlGameApiUrl),
+  keycloak: {
+    ...runtimeConfig.keycloak,
+    postLogoutRedirectUri:
+      runtimeConfig.keycloak.postLogoutRedirectUri || window.location.origin + '/game-session',
+  },
 };

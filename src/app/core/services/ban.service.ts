@@ -16,7 +16,7 @@ export class BanService {
   private http = inject(HttpClient);
 
   private readonly baseUrl: string =
-    `${environment.apiBaseUrl || 'http://localhost:7000'}/api/v1/admin/bans`;
+    `${environment.apiBaseUrl}/api/v1/admin/bans`;
 
   listBans(): Observable<Ban[]> {
     return this.http.get<Ban[]>(this.baseUrl);
