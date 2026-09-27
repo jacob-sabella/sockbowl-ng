@@ -1,0 +1,35 @@
+.stomp-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 16px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface, transparent));
+  color: var(--text-primary);
+
+  &.fatal {
+    border-color: var(--error);
+    background: color-mix(in srgb, var(--error) 12%, var(--surface, transparent));
+
+    > mat-icon {
+      color: var(--error);
+    }
+  }
+
+  > mat-icon {
+    flex: none;
+    color: var(--warning);
+  }
+
+  .text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .retry {
+    margin-left: 4px;
+    color: var(--text-secondary);
+  }
+}

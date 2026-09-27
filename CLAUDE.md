@@ -29,7 +29,9 @@ The application uses a three-layer service architecture for managing game state 
    - Low-level WebSocket management using STOMP.js over WebSocket
    - Connects to backend at `environment.wsUrl`
    - Subscribes to two queues: `/queue/event/{gameSessionId}/{playerSessionId}` and `/queue/event/{gameSessionId}`
-   - Publishes messages to `/app/game/*` destinations with headers (gameSessionId, playerSecret, playerSessionId)
+   - Authenticates in the CONNECT frame only (built in `beforeConnect`): `playerSecret` for a guest seat, or a fresh `Authorization: Bearer` token from `AuthService.getFreshAccessToken()` for a seat joined as the signed-in account
+   - Publishes messages to `/app/game/*` destinations with headers (gameSessionId, playerSessionId), plus `Authorization` once after a token refresh (`AuthService.tokenChanges$`)
+   - Also subscribes to `/user/queue/errors`; ERROR-frame codes and those errors surface on `errors$` (fatal codes stop reconnecting; see M2 plan section 2.5)
    - Exposes `messageObservable$` for raw message stream
 
 2. **GameMessageService** (`src/app/game/services/game-message.service.ts`)
@@ -85,7 +87,7 @@ Production overrides in `src/environments/environment.prod.ts`.
 
 Two main routes (see `app-routing.module.ts`):
 - `/game-session` - Lobby/session join (default route)
-- `/game` - Active game canvas
+- `/game` - Active game canvas. Its matrix params carry only `gameSessionId` and `playerSessionId`; the lobby stores the seat's credentials in `sessionStorage['sockbowl.join.<gameSessionId>']` (see `game-join-storage.ts`), and a legacy `playerSecret` param is moved there and scrubbed from the URL. Never put an access token in route params.
 
 ## Key Patterns
 

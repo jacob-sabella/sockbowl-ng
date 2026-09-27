@@ -20,6 +20,9 @@ import { PresentationConnectionService } from '../../services/presentation-conne
 import { CastStateService } from '../../services/cast-state.service';
 import { PresentationConnectionState } from '../../models/cast-interfaces';
 
+/** How long the proctor preview waits for the server to resend the packet. */
+const PREVIEW_TIMEOUT_MS = 5000;
+
 @Component({
     selector: 'app-game-config',
     templateUrl: './game-config.component.html',
@@ -58,9 +61,14 @@ export class GameConfigComponent implements OnInit {
 
   @ViewChild('packetSearchModal') packetSearchModal!: TemplateRef<any>;
 
+  /** A preview was asked for while the session lacked the questions. */
+  private previewPending = false;
+  private previewTimer: ReturnType<typeof setTimeout> | null = null;
+
   private destroyRef = inject(DestroyRef);
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.clearPreviewTimer());
     this.gameSessionObs = this.gameStateService.gameSession$;
     this.castAvailable$ = this.presentationConnectionService.isAvailable$;
     this.castConnectionState$ = this.presentationConnectionService.connectionState$;
@@ -78,26 +86,39 @@ export class GameConfigComponent implements OnInit {
         this.readingWordsPerSecond = gameSession.gameSettings.timerSettings.readingWordsPerSecond;
       }
 
-      // Fetch full packet data with bonuses if packet is set AND we don't already have it
-      if (gameSession.currentMatch?.packet?.id &&
-          this.selectedPacketId !== gameSession.currentMatch.packet.id.toString()) {
-        const packetId = gameSession.currentMatch.packet.id.toString();
+      const sessionPacket = gameSession.currentMatch?.packet;
+      if (sessionPacket?.id && this.selectedPacketId !== sessionPacket.id.toString()) {
+        this.selectedPacketId = sessionPacket.id.toString();
+        if (GameConfigComponent.hasQuestions(sessionPacket)) {
+          // The proctor's copy of the session carries the whole packet.
+          this.selectedPacket = sessionPacket;
+        } else if (this.gameStateService.isSelfProctor()) {
+          // A packet change arrives without questions; the proctor gets the
+          // full packet from the game server, never from questions (D2).
+          this.selectedPacket = sessionPacket;
+          this.gameStateService.requestGameSession();
+        } else {
+          // Everyone else only needs packet metadata (the bonus count), and
+          // questions serves them the answer-free projection.
+          this.selectedPacket = sessionPacket;
+          this.sockbowlQuestionsService.getPacketById(this.selectedPacketId).subscribe({
+            next: (packet) => {
+              if (packet && packet.id === this.selectedPacketId) {
+                this.selectedPacket = packet;
+              }
+            },
+            error: (error) => console.error('Error fetching packet details:', error),
+          });
+        }
+      } else if (sessionPacket?.id && GameConfigComponent.hasQuestions(sessionPacket)
+          && !GameConfigComponent.hasQuestions(this.selectedPacket)) {
+        this.selectedPacket = sessionPacket;
+      }
 
-        // Fetch full packet details including bonuses
-        this.sockbowlQuestionsService.getPacketById(packetId).subscribe(
-          (packet) => {
-            if (packet) {
-              this.selectedPacket = packet;
-              this.selectedPacketId = packet.id;
-            }
-          },
-          (error) => {
-            console.error('Error fetching packet details:', error);
-            // Fallback to basic packet from session
-            this.selectedPacket = gameSession.currentMatch.packet;
-            this.selectedPacketId = gameSession.currentMatch.packet.id;
-          }
-        );
+      if (this.previewPending && sessionPacket?.id && GameConfigComponent.hasQuestions(sessionPacket)) {
+        this.previewPending = false;
+        this.clearPreviewTimer();
+        this.showPreview(sessionPacket);
       }
     });
 
@@ -167,22 +188,48 @@ export class GameConfigComponent implements OnInit {
     this.gameStateService.setMatchPacket(this.packetId);
   }
 
-  /** Proctor-only: open a read-through of the set packet's questions + answers. */
+  /**
+   * Proctor-only: open a read-through of the set packet's questions and
+   * answers. The packet comes from the game session, which the game server
+   * sends in full only to the proctor; the questions service is never asked
+   * for answers (D2). If this copy of the session lacks the questions (a
+   * packet change arrives without them), ask the server to resend the session
+   * and open the preview when it lands.
+   */
   openPacketPreview(): void {
-    const id = this.gameSession?.currentMatch?.packet?.id;
-    if (!id) return;
-    const open = (packet: Packet) =>
-      this.dialog.open(PacketPreviewComponent, {
-        width: '760px', maxWidth: '94vw', panelClass: 'preview-dialog', data: packet
-      });
-    // selectedPacket is usually the full packet already; fetch fresh if it lacks questions.
-    if (this.selectedPacket?.tossups?.length) {
-      open(this.selectedPacket);
-    } else {
-      this.sockbowlQuestionsService.getPacketById(id.toString()).subscribe(packet => {
-        if (packet) { this.selectedPacket = packet; open(packet); }
-      });
+    const packet = this.gameSession?.currentMatch?.packet;
+    if (!packet?.id) return;
+    if (GameConfigComponent.hasQuestions(packet)) {
+      this.showPreview(packet);
+      return;
     }
+    this.previewPending = true;
+    this.clearPreviewTimer();
+    this.previewTimer = setTimeout(() => {
+      if (this.previewPending) {
+        this.previewPending = false;
+        this.snack.open('The packet preview is not available right now.', 'Dismiss', { duration: 4000 });
+      }
+    }, PREVIEW_TIMEOUT_MS);
+    this.gameStateService.requestGameSession();
+  }
+
+  private showPreview(packet: Packet): void {
+    this.dialog.open(PacketPreviewComponent, {
+      width: '760px', maxWidth: '94vw', panelClass: 'preview-dialog', data: packet
+    });
+  }
+
+  private clearPreviewTimer(): void {
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = null;
+    }
+  }
+
+  /** Whether a packet carries its questions (not just an id, name and count). */
+  private static hasQuestions(packet: Packet | null | undefined): packet is Packet {
+    return Array.isArray(packet?.tossups) && packet.tossups.some(t => !!t);
   }
 
   openPacketSearch(): void {

@@ -1,7 +1,8 @@
 import {GameWebSocketService} from "./game-web-socket.service";
 import {BehaviorSubject, Observable} from "rxjs";
 import { Injectable, inject } from "@angular/core";
-import {SockbowlInMessage} from "../models/sockbowl/sockbowl-interfaces";
+import {SockbowlInMessage, StompError} from "../models/sockbowl/sockbowl-interfaces";
+import {SocketCredentials} from "./game-web-socket.service";
 
 /**
  * GameMessageService
@@ -51,19 +52,30 @@ export class GameMessageService {
     }
   }
 
-  /**
-   * Constructor
-   *
-   * Initializes the GameMessageService instance and sets up subscriptions to the GameWebSocketService.
-   *
-   * @param gameSessionId
-   * @param playerSecret
-   * @param playerSessionId
-   * @param accessToken Optional JWT access token for authenticated users
-   */
-  public initialize(gameSessionId: string, playerSecret: string, playerSessionId: string, accessToken?: string) {
+  /** STOMP errors (fatal ERROR frames and non-fatal `/user/queue/errors`). */
+  public get errors$(): Observable<StompError> {
+    return this.gameWebSocketService.errors$;
+  }
 
-    this.gameWebSocketService.initialize(gameSessionId, playerSecret, playerSessionId, accessToken)
+  private messagesSubscribed = false;
+
+  /**
+   * Opens the game socket for a seat and starts dispatching its messages.
+   *
+   * @param gameSessionId the game session
+   * @param playerSessionId the player's seat
+   * @param credentials `playerSecret` for a guest seat; empty for a seat bound
+   *   to the signed-in account (the socket uses a fresh access token)
+   */
+  public initialize(gameSessionId: string, playerSessionId: string, credentials: SocketCredentials = {}) {
+
+    this.gameWebSocketService.initialize(gameSessionId, playerSessionId, credentials);
+
+    // Subscribe once: the message stream outlives reconnects and re-initializes.
+    if (this.messagesSubscribed) {
+      return;
+    }
+    this.messagesSubscribed = true;
 
     // Subscribe to the WebSocket message observable exposed by GameWebSocketService
     this.gameWebSocketService.messageObservable$.subscribe({

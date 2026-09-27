@@ -1,5 +1,5 @@
 import { createGame, joinByCode } from '../harness/rest.js';
-import { SockbowlBot } from '../harness/bot.js';
+import { SockbowlBot, StompConnectError } from '../harness/bot.js';
 
 // Proves the harness speaks the protocol: create a game, join it, connect over
 // STOMP, and read back the live session state.
@@ -11,7 +11,7 @@ console.log('✓ joined as host, playerSessionId =', host.playerSessionId.slice(
 
 const bot = new SockbowlBot('HostBot', host.gameSessionId, host.playerSecret, host.playerSessionId);
 await bot.connect();
-console.log('✓ STOMP connected');
+console.log('✓ STOMP connected (credentials in the CONNECT frame only)');
 
 const gs = await bot.waitFor((g) => !!g.gameSettings, 8000, 'initial session');
 console.log('✓ received session state:');
@@ -20,5 +20,24 @@ console.log('    players    :', gs.playerList?.length);
 console.log('    teams      :', gs.teamList?.map((t: any) => `${t.teamName}(${t.teamId.slice(0, 6)})`).join(', '));
 
 bot.disconnect();
+
+// M2 STOMP contract: a CONNECT with the wrong secret is refused with a typed
+// ERROR frame. Skip with SOCKBOWL_SMOKE_SKIP_AUTH_PROBE=1 against a pre-M2 server.
+if (process.env.SOCKBOWL_SMOKE_SKIP_AUTH_PROBE !== '1') {
+  const intruder = new SockbowlBot('Intruder', host.gameSessionId, 'not-the-secret', host.playerSessionId);
+  try {
+    await intruder.connect();
+    intruder.disconnect();
+    console.error('✗ CONNECT with a wrong playerSecret was accepted');
+    process.exit(1);
+  } catch (e) {
+    if (!(e instanceof StompConnectError) || e.stompError.code !== 'INVALID_CREDENTIALS') {
+      console.error('✗ wrong-secret CONNECT failed without INVALID_CREDENTIALS:', e);
+      process.exit(1);
+    }
+    console.log('✓ wrong-secret CONNECT refused with', e.stompError.code);
+  }
+}
+
 console.log('\nSMOKE OK');
 process.exit(0);

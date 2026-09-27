@@ -1,0 +1,14 @@
+@if (visible()) {
+  <div class="stomp-error-banner" [class.fatal]="fatal()" role="alert" data-testid="stomp-error-banner">
+    <mat-icon aria-hidden="true">{{ fatal() ? 'error' : 'warning' }}</mat-icon>
+    <span class="text">
+      {{ text() }}
+      @if (retryAfterSeconds(); as seconds) {
+        <span class="retry">Try again in {{ seconds }}s.</span>
+      }
+    </span>
+    <button mat-icon-button type="button" aria-label="Dismiss" (click)="dismiss()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+}

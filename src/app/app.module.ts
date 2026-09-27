@@ -50,6 +50,7 @@ import { AdminBansComponent } from './structure/components/admin-bans/admin-bans
 import { AdminHomeComponent } from './structure/components/admin-home/admin-home.component';
 import { PacketListComponent } from './packets/components/packet-list/packet-list.component';
 import { PacketBuilderComponent } from './packets/components/packet-builder/packet-builder.component';
+import { StompErrorBannerComponent } from './game/components/stomp-error-banner/stomp-error-banner.component';
 
 @NgModule({ declarations: [
         AppComponent,
@@ -99,6 +100,7 @@ import { PacketBuilderComponent } from './packets/components/packet-builder/pack
         MatTabsModule,
         MatAutocompleteModule,
         MatMenuModule,
+        StompErrorBannerComponent,
         // OAuth2/OIDC Module
         OAuthModule.forRoot(),
         // PWA service worker — enabled only in production builds. Registers
