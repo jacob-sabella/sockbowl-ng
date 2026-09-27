@@ -44,6 +44,7 @@ import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
 import {MatTabsModule} from "@angular/material/tabs";
 import {MatAutocompleteModule} from "@angular/material/autocomplete";
 import {MatMenuModule} from "@angular/material/menu";
+import {MatPaginatorModule} from "@angular/material/paginator";
 import { ProfileComponent } from './structure/components/profile/profile.component';
 import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
 import { AdminBansComponent } from './structure/components/admin-bans/admin-bans.component';
@@ -111,6 +112,7 @@ import { AdminTaxonomyComponent } from './structure/components/admin-taxonomy/ad
         MatTabsModule,
         MatAutocompleteModule,
         MatMenuModule,
+        MatPaginatorModule,
         DragDropModule,
         StompErrorBannerComponent,
         // OAuth2/OIDC Module

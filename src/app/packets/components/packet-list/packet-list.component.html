@@ -4,12 +4,18 @@
       <mat-icon aria-hidden="true">edit_note</mat-icon>
       Packet Builder
     </h1>
-    @if (auth.hasPermission('packet:create')) {
-      <button mat-raised-button class="packet-list__new-btn" (click)="toggleCreateForm()">
-        <mat-icon aria-hidden="true">add</mat-icon>
-        New Packet
-      </button>
-    }
+    <div class="packet-list__header-actions">
+      @if (auth.hasPermission('packet:create')) {
+        <button mat-stroked-button class="packet-list__import-btn" (click)="openImportDialog()">
+          <mat-icon aria-hidden="true">upload_file</mat-icon>
+          Import
+        </button>
+        <button mat-raised-button class="packet-list__new-btn" (click)="toggleCreateForm()">
+          <mat-icon aria-hidden="true">add</mat-icon>
+          New Packet
+        </button>
+      }
+    </div>
   </div>
 
   @if (showCreateForm) {
@@ -41,47 +47,122 @@
 
   <mat-card class="packet-list__card">
     <mat-card-content>
-      <div class="packet-list__search">
+      <div class="packet-list__filters">
         <mat-form-field appearance="outline" class="packet-list__search-field">
           <mat-label>Search packets by name</mat-label>
-          <input matInput [(ngModel)]="searchQuery" (keyup.enter)="search()" />
+          <input
+            matInput
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchInput($event)"
+            data-testid="packet-search-input"
+          />
           <mat-icon matPrefix aria-hidden="true">search</mat-icon>
         </mat-form-field>
-        <button mat-stroked-button (click)="search()" [disabled]="searching">
-          Search
-        </button>
-      </div>
 
-      <div class="packet-list__filter">
-        <mat-checkbox [(ngModel)]="showMineOnly">Show my packets only</mat-checkbox>
+        <mat-form-field appearance="outline" class="packet-list__difficulty-field">
+          <mat-label>Difficulty</mat-label>
+          <mat-select
+            [(ngModel)]="selectedDifficultyId"
+            (selectionChange)="onDifficultyFilterChange()"
+          >
+            <mat-option [value]="null">Any difficulty</mat-option>
+            @for (d of difficulties; track d.id) {
+              <mat-option [value]="d.id">{{ d.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-checkbox
+          class="packet-list__mine"
+          [(ngModel)]="showMineOnly"
+          (ngModelChange)="onMineToggle()"
+        >
+          My packets only
+        </mat-checkbox>
       </div>
 
       @if (loading) {
         <div class="packet-list__status">
           <mat-spinner diameter="32"></mat-spinner>
         </div>
-      } @else if (filteredPackets.length === 0) {
+      } @else if (packets.length === 0) {
         <p class="packet-list__empty">No packets found.</p>
       } @else {
         <div class="packet-list__items">
-          @for (packet of filteredPackets; track packet.id) {
+          @for (packet of packets; track packet.id) {
             <div class="packet-list__item">
               <div class="packet-list__item-info">
                 <span class="packet-list__item-name">{{ packet.name }}</span>
+                <span
+                  class="packet-list__item-chip packet-list__item-chip--visibility"
+                  [class.packet-list__item-chip--draft]="packet.visibility === 'DRAFT'"
+                >
+                  {{ packet.visibility === 'DRAFT' ? 'Draft' : 'Published' }}
+                </span>
+                <span
+                  class="packet-list__item-chip packet-list__item-chip--playable"
+                  [class.packet-list__item-chip--unplayable]="!packet.playable"
+                >
+                  {{ packet.playable ? 'Playable' : 'Not playable' }}
+                </span>
                 @if (packet.difficulty?.name) {
-                  <span class="packet-list__item-chip">{{ packet.difficulty.name }}</span>
+                  <span class="packet-list__item-chip">{{ packet.difficulty?.name }}</span>
                 }
+                <span class="packet-list__item-counts">
+                  {{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses
+                </span>
                 <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
               </div>
               <div class="packet-list__item-actions">
                 @if (auth.hasPermission('packet:update') && canManage(packet)) {
-                  <button mat-button [routerLink]="['/packets', packet.id, 'edit']" aria-label="Edit packet">
+                  <button
+                    mat-icon-button
+                    [routerLink]="['/packets', packet.id, 'edit']"
+                    aria-label="Edit packet"
+                    matTooltip="Edit"
+                  >
                     <mat-icon aria-hidden="true">edit</mat-icon>
-                    Edit
+                  </button>
+                }
+                <button
+                  mat-icon-button
+                  [disabled]="!packet.playable"
+                  aria-label="Play test packet"
+                  matTooltip="Play test"
+                  (click)="playTest(packet)"
+                >
+                  <mat-icon aria-hidden="true">play_arrow</mat-icon>
+                </button>
+                @if (auth.hasPermission('packet:create') && canManage(packet)) {
+                  <button
+                    mat-icon-button
+                    [disabled]="busyIds.has(packet.id)"
+                    aria-label="Duplicate packet"
+                    matTooltip="Duplicate"
+                    (click)="duplicatePacket(packet)"
+                  >
+                    <mat-icon aria-hidden="true">content_copy</mat-icon>
+                  </button>
+                }
+                @if (canManage(packet)) {
+                  <button
+                    mat-icon-button
+                    [disabled]="busyIds.has(packet.id)"
+                    aria-label="Export packet as plaintext"
+                    matTooltip="Export .txt"
+                    (click)="exportPacket(packet)"
+                  >
+                    <mat-icon aria-hidden="true">download</mat-icon>
                   </button>
                 }
                 @if (auth.hasPermission('packet:delete') && canManage(packet)) {
-                  <button mat-icon-button color="warn" aria-label="Delete packet" (click)="deletePacket(packet)">
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    aria-label="Delete packet"
+                    matTooltip="Delete"
+                    (click)="deletePacket(packet)"
+                  >
                     <mat-icon aria-hidden="true">delete</mat-icon>
                   </button>
                 }
@@ -89,6 +170,15 @@
             </div>
           }
         </div>
+
+        <mat-paginator
+          [length]="total"
+          [pageIndex]="pageIndex"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="onPageChange($event)"
+          aria-label="Select page of packets"
+        ></mat-paginator>
       }
     </mat-card-content>
   </mat-card>

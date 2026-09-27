@@ -1,8 +1,169 @@
 <h2 mat-dialog-title>Import a packet</h2>
-<mat-dialog-content>
-  <!-- TODO(N4): paste/.txt step, dry-run preview (importPacket dryRun:true), issues by severity, then commit. -->
-  <p>Import is coming soon.</p>
+
+<mat-dialog-content class="import-dialog">
+  @if (step === 'input') {
+    <div class="import-dialog__input-step">
+      <p class="import-dialog__hint">
+        Paste ACF/NAQT-style plaintext, or upload a <code>.txt</code> file (up to {{ maxBytes / 1024 }} KiB).
+      </p>
+
+      <div class="import-dialog__upload">
+        <button mat-stroked-button type="button" (click)="fileInput.click()">
+          <mat-icon aria-hidden="true">upload_file</mat-icon>
+          Choose .txt file
+        </button>
+        <input
+          #fileInput
+          type="file"
+          accept=".txt,text/plain"
+          hidden
+          data-testid="import-file-input"
+          (change)="onFileSelected($event)"
+        />
+        @if (selectedFileName) {
+          <span class="import-dialog__filename">{{ selectedFileName }}</span>
+        }
+      </div>
+
+      @if (fileError) {
+        <p class="import-dialog__error" data-testid="import-file-error">{{ fileError }}</p>
+      }
+
+      <mat-form-field appearance="outline" class="import-dialog__field">
+        <mat-label>Packet text</mat-label>
+        <textarea
+          matInput
+          rows="10"
+          [(ngModel)]="text"
+          data-testid="import-text-area"
+          placeholder="1. This is a tossup question...&#10;ANSWER: The answer"
+        ></textarea>
+      </mat-form-field>
+
+      @if (textTooLarge) {
+        <p class="import-dialog__error">
+          That text is {{ (textByteLength / 1024).toFixed(1) }} KiB, over the {{ maxBytes / 1024 }} KiB limit.
+        </p>
+      }
+
+      <div class="import-dialog__meta">
+        <mat-form-field appearance="outline" class="import-dialog__field">
+          <mat-label>Name</mat-label>
+          <input matInput [(ngModel)]="name" placeholder="Prefilled from the parsed packet" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="import-dialog__field">
+          <mat-label>Difficulty</mat-label>
+          <mat-select [(ngModel)]="difficultyId">
+            <mat-option [value]="null">None</mat-option>
+            @for (d of difficulties; track d.id) {
+              <mat-option [value]="d.id">{{ d.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+  } @else {
+    <div class="import-dialog__preview-step" data-testid="import-preview">
+      <div class="import-dialog__counts">
+        <span class="import-dialog__count-chip">{{ result?.parsed?.tossups?.length ?? 0 }} tossups</span>
+        <span class="import-dialog__count-chip">{{ result?.parsed?.bonuses?.length ?? 0 }} bonuses</span>
+      </div>
+
+      @if ((result?.issues?.length ?? 0) > 0) {
+        <div class="import-dialog__issues" data-testid="import-issues">
+          @for (severity of severityOrder; track severity) {
+            @for (issue of issuesBySeverity(severity); track $index) {
+              <div class="import-dialog__issue" [class]="'import-dialog__issue--' + severity.toLowerCase()">
+                <mat-icon aria-hidden="true">
+                  {{ severity === 'ERROR' ? 'error' : severity === 'WARNING' ? 'warning' : 'info' }}
+                </mat-icon>
+                <span>
+                  @if (issue.line !== null && issue.line !== undefined) {
+                    <strong>Line {{ issue.line }}:</strong>
+                  }
+                  {{ issue.message }}
+                </span>
+              </div>
+            }
+          }
+        </div>
+      } @else {
+        <p class="import-dialog__no-issues">No issues found.</p>
+      }
+
+      <mat-accordion class="import-dialog__parsed">
+        @if ((result?.parsed?.tossups?.length ?? 0) > 0) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Tossups ({{ result?.parsed?.tossups?.length }})</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="import-dialog__parsed-list">
+              @for (t of result?.parsed?.tossups; track $index) {
+                <div class="import-dialog__parsed-item">
+                  <span class="import-dialog__parsed-q">{{ t.question }}</span>
+                  <span class="import-dialog__parsed-a">ANSWER: {{ t.answer }}</span>
+                </div>
+              }
+            </div>
+          </mat-expansion-panel>
+        }
+        @if ((result?.parsed?.bonuses?.length ?? 0) > 0) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Bonuses ({{ result?.parsed?.bonuses?.length }})</mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="import-dialog__parsed-list">
+              @for (b of result?.parsed?.bonuses; track $index) {
+                <div class="import-dialog__parsed-item">
+                  <span class="import-dialog__parsed-q">{{ b.preamble }}</span>
+                  <span class="import-dialog__parsed-a">{{ b.parts.length }} parts</span>
+                </div>
+              }
+            </div>
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+
+      @if (hasErrorIssues) {
+        <mat-checkbox [(ngModel)]="skipInvalid" data-testid="import-skip-invalid">
+          Skip invalid items and import the rest
+        </mat-checkbox>
+      }
+    </div>
+  }
 </mat-dialog-content>
+
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Close</button>
+  <button mat-button (click)="cancel()">Cancel</button>
+  @if (step === 'input') {
+    <button
+      mat-raised-button
+      color="primary"
+      [disabled]="!canPreview"
+      data-testid="import-preview-btn"
+      (click)="preview()"
+    >
+      @if (previewing) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        Preview
+      }
+    </button>
+  } @else {
+    <button mat-button (click)="backToInput()">Back</button>
+    <button
+      mat-raised-button
+      color="primary"
+      [disabled]="!canImport"
+      data-testid="import-commit-btn"
+      (click)="import()"
+    >
+      @if (importing) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        Import
+      }
+    </button>
+  }
 </mat-dialog-actions>

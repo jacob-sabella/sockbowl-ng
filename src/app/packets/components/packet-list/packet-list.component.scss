@@ -27,6 +27,12 @@
     }
   }
 
+  &__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   &__new-btn {
     background: var(--accent-primary) !important;
     color: #fff !important;
@@ -34,6 +40,11 @@
     &:hover {
       filter: brightness(1.06);
     }
+  }
+
+  &__import-btn {
+    color: var(--text-primary) !important;
+    border-color: var(--border-subtle) !important;
   }
 
   &__card {
@@ -62,20 +73,25 @@
     }
   }
 
-  &__search {
+  &__filters {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 16px;
   }
 
   &__search-field {
-    flex: 1 1 auto;
+    flex: 1 1 240px;
   }
 
-  &__filter {
-    margin-bottom: 12px;
+  &__difficulty-field {
+    flex: 0 1 200px;
+  }
+
+  &__mine {
     color: var(--text-muted);
+    white-space: nowrap;
   }
 
   &__status {
@@ -132,6 +148,33 @@
     white-space: nowrap;
   }
 
+  &__item-chip--visibility {
+    background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+    color: var(--text-secondary, var(--text-muted));
+    border-color: var(--border-subtle);
+  }
+
+  &__item-chip--draft {
+    background: color-mix(in srgb, var(--warning) 18%, transparent);
+    color: var(--warning);
+  }
+
+  &__item-chip--playable {
+    background: color-mix(in srgb, var(--success) 16%, transparent);
+    color: var(--success);
+  }
+
+  &__item-chip--unplayable {
+    background: color-mix(in srgb, var(--error) 16%, transparent);
+    color: var(--error);
+  }
+
+  &__item-counts {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
   &__item-owner {
     font-size: 0.8rem;
     color: var(--text-muted);
@@ -146,11 +189,16 @@
   }
 }
 
+::ng-deep .packet-list mat-paginator {
+  background: transparent;
+  color: var(--text-primary);
+}
+
 @media (max-width: 600px) {
   .packet-list {
     padding: 8px;
 
-    &__search {
+    &__filters {
       flex-direction: column;
       align-items: stretch;
     }
