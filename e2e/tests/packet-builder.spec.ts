@@ -120,7 +120,15 @@ async function pickFirstSubcategory(panel: Locator): Promise<string | null> {
   const page = panel.page();
   const select = panel.locator('.packet-builder__subcategory-field mat-select');
   await select.click();
-  const options = page.locator('.cdk-overlay-container mat-option');
+  // M3-V1 live-run fix: this Angular/CDK version's overlay for mat-select no
+  // longer wraps its panel in a `.cdk-overlay-container` div -- it uses the
+  // browser's native Popover API instead (confirmed live: a
+  // `.cdk-overlay-container mat-option` CSS locator matched 0 elements while
+  // the panel was open and fully populated; a plain `mat-option` tag locator
+  // matched 68, and role=listbox/option matched the same 68). Select by ARIA
+  // role instead, scoped to the one open listbox, matching the pattern
+  // newPacketInBuilder's difficulty picker already uses below.
+  const options = page.getByRole('listbox').getByRole('option');
   await expect(options.first()).toBeVisible({ timeout: 5000 });
   // Index 0 is always the "None" option (packet-builder.component.html); a
   // real, seeded subcategory (if any) is index 1 onward.
@@ -157,6 +165,17 @@ async function expandPanel(panel: Locator): Promise<void> {
 
 /** Best-effort CDK drag-and-drop: drags `source`'s handle onto `target`'s header. */
 async function dragOnto(page: Page, source: Locator, target: Locator): Promise<void> {
+  // M3-V1 live-run fix: this always ran right after the NG-V1-08 subcategory
+  // pick, which leaves the T1 panel expanded (its Save button is what got
+  // clicked), pushing T3's drag handle below the 900px viewport
+  // (boundingBox() showed y≈1040 live). Locator methods like .click()/.fill()
+  // auto-scroll their target into view; raw page.mouse.move() to a manually
+  // read boundingBox() does not, so the pointer landed outside the rendered
+  // viewport and every move/down/up below was a no-op -- no CDK drag classes
+  // ever appeared, confirmed live, and the order was unchanged even before
+  // the reload this test then checked. Scroll both ends into view first.
+  await source.scrollIntoViewIfNeeded();
+  await target.scrollIntoViewIfNeeded();
   const s = await source.boundingBox();
   const t = await target.boundingBox();
   if (!s || !t) throw new Error('dragOnto: missing bounding box for source or target');
@@ -167,9 +186,23 @@ async function dragOnto(page: Page, source: Locator, target: Locator): Promise<v
   await page.mouse.move(sx, sy);
   await page.mouse.down();
   await page.mouse.move(sx, sy - 15, { steps: 5 });
-  await page.mouse.move(tx, ty, { steps: 20 });
-  await page.mouse.move(tx, ty, { steps: 3 });
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(100);
+  // M3-V1 live-run fix: two big jumps straight to the target (the previous
+  // version of this helper) left CDK's drag fully engaged
+  // (cdk-drag-dragging/-placeholder/-preview all present, confirmed with a
+  // standalone repro) but never actually reordered past the target's
+  // midpoint in this environment -- CDK's drop-list sort needs several
+  // separate pointermove events along the way, each given a moment to run
+  // its own reorder pass, not just a fine-grained final approach. Walk the
+  // pointer there in ~10 waypoints instead.
+  const steps = 10;
+  for (let i = 1; i <= steps; i++) {
+    const ix = sx + (tx - sx) * (i / steps);
+    const iy = sy + (ty - sy) * (i / steps);
+    await page.mouse.move(ix, iy, { steps: 3 });
+    await page.waitForTimeout(80);
+  }
+  await page.waitForTimeout(300);
   await page.mouse.up();
   await page.waitForTimeout(300);
 }
@@ -228,6 +261,14 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
       await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/All changes saved/, {
         timeout: 10000,
       });
+      // M3-V1 live-run fix: collapse T1 again once its own save lands. Left
+      // expanded, its full editable form (question/answer/subcategory
+      // fields) is tall enough to push T3's drag handle below the viewport
+      // for the Step 3 drag below -- confirmed live (boundingBox() read
+      // y≈1040 against a 900px-tall viewport, so every mouse event in that
+      // drag landed outside the rendered page and silently did nothing). A
+      // real author would naturally collapse it too once done.
+      await t1PanelForSubcategory.locator('mat-expansion-panel-header').click(); // was open; this collapses it
     }
 
     // NG-V1-08: dirty more than one entity (the bonus's preamble and two of
@@ -261,8 +302,15 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     }
 
     // Step 4: Preview shows all 3 tossups and the bonus's 4 parts.
+    //
+    // M3-V1 live-run fix: NG-V1-01 (print) added a second, always-present
+    // `app-packet-reading-view.packet-builder__preview-print-only` sibling
+    // to this on-screen one whenever preview mode is on (see the print-only
+    // assertions below) -- an unscoped `app-packet-reading-view` locator
+    // matches both, and `toContainText` (single-string form) needs exactly
+    // one match. Scope to the on-screen instance's own class.
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
-    const preview = page.locator('app-packet-reading-view');
+    const preview = page.locator('app-packet-reading-view.packet-builder__preview-onscreen');
     await expect(preview.getByRole('tab', { name: /Tossups \(3\)/ })).toBeVisible({ timeout: 10000 });
     await expect(preview).toContainText(T1.q);
     await expect(preview).toContainText(T2.q);
