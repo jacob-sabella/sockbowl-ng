@@ -21,5 +21,5 @@
 
 <mat-dialog-actions align="end">
   <button mat-button cdkFocusInitial (click)="cancel()">Cancel</button>
-  <button mat-raised-button color="warn" (click)="confirm()">Ban user</button>
+  <button mat-raised-button color="warn" [disabled]="submitting" (click)="confirm()">Ban user</button>
 </mat-dialog-actions>

@@ -3,7 +3,15 @@
 <mat-dialog-content class="ip-ban-dialog__content">
   <mat-form-field appearance="outline" class="ip-ban-dialog__field">
     <mat-label>CIDR or IP address</mat-label>
-    <input matInput name="cidr" [(ngModel)]="cidr" required />
+    <input
+      matInput
+      name="cidr"
+      [(ngModel)]="cidr"
+      (ngModelChange)="onCidrChange()"
+      (blur)="onCidrBlur()"
+      [errorStateMatcher]="cidrErrorStateMatcher"
+      required
+    />
     @if (cidrError) {
       <mat-error>{{ cidrError }}</mat-error>
     }
@@ -26,5 +34,5 @@
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()">Cancel</button>
-  <button mat-raised-button color="warn" (click)="confirm()">Ban IP</button>
+  <button mat-raised-button color="warn" [disabled]="submitting" (click)="confirm()">Ban IP</button>
 </mat-dialog-actions>

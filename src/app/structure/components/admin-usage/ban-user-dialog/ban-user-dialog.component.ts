@@ -51,8 +51,14 @@ export class BanUserDialogComponent {
 
   reason = '';
   expirySeconds: number | null = DEFAULT_EXPIRY_SECONDS;
+  /** S5-16: guards a fast double-click on Ban user from closing the dialog (and firing the parent's HTTP call) twice. */
+  submitting = false;
 
   confirm(): void {
+    if (this.submitting) {
+      return;
+    }
+    this.submitting = true;
     const expiresAt = this.expirySeconds === null ? null : new Date(Date.now() + this.expirySeconds * 1000).toISOString();
     this.dialogRef.close({
       bannedKeycloakId: this.data.keycloakId,

@@ -61,6 +61,16 @@ describe('BanUserDialogComponent', () => {
     expect(dialogRefSpy.close).toHaveBeenCalledWith();
   });
 
+  it('a second confirm() call is a no-op once submitting (S5-16 double-submit guard)', () => {
+    configure();
+
+    component.confirm();
+    dialogRefSpy.close.calls.reset();
+    component.confirm();
+
+    expect(dialogRefSpy.close).not.toHaveBeenCalled();
+  });
+
   it('exposes the Permanent option alongside the timed choices', () => {
     configure();
     expect(component.expiryOptions).toBe(USER_BAN_EXPIRY_OPTIONS);
