@@ -63,6 +63,10 @@
                   <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
                   <span class="navbar__btn-label">Admin</span>
                 </button>
+                <button mat-button [routerLink]="['/admin/usage']" aria-label="Usage">
+                  <mat-icon aria-hidden="true">insights</mat-icon>
+                  <span class="navbar__btn-label">Usage</span>
+                </button>
               }
               @if ((userProfile$ | async) && authService.hasPermission('packet:create')) {
                 <button mat-button [routerLink]="['/packets']" aria-label="Packet Builder">

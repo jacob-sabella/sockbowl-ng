@@ -9,6 +9,7 @@ import { SockbowlQuestionsService } from '../../services/sockbowl-questions.serv
 import { OpenAiModelService } from '../../services/openai-model.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PacketSummary } from '../../../packets/models/packet-authoring.models';
+import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 
 describe('PacketSearchComponent', () => {
   let component: PacketSearchComponent;
@@ -133,6 +134,42 @@ describe('PacketSearchComponent', () => {
       expect(questions['getUsedQuestionIds']).toHaveBeenCalled();
       expect(questions['recordUsedQuestionIds']).toHaveBeenCalledOnceWith(['r1', 'r2']);
       expect(dialogClose.calls.mostRecent().args[0].id).toBe('eph-3');
+    });
+  });
+
+  describe('M4-UI-01 rate-limit cooldowns', () => {
+    it('disables the AI Generate button while the ai-generate policy cools down', () => {
+      configure(['question:generate']);
+      const rateLimitState = TestBed.inject(RateLimitStateService);
+      component.generateTopic = 'Topic';
+      component.apiKey = 'sk-test';
+      component.selectedModel = 'gpt-5';
+      fixture.detectChanges();
+
+      const button = (fixture.nativeElement as HTMLElement).querySelector('.generate-btn') as HTMLButtonElement;
+      expect(button.disabled).toBeFalse();
+
+      rateLimitState.setCooldown('ai-generate', 5);
+      fixture.detectChanges();
+      expect(button.disabled).toBeTrue();
+
+      rateLimitState.clearCooldown('ai-generate');
+      fixture.detectChanges();
+      expect(button.disabled).toBeFalse();
+    });
+
+    it('disables the bank Import button while the import policy cools down', () => {
+      configure([]);
+      const rateLimitState = TestBed.inject(RateLimitStateService);
+      component.availTossups = 5;
+      fixture.detectChanges();
+
+      const button = (fixture.nativeElement as HTMLElement).querySelector('.qb-import-btn') as HTMLButtonElement;
+      expect(button.disabled).toBeFalse();
+
+      rateLimitState.setCooldown('import', 5);
+      fixture.detectChanges();
+      expect(button.disabled).toBeTrue();
     });
   });
 });

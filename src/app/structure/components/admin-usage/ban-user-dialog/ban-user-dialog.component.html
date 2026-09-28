@@ -1,0 +1,15 @@
+<h2 mat-dialog-title>Ban user</h2>
+
+<mat-dialog-content class="ban-user-dialog__content">
+  <p class="ban-user-dialog__target">{{ data.displayName || data.keycloakId }}</p>
+
+  <mat-form-field appearance="outline" class="ban-user-dialog__field">
+    <mat-label>Reason</mat-label>
+    <input matInput name="reason" [(ngModel)]="reason" />
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-raised-button color="warn" (click)="confirm()">Ban user</button>
+</mat-dialog-actions>

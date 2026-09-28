@@ -4,7 +4,8 @@
  * questions-schema.graphqls) and are hand-written (not generated) since they
  * are request-only shapes, not response shapes.
  */
-import { Packet, PacketOwner } from '../../game/models/sockbowl/packet-types.generated';
+import { Packet } from '../../game/models/sockbowl/packet-types.generated';
+import { PacketOwner } from '../../game/models/sockbowl/packet-owner';
 
 export interface CreatePacketInput {
   name: string;

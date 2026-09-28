@@ -39,9 +39,9 @@
             mat-raised-button
             id="buzz-button"
             type="button"
-            (click)="gameStateService.sendPlayerIncomingBuzz()"
-            [disabled]="gameStateService.hasCurrentPlayerTeamBuzzed()"
-            [class.is-locked]="gameStateService.hasCurrentPlayerTeamBuzzed()"
+            (click)="onBuzzClick()"
+            [disabled]="gameStateService.hasCurrentPlayerTeamBuzzed() || buzzLocked()"
+            [class.is-locked]="gameStateService.hasCurrentPlayerTeamBuzzed() || buzzLocked()"
             [attr.aria-label]="getBuzzButtonAriaLabel()"
             class="buzz-button">
             <!-- Display appropriate text on the buzz button -->

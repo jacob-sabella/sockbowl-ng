@@ -102,11 +102,18 @@ describe('NavbarComponent', () => {
     expect(labels).not.toContain('Packet Builder');
   });
 
-  it('shows Moderation, Admin and Packets for an admin', () => {
+  it('shows Moderation, Admin, Usage and Packets for an admin', () => {
     setUp(PERMISSION_SETS['admin']);
     const labels = visibleLabels();
     expect(labels).toContain('Moderation');
     expect(labels).toContain('Admin');
+    expect(labels).toContain('Usage');
     expect(labels).toContain('Packet Builder');
+  });
+
+  it('hides the Usage link (like Admin) without admin:access', () => {
+    setUp(PERMISSION_SETS['moderator']);
+    const labels = visibleLabels();
+    expect(labels).not.toContain('Usage');
   });
 });

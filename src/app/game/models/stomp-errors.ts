@@ -12,6 +12,10 @@ export const FATAL_STOMP_CODES: ReadonlySet<string> = new Set([
   'PLAYER_NOT_IN_SESSION',
   'IDENTITY_MISMATCH',
   'FORBIDDEN_DESTINATION',
+  // M4: an IP ban is as permanent as an account ban from the client's point of
+  // view, so it joins the fatal list rather than getting the RATE_LIMITED
+  // reconnect treatment.
+  'IP_BANNED',
 ]);
 
 /**
@@ -33,6 +37,10 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
   IDENTITY_MISMATCH: 'This game seat belongs to a different account.',
   FORBIDDEN_DESTINATION: 'The game connection was refused.',
   INTERNAL: 'The game server had a problem. Reconnecting…',
+  IP_BANNED: 'Your network is temporarily blocked from playing.',
+  // RATE_LIMITED and QUOTA_EXCEEDED intentionally have no friendly override:
+  // the server's `message` already carries the specific, contextual text
+  // (which policy or metric tripped), and a static string here would hide it.
 };
 
 /** A user-facing sentence for a STOMP error (server detail as a fallback). */
@@ -42,9 +50,10 @@ export function describeStompError(error: StompError): string {
 
 /**
  * Parse a StompError from an ERROR frame or a `/user/queue/errors` message.
- * The server sends a JSON body `{code, message, retryAfterSeconds}` and the
- * code again in the `x-sockbowl-error` / `message` headers; the body wins,
- * and a bare header (or a non-JSON body) still yields the code.
+ * The server sends a JSON body `{code, message, retryAfterSeconds}` (M4 adds
+ * optional `policy`, `retryAfterMs`, `droppedDestination`) and the code again
+ * in the `x-sockbowl-error` / `message` headers; the body wins, and a bare
+ * header (or a non-JSON body) still yields the code.
  */
 export function parseStompError(body: string | undefined, headers: Record<string, string> = {}): StompError {
   let parsed: Partial<StompError> | null = null;
@@ -64,6 +73,9 @@ export function parseStompError(body: string | undefined, headers: Record<string
     || 'INTERNAL';
   return {
     ...(parsed ?? {}),
+    policy: parsed?.policy ?? null,
+    retryAfterMs: parsed?.retryAfterMs ?? null,
+    droppedDestination: parsed?.droppedDestination ?? null,
     code,
     message: parsed?.message ?? (body && !parsed ? body : null),
     retryAfterSeconds: parsed?.retryAfterSeconds ?? null,

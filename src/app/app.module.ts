@@ -16,6 +16,7 @@ import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, withXhr }
 import {MatIconModule} from "@angular/material/icon";
 import { OAuthModule } from 'angular-oauth2-oidc';
 import { AuthInterceptor } from './core/auth/auth.interceptor';
+import { RateLimitInterceptor } from './core/http/rate-limit.interceptor';
 import { NavbarComponent } from './structure/components/navbar/navbar.component';
 import {MatToolbarModule} from "@angular/material/toolbar";
 import {MatCardModule} from "@angular/material/card";
@@ -41,6 +42,7 @@ import {MatChipsModule} from "@angular/material/chips";
 import {MatSnackBarModule} from "@angular/material/snack-bar";
 import {MatTooltipModule} from "@angular/material/tooltip";
 import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
+import {MatProgressBarModule} from "@angular/material/progress-bar";
 import {MatTabsModule} from "@angular/material/tabs";
 import {MatAutocompleteModule} from "@angular/material/autocomplete";
 import {MatMenuModule} from "@angular/material/menu";
@@ -109,6 +111,7 @@ import { AdminTaxonomyComponent } from './structure/components/admin-taxonomy/ad
         MatSnackBarModule,
         MatTooltipModule,
         MatProgressSpinnerModule,
+        MatProgressBarModule,
         MatTabsModule,
         MatAutocompleteModule,
         MatMenuModule,
@@ -127,6 +130,13 @@ import { AdminTaxonomyComponent } from './structure/components/admin-taxonomy/ad
         {
             provide: HTTP_INTERCEPTORS,
             useClass: AuthInterceptor,
+            multi: true
+        },
+        // Registered after AuthInterceptor (M4-UI-01): it sees 429/503 first
+        // on the way back up, and leaves 401/403 handling to AuthInterceptor.
+        {
+            provide: HTTP_INTERCEPTORS,
+            useClass: RateLimitInterceptor,
             multi: true
         },
         provideHttpClient(withXhr(), withInterceptorsFromDi())

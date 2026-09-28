@@ -1,10 +1,107 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
+import { of, throwError } from 'rxjs';
 
 import { AdminHomeComponent } from './admin-home.component';
 import { AuthService } from '../../../core/auth/auth.service';
+import { UsageService } from '../../../core/services/usage.service';
 
 describe('AdminHomeComponent', () => {
+  let fixture: ComponentFixture<AdminHomeComponent>;
+  let component: AdminHomeComponent;
+  let usageServiceSpy: jasmine.SpyObj<UsageService>;
+
+  function configure(): void {
+    const authSpy = jasmine.createSpyObj('AuthService', ['hasPermission']);
+    authSpy.hasPermission.and.returnValue(true);
+
+    usageServiceSpy = jasmine.createSpyObj('UsageService', ['global']);
+    usageServiceSpy.global.and.returnValue(
+      of({ aiServerKey: { used: 42, limit: 200, resetsAt: null }, activeHostedSessions: 3, topGuestIps: [], rejectionsLastHour: 0 })
+    );
+
+    TestBed.configureTestingModule({
+      imports: [RouterTestingModule],
+      declarations: [AdminHomeComponent],
+      providers: [
+        { provide: AuthService, useValue: authSpy },
+        { provide: UsageService, useValue: usageServiceSpy },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(AdminHomeComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  it('links the Usage card to /admin/usage', () => {
+    configure();
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('[aria-label="Open usage and quotas"]');
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/admin/usage');
+  });
+
+  it('shows the AI budget meter once global usage loads', () => {
+    configure();
+    expect(component.globalUsage?.aiServerKey.used).toBe(42);
+    expect(component.globalUsage?.aiServerKey.limit).toBe(200);
+    const label: HTMLElement = fixture.nativeElement.querySelector('.admin-home__ai-budget-label');
+    expect(label?.textContent).toContain('42');
+    expect(label?.textContent).toContain('200');
+  });
+
+  it('shows ∞ instead of a bar for an unlimited budget', () => {
+    usageServiceSpy = jasmine.createSpyObj('UsageService', ['global']);
+    usageServiceSpy.global.and.returnValue(
+      of({ aiServerKey: { used: 5, limit: -1, resetsAt: null }, activeHostedSessions: 0, topGuestIps: [], rejectionsLastHour: 0 })
+    );
+    const authSpy = jasmine.createSpyObj('AuthService', ['hasPermission']);
+    authSpy.hasPermission.and.returnValue(true);
+    TestBed.configureTestingModule({
+      declarations: [AdminHomeComponent],
+      providers: [
+        { provide: AuthService, useValue: authSpy },
+        { provide: UsageService, useValue: usageServiceSpy },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(AdminHomeComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const label: HTMLElement = fixture.nativeElement.querySelector('.admin-home__ai-budget-label');
+    expect(label?.textContent).toContain('∞');
+    expect(component.aiBudgetPercent()).toBe(0);
+  });
+
+  it('does not crash when the global usage fetch fails', () => {
+    usageServiceSpy = jasmine.createSpyObj('UsageService', ['global']);
+    usageServiceSpy.global.and.returnValue(throwError(() => new Error('down')));
+    const authSpy = jasmine.createSpyObj('AuthService', ['hasPermission']);
+    authSpy.hasPermission.and.returnValue(true);
+    TestBed.configureTestingModule({
+      declarations: [AdminHomeComponent],
+      providers: [
+        { provide: AuthService, useValue: authSpy },
+        { provide: UsageService, useValue: usageServiceSpy },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(AdminHomeComponent);
+    component = fixture.componentInstance;
+    expect(() => fixture.detectChanges()).not.toThrow();
+    expect(component.globalUsage).toBeNull();
+  });
+});
+
+/**
+ * FIX-N2 (M2): the Bans card follows user:ban. Merged forward into M4, where
+ * the Usage card is no longer a "Coming soon" placeholder but a link
+ * (M4-AD-02) shown to every admin regardless of user:ban.
+ */
+describe('AdminHomeComponent permissions (FIX-N2)', () => {
   let fixture: ComponentFixture<AdminHomeComponent>;
   let authSpy: jasmine.SpyObj<AuthService>;
 
@@ -13,13 +110,24 @@ describe('AdminHomeComponent', () => {
     fixture.detectChanges();
   }
 
+  function cardTitles(): (string | undefined)[] {
+    const root: HTMLElement = fixture.nativeElement;
+    return Array.from(root.querySelectorAll('.admin-home__card-title')).map(el => el.textContent?.trim());
+  }
+
   beforeEach(() => {
     authSpy = jasmine.createSpyObj('AuthService', ['hasPermission']);
     authSpy.hasPermission.and.returnValue(false);
+    const usage = jasmine.createSpyObj<UsageService>('UsageService', ['global']);
+    usage.global.and.returnValue(throwError(() => new Error('not needed here')));
 
     TestBed.configureTestingModule({
+      imports: [RouterTestingModule],
       declarations: [AdminHomeComponent],
-      providers: [{ provide: AuthService, useValue: authSpy }],
+      providers: [
+        { provide: AuthService, useValue: authSpy },
+        { provide: UsageService, useValue: usage },
+      ],
       schemas: [NO_ERRORS_SCHEMA],
     });
 
@@ -32,27 +140,21 @@ describe('AdminHomeComponent', () => {
     expect(root.querySelector('.admin-home__title')?.textContent).toContain('Admin');
   });
 
-  it('shows the Usage placeholder card regardless of permissions (M4-AD-02 fills it in)', () => {
+  it('shows the Usage card regardless of user:ban', () => {
     setUp(false);
-    const root: HTMLElement = fixture.nativeElement;
-    const titles = Array.from(root.querySelectorAll('.admin-home__card-title')).map(el => el.textContent?.trim());
-    expect(titles).toContain('Usage');
-    expect(root.querySelector('.admin-home__card--disabled')?.textContent).toContain('Coming soon');
+    expect(cardTitles()).toContain('Usage');
+    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Open usage and quotas"]')).not.toBeNull();
   });
 
   it('hides the Bans card for an admin without user:ban', () => {
     setUp(false);
-    const root: HTMLElement = fixture.nativeElement;
-    const titles = Array.from(root.querySelectorAll('.admin-home__card-title')).map(el => el.textContent?.trim());
-    expect(titles).not.toContain('Bans');
-    expect(root.querySelector('a[aria-label="Open ban management"]')).toBeNull();
+    expect(cardTitles()).not.toContain('Bans');
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open ban management"]')).toBeNull();
   });
 
   it('shows a Bans link for an admin holding user:ban', () => {
     setUp(true);
-    const root: HTMLElement = fixture.nativeElement;
-    const titles = Array.from(root.querySelectorAll('.admin-home__card-title')).map(el => el.textContent?.trim());
-    expect(titles).toContain('Bans');
-    expect(root.querySelector('a[aria-label="Open ban management"]')).not.toBeNull();
+    expect(cardTitles()).toContain('Bans');
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open ban management"]')).not.toBeNull();
   });
 });

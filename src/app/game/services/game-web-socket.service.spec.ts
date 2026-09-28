@@ -5,6 +5,8 @@ import { IFrame, StompConfig } from '@stomp/stompjs';
 import {
   BASE_RECONNECT_DELAY_MS,
   GameWebSocketService,
+  RATE_LIMIT_JITTER,
+  RATE_LIMIT_STABLE_MS,
   STOMP_CLIENT_FACTORY
 } from './game-web-socket.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -42,11 +44,11 @@ class FakeStompClient {
     this.onConnect({} as IFrame);
   }
 
-  errorFrame(code: string, message = 'detail'): IFrame {
+  errorFrame(code: string, message = 'detail', retryAfterSeconds: number | null = null, policy?: string): IFrame {
     return {
       command: 'ERROR',
       headers: { message: code, 'x-sockbowl-error': code },
-      body: JSON.stringify({ code, message, retryAfterSeconds: null }),
+      body: JSON.stringify({ code, message, retryAfterSeconds, ...(policy ? { policy } : {}) }),
     } as unknown as IFrame;
   }
 
@@ -70,6 +72,7 @@ describe('GameWebSocketService', () => {
   let authService: jasmine.SpyObj<AuthService> & { tokenChanges$: Subject<string> };
   let errors: StompError[];
   let originalAuthEnabled: boolean;
+  let rateLimitJitter: jasmine.Spy<() => number>;
 
   const client = () => clients[clients.length - 1];
 
@@ -86,9 +89,13 @@ describe('GameWebSocketService', () => {
     authService.refreshToken.and.resolveTo('token-2');
     authService.whenInitialized.and.resolveTo(undefined);
 
+    rateLimitJitter = jasmine.createSpy('rateLimitJitter').and.returnValue(0);
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: authService },
+        // Deterministic by default (no jitter); individual tests can call
+        // rateLimitJitter.and.returnValue(...) to exercise the jitter math.
+        { provide: RATE_LIMIT_JITTER, useValue: rateLimitJitter },
         {
           provide: STOMP_CLIENT_FACTORY,
           useValue: (config: StompConfig) => {
@@ -302,7 +309,7 @@ describe('GameWebSocketService', () => {
     });
 
     for (const code of ['INVALID_CREDENTIALS', 'SESSION_NOT_FOUND', 'PLAYER_NOT_IN_SESSION',
-      'IDENTITY_MISMATCH', 'FORBIDDEN_DESTINATION']) {
+      'IDENTITY_MISMATCH', 'FORBIDDEN_DESTINATION', 'IP_BANNED']) {
       it(`${code} is fatal`, async () => {
         service.initialize('g1', 'p1', { playerSecret: 's' });
         await client().connect();
@@ -424,6 +431,112 @@ describe('GameWebSocketService', () => {
       expect(client().reconnectDelay).toBe(BASE_RECONNECT_DELAY_MS);
       expect(client().config.reconnectTimeMode).toBeDefined();
       expect(errors).toEqual([jasmine.objectContaining({ code: 'INTERNAL', fatal: false })]);
+    });
+  });
+
+  describe('RATE_LIMITED reconnect (M4-UI-02)', () => {
+    beforeEach(() => jasmine.clock().install());
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('reconnects at retryAfterSeconds, doubles on repeat trips, caps at 30s, and resets after 60s stable', async () => {
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      await client().connect();
+      const activations = () => client().activate.calls.count();
+      const start = activations();
+
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 5, 'stomp-flood'));
+
+      expect(client().deactivate).toHaveBeenCalledTimes(1);
+      expect(errors[errors.length - 1]).toEqual(jasmine.objectContaining({ code: 'RATE_LIMITED', fatal: false }));
+
+      jasmine.clock().tick(4999);
+      expect(activations()).toBe(start);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 1); // 5s floor from retryAfterSeconds
+      expect(client().reconnectDelay).toBe(BASE_RECONNECT_DELAY_MS);
+
+      // Trips again before proving stable: the delay doubles (5s -> 10s), ignoring the new retryAfterSeconds.
+      await client().connect();
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 1, 'stomp-flood'));
+      jasmine.clock().tick(9999);
+      expect(activations()).toBe(start + 1);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 2);
+
+      // Keeps doubling (10s -> 20s -> capped at 30s, not 40s).
+      await client().connect();
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 1, 'stomp-flood'));
+      jasmine.clock().tick(19999);
+      expect(activations()).toBe(start + 2);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 3);
+
+      await client().connect();
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 1, 'stomp-flood'));
+      jasmine.clock().tick(29999);
+      expect(activations()).toBe(start + 3);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 4); // capped at 30s
+
+      // Stays connected for the full 60s stability window: the next trip starts over at its own floor.
+      await client().connect();
+      jasmine.clock().tick(RATE_LIMIT_STABLE_MS);
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 3, 'stomp-flood'));
+      jasmine.clock().tick(2999);
+      expect(activations()).toBe(start + 4);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 5);
+    });
+
+    it('does not reset the backoff if a trip lands before the connection is stable for 60s', async () => {
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      await client().connect();
+      const activations = () => client().activate.calls.count();
+      const start = activations();
+
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 5, 'stomp-flood'));
+      jasmine.clock().tick(5000);
+      expect(activations()).toBe(start + 1);
+
+      await client().connect();
+      jasmine.clock().tick(RATE_LIMIT_STABLE_MS - 1); // one tick short of stable
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 1, 'stomp-flood'));
+
+      jasmine.clock().tick(9999); // would be 10s (doubled), not the 1s the frame asked for
+      expect(activations()).toBe(start + 1);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 2);
+    });
+
+    it('adds jitter on top of the base delay', async () => {
+      rateLimitJitter.and.returnValue(1); // max jitter: 20% on top of the 5s floor
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      await client().connect();
+      const activations = () => client().activate.calls.count();
+      const start = activations();
+
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 5, 'stomp-flood'));
+
+      jasmine.clock().tick(5999);
+      expect(activations()).toBe(start);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 1);
+    });
+
+    it('clamps the jittered delay to the 30s cap', async () => {
+      rateLimitJitter.and.returnValue(1);
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      await client().connect();
+      const activations = () => client().activate.calls.count();
+      const start = activations();
+
+      // retryAfterSeconds of 30 with max jitter would be 36s without the cap.
+      client().onStompError(client().errorFrame('RATE_LIMITED', 'slow down', 30, 'stomp-flood'));
+
+      jasmine.clock().tick(29999);
+      expect(activations()).toBe(start);
+      jasmine.clock().tick(1);
+      expect(activations()).toBe(start + 1);
     });
   });
 

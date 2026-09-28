@@ -19,14 +19,26 @@
       </a>
     }
 
-    <mat-card class="admin-home__card admin-home__card--disabled">
-      <mat-card-content class="admin-home__card-content">
-        <mat-icon aria-hidden="true">insights</mat-icon>
-        <div class="admin-home__card-body">
-          <div class="admin-home__card-title">Usage</div>
-          <div class="admin-home__card-desc">Per-user quotas and generation usage. Coming soon.</div>
-        </div>
-      </mat-card-content>
-    </mat-card>
+    <a class="admin-home__card admin-home__card-link" [routerLink]="['/admin/usage']" aria-label="Open usage and quotas">
+      <mat-card class="admin-home__card-inner">
+        <mat-card-content class="admin-home__card-content">
+          <mat-icon aria-hidden="true">insights</mat-icon>
+          <div class="admin-home__card-body">
+            <div class="admin-home__card-title">Usage</div>
+            <div class="admin-home__card-desc">Per-user quotas and generation usage.</div>
+            @if (globalUsage) {
+              <div class="admin-home__ai-budget">
+                <div class="admin-home__ai-budget-label">
+                  AI budget: {{ globalUsage.aiServerKey.used }} / {{ globalUsage.aiServerKey.limit === -1 ? '∞' : globalUsage.aiServerKey.limit }}
+                </div>
+                @if (globalUsage.aiServerKey.limit !== -1) {
+                  <mat-progress-bar mode="determinate" [value]="aiBudgetPercent()"></mat-progress-bar>
+                }
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </a>
   </div>
 </div>

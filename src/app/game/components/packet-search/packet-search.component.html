@@ -328,7 +328,7 @@
                 <button
                   mat-raised-button
                   color="accent"
-                  [disabled]="!generateTopic || !apiKey || !selectedModel"
+                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked()"
                   (click)="generateAIPacket()"
                   class="generate-btn"
                   >
@@ -634,7 +634,7 @@
               </div>
 
               <button mat-raised-button color="primary" class="qb-import-btn"
-                      [disabled]="qbImporting || availTossups === 0" (click)="generateFromBank()">
+                      [disabled]="qbImporting || availTossups === 0 || importLocked()" (click)="generateFromBank()">
                 @if (qbImporting) {
                   <mat-spinner diameter="20"></mat-spinner> <span>Generating…</span>
                 } @else {

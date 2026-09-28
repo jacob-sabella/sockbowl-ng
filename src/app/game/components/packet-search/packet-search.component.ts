@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, computed, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ImportRandomResult, SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
@@ -7,6 +7,7 @@ import { PacketPage, PacketSummary } from '../../../packets/models/packet-author
 import { Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/auth.service';
+import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 
 const EMPTY_PACKET_PAGE: PacketPage = { items: [], total: 0, page: 0, size: 0 };
 
@@ -25,8 +26,14 @@ export class PacketSearchComponent implements OnInit {
   private dialogRef = inject<MatDialogRef<PacketSearchComponent>>(MatDialogRef);
   private sockbowlQuestionsService = inject(SockbowlQuestionsService);
   private snackBar = inject(MatSnackBar);
+  private rateLimitState = inject(RateLimitStateService);
   auth = inject(AuthService);
   data = inject(MAT_DIALOG_DATA);
+
+  /** True while the `ai-generate` policy is cooling down after a 429 (M4-UI-01). */
+  readonly generateLocked = computed(() => this.rateLimitState.cooldown('ai-generate')() > 0);
+  /** True while the `import`/`import-ip` policy is cooling down after a 429 (M4-UI-01). */
+  readonly importLocked = computed(() => this.rateLimitState.cooldown('import')() > 0);
 
   // Search tab properties. Both lists are the answer-free, policy-filtered
   // PacketSummary projection (`listPackets`, PB-19), not full Packet objects;
@@ -361,14 +368,22 @@ export class PacketSearchComponent implements OnInit {
         console.error('Generation error:', error);
         this.isGenerating = false;
 
+        // A 429 (rate_limited/quota_exceeded) or 503 (limiter_unavailable) is
+        // already surfaced by the global RateLimitInterceptor, with a cooldown
+        // that disables the Generate button above; don't double the snackbar.
+        if (error.status === 429 || error.status === 503) {
+          return;
+        }
+
         // Handle different error types
         let errorMessage = 'Error generating packet. Please try again.';
         if (error.status === 400) {
           errorMessage = 'Invalid request. Please check your API key and model selection.';
         } else if (error.status === 401) {
           errorMessage = 'Invalid API key. Please check your OpenAI API key.';
-        } else if (error.status === 429) {
-          errorMessage = 'Rate limit exceeded. Please try again later.';
+        } else if (error.status === 502) {
+          // The AI provider (not our own limiter) rate-limited the server-side call.
+          errorMessage = 'The AI provider is rate-limiting requests. Please try again later.';
         } else if (error.name === 'TimeoutError') {
           errorMessage = 'Request timed out. The generation may still be processing.';
         }
@@ -677,6 +692,11 @@ export class PacketSearchComponent implements OnInit {
   private onQbImportError(err: any): void {
     this.qbImporting = false;
     console.error('packet generation error:', err);
+    // A 429 (rate_limited/quota_exceeded) or 503 is already surfaced by the
+    // global RateLimitInterceptor, with a cooldown on the Import button above.
+    if (err?.status === 429 || err?.status === 503) {
+      return;
+    }
     this.snackBar.open('Could not build a packet. Try loosening the filters.', 'Close', { duration: 5000 });
   }
 

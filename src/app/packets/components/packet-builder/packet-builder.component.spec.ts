@@ -263,7 +263,7 @@ describe('PacketBuilderComponent', () => {
     packet.tossups[0] = {
       id: 1,
       order: 0,
-      tossup: { id: 't1', question: 'Q1', answer: 'A1', remoteId: '', subcategory: { id: 'sub-1', name: 'Sub', category: { id: 'c1', name: 'Cat' } } as any }
+      tossup: { id: 't1', question: 'Q1', answer: 'A1', remoteId: '', subcategory: { id: 'sub-1', name: 'Sub', category: { id: 'c1', name: 'Cat' } } } as any
     };
     configure(packet);
     authoringSpy.updateTossup.and.returnValue(of('t1'));
