@@ -1,5 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -90,6 +91,44 @@ describe('AdminUsageComponent', () => {
     expect(usageServiceSpy.events).toHaveBeenCalledWith(100);
     expect(component.rows).toEqual([bannedRow]);
   });
+
+  it('renders the table once a genuinely async HTTP response resolves, with no second manual detectChanges (OnPush, S5-01)', fakeAsync(() => {
+    usageServiceSpy = jasmine.createSpyObj('UsageService', [
+      'list', 'detail', 'global', 'events', 'setQuotaOverride', 'resetUsage',
+    ]);
+    usageServiceSpy.list.and.returnValue(of(page).pipe(delay(1)));
+    usageServiceSpy.global.and.returnValue(
+      of({ aiServerKey: { used: 10, limit: 200, resetsAt: null }, activeHostedSessions: 2, topGuestIps: [], rejectionsLastHour: 0 }).pipe(delay(1))
+    );
+    usageServiceSpy.events.and.returnValue(of([]).pipe(delay(1)));
+    banServiceSpy = jasmine.createSpyObj('BanService', ['createBan', 'createIpBan']);
+    dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+
+    TestBed.configureTestingModule({
+      imports: [AdminUsageComponent],
+      providers: [
+        { provide: UsageService, useValue: usageServiceSpy },
+        { provide: BanService, useValue: banServiceSpy },
+        { provide: MatDialog, useValue: dialogSpy },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+      ],
+    });
+    fixture = TestBed.createComponent(AdminUsageComponent);
+    component = fixture.componentInstance;
+
+    // Mirrors production: NgZone flushes an ApplicationRef tick once the
+    // async HTTP call settles. No explicit fixture.detectChanges() is
+    // called after this point, so the assertions below only pass if the
+    // component notifies change detection itself (markForCheck/signals).
+    fixture.autoDetectChanges(true);
+    tick(1);
+
+    expect(component.rows).toEqual([bannedRow]);
+    expect(component.loading).toBeFalse();
+    const text = (fixture.nativeElement as HTMLElement).textContent || '';
+    expect(text).toContain('Jane Doe');
+    expect(text).not.toContain('No users match.');
+  }));
 
   it('shows "—" for packets when questions could not be reached (packetsOwned null)', () => {
     configure();

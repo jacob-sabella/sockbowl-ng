@@ -10,8 +10,16 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-tight);
     margin: 0;
+  }
+
+  &__lede {
+    color: var(--text-secondary);
+    margin: -8px 0 0;
   }
 
   &__card {
@@ -42,7 +50,7 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 4px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
 
   &__global-stats {
@@ -57,12 +65,13 @@
   }
 
   &__global-stat-value {
-    font-size: 1.4rem;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
   }
 
   &__global-stat-label {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     opacity: 0.7;
   }
 
@@ -74,7 +83,7 @@
 
   &__top-ips-label,
   &__side-label {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     opacity: 0.7;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -107,19 +116,19 @@
   }
 
   &__user-id {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     opacity: 0.65;
     word-break: break-all;
   }
 
   &__banned-chip {
-    background: var(--mat-sys-error-container, rgba(211, 47, 47, 0.15));
+    background: var(--mat-sys-error-container, var(--danger-surface));
     color: var(--mat-sys-error, var(--error));
   }
 
   &__override-chip {
     margin-left: 6px;
-    font-size: 0.7rem;
+    font-size: var(--text-xs);
     min-height: 20px;
   }
 
@@ -130,6 +139,12 @@
   &__detail {
     padding: 16px;
     background: var(--surface-hover);
+  }
+
+  &__detail-help {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin: 0 0 16px;
   }
 
   &__detail-grid {
@@ -147,13 +162,28 @@
   &__counter-label {
     display: flex;
     justify-content: space-between;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     margin-bottom: 4px;
   }
 
   &__counter-actions {
     display: flex;
+    justify-content: space-between;
     gap: 4px;
+  }
+
+  /* Destructive actions name the --error role directly rather than
+     Material's own `warn` palette (OWN-WORLD: components never hold a
+     colour of their own; S5-12). Kept apart from the benign "Edit quota"
+     action by `justify-content: space-between` above and `__actions`'
+     own group below. */
+  &__danger-btn {
+    background-color: var(--error) !important;
+    color: var(--on-error) !important;
+  }
+
+  &__danger-text-btn {
+    color: var(--error) !important;
   }
 
   &__side {
@@ -167,7 +197,7 @@
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     padding: 2px 0;
   }
 

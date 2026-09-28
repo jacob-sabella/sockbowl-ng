@@ -3,6 +3,7 @@
     <mat-icon aria-hidden="true">insights</mat-icon>
     Usage &amp; quotas
   </h1>
+  <p class="admin-usage__lede">The AI budget, per-user quotas, and recent rejections.</p>
 
   <!-- Global card -->
   <mat-card class="admin-usage__card">
@@ -133,6 +134,11 @@
                   } @else if (detailError) {
                     <p class="admin-usage__error">{{ detailError }}</p>
                   } @else if (detail) {
+                    <p class="admin-usage__detail-help">
+                      Tier sets each metric's default limit; an override replaces it for this user only.
+                      Daily metrics reset at UTC midnight; concurrent and owned metrics recover as sessions
+                      end or items are removed.
+                    </p>
                     <div class="admin-usage__detail-grid">
                       <div class="admin-usage__counters">
                         @for (counter of detail.counters; track counter.metric) {
@@ -155,7 +161,7 @@
                                 Edit quota
                               </button>
                               @if (counter.kind === 'daily') {
-                                <button mat-button (click)="resetUsage(row, counter.metric)">
+                                <button mat-button class="admin-usage__danger-text-btn" (click)="resetUsage(row, counter.metric)">
                                   <mat-icon>restart_alt</mat-icon>
                                   Reset
                                 </button>
@@ -182,11 +188,11 @@
                         </div>
 
                         <div class="admin-usage__actions">
-                          <button mat-raised-button color="warn" (click)="banUser(row)">
+                          <button mat-raised-button class="admin-usage__danger-btn" (click)="banUser(row)">
                             <mat-icon>gavel</mat-icon>
                             Ban user
                           </button>
-                          <button mat-button (click)="resetUsage(row)">
+                          <button mat-button class="admin-usage__danger-text-btn" (click)="resetUsage(row)">
                             <mat-icon>restart_alt</mat-icon>
                             Reset all daily
                           </button>
@@ -198,8 +204,8 @@
                             @for (event of detail.events; track $index) {
                               <div class="admin-usage__event-row">
                                 <span>{{ formatDate(event.ts) }}</span>
-                                <span>{{ event.policy }}</span>
-                                <span>{{ event.kind }}</span>
+                                <span [title]="event.policy">{{ metricLabel(event.policy) }}</span>
+                                <span [title]="event.kind">{{ kindLabel(event.kind) }}</span>
                               </div>
                             }
                           </div>
@@ -243,9 +249,9 @@
           @for (event of recentEvents; track $index) {
             <div class="admin-usage__event-row">
               <span>{{ formatDate(event.ts) }}</span>
-              <span>{{ event.svc }}</span>
-              <span>{{ event.policy }}</span>
-              <span>{{ event.kind }}</span>
+              <span [title]="event.svc">{{ svcLabel(event.svc) }}</span>
+              <span [title]="event.policy">{{ metricLabel(event.policy) }}</span>
+              <span [title]="event.kind">{{ kindLabel(event.kind) }}</span>
               <span>{{ event.sub || event.ip }}</span>
             </div>
           }

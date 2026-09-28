@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -66,6 +66,7 @@ export class AdminUsageComponent implements OnInit {
   private banService = inject(BanService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   readonly displayedColumns = ['user', 'tier', 'lastSeen', 'status', 'sessions', 'packets', 'expand'];
   readonly metricLabel = metricLabel;
@@ -103,11 +104,13 @@ export class AdminUsageComponent implements OnInit {
         this.rows = page.content;
         this.totalElements = page.totalElements;
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load usage', err);
         this.error = 'Failed to load usage data.';
         this.loading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -118,11 +121,13 @@ export class AdminUsageComponent implements OnInit {
       next: (g) => {
         this.global = g;
         this.globalLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load global usage', err);
         this.global = null;
         this.globalLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -133,11 +138,13 @@ export class AdminUsageComponent implements OnInit {
       next: (events) => {
         this.recentEvents = events;
         this.eventsLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load rejection events', err);
         this.recentEvents = [];
         this.eventsLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -187,11 +194,13 @@ export class AdminUsageComponent implements OnInit {
       next: (detail) => {
         this.detail = detail;
         this.detailLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load usage detail', err);
         this.detailError = 'Failed to load detail.';
         this.detailLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -288,5 +297,24 @@ export class AdminUsageComponent implements OnInit {
     }
     const date = new Date(value);
     return isNaN(date.getTime()) ? value : date.toLocaleString();
+  }
+
+  /** Human label for a rejection event's service (`RateLimitEvent.svc`); raw code stays in a title/tooltip. */
+  svcLabel(svc: RateLimitEvent['svc']): string {
+    return svc === 'game' ? 'Game' : svc === 'questions' ? 'Questions' : svc;
+  }
+
+  /** Human label for a rejection event's kind (`RateLimitEvent.kind`); raw code stays in a title/tooltip. */
+  kindLabel(kind: RateLimitEvent['kind']): string {
+    switch (kind) {
+      case 'rate':
+        return 'Rate limit';
+      case 'quota':
+        return 'Quota';
+      case 'ban':
+        return 'Ban';
+      default:
+        return kind;
+    }
   }
 }
