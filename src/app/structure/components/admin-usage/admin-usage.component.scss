@@ -330,10 +330,17 @@
      Material's own `warn` palette (OWN-WORLD: components never hold a
      colour of their own; S5-12). Kept apart from the benign "Edit quota"
      action by `justify-content: space-between` above and `__actions`'
-     own group below. */
+     own group below. `background-color` keeps its `!important`: Material's
+     protected/raised-button structural CSS also declares `background-color`
+     on this host element at equal or higher specificity. `color` doesn't
+     need one (same finding as admin-bans.component.scss's `__danger-btn`):
+     only `.mat-mdc-button`/`-outlined-button`/`-icon-button` get a themed
+     `color !important` in `vendors/_material-overrides.scss`, not
+     `.mat-mdc-raised-button`, so nothing competes with the plain
+     declaration here. M5 merge-gate grep fix (goal/m5-polish). */
   &__danger-btn {
     background-color: var(--error) !important;
-    color: var(--on-error) !important;
+    color: var(--on-error);
   }
 
   &__danger-text-btn {
