@@ -19,7 +19,13 @@
 }
 
 .theme-toggle {
-  color: var(--text-secondary);
+  /* M5 F2b (SA recheck): see navbar.component.scss's `.navbar__social a`
+     comment for the mechanism -- F2's material-overrides fix let this
+     rule's own idle `--text-secondary` take effect for the first time
+     (it used to lose to the icon-button rule's `!important` regardless
+     of specificity), dimming the theme icon in every capture anyone has
+     reviewed. Restored to the brighter, previously-shipped default. */
+  color: var(--text-primary);
   transition: all var(--transition-base);
 
   /* S6-03/S6-15: the toggle is one of the only two controls the FIRST
@@ -33,7 +39,8 @@
   height: 44px;
 
   &:hover {
-    color: var(--text-primary);
+    /* `color` is already `--text-primary` above (the restored idle
+       color, M5 F2b); the hover affordance is the background tint. */
     background: var(--surface-hover);
   }
 
