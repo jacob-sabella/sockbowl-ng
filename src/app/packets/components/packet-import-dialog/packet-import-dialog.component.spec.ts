@@ -10,12 +10,14 @@ import { PacketAuthoringService } from '../../services/packet-authoring.service'
 import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questions.service';
 import { ImportPacketResult } from '../../models/packet-authoring.models';
 import { IMPORT_MAX_BYTES } from '../../models/packet-limits';
+import { GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 
 describe('PacketImportDialogComponent', () => {
   let fixture: ComponentFixture<PacketImportDialogComponent>;
   let component: PacketImportDialogComponent;
   let authoringSpy: jasmine.SpyObj<PacketAuthoringService>;
   let dialogRefSpy: jasmine.SpyObj<MatDialogRef<PacketImportDialogComponent>>;
+  let snackBarSpy: jasmine.SpyObj<MatSnackBar>;
   let router: jasmine.SpyObj<Router>;
 
   const cleanResult: ImportPacketResult = {
@@ -47,6 +49,7 @@ describe('PacketImportDialogComponent', () => {
     authoringSpy.getAllDifficulties.and.returnValue(of([]));
 
     dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['close']);
+    snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
 
     TestBed.configureTestingModule({
       declarations: [PacketImportDialogComponent],
@@ -54,7 +57,7 @@ describe('PacketImportDialogComponent', () => {
         { provide: PacketAuthoringService, useValue: authoringSpy },
         { provide: SockbowlQuestionsService, useValue: jasmine.createSpyObj('SockbowlQuestionsService', ['listPackets', 'exportPacket']) },
         { provide: MatDialogRef, useValue: dialogRefSpy },
-        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+        { provide: MatSnackBar, useValue: snackBarSpy },
         { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -182,6 +185,38 @@ describe('PacketImportDialogComponent', () => {
     component.text = 'some text';
     expect(() => component.preview()).not.toThrow();
     expect(component.previewing).toBeFalse();
+  });
+
+  // INT1 (single-snackbar rule): importPacket is wrapped in the `imports`
+  // quota and `import`/`import-ip` rate limits (M4-plan INT1), and
+  // GraphqlClientService's notifyLimit already shows the canonical snackbar
+  // for RATE_LIMITED/QUOTA_EXCEEDED/BANNED (describeGraphqlError maps them to
+  // ''), so this dialog must not open a second, empty one.
+  it('a RATE_LIMITED preview failure does not open a second (empty) snackbar', () => {
+    configure();
+    authoringSpy.importPacket.and.returnValue(
+      throwError(() => new GraphqlRequestError({ message: 'Too many requests', classification: 'RATE_LIMITED' }))
+    );
+    component.text = 'some text';
+    component.preview();
+
+    expect(component.previewing).toBeFalse();
+    expect(snackBarSpy.open).not.toHaveBeenCalled();
+  });
+
+  it('a QUOTA_EXCEEDED import commit failure does not open a second (empty) snackbar', () => {
+    configure();
+    authoringSpy.importPacket.and.returnValue(of(cleanResult));
+    component.text = 'clean packet text';
+    component.preview();
+
+    authoringSpy.importPacket.and.returnValue(
+      throwError(() => new GraphqlRequestError({ message: 'Quota used up', classification: 'QUOTA_EXCEEDED' }))
+    );
+    component.import();
+
+    expect(component.importing).toBeFalse();
+    expect(snackBarSpy.open).not.toHaveBeenCalled();
   });
 
   it('cancel closes the dialog without importing', () => {

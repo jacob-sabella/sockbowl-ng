@@ -216,6 +216,12 @@ export class SockbowlQuestionsService {
             id
             name
           }
+          createdAt
+          lastModifiedAt
+          source
+          aiModel
+          createdById
+          lastModifiedById
           bonuses {
             order
             bonus {

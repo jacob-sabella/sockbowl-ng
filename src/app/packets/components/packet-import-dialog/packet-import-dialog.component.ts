@@ -137,7 +137,7 @@ export class PacketImportDialogComponent {
         },
         error: (err) => {
           this.previewing = false;
-          this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 5000 });
+          this.reportError(err);
         }
       });
   }
@@ -178,13 +178,28 @@ export class PacketImportDialogComponent {
         },
         error: (err) => {
           this.importing = false;
-          this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 5000 });
+          this.reportError(err);
         }
       });
   }
 
   cancel(): void {
     this.dialogRef.close();
+  }
+
+  /**
+   * Shows `describeGraphqlError(err)` as a snackbar, unless it's `''`
+   * (INT1: RATE_LIMITED/QUOTA_EXCEEDED/BANNED -- `importPacket` is wrapped in
+   * the `imports` quota and the `import`/`import-ip` rate limits, and
+   * `GraphqlClientService`'s `notifyLimit` already shows the canonical
+   * message for exactly those three classifications). A second, empty-text
+   * snackbar here would both duplicate the notice and show nothing useful.
+   */
+  private reportError(err: unknown): void {
+    const message = describeGraphqlError(err);
+    if (message) {
+      this.snackBar.open(message, 'Dismiss', { duration: 5000 });
+    }
   }
 }
 

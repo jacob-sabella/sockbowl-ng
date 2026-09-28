@@ -16,6 +16,7 @@ import {
   AuthoringPacket,
   Category,
   Difficulty,
+  packetSourceLabel,
   PacketValidation,
   PacketVisibility,
   Subcategory
@@ -170,7 +171,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.loading = false;
       },
       error: (err) => {
-        this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
+        this.reportError(err);
         this.loading = false;
       }
     });
@@ -200,7 +201,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.applyPacket(packet);
         onDone?.();
       },
-      error: (err) => this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 })
+      error: (err) => this.reportError(err)
     });
   }
 
@@ -215,7 +216,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.conflictBanner = false;
         this.applyPacket(packet, true);
       },
-      error: (err) => this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 })
+      error: (err) => this.reportError(err)
     });
   }
 
@@ -298,6 +299,20 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     // can never spuriously match that null (NG-R2-04).
     return this.auth.hasPermission('packet:manage-any')
       || (!!userId && !!this.packet?.owner && this.packet.owner.id === userId);
+  }
+
+  /**
+   * INT1 (M4-PV-01 provenance display, missing from the M3 builder): a
+   * short label for the header's "how this packet was made" line.
+   * `getPacketById` now selects `source` (plus `createdById`/
+   * `lastModifiedById`/`createdAt`/`lastModifiedAt`), so this is the only
+   * place in the app currently reading it. `createdById`/`lastModifiedById`
+   * are shown as raw ids -- there is no display-name lookup for them yet,
+   * the same known limitation as the M5 bans list (see PROGRESS.md's
+   * H-05 follow-up).
+   */
+  sourceLabel(source: Packet['source'] | null | undefined): string {
+    return packetSourceLabel(source);
   }
 
   get sortedTossups(): TossupElement[] {
@@ -615,7 +630,21 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       this.conflictBanner = true;
       return;
     }
-    this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
+    this.reportError(err);
+  }
+
+  /**
+   * Shows `describeGraphqlError(err)` as a snackbar, unless it's `''`
+   * (INT1: RATE_LIMITED/QUOTA_EXCEEDED/BANNED, already shown once by
+   * `GraphqlClientService`'s `notifyLimit` -- see `describeGraphqlError`'s
+   * doc comment). Opening a second, empty-text snackbar for those would
+   * both duplicate the notice and show nothing useful.
+   */
+  private reportError(err: unknown): void {
+    const message = this.extractError(err);
+    if (message) {
+      this.snackBar.open(message, 'Dismiss', { duration: 4000 });
+    }
   }
 
   /* -------------------------------- tossups -------------------------------- */

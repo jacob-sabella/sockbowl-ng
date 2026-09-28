@@ -102,6 +102,9 @@ export class AdminTaxonomyComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
+        // INT1: '' for RATE_LIMITED/QUOTA_EXCEEDED/BANNED -- GraphqlClientService's
+        // notifyLimit already showed a snackbar for those, so this page's inline
+        // banner just stays empty rather than repeating (or blanking) the message.
         this.loadError = describeGraphqlError(err);
         this.loading = false;
       }
@@ -143,7 +146,7 @@ export class AdminTaxonomyComponent implements OnInit {
       },
       error: (err) => {
         this.creatingCategory = false;
-        this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 4000 });
+        this.reportError(err);
       }
     });
   }
@@ -168,7 +171,7 @@ export class AdminTaxonomyComponent implements OnInit {
       },
       error: (err) => {
         this.creatingDifficulty = false;
-        this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 4000 });
+        this.reportError(err);
       }
     });
   }
@@ -195,7 +198,7 @@ export class AdminTaxonomyComponent implements OnInit {
       },
       error: (err) => {
         this.creatingSubcategory = false;
-        this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 4000 });
+        this.reportError(err);
       }
     });
   }
@@ -246,7 +249,7 @@ export class AdminTaxonomyComponent implements OnInit {
             return;
           }
         }
-        this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 4000 });
+        this.reportError(err);
       }
     });
   }
@@ -367,7 +370,7 @@ export class AdminTaxonomyComponent implements OnInit {
           },
           error: (err) => {
             this.mergingBusy = false;
-            this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 4000 });
+            this.reportError(err);
           }
         });
       });
@@ -400,6 +403,21 @@ export class AdminTaxonomyComponent implements OnInit {
       this.subcategories = this.subcategories.filter((s) => s.id !== sourceId);
     } else {
       this.difficulties = this.difficulties.filter((d) => d.id !== sourceId);
+    }
+  }
+
+  /**
+   * Shows `describeGraphqlError(err)` as a snackbar, unless it's `''`
+   * (INT1: RATE_LIMITED/QUOTA_EXCEEDED/BANNED -- every mutation on this page
+   * goes through the shared `graphql-write` policy, and `GraphqlClientService`'s
+   * `notifyLimit` already shows the canonical message for exactly those three
+   * classifications). A second, empty-text snackbar here would both duplicate
+   * the notice and show nothing useful.
+   */
+  private reportError(err: unknown): void {
+    const message = describeGraphqlError(err);
+    if (message) {
+      this.snackBar.open(message, 'Dismiss', { duration: 4000 });
     }
   }
 }

@@ -4,7 +4,7 @@
  * questions-schema.graphqls) and are hand-written (not generated) since they
  * are request-only shapes, not response shapes.
  */
-import { Packet } from '../../game/models/sockbowl/packet-types.generated';
+import { Packet, Source } from '../../game/models/sockbowl/packet-types.generated';
 import { PacketOwner } from '../../game/models/sockbowl/packet-owner';
 
 export interface CreatePacketInput {
@@ -181,3 +181,24 @@ export type AuthoringPacket = Packet & {
   visibility: PacketVisibility;
   validation: PacketValidation;
 };
+
+/**
+ * Short, human-readable label for a packet/tossup/bonus/bonus part's
+ * `ContentSource` (D13, M4-PV-01), for the packet builder's provenance
+ * display (INT1). `TEXT_IMPORT` and `CLONED` are M3's; the rest are M4's.
+ */
+const SOURCE_LABELS: Record<Source, string> = {
+  AUTHORED: 'Authored',
+  QBREADER_IMPORT: 'Imported from the question bank',
+  AI_GENERATED: 'AI generated',
+  TEXT_IMPORT: 'Imported from text',
+  CLONED: 'Cloned',
+};
+
+/** `SOURCE_LABELS[source]`, falling back to the raw value (or 'Unknown') for anything unrecognized. */
+export function packetSourceLabel(source: Source | null | undefined): string {
+  if (!source) {
+    return 'Unknown';
+  }
+  return SOURCE_LABELS[source] ?? source;
+}
