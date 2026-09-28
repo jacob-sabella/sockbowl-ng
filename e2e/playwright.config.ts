@@ -8,6 +8,14 @@ export default defineConfig({
   outputDir: './artifacts/output',
   reporter: [['list']],
   use: {
+    // WP-E1's packet-builder.spec.ts (and the tests-auth/helpers/login.ts it
+    // reuses) navigate with bare relative paths (page.goto('/packets'),
+    // page.goto('/game-session')), unlike this file's older specs, which
+    // build absolute URLs themselves from harness/config.ts's APP_URL. That
+    // needs a baseURL here, defaulted the same way APP_URL is (SOCKBOWL_APP,
+    // else the live deployment) so `m3:auth-on`/`m3:auth-off` can point it at
+    // a local docker-compose stack per e2e/README.md's M3 section.
+    baseURL: process.env.SOCKBOWL_APP || 'https://sockbowl.com',
     headless: true,
     viewport: { width: 1400, height: 900 },
     ignoreHTTPSErrors: true,

@@ -91,9 +91,18 @@ function panelByText(page: Page, snippet: string): Locator {
 }
 
 async function expandPanel(panel: Locator): Promise<void> {
-  const expanded = await panel.getAttribute('aria-expanded').catch(() => null);
+  // Angular Material sets aria-expanded on the <mat-expansion-panel-header>,
+  // not on the outer <mat-expansion-panel> itself, which always lacks the
+  // attribute. Checking the outer element here always read null, so this
+  // unconditionally clicked the header even when the panel was already open
+  // (e.g. a newly-added bonus, which the builder auto-expands) -- collapsing
+  // it. Since the panel's `[expanded]` binding is a plain one-way expression
+  // that doesn't re-fire once its own source value is unchanged, Angular
+  // never reopened it afterwards, and the click's collapse stuck forever.
+  const header = panel.locator('mat-expansion-panel-header');
+  const expanded = await header.getAttribute('aria-expanded').catch(() => null);
   if (expanded !== 'true') {
-    await panel.locator('mat-expansion-panel-header').click();
+    await header.click();
   }
 }
 
@@ -197,10 +206,36 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     await t2Panel.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/All changes saved/, { timeout: 10000 });
 
-    // Step 6 (auth-on only): Publish, then back to Draft; the owner's draft stays playable.
+    // Step 6 (auth-on only): Publish.
     if (authOn) {
       await page.getByRole('button', { name: 'Publish', exact: true }).click();
       await expect(page.locator('.packet-builder__visibility-chip')).toHaveText(/Published/, { timeout: 10000 });
+    }
+
+    // Supplementary bonus proof (plan risk 8 fallback), moved here (while the
+    // packet is Published under auth-on): the same packet, played in a
+    // bot-driven QUIZ_BOWL_CLASSIC match with bonuses on, reaches a scored
+    // bonus round -- proving the packet's bonus content is usable in a real
+    // match, which single-player structurally cannot exercise. This must run
+    // before Unpublish below: the bot match joins as a guest with no identity
+    // at all, and M2's draft-ownership rule (C6) refuses SetMatchPacket for a
+    // non-owner on a DRAFT packet with PACKET_NOT_AVAILABLE, exactly like the
+    // "draft privacy in game" spec proves for an authenticated non-owner --
+    // running this while still Draft deadlocked the match at CONFIG (matchState
+    // stuck, packet never set). Auth-off has no ownership gate at all, so the
+    // packet's visibility doesn't matter there and this placement is still valid.
+    const bonusMatch = await stageMatch({ packetId, playerNames: ['Ada', 'Blaise'] });
+    try {
+      const result = await driveFullMatch(bonusMatch, 1, false);
+      expect(result.rounds).toBeGreaterThanOrEqual(1);
+      const scored = result.scores.some((s) => (s.score ?? 0) > 0);
+      expect(scored).toBeTruthy();
+    } finally {
+      bonusMatch.cleanup();
+    }
+
+    // Back to Draft (auth-on only): the owner's draft stays playable.
+    if (authOn) {
       await page.getByRole('button', { name: 'Unpublish', exact: true }).click();
       await expect(page.locator('.packet-builder__visibility-chip')).toHaveText(/Draft/, { timeout: 10000 });
       await expect(page.locator('.packet-builder__validation-badge')).toHaveText(/Playable/, { timeout: 10000 });
@@ -244,20 +279,6 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     // Step 8: match reaches COMPLETED with all 3 tossups correct.
     await expect(page.locator('.match-summary')).toBeVisible({ timeout: 20000 });
     await expect(page.locator('.winning-announcement')).toContainText(/3 of 3 correctly/, { timeout: 10000 });
-
-    // Supplementary bonus proof (plan risk 8 fallback): the same packet,
-    // played in a bot-driven QUIZ_BOWL_CLASSIC match with bonuses on, reaches
-    // a scored bonus round — proving the packet's bonus content is usable in
-    // a real match, which single-player structurally cannot exercise.
-    const bonusMatch = await stageMatch({ packetId, playerNames: ['Ada', 'Blaise'] });
-    try {
-      const result = await driveFullMatch(bonusMatch, 1, false);
-      expect(result.rounds).toBeGreaterThanOrEqual(1);
-      const scored = result.scores.some((s) => (s.score ?? 0) > 0);
-      expect(scored).toBeTruthy();
-    } finally {
-      bonusMatch.cleanup();
-    }
   } finally {
     if (packetId) {
       await deletePacket(packetId, accessToken);
