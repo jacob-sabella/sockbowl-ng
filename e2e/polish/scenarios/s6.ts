@@ -106,22 +106,49 @@ const states: CaptureState[] = [
     setupMocks: async () => {},
   },
   {
+    // S6-03: author is the first role with a folded destination (Packets,
+    // plus a standalone Taxonomy link) — captured at 280px too, alongside
+    // the default mobile/desktop pair, so the fold's narrowest case has
+    // direct evidence, not just the player-only `nav-280-min-width` row.
     id: 'nav-author',
     route: '/game-session',
     role: 'author',
+    viewports: ['mobile', 'mobile-min', 'desktop'],
     setupMocks: async () => {},
   },
   {
     id: 'nav-moderator',
     route: '/game-session',
     role: 'moderator',
+    viewports: ['mobile', 'mobile-min', 'desktop'],
     setupMocks: async () => {},
   },
   {
+    // S6-03: admin is the densest role (Packets + the whole Admin group) —
+    // the one the backlog's "587px at 390" defect was measured against, so
+    // this is the row that most directly proves the fold at 280px.
     id: 'nav-admin',
     route: '/game-session',
     role: 'admin',
+    viewports: ['mobile', 'mobile-min', 'desktop'],
     setupMocks: async () => {},
+  },
+  {
+    // S6-03: proves the fold, not just the absence of overflow — every
+    // admin destination (Packets, Admin, Usage, Bans, Taxonomy) reachable
+    // in the one account menu the bar keeps at 280/390px (M5 plan §4 S6
+    // FIRST VIEWPORT: "every staff destination reachable in one tap from
+    // the account menu").
+    id: 'nav-admin-menu-open',
+    route: '/game-session',
+    role: 'admin',
+    viewports: ['mobile-min', 'mobile'],
+    themes: ['dark'],
+    setupMocks: async () => {},
+    afterGoto: async page => {
+      await page.getByLabel(/^Account menu,/).click();
+      await page.waitForTimeout(150);
+    },
   },
   {
     id: 'nav-auth-off',

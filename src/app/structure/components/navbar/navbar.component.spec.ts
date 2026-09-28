@@ -176,6 +176,61 @@ describe('NavbarComponent', () => {
     expect(openMenuLabels('Admin menu')).toEqual([]);
   });
 
+  describe('mobile fold (S6-03): every role destination also lives in the account menu', () => {
+    it('marks every toolbar role destination navbar__role-btn, so CSS can hide it below 640px', () => {
+      setUp(PERMISSION_SETS['admin']);
+      const root: HTMLElement = fixture.nativeElement;
+      const roleButtons = Array.from(root.querySelectorAll<HTMLElement>('.navbar__role-btn'));
+      // Admin: Admin-menu trigger + Packets = 2 toolbar role buttons.
+      expect(roleButtons.length).toBe(2);
+      expect(roleButtons.every(el => el.tagName === 'BUTTON')).toBeTrue();
+    });
+
+    it('folds Packets, Admin, Usage, Bans and Taxonomy into the account menu for an admin', () => {
+      setUp(PERMISSION_SETS['admin']);
+      const menuLabels = openMenuLabels('Account menu, Test User');
+      expect(menuLabels).toContain('Packet Builder');
+      expect(menuLabels).toContain('Admin');
+      expect(menuLabels).toContain('Usage');
+      expect(menuLabels).toContain('Bans');
+      expect(menuLabels).toContain('Taxonomy');
+      expect(menuLabels).toContain('Profile');
+      expect(menuLabels).toContain('Sign out');
+    });
+
+    it('folds Packets and the standalone Taxonomy link into the account menu for an author', () => {
+      setUp(PERMISSION_SETS['author']);
+      const menuLabels = openMenuLabels('Account menu, Test User');
+      expect(menuLabels).toContain('Packet Builder');
+      expect(menuLabels).toContain('Taxonomy');
+      // Author has no admin:access, so no Admin/Usage/Bans entries fold in.
+      expect(menuLabels).not.toContain('Admin');
+      expect(menuLabels).not.toContain('Usage');
+    });
+
+    it('folds Moderation into the account menu for a moderator', () => {
+      setUp(PERMISSION_SETS['moderator']);
+      const menuLabels = openMenuLabels('Account menu, Test User');
+      expect(menuLabels).toContain('Moderation');
+      expect(menuLabels).not.toContain('Admin');
+    });
+
+    it('folds nothing extra into the account menu for a plain player', () => {
+      setUp(PERMISSION_SETS['player']);
+      const menuLabels = openMenuLabels('Account menu, Test User');
+      expect(menuLabels).toEqual(['Profile', 'Sign out']);
+    });
+  });
+
+  it('gives the guest Sign In button an accessible name that carries guest status at every width (S6-15)', () => {
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    const btn = root.querySelector('.navbar__signin');
+    expect(btn?.getAttribute('aria-label')).toBe('Playing as Guest. Sign In');
+    // The visible pill is still there for the widths that have room for it.
+    expect(root.querySelector('.navbar__guest-label')?.textContent).toBe('Playing as Guest');
+  });
+
   it('signs out immediately (no confirmation) outside /game', () => {
     setUp(PERMISSION_SETS['player']);
     fixture.componentInstance.logout();

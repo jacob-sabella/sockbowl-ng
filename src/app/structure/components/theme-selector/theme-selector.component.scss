@@ -6,6 +6,16 @@
   color: var(--text-secondary);
   transition: all var(--transition-base);
 
+  /* S6-03/S6-15: the toggle is one of the only two controls the FIRST
+     VIEWPORT contract keeps in the bar below 640px (theme + account
+     trigger/Sign In), both named there as "targets of 44px or more". The
+     global `--mdc-icon-button-state-layer-size: 44px` (styles/material-
+     theme.scss, F1-12) only resizes the ripple/state layer, not the MDC
+     icon button's own host box — it measures 40x40 without this, short of
+     the floor. */
+  width: 44px;
+  height: 44px;
+
   &:hover {
     color: var(--text-primary);
     background: var(--surface-hover);
