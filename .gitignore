@@ -46,3 +46,7 @@ Thumbs.db
 /playwright-report/
 /clips-report.json
 /artifacts/
+
+# Impeccable: keep critique/review state local; commit only the design sidecar
+.impeccable/*
+!.impeccable/design.json
