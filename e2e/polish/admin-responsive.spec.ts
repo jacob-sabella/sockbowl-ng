@@ -89,7 +89,10 @@ const CHECKS: AdminCheck[] = [
     container: '.admin-usage',
     controls: (p) => [
       { label: 'search-submit', loc: p.getByRole('button', { name: /^Search$/i }) },
-      { label: 'row-expand', loc: p.getByRole('button', { name: /^(Expand|Collapse)$/ }).first() },
+      // M5 AY (S5-15): the row-expand button's accessible name now carries
+      // the row's user name too ("Expand <user>"/"Collapse <user>"), not a
+      // bare "Expand"/"Collapse" — match the prefix instead of the whole name.
+      { label: 'row-expand', loc: p.getByRole('button', { name: /^(Expand|Collapse) / }).first() },
     ],
   },
   {
@@ -97,8 +100,10 @@ const CHECKS: AdminCheck[] = [
     stateId: 'taxonomy-admin',
     container: '.admin-taxonomy',
     controls: (p) => [
-      { label: 'category-rename', loc: p.getByRole('button', { name: /^Rename$/i }).first() },
-      { label: 'category-merge', loc: p.getByRole('button', { name: /^Merge$/i }).first() },
+      // M5 AY (S5-15): target-specific names now ("Rename category <name>" /
+      // "Merge category <name>"), not the bare verb.
+      { label: 'category-rename', loc: p.getByRole('button', { name: /^Rename category /i }).first() },
+      { label: 'category-merge', loc: p.getByRole('button', { name: /^Merge category /i }).first() },
     ],
   },
 ];

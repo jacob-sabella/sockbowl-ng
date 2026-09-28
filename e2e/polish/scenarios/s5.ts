@@ -9,6 +9,15 @@ import { mockRest, ok, apiError, type RestRoute } from '../mock/rest.js';
 import { loadFixture } from '../fixtures/load.js';
 import type { CaptureState, SurfaceScenario } from './types.js';
 
+/**
+ * M5 plan §4 AY row: the `final` capture adds tablet for S4 and S5, on top
+ * of the {mobile, desktop} x {dark, light} matrix every phase captures.
+ * Scoped to `POLISH_PHASE=final` only, so `baseline`/`post-f1` stay exactly
+ * as H0/F1 recorded them (no retroactive tablet rows in earlier phases).
+ */
+const FINAL_PHASE = process.env.POLISH_PHASE === 'final';
+const STANDARD_VIEWPORTS = FINAL_PHASE ? ['mobile', 'desktop', 'tablet'] : ['mobile', 'desktop'];
+
 interface BansFixtures {
   populated: { bans: unknown[]; ipBans: unknown[] };
   empty: { bans: unknown[]; ipBans: unknown[] };
@@ -75,6 +84,7 @@ const states: CaptureState[] = [
     id: 'home-admin',
     route: '/admin',
     role: 'admin',
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, usageRoutes()),
   },
   {
@@ -87,30 +97,35 @@ const states: CaptureState[] = [
     id: 'admin-hub-denied-moderator',
     route: '/admin',
     role: 'moderator',
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, usageRoutes()),
   },
   {
     id: 'home-usage-partial',
     route: '/admin',
     role: 'admin',
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, usageRoutes({ partial: true })),
   },
   {
     id: 'bans-populated',
     route: '/admin/bans',
     role: 'admin',
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, bansRoutes('populated')),
   },
   {
     id: 'bans-empty',
     route: '/admin/bans',
     role: 'moderator',
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, bansRoutes('empty')),
   },
   {
     id: 'usage-table-populated',
     route: '/admin/usage',
     role: 'admin',
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, usageRoutes()),
   },
   {
@@ -125,18 +140,21 @@ const states: CaptureState[] = [
     id: 'taxonomy-admin',
     route: '/admin/taxonomy',
     role: 'admin',
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockGraphql(page, taxonomyGraphqlHandlers()),
   },
   {
     id: 'taxonomy-denied-player',
     route: '/admin/taxonomy',
     role: 'player', // lacks taxonomy:manage; permissionGuard redirects to /game-session
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockGraphql(page, taxonomyGraphqlHandlers()),
   },
   {
     id: 'home-route-denied-player',
     route: '/admin',
     role: 'player', // lacks admin:access
+    viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, usageRoutes()),
   },
 ];

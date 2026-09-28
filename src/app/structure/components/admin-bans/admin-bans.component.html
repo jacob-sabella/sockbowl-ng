@@ -6,6 +6,7 @@
   <p class="admin-bans__lede">View, add, and remove user and IP bans.</p>
 
   <!-- Ban list -->
+  <h2 class="admin-bans__subtitle">User bans</h2>
   <mat-card class="admin-bans__card">
     <mat-card-header>
       <mat-card-title>Active bans</mat-card-title>
@@ -13,7 +14,7 @@
     <mat-card-content>
       @if (loading) {
         <div class="admin-bans__status">
-          <mat-spinner diameter="32"></mat-spinner>
+          <mat-spinner diameter="32" aria-label="Loading bans"></mat-spinner>
         </div>
       } @else if (error) {
         <div class="admin-bans__error-row">
@@ -33,7 +34,7 @@
               </div>
               @if (auth.hasPermission('user:ban')) {
                 <button mat-icon-button class="admin-bans__danger-icon-btn" [attr.aria-label]="'Remove ban on ' + ban.bannedKeycloakId" (click)="removeBan(ban)">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon aria-hidden="true">delete</mat-icon>
                 </button>
               }
             </div>
@@ -72,7 +73,7 @@
           </mat-form-field>
 
           <button mat-raised-button class="admin-bans__danger-btn" type="submit" [disabled]="submitting">
-            <mat-icon>block</mat-icon>
+            <mat-icon aria-hidden="true">block</mat-icon>
             Ban user
           </button>
         </form>
@@ -90,7 +91,7 @@
     <mat-card-content>
       @if (ipBansLoading) {
         <div class="admin-bans__status">
-          <mat-spinner diameter="32"></mat-spinner>
+          <mat-spinner diameter="32" aria-label="Loading IP bans"></mat-spinner>
         </div>
       } @else if (ipBansError) {
         <div class="admin-bans__error-row">
@@ -110,7 +111,7 @@
               </div>
               @if (auth.hasPermission('user:ban')) {
                 <button mat-icon-button class="admin-bans__danger-icon-btn" [attr.aria-label]="'Remove IP ban on ' + ban.cidr" (click)="removeIpBan(ban)">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon aria-hidden="true">delete</mat-icon>
                 </button>
               }
             </div>
@@ -159,7 +160,7 @@
           </mat-form-field>
 
           <button mat-raised-button class="admin-bans__danger-btn" type="submit" [disabled]="ipBanSubmitting">
-            <mat-icon>block</mat-icon>
+            <mat-icon aria-hidden="true">block</mat-icon>
             Ban IP
           </button>
         </form>

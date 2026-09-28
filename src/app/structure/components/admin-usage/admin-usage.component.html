@@ -26,7 +26,12 @@
               <span>{{ global.aiServerKey.used }} / {{ global.aiServerKey.limit === -1 ? '∞' : global.aiServerKey.limit }}</span>
             </div>
             @if (global.aiServerKey.limit !== -1) {
-              <mat-progress-bar mode="determinate" [value]="(global.aiServerKey.used / global.aiServerKey.limit) * 100"></mat-progress-bar>
+              <mat-progress-bar
+                mode="determinate"
+                [value]="(global.aiServerKey.used / global.aiServerKey.limit) * 100"
+                aria-label="AI generation budget used"
+                [attr.aria-valuetext]="global.aiServerKey.used + ' of ' + global.aiServerKey.limit + ' AI generations used'"
+              ></mat-progress-bar>
             }
           </div>
 
@@ -68,7 +73,7 @@
         <mat-label>Search</mat-label>
         <input matInput name="search" [(ngModel)]="searchQuery" (keyup.enter)="onSearch()" placeholder="Username or Keycloak id" />
         <button matSuffix mat-icon-button class="admin-usage__icon-btn" aria-label="Search" (click)="onSearch()">
-          <mat-icon>search</mat-icon>
+          <mat-icon aria-hidden="true">search</mat-icon>
         </button>
       </mat-form-field>
 
@@ -130,8 +135,14 @@
           <ng-container matColumnDef="expand">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row" class="admin-usage__expand-cell">
-              <button mat-icon-button class="admin-usage__icon-btn" [attr.aria-label]="expandedSub === row.keycloakId ? 'Collapse' : 'Expand'" (click)="toggleDetail(row)">
-                <mat-icon>{{ expandedSub === row.keycloakId ? 'expand_less' : 'expand_more' }}</mat-icon>
+              <button
+                mat-icon-button
+                class="admin-usage__icon-btn"
+                [attr.aria-label]="(expandedSub === row.keycloakId ? 'Collapse ' : 'Expand ') + (row.displayName || row.username || row.keycloakId)"
+                [attr.aria-expanded]="expandedSub === row.keycloakId"
+                (click)="toggleDetail(row)"
+              >
+                <mat-icon aria-hidden="true">{{ expandedSub === row.keycloakId ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
             </td>
           </ng-container>
@@ -167,11 +178,16 @@
                               </span>
                             </div>
                             @if (!isUnlimited(counter)) {
-                              <mat-progress-bar mode="determinate" [value]="meterPercent(counter)"></mat-progress-bar>
+                              <mat-progress-bar
+                                mode="determinate"
+                                [value]="meterPercent(counter)"
+                                [attr.aria-label]="metricLabel(counter.metric) + ' used'"
+                                [attr.aria-valuetext]="counter.used + ' of ' + counter.limit + ' ' + metricLabel(counter.metric) + ' used'"
+                              ></mat-progress-bar>
                             }
                             <div class="admin-usage__counter-actions">
                               <button mat-button [attr.aria-label]="'Edit ' + metricLabel(counter.metric) + ' quota'" (click)="editQuota(row, counter)">
-                                <mat-icon>edit</mat-icon>
+                                <mat-icon aria-hidden="true">edit</mat-icon>
                                 Edit quota
                               </button>
                               @if (counter.kind === 'daily') {
@@ -181,7 +197,7 @@
                                   [attr.aria-label]="'Reset ' + metricLabel(counter.metric) + ' usage'"
                                   (click)="resetUsage(row, counter.metric)"
                                 >
-                                  <mat-icon>restart_alt</mat-icon>
+                                  <mat-icon aria-hidden="true">restart_alt</mat-icon>
                                   Reset
                                 </button>
                               }
@@ -197,7 +213,7 @@
                             <div class="admin-usage__ip-row">
                               <span>{{ ip }}</span>
                               <button mat-icon-button class="admin-usage__icon-btn" [attr.aria-label]="'Ban IP ' + ip" (click)="banIp(row, ip)">
-                                <mat-icon>block</mat-icon>
+                                <mat-icon aria-hidden="true">block</mat-icon>
                               </button>
                             </div>
                           }
@@ -213,7 +229,7 @@
                             [attr.aria-label]="'Ban user ' + (row.displayName || row.username || row.keycloakId)"
                             (click)="banUser(row)"
                           >
-                            <mat-icon>gavel</mat-icon>
+                            <mat-icon aria-hidden="true">gavel</mat-icon>
                             Ban user
                           </button>
                           <button
@@ -222,7 +238,7 @@
                             [attr.aria-label]="'Reset all daily usage for ' + (row.displayName || row.username || row.keycloakId)"
                             (click)="resetUsage(row)"
                           >
-                            <mat-icon>restart_alt</mat-icon>
+                            <mat-icon aria-hidden="true">restart_alt</mat-icon>
                             Reset all daily
                           </button>
                         </div>

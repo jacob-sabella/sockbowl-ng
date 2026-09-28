@@ -87,7 +87,11 @@
 
   &__card-desc {
     font-size: var(--text-sm);
-    opacity: 0.75;
+    // M5 AY (a11y audit): a role token, not opacity — opacity blends toward
+    // whatever sits behind the element, so it drifts under AA depending on
+    // the card's own background instead of guaranteeing 4.5:1 (axe: serious,
+    // 3.51:1 in dark).
+    color: var(--text-secondary);
   }
 
   &__ai-budget-slot {

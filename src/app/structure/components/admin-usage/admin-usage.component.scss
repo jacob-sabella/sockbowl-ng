@@ -156,7 +156,10 @@
 
   &__user-id {
     font-size: var(--text-xs);
-    opacity: 0.65;
+    // M5 AY (a11y audit): a role token, not opacity — the table row's
+    // background varies (base vs. striped/hover), and opacity blends toward
+    // it instead of guaranteeing 4.5:1 (axe: serious, 4.38:1 on a striped row).
+    color: var(--text-muted);
     word-break: break-all;
   }
 
