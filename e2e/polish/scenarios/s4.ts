@@ -121,6 +121,26 @@ const states: CaptureState[] = [
     setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-draft')),
   },
   {
+    // FF2 (finish review remaining #3/fix 7): no other state expands a
+    // bonus panel, so "Parts" (packet-builder.component.scss
+    // `&__parts-title`) never appeared in any capture the reviewer could
+    // read. This state opens bonus #1 before the screenshot so the
+    // display-voice fix on that heading is actually evidenced.
+    id: 'builder-bonus-expanded',
+    route: '/packets/pkt-own-published/edit',
+    role: 'author',
+    setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published')),
+    afterGoto: async page => {
+      await page.locator('.packet-builder__bonuses mat-expansion-panel-header').first().click();
+      // `.first()` by DOM order, not `getByText` (Material keeps every
+      // panel's content in the DOM even collapsed, so "Parts" is present
+      // for every bonus and `getByText(exact)` hits strict-mode's
+      // multiple-match error). The first bonus in the list is the one the
+      // click above just expanded.
+      await page.locator('.packet-builder__parts-title').first().waitFor({ state: 'visible' });
+    },
+  },
+  {
     id: 'builder-admin-manage-any',
     route: '/packets/pkt-others-published/edit',
     role: 'admin', // packet:manage-any: an admin may open a packet they don't own

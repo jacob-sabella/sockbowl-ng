@@ -83,11 +83,22 @@
     border: 1px solid var(--border-subtle);
   }
 
+  /*
+   * FF2 (finish review #4): `flex-wrap: wrap` made the row itself wrap
+   * whenever the *unshrunk* name (its hypothetical main size before
+   * flex-shrink is applied) was wider than the row, even when the name's
+   * actual rendered (shrunk + line-clamped) width left plenty of room for
+   * the edit/delete buttons. That pushed the buttons onto their own line
+   * for names that render on one line just fine. `nowrap` keeps the
+   * buttons on the name's row always; the name itself still wraps to 2
+   * lines internally via its own `-webkit-line-clamp`, so a 100+ char name
+   * still can't push the row's height around.
+   */
   &__name-row {
     display: flex;
     align-items: center;
     gap: 4px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   &__name {
@@ -675,13 +686,28 @@
    * buttons stay correctly centered over the header whether the panel is
    * open or closed.
    */
+  /*
+   * FF2 (finish review #1): the grid had no `grid-template-columns`, and
+   * only `&__reorder-btns` (below) carried an explicit `grid-column: 1`.
+   * With the header's column left auto, the auto-placement algorithm
+   * treated column 1 (row 1) as taken and placed the header into a new,
+   * implicit, content-sized column instead of overlapping it in column 1
+   * as intended — pushing the header out to the right on desktop/tablet
+   * and off the card entirely at mobile widths. A single `minmax(0, 1fr)`
+   * column, with the header and content wrapper both pinned to
+   * `grid-column: 1`, makes the header share column 1 with the reorder
+   * buttons (which render on top via z-index) and span the panel's full
+   * width, so the buttons overlay it instead of displacing it.
+   */
   &__panel--managed {
     display: grid;
     grid-template-rows: auto auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   &__panel--managed ::ng-deep .mat-expansion-panel-header {
     grid-row: 1;
+    grid-column: 1;
     padding-left: 84px;
   }
 
@@ -695,6 +721,7 @@
    */
   &__panel--managed ::ng-deep .mat-expansion-panel-content-wrapper {
     grid-row: 2;
+    grid-column: 1;
   }
 
   /*
