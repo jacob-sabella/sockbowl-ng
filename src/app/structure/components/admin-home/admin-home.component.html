@@ -3,6 +3,7 @@
     <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
     Admin
   </h1>
+  <p class="admin-home__subtitle">Tools for your role: bans, usage and quotas, and taxonomy.</p>
 
   <div class="admin-home__cards">
     @if (auth.hasPermission('user:ban')) {
@@ -40,5 +41,19 @@
         </mat-card-content>
       </mat-card>
     </a>
+
+    @if (auth.hasPermission('taxonomy:manage')) {
+      <a class="admin-home__card admin-home__card-link" [routerLink]="['/admin/taxonomy']" aria-label="Open taxonomy">
+        <mat-card class="admin-home__card-inner">
+          <mat-card-content class="admin-home__card-content">
+            <mat-icon aria-hidden="true">category</mat-icon>
+            <div class="admin-home__card-body">
+              <div class="admin-home__card-title">Taxonomy</div>
+              <div class="admin-home__card-desc">Manage categories, subcategories, and difficulties.</div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </a>
+    }
   </div>
 </div>

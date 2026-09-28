@@ -157,4 +157,17 @@ describe('AdminHomeComponent permissions (FIX-N2)', () => {
     expect(cardTitles()).toContain('Bans');
     expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open ban management"]')).not.toBeNull();
   });
+
+  it('hides the Taxonomy card for an admin without taxonomy:manage (S5-13)', () => {
+    setUp(false);
+    expect(cardTitles()).not.toContain('Taxonomy');
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open taxonomy"]')).toBeNull();
+  });
+
+  it('shows a Taxonomy link for an admin holding taxonomy:manage (S5-13)', () => {
+    authSpy.hasPermission.and.callFake((p: string) => p === 'taxonomy:manage');
+    fixture.detectChanges();
+    expect(cardTitles()).toContain('Taxonomy');
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open taxonomy"]')).not.toBeNull();
+  });
 });
