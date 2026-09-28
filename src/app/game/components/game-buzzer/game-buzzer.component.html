@@ -20,41 +20,60 @@
       Tossup {{ gameSession.currentMatch.currentRound.roundNumber }}@if (totalTossups) { <span class="of-total"> of {{ totalTossups }}</span> }
     </mat-card-title>
     <mat-card-content>
-      <!-- Buzz outcome: who has it, in text (not colour alone), one line above the dome. -->
-      @if (isTossupRoundState() && getBuzzOutcomeText(); as outcomeText) {
-        <div class="buzz-outcome-strip"
-          [class.buzz-outcome-strip--self]="getBuzzState() === 'self'"
-          [class.buzz-outcome-strip--other]="getBuzzState() === 'other'"
-          [class.buzz-outcome-strip--team-locked]="getBuzzState() === 'teamLocked'"
-          role="status" aria-live="polite">
-          {{ outcomeText }}
-        </div>
-      }
-
-      <!-- Buzz button: mounted for every tossup round state (open, answered, locked), so it never
-           unmounts between AWAITING_BUZZ and AWAITING_ANSWER; label and enabled-state carry the
-           round state (M5 S1-01). -->
-      @if (isTossupRoundState()) {
-        <div class="buzz-button-container">
-          <button
-            mat-raised-button
-            id="buzz-button"
-            type="button"
-            (click)="onBuzzClick()"
-            [disabled]="getBuzzState() !== 'open'"
-            [class.is-locked]="getBuzzState() !== 'open'"
-            [attr.aria-label]="getBuzzButtonAriaLabel()"
-            class="buzz-button">
-            <!-- Display appropriate text on the buzz button -->
-            {{ getBuzzButtonText() }}
-          </button>
-        </div>
-      }
-
-      <!-- Timer Display -->
+      <!-- Timer: part of the top status strip alongside the "Tossup N of M"
+           title (M5 S1-04 FIRST VIEWPORT), placed ahead of the team list so
+           it never lands in the dome's anchored slot. -->
       @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ && getTossupTimerDisplay(); as tossupSeconds) {
         <div class="timer-display" [class.timer-display--urgent]="tossupSeconds <= 5" role="timer" aria-live="polite">
           <p>Time remaining: {{ tossupSeconds }}s</p>
+        </div>
+      }
+
+      <!-- Team list component: the middle, scrollable slot (M5 S1-04). Moved
+           ahead of the buzz/bonus/round-complete blocks in source order:
+           mat-card-content is a flex column and this is its only
+           `flex: 1 1 auto` child, so document order alone puts it between
+           the top strip and whichever bottom slot is showing, with no
+           `order` overrides needed. -->
+      <app-team-list [teams]="gameSession.teamList"
+        [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
+        [currentRound]="gameSession.currentMatch.currentRound"
+        [previousRoundList]="gameSession.currentMatch.previousRounds">
+      </app-team-list>
+
+      <!-- Buzzer active slot: outcome strip + dome as one unit, anchored in
+           the lower third on tall viewports and beside the team list in
+           landscape (M5 S1-04). Kept mounted for every tossup round state
+           (open, answered, locked), so it never unmounts between
+           AWAITING_BUZZ and AWAITING_ANSWER; label and enabled-state carry
+           the round state (M5 S1-01). -->
+      @if (isTossupRoundState()) {
+        <div class="buzzer-active-slot">
+          <!-- Buzz outcome: who has it, in text (not colour alone), one line above the dome. -->
+          @if (getBuzzOutcomeText(); as outcomeText) {
+            <div class="buzz-outcome-strip"
+              [class.buzz-outcome-strip--self]="getBuzzState() === 'self'"
+              [class.buzz-outcome-strip--other]="getBuzzState() === 'other'"
+              [class.buzz-outcome-strip--team-locked]="getBuzzState() === 'teamLocked'"
+              role="status" aria-live="polite">
+              {{ outcomeText }}
+            </div>
+          }
+
+          <div class="buzz-button-container">
+            <button
+              mat-raised-button
+              id="buzz-button"
+              type="button"
+              (click)="onBuzzClick()"
+              [disabled]="getBuzzState() !== 'open'"
+              [class.is-locked]="getBuzzState() !== 'open'"
+              [attr.aria-label]="getBuzzButtonAriaLabel()"
+              class="buzz-button">
+              <!-- Display appropriate text on the buzz button -->
+              {{ getBuzzButtonText() }}
+            </button>
+          </div>
         </div>
       }
 
@@ -112,14 +131,6 @@
           </div>
         </div>
       }
-
-
-      <!-- Team list component: Displays a list of teams with their respective scores and buzz statuses -->
-      <app-team-list [teams]="gameSession.teamList"
-        [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
-        [currentRound]="gameSession.currentMatch.currentRound"
-        [previousRoundList]="gameSession.currentMatch.previousRounds">
-      </app-team-list>
     </mat-card-content>
   </mat-card>
 </div>

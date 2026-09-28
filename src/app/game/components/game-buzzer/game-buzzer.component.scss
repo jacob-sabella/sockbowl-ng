@@ -10,13 +10,33 @@
   overflow-y: auto;
   background: var(--bg-primary);
   padding: 1rem;
+  // Clears the home-indicator / gesture-bar area so the dome (anchored at
+  // the bottom of the card, see `.game-buzzer` below) is never under it
+  // (M5 S1-04 "Bottom third ... clear of env(safe-area-inset-bottom)").
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  // Was `center`: with the card's height fixed to the viewport (see
+  // `.game-buzzer` `flex`), a `center`-justified single-item container
+  // re-blocks (moves) the whole card up/down by half of whatever the card's
+  // content height changed by — that's exactly the S1-04 bug ("card offsets
+  // ... top y~72 -> y~172" when the outcome strip appears). Top-aligning the
+  // card and anchoring the dome *inside* it instead keeps the card itself
+  // from ever moving.
+  justify-content: flex-start;
 
   @media (min-width: 600px) {
     padding: 2rem;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  // Landscape phone (M5 S1-04 FIRST VIEWPORT: 844x390): little vertical
+  // room, so the card gets a tighter frame and its content switches to a
+  // row layout (see `.game-buzzer` below) instead of stacking.
+  @media (orientation: landscape) and (max-height: 500px) {
+    padding: 0.5rem;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -41,13 +61,28 @@
   // dark theme). Pairing them, as `_material-overrides.scss` does, fixes it.
   box-shadow: var(--shadow-lg) var(--shadow-color);
   padding: 1rem;
+  // Fixed-slot layout (M5 S1-04): the card fills the height the container
+  // gives it (the container's `min-height: 100dvh` minus its own padding)
+  // instead of sizing to its content, so its children can be arranged as
+  // top status strip / middle team list / bottom-anchored dome. `min-height:
+  // 0` lets a flex child (`mat-card-content`) actually shrink/scroll inside
+  // it rather than being forced to its content's intrinsic height.
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
 
   @media (min-width: 600px) {
     border-radius: var(--radius-xl);
     padding: 1.5rem;
   }
 
+  @media (orientation: landscape) and (max-height: 500px) {
+    padding: 0.5rem;
+  }
+
   mat-card-title {
+    flex: 0 0 auto;
     font-size: var(--text-xl) !important;
     font-weight: 700 !important;
     color: var(--text-primary) !important;
@@ -61,6 +96,12 @@
       font-size: var(--text-2xl) !important;
     }
 
+    @media (orientation: landscape) and (max-height: 500px) {
+      font-size: var(--text-base) !important;
+      margin-bottom: 0.5rem !important;
+      padding-bottom: 0.4rem !important;
+    }
+
     .of-total {
       font-weight: 500;
       color: var(--text-secondary);
@@ -69,6 +110,24 @@
 
   mat-card-content {
     color: var(--text-primary) !important;
+    // Fixed-slot layout (M5 S1-04): a flex column so the team list (the
+    // only child given `flex: 1 1 auto`, below) grows or shrinks to absorb
+    // whatever room the other slots don't use, which is what keeps the
+    // dome's own bottom edge anchored to the same spot regardless of
+    // whether the outcome strip, bonus block or timer is showing.
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      // Team list beside the buzzer/bonus/round-complete slot instead of
+      // stacked above it (FIRST VIEWPORT: "the dome and team list sit side
+      // by side" at 844x390).
+      flex-direction: row;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
   }
 
   // ---- Buzz outcome strip --------------------------------------------------
@@ -177,6 +236,22 @@
       @media (min-width: 600px) {
         font-size: 2rem;
       }
+
+      // Landscape phone (M5 S1-04): the dome shares a ~390px-tall row with
+      // the title bar and team list, so it's capped by height, not just
+      // width — `min(72vw, 240px)` alone would still ask for 240px of
+      // height here and force the page to scroll, which the FIRST VIEWPORT
+      // contract for this breakpoint rules out ("fully visible"). `34vh`
+      // keeps it comfortably inside that row at 390px tall while `min-width`
+      // holds the touch-target floor.
+      @media (orientation: landscape) and (max-height: 500px) {
+        width: min(34vh, 170px);
+        height: min(34vh, 170px);
+        min-width: 96px;
+        min-height: 96px;
+        font-size: 1.1rem;
+        padding: 0.5rem;
+      }
     }
   }
 
@@ -185,6 +260,7 @@
   // (<=5s), rather than sitting in an amber bordered box the whole time
   // (M5 S1-12).
   .timer-display {
+    flex: 0 0 auto;
     text-align: center;
     font-size: var(--text-lg);
     font-weight: 700;
@@ -206,17 +282,50 @@
       color: inherit !important;
       font-weight: 700 !important;
     }
+
+    // Landscape phone: a slim column ahead of the team list rather than a
+    // full-width row eating into the limited vertical space.
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 0 0 auto;
+      margin-top: 0;
+      align-self: center;
+    }
+  }
+
+  // ---- Buzzer active slot (M5 S1-04) -----------------------------------------
+  // Wraps the outcome strip + dome as one unit: the block that's anchored at
+  // the bottom of the card in portrait, and becomes the dome's own column
+  // beside the team list in landscape.
+  .buzzer-active-slot {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 1 1 55%;
+      min-width: 0;
+      justify-content: center;
+      overflow-y: auto;
+    }
   }
 
   // ---- Bonus section ---------------------------------------------------------
   // One heading + one info block (who/part/phase) + a plain score line,
   // instead of four nested bordered boxes (M5 S1-12).
   .bonus-section {
+    flex: 0 0 auto;
     margin: 1.5rem 0;
     padding: 1.25rem;
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 1 1 55%;
+      min-width: 0;
+      margin: 0;
+      overflow-y: auto;
+    }
 
     .bonus-info {
       text-align: center;
@@ -267,9 +376,17 @@
   // Left-stripe info blocks in the reading voice, left-aligned, no accent
   // top border (M5 S1-13).
   .round-completed-info {
+    flex: 0 0 auto;
     text-align: left;
     padding: 0.25rem 0;
     margin: 1rem 0;
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 1 1 55%;
+      min-width: 0;
+      margin: 0;
+      overflow-y: auto;
+    }
 
     h3 {
       color: var(--text-primary);
@@ -312,8 +429,22 @@
 
 // Team list styling. `:host` scopes the descendant selector to this
 // component's own template instead of every `app-team-list` on the page
-// (M5 S1-11).
+// (M5 S1-11). Fixed-slot layout (M5 S1-04): this is `mat-card-content`'s
+// only `flex: 1 1 auto` child, so it grows or shrinks to fill whatever
+// height the top strip and the active/bonus/round-complete slot don't use —
+// the "middle, scrollable" slot, and what keeps the dome's own position
+// stable when the outcome strip appears or disappears above it.
 :host ::ng-deep app-team-list {
-  margin-top: 1rem;
   display: block;
+  flex: 1 1 auto;
+  min-height: 3rem;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    flex: 1 1 45%;
+    min-width: 0;
+    margin: 0;
+  }
 }

@@ -1,12 +1,26 @@
 /* Non-fatal reconnect indicator (M5 S1-03): a plain status strip, distinct from
-   the stomp-error-banner (fatal/error frames only). */
+   the stomp-error-banner (fatal/error frames only).
+   M5 S1-04: fixed overlay, matching the stomp-error-banner's own fix, so
+   this strip appearing/disappearing while a round is live never pushes (or
+   covers) the buzzer dome below it. Sits under the banner's z-index so a
+   simultaneous fatal error wins the same slot rather than the two stacking. */
 .reconnect-strip {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  z-index: 80;
   padding: 0.5rem 1rem;
   text-align: center;
   font-size: var(--text-sm, 0.875rem);
   font-weight: 600;
   color: var(--warning-text, var(--text-primary));
   background: var(--warning-surface, var(--bg-secondary));
+  box-shadow: var(--shadow-sm) var(--shadow-color);
+
+  @media (min-width: 641px) {
+    top: 64px;
+  }
 }
 
 /* Connecting state before the first gameSession$ emission (M5 S1-02). */
