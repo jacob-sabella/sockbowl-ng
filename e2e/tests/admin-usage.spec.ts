@@ -166,8 +166,17 @@ async function openPlayer2Detail(page: Page) {
   await expect(usersCard.locator('.admin-usage__status')).toBeHidden({ timeout: 20_000 });
   await search.fill('player2');
   await search.press('Enter');
-  const row = page.locator('tr.admin-usage__row', { hasText: 'player2' });
+  // Not `{ hasText: 'player2' }`: the row's user cell renders
+  // `row.displayName || row.username || row.keycloakId`, and player2's
+  // *display name* is "Player Two" -- the literal substring "player2"
+  // (their username/email) is never actually in the DOM once a display
+  // name exists, so that filter could never match (live evidence: with the
+  // OnPush fix in place, the table rendered exactly one row -- the search
+  // already narrows server-side -- and this filter still failed to see
+  // it). The server-side search already guarantees at most one match.
+  const row = page.locator('tr.admin-usage__row').first();
   await expect(row).toBeVisible({ timeout: 20_000 });
+  await expect(row).toContainText('Player Two', { timeout: 5_000 });
   await row.getByRole('button', { name: 'Expand' }).click();
   await expect(page.locator('.admin-usage__detail')).toBeVisible({ timeout: 20_000 });
   return row;
