@@ -1,0 +1,717 @@
+{
+  "_meta": {
+    "source": "M4-int",
+    "m3Merged": false,
+    "note": "Backend is the M4 integration head (goal/m4-limits), not yet merged with M3 (goal/m3-packets). INT1 may re-record this fixture once the real M3×M4×M5 integration heads exist.",
+    "images": {
+      "game": "sockbowl-game:m5rec (5186d25)",
+      "questions": "sockbowl-questions:m5rec (fc456d6)",
+      "docker": "4e8ebb3 (goal/m4-limits)"
+    },
+    "recordedAt": "2026-09-28T20:24:47.535Z",
+    "gameMode": "SINGLE_PLAYER",
+    "seat": "buzzer",
+    "synthesized": false
+  },
+  "gameSessionId": "01M3MV3WA7ZJVDWHKXZ6WXZ06S",
+  "playerSessionId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+  "frames": [
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "gameSession": {
+          "id": "01M3MV3WA7ZJVDWHKXZ6WXZ06S",
+          "joinCode": "XNXPKV",
+          "gameSettings": {
+            "proctorType": "NO_PROCTOR",
+            "gameMode": "SINGLE_PLAYER",
+            "bonusesEnabled": false,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": true
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Solo",
+              "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "618d90bd-a4db-4f80-a16f-94ff7b78fb9c",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": true,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Solo",
+                  "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": {
+              "answer": "",
+              "associatedBonus": null,
+              "bonusEligibleTeamId": null,
+              "bonusPartAnswers": [],
+              "bonusPoints": 0,
+              "bonusTimerActive": false,
+              "buzzList": [],
+              "category": null,
+              "currentBonus": null,
+              "currentBonusPartIndex": 0,
+              "currentBuzz": null,
+              "proctorFinishedReading": false,
+              "proctorFinishedReadingBonusPreamble": false,
+              "proctorFinishedReadingCurrentPart": false,
+              "question": "",
+              "remainingBonusTimerSeconds": null,
+              "remainingTossupTimerSeconds": null,
+              "revealedWordCount": 0,
+              "roundNumber": 0,
+              "roundState": null,
+              "subcategory": null,
+              "timerStartedAtMillis": null,
+              "tossupTimerActive": false,
+              "totalWordCount": 0
+            },
+            "matchState": "CONFIG",
+            "packet": {
+              "id": null,
+              "name": null,
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": null,
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": null,
+              "bonuses": null
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 1,
+          "currentRound": {
+            "answer": "",
+            "associatedBonus": null,
+            "bonusEligibleTeamId": null,
+            "bonusPartAnswers": [],
+            "bonusPoints": 0,
+            "bonusTimerActive": false,
+            "buzzList": [],
+            "category": null,
+            "currentBonus": null,
+            "currentBonusPartIndex": 0,
+            "currentBuzz": null,
+            "proctorFinishedReading": false,
+            "proctorFinishedReadingBonusPreamble": false,
+            "proctorFinishedReadingCurrentPart": false,
+            "question": "",
+            "remainingBonusTimerSeconds": null,
+            "remainingTossupTimerSeconds": null,
+            "revealedWordCount": 0,
+            "roundNumber": 0,
+            "roundState": null,
+            "subcategory": null,
+            "timerStartedAtMillis": null,
+            "tossupTimerActive": false,
+            "totalWordCount": 0
+          },
+          "proctor": null
+        },
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION"
+      },
+      "delayMs": 8
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "bonusCount": 0,
+        "messageContentType": "MatchPacketUpdate",
+        "messageType": "CONFIG",
+        "packetId": "bfb2b154-a8d6-41eb-abe8-ea00a366387b",
+        "packetName": "M5 H0 SINGLE_PLAYER 1790627147655",
+        "tossupCount": 9
+      },
+      "delayMs": 20
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "gameSession": {
+          "id": "01M3MV3WA7ZJVDWHKXZ6WXZ06S",
+          "joinCode": "XNXPKV",
+          "gameSettings": {
+            "proctorType": "NO_PROCTOR",
+            "gameMode": "SINGLE_PLAYER",
+            "bonusesEnabled": false,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": true
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Solo",
+              "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "618d90bd-a4db-4f80-a16f-94ff7b78fb9c",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": true,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Solo",
+                  "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": {
+              "answer": "",
+              "associatedBonus": null,
+              "bonusEligibleTeamId": null,
+              "bonusPartAnswers": [],
+              "bonusPoints": 0,
+              "bonusTimerActive": false,
+              "buzzList": [],
+              "category": null,
+              "currentBonus": null,
+              "currentBonusPartIndex": 0,
+              "currentBuzz": null,
+              "proctorFinishedReading": false,
+              "proctorFinishedReadingBonusPreamble": false,
+              "proctorFinishedReadingCurrentPart": false,
+              "question": "",
+              "remainingBonusTimerSeconds": null,
+              "remainingTossupTimerSeconds": null,
+              "revealedWordCount": 0,
+              "roundNumber": 0,
+              "roundState": null,
+              "subcategory": null,
+              "timerStartedAtMillis": null,
+              "tossupTimerActive": false,
+              "totalWordCount": 0
+            },
+            "matchState": "CONFIG",
+            "packet": {
+              "id": null,
+              "name": "M5 H0 SINGLE_PLAYER 1790627147655",
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": "PUBLISHED",
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": null,
+              "bonuses": null
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 1,
+          "currentRound": {
+            "answer": "",
+            "associatedBonus": null,
+            "bonusEligibleTeamId": null,
+            "bonusPartAnswers": [],
+            "bonusPoints": 0,
+            "bonusTimerActive": false,
+            "buzzList": [],
+            "category": null,
+            "currentBonus": null,
+            "currentBonusPartIndex": 0,
+            "currentBuzz": null,
+            "proctorFinishedReading": false,
+            "proctorFinishedReadingBonusPreamble": false,
+            "proctorFinishedReadingCurrentPart": false,
+            "question": "",
+            "remainingBonusTimerSeconds": null,
+            "remainingTossupTimerSeconds": null,
+            "revealedWordCount": 0,
+            "roundNumber": 0,
+            "roundState": null,
+            "subcategory": null,
+            "timerStartedAtMillis": null,
+            "tossupTimerActive": false,
+            "totalWordCount": 0
+          },
+          "proctor": null
+        },
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION"
+      },
+      "delayMs": 883
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "bonusCount": 0,
+        "messageContentType": "MatchPacketUpdate",
+        "messageType": "CONFIG",
+        "packetId": null,
+        "packetName": "M5 H0 SINGLE_PLAYER 1790627147655",
+        "tossupCount": 9
+      },
+      "delayMs": 0
+    },
+    {
+      "target": "broadcast",
+      "kind": "message",
+      "body": {
+        "messageContentType": "GameStartedMessage",
+        "messageType": "PROGRESSION"
+      },
+      "delayMs": 8
+    },
+    {
+      "target": "broadcast",
+      "kind": "message",
+      "body": {
+        "messageContentType": "RoundUpdate",
+        "messageType": "GAME",
+        "previousRounds": null,
+        "round": {
+          "answer": "",
+          "associatedBonus": null,
+          "bonusEligibleTeamId": null,
+          "bonusPartAnswers": [],
+          "bonusPoints": 0,
+          "bonusTimerActive": false,
+          "buzzList": [],
+          "category": "",
+          "currentBonus": null,
+          "currentBonusPartIndex": 0,
+          "currentBuzz": null,
+          "proctorFinishedReading": false,
+          "proctorFinishedReadingBonusPreamble": false,
+          "proctorFinishedReadingCurrentPart": false,
+          "question": "Placeholder tossup 1 (M5 H0 SINGLE_PLAYER), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+          "remainingBonusTimerSeconds": null,
+          "remainingTossupTimerSeconds": null,
+          "revealedWordCount": 0,
+          "roundNumber": 1,
+          "roundState": "PROCTOR_READING",
+          "subcategory": "",
+          "timerStartedAtMillis": null,
+          "tossupTimerActive": false,
+          "totalWordCount": 19
+        }
+      },
+      "delayMs": 0
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "gameSession": {
+          "id": "01M3MV3WA7ZJVDWHKXZ6WXZ06S",
+          "joinCode": "XNXPKV",
+          "gameSettings": {
+            "proctorType": "NO_PROCTOR",
+            "gameMode": "SINGLE_PLAYER",
+            "bonusesEnabled": false,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": true
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Solo",
+              "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "618d90bd-a4db-4f80-a16f-94ff7b78fb9c",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": true,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Solo",
+                  "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": {
+              "answer": "",
+              "associatedBonus": null,
+              "bonusEligibleTeamId": null,
+              "bonusPartAnswers": [],
+              "bonusPoints": 0,
+              "bonusTimerActive": false,
+              "buzzList": [],
+              "category": "",
+              "currentBonus": null,
+              "currentBonusPartIndex": 0,
+              "currentBuzz": null,
+              "proctorFinishedReading": false,
+              "proctorFinishedReadingBonusPreamble": false,
+              "proctorFinishedReadingCurrentPart": false,
+              "question": "",
+              "remainingBonusTimerSeconds": null,
+              "remainingTossupTimerSeconds": null,
+              "revealedWordCount": 0,
+              "roundNumber": 1,
+              "roundState": "PROCTOR_READING",
+              "subcategory": "",
+              "timerStartedAtMillis": null,
+              "tossupTimerActive": false,
+              "totalWordCount": 19
+            },
+            "matchState": "IN_GAME",
+            "packet": {
+              "id": null,
+              "name": "M5 H0 SINGLE_PLAYER 1790627147655",
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": "PUBLISHED",
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": null,
+              "bonuses": null
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 1,
+          "currentRound": {
+            "answer": "",
+            "associatedBonus": null,
+            "bonusEligibleTeamId": null,
+            "bonusPartAnswers": [],
+            "bonusPoints": 0,
+            "bonusTimerActive": false,
+            "buzzList": [],
+            "category": "",
+            "currentBonus": null,
+            "currentBonusPartIndex": 0,
+            "currentBuzz": null,
+            "proctorFinishedReading": false,
+            "proctorFinishedReadingBonusPreamble": false,
+            "proctorFinishedReadingCurrentPart": false,
+            "question": "",
+            "remainingBonusTimerSeconds": null,
+            "remainingTossupTimerSeconds": null,
+            "revealedWordCount": 0,
+            "roundNumber": 1,
+            "roundState": "PROCTOR_READING",
+            "subcategory": "",
+            "timerStartedAtMillis": null,
+            "tossupTimerActive": false,
+            "totalWordCount": 19
+          },
+          "proctor": null
+        },
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION"
+      },
+      "delayMs": 901
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "bonusCount": 0,
+        "messageContentType": "MatchPacketUpdate",
+        "messageType": "CONFIG",
+        "packetId": null,
+        "packetName": "M5 H0 SINGLE_PLAYER 1790627147655",
+        "tossupCount": 9
+      },
+      "delayMs": 0
+    },
+    {
+      "target": "broadcast",
+      "kind": "message",
+      "body": {
+        "correct": true,
+        "currentRound": {
+          "answer": "Synthetic Answer 1",
+          "associatedBonus": null,
+          "bonusEligibleTeamId": null,
+          "bonusPartAnswers": [],
+          "bonusPoints": 0,
+          "bonusTimerActive": false,
+          "buzzList": [
+            {
+              "correct": true,
+              "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+              "teamId": "618d90bd-a4db-4f80-a16f-94ff7b78fb9c"
+            }
+          ],
+          "category": "",
+          "currentBonus": null,
+          "currentBonusPartIndex": 0,
+          "currentBuzz": null,
+          "proctorFinishedReading": false,
+          "proctorFinishedReadingBonusPreamble": false,
+          "proctorFinishedReadingCurrentPart": false,
+          "question": "Placeholder tossup 1 (M5 H0 SINGLE_PLAYER), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+          "remainingBonusTimerSeconds": null,
+          "remainingTossupTimerSeconds": null,
+          "revealedWordCount": 0,
+          "roundNumber": 1,
+          "roundState": "COMPLETED",
+          "subcategory": "",
+          "timerStartedAtMillis": null,
+          "tossupTimerActive": false,
+          "totalWordCount": 19
+        },
+        "messageContentType": "AnswerUpdate",
+        "messageType": "GAME",
+        "playerId": null,
+        "previousRounds": []
+      },
+      "delayMs": 20
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "gameSession": {
+          "id": "01M3MV3WA7ZJVDWHKXZ6WXZ06S",
+          "joinCode": "XNXPKV",
+          "gameSettings": {
+            "proctorType": "NO_PROCTOR",
+            "gameMode": "SINGLE_PLAYER",
+            "bonusesEnabled": false,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": true
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Solo",
+              "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "618d90bd-a4db-4f80-a16f-94ff7b78fb9c",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": true,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Solo",
+                  "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": {
+              "answer": "Synthetic Answer 1",
+              "associatedBonus": null,
+              "bonusEligibleTeamId": null,
+              "bonusPartAnswers": [],
+              "bonusPoints": 0,
+              "bonusTimerActive": false,
+              "buzzList": [
+                {
+                  "correct": true,
+                  "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+                  "teamId": "618d90bd-a4db-4f80-a16f-94ff7b78fb9c"
+                }
+              ],
+              "category": "",
+              "currentBonus": null,
+              "currentBonusPartIndex": 0,
+              "currentBuzz": null,
+              "proctorFinishedReading": false,
+              "proctorFinishedReadingBonusPreamble": false,
+              "proctorFinishedReadingCurrentPart": false,
+              "question": "Placeholder tossup 1 (M5 H0 SINGLE_PLAYER), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+              "remainingBonusTimerSeconds": null,
+              "remainingTossupTimerSeconds": null,
+              "revealedWordCount": 0,
+              "roundNumber": 1,
+              "roundState": "COMPLETED",
+              "subcategory": "",
+              "timerStartedAtMillis": null,
+              "tossupTimerActive": false,
+              "totalWordCount": 19
+            },
+            "matchState": "IN_GAME",
+            "packet": {
+              "id": null,
+              "name": "M5 H0 SINGLE_PLAYER 1790627147655",
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": "PUBLISHED",
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": null,
+              "bonuses": null
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 1,
+          "currentRound": {
+            "answer": "Synthetic Answer 1",
+            "associatedBonus": null,
+            "bonusEligibleTeamId": null,
+            "bonusPartAnswers": [],
+            "bonusPoints": 0,
+            "bonusTimerActive": false,
+            "buzzList": [
+              {
+                "correct": true,
+                "playerId": "b47cba8a-34ab-4525-bca8-bf43da9cee08",
+                "teamId": "618d90bd-a4db-4f80-a16f-94ff7b78fb9c"
+              }
+            ],
+            "category": "",
+            "currentBonus": null,
+            "currentBonusPartIndex": 0,
+            "currentBuzz": null,
+            "proctorFinishedReading": false,
+            "proctorFinishedReadingBonusPreamble": false,
+            "proctorFinishedReadingCurrentPart": false,
+            "question": "Placeholder tossup 1 (M5 H0 SINGLE_PLAYER), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+            "remainingBonusTimerSeconds": null,
+            "remainingTossupTimerSeconds": null,
+            "revealedWordCount": 0,
+            "roundNumber": 1,
+            "roundState": "COMPLETED",
+            "subcategory": "",
+            "timerStartedAtMillis": null,
+            "tossupTimerActive": false,
+            "totalWordCount": 19
+          },
+          "proctor": null
+        },
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION"
+      },
+      "delayMs": 890
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "body": {
+        "bonusCount": 0,
+        "messageContentType": "MatchPacketUpdate",
+        "messageType": "CONFIG",
+        "packetId": null,
+        "packetName": "M5 H0 SINGLE_PLAYER 1790627147655",
+        "tossupCount": 9
+      },
+      "delayMs": 0
+    }
+  ]
+}

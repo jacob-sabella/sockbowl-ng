@@ -28,13 +28,25 @@
 import type { Page } from '@playwright/test';
 
 export interface ReplayFrame {
-  /** `self`: the seat's own queue; `broadcast`: the whole session's queue. */
-  target: 'self' | 'broadcast';
+  /**
+   * `self`: the seat's own queue; `broadcast`: the whole session's queue;
+   * `errors`: `/user/queue/errors` — a *non-fatal* STOMP error the client
+   * treats as a normal MESSAGE, not a connection-ending ERROR frame (M5 H0
+   * follow-up: `game-web-socket.service.ts`'s `/user/queue/errors`
+   * subscription forwards anything not in `FATAL_STOMP_CODES` to
+   * `errorsSubject` with `fatal: false` while the socket stays open — e.g. a
+   * soft `RATE_LIMITED` drop). For a *fatal* STOMP error (the server closing
+   * the socket, e.g. `BANNED`), use `kind: 'error'` instead, which still
+   * ignores `target`.
+   */
+  target: 'self' | 'broadcast' | 'errors';
   kind?: 'message' | 'error';
   /** JSON body. For `kind: 'message'` this must include `messageContentType` (see `game-message.service.ts`). */
   body: Record<string, unknown>;
   /** Delay before sending, relative to the previous frame (or CONNECT for the first). */
   delayMs?: number;
+  /** Purely documentary — never read by the mock itself (M5 H0 task 2's synthesis fallback marker). */
+  synthesized?: boolean;
 }
 
 export interface StompReplayOptions {
@@ -43,6 +55,17 @@ export interface StompReplayOptions {
   frames: ReplayFrame[];
   /** Defaults to the mock game origin's socket path (`mock/config.ts`'s `MOCK_WS_URL`). */
   wsUrlGlob?: string;
+  /**
+   * After every `frames` entry has been delivered, wait this long and then
+   * close the mock socket (no ERROR/DISCONNECT frame — a bare drop), for a
+   * `*-reconnecting` capture state: `game-web-socket.service.ts`'s stompjs
+   * `Client` sees a plain socket close as neither a fatal nor a `TOKEN_*`
+   * `onStompError`, so it just retries with its own exponential backoff
+   * (`BASE_RECONNECT_DELAY_MS`) — the same as any real dropped connection.
+   * The mock does not answer that reconnect (this route only fires once), so
+   * the app is left visibly retrying, which is the state being captured.
+   */
+  closeAfterMs?: number;
 }
 
 interface ParsedFrame {
@@ -90,10 +113,12 @@ export async function mockStompReplay(page: Page, opts: StompReplayOptions): Pro
     const subsByDestination = new Map<string, string>();
     let delivered = false;
 
-    const destinationFor = (target: 'self' | 'broadcast') =>
-      target === 'self'
+    const destinationFor = (target: 'self' | 'broadcast' | 'errors') => {
+      if (target === 'errors') return '/user/queue/errors';
+      return target === 'self'
         ? `/queue/event/${opts.gameSessionId}/${opts.playerSessionId}`
         : `/queue/event/${opts.gameSessionId}`;
+    };
 
     async function deliver(): Promise<void> {
       if (delivered) return; // get-game can be re-sent by a reconnect; replay the script once
@@ -113,6 +138,9 @@ export async function mockStompReplay(page: Page, opts: StompReplayOptions): Pro
           destination: dest,
           'content-type': 'application/json',
         }, JSON.stringify(frame.body)));
+      }
+      if (opts.closeAfterMs != null) {
+        setTimeout(() => { try { ws.close(); } catch { /* already closed */ } }, opts.closeAfterMs);
       }
     }
 
