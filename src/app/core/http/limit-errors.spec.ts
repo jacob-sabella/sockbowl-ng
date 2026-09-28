@@ -107,8 +107,26 @@ describe('notifyLimit', () => {
       'AI generation is temporarily unavailable', 'Dismiss', jasmine.any(Object));
   });
 
-  it('shows a banned snackbar using the reason when present', () => {
+  // WP-E1fix (M4 live-run evidence, auth-ban.spec.ts): showing the reason
+  // ALONE (no earlier version's behavior) broke a live assertion that just
+  // checks the shown text says "banned" -- a moderator's free-text reason
+  // isn't guaranteed to contain that word itself, so the fixed lead-in must
+  // always be there too.
+  it('shows a banned snackbar that always says "banned", with the reason appended when present', () => {
     notifyLimit({ kind: 'banned', reason: 'Spamming the buzzer.', expiresAt: null }, snackBar, state);
-    expect(snackBar.open).toHaveBeenCalledWith('Spamming the buzzer.', 'Dismiss', jasmine.any(Object));
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'You have been banned from Sockbowl. Reason: Spamming the buzzer.', 'Dismiss', jasmine.any(Object));
+  });
+
+  it('shows the default banned snackbar when no reason is present', () => {
+    notifyLimit({ kind: 'banned', reason: undefined, expiresAt: null }, snackBar, state);
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'You have been banned from Sockbowl.', 'Dismiss', jasmine.any(Object));
+  });
+
+  it('shows an ip_banned snackbar with its own wording and the reason appended when present', () => {
+    notifyLimit({ kind: 'ip_banned', reason: 'Abuse from this network.', expiresAt: null }, snackBar, state);
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'Your network has been banned from Sockbowl. Reason: Abuse from this network.', 'Dismiss', jasmine.any(Object));
   });
 });

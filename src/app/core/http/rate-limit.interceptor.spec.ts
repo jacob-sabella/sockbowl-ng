@@ -104,23 +104,41 @@ describe('RateLimitInterceptor', () => {
   // never finds it. This interceptor sits closer to the backend (registered
   // after AuthInterceptor) and already knows how to render a proper message
   // for a classified body via notifyLimit(), so it must handle 403 too.
-  it('a 403 banned response shows the banned snackbar with the reason', () => {
+  it('a 403 banned response with a reason shows a message that still says "banned", plus the reason', () => {
+    // Live evidence (auth-ban.spec.ts's own ban reason, "e2e ban test
+    // (auth-ban.spec.ts)"): a moderator's free-text reason has no guarantee
+    // of containing the word "banned" itself. An earlier version of this
+    // fix showed the reason ALONE (e.g. just "spam"), which broke exactly
+    // that live test's getByText(/not allowed|banned/i) assertion -- the
+    // fixed lead-in text must always be present.
     http.post(URL, {}).subscribe({ error: () => undefined });
 
     httpMock.expectOne(URL).flush({ error: 'banned', reason: 'spam', expiresAt: null },
       { status: 403, statusText: 'Forbidden' });
 
-    expect(snackBarSpy.open).toHaveBeenCalledWith('spam', 'Dismiss', jasmine.any(Object));
+    const [message] = snackBarSpy.open.calls.mostRecent().args;
+    expect(message).toMatch(/banned/i);
+    expect(message).toContain('spam');
   });
 
-  it('a 403 ip_banned response shows the banned snackbar with a default message when reason is absent', () => {
+  it('a 403 banned response with no reason shows the default banned message', () => {
+    http.post(URL, {}).subscribe({ error: () => undefined });
+
+    httpMock.expectOne(URL).flush({ error: 'banned', reason: null, expiresAt: null },
+      { status: 403, statusText: 'Forbidden' });
+
+    expect(snackBarSpy.open).toHaveBeenCalledWith(
+      'You have been banned from Sockbowl.', 'Dismiss', jasmine.any(Object));
+  });
+
+  it('a 403 ip_banned response shows its own default message when reason is absent', () => {
     http.post(URL, {}).subscribe({ error: () => undefined });
 
     httpMock.expectOne(URL).flush({ error: 'ip_banned', reason: null, expiresAt: null },
       { status: 403, statusText: 'Forbidden' });
 
     expect(snackBarSpy.open).toHaveBeenCalledWith(
-      'You have been banned from Sockbowl.', 'Dismiss', jasmine.any(Object));
+      'Your network has been banned from Sockbowl.', 'Dismiss', jasmine.any(Object));
   });
 
   it('a plain 403 with no recognized classification is left alone (not this interceptor\'s concern)', () => {

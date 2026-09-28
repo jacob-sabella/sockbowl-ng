@@ -93,6 +93,10 @@ export function limitErrorFrom(
  * `{error,reason,expiresAt}` shape into a useful message, so it defers to
  * this one instead of double-showing a snackbar). Callers that classify a
  * GraphQL `BANNED` error (INT1) may still choose to call this for that case.
+ * The `banned`/`ip_banned` message always leads with fixed wording that says
+ * "banned" and appends a moderator's free-text reason, if any, rather than
+ * showing the reason alone -- a caller-supplied reason has no guarantee of
+ * containing that word itself.
  */
 export function notifyLimit(
   err: LimitError,
@@ -120,10 +124,23 @@ export function notifyLimit(
     case 'limiter_unavailable':
       snackBar.open('AI generation is temporarily unavailable', 'Dismiss', { duration: 6000 });
       break;
-    case 'banned':
-    case 'ip_banned':
-      snackBar.open(err.reason || 'You have been banned from Sockbowl.', 'Dismiss', { duration: 8000 });
+    case 'banned': {
+      // Always say "banned" even when a moderator's free-text reason doesn't
+      // happen to include that word itself (found live: auth-ban.spec.ts's
+      // own ban reason, e.g. "e2e ban test (auth-ban.spec.ts)", showed with
+      // no other wording and so never matched a /banned/i-style assertion --
+      // the STOMP-side fatal ban notice, stomp-errors.ts's fixed
+      // 'Your account is banned from playing.', never had this gap because
+      // it never mixes in caller-supplied text).
+      const base = 'You have been banned from Sockbowl.';
+      snackBar.open(err.reason ? `${base} Reason: ${err.reason}` : base, 'Dismiss', { duration: 8000 });
       break;
+    }
+    case 'ip_banned': {
+      const base = 'Your network has been banned from Sockbowl.';
+      snackBar.open(err.reason ? `${base} Reason: ${err.reason}` : base, 'Dismiss', { duration: 8000 });
+      break;
+    }
   }
 }
 
