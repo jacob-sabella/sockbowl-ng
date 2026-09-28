@@ -8,6 +8,7 @@ import { Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
+import { isLimitHandled } from '../../../core/http/limit-errors';
 
 @Component({
     selector: 'app-packet-search',
@@ -29,10 +30,20 @@ export class PacketSearchComponent implements OnInit {
   auth = inject(AuthService);
   data = inject(MAT_DIALOG_DATA);
 
-  /** True while the `ai-generate` policy is cooling down after a 429 (M4-UI-01). */
-  readonly generateLocked = computed(() => this.rateLimitState.cooldown('ai-generate')() > 0);
-  /** True while the `import`/`import-ip` policy is cooling down after a 429 (M4-UI-01). */
-  readonly importLocked = computed(() => this.rateLimitState.cooldown('import')() > 0);
+  /**
+   * True while the `ai-generate` OR `ai-concurrency` policy is cooling down
+   * after a 429 (M4-UI-01, NG-V1-03): a concurrency rejection locks the
+   * button exactly like a plain rate-limit rejection does.
+   */
+  readonly generateLocked = computed(() =>
+    this.rateLimitState.cooldown('ai-generate')() > 0 || this.rateLimitState.cooldown('ai-concurrency')() > 0);
+  /**
+   * True while the `import` OR `import-ip` policy is cooling down after a
+   * 429 (M4-UI-01, NG-V1-03): the per-IP import limit locks the same button
+   * as the per-account one.
+   */
+  readonly importLocked = computed(() =>
+    this.rateLimitState.cooldown('import')() > 0 || this.rateLimitState.cooldown('import-ip')() > 0);
 
   // Search tab properties
   searchQuery = "";
@@ -335,10 +346,12 @@ export class PacketSearchComponent implements OnInit {
         console.error('Generation error:', error);
         this.isGenerating = false;
 
-        // A 429 (rate_limited/quota_exceeded) or 503 (limiter_unavailable) is
-        // already surfaced by the global RateLimitInterceptor, with a cooldown
-        // that disables the Generate button above; don't double the snackbar.
-        if (error.status === 429 || error.status === 503) {
+        // A 429 (rate_limited/quota_exceeded), 503 (limiter_unavailable), or
+        // 403 banned/ip_banned is already surfaced by the global
+        // RateLimitInterceptor -- the first two with a cooldown that disables
+        // the Generate button above -- so don't double the snackbar
+        // (NG-V1-01).
+        if (isLimitHandled(error)) {
           return;
         }
 
@@ -743,9 +756,11 @@ export class PacketSearchComponent implements OnInit {
   private onQbImportError(err: any): void {
     this.qbImporting = false;
     console.error('packet generation error:', err);
-    // A 429 (rate_limited/quota_exceeded) or 503 is already surfaced by the
-    // global RateLimitInterceptor, with a cooldown on the Import button above.
-    if (err?.status === 429 || err?.status === 503) {
+    // A 429 (rate_limited/quota_exceeded), 503, or 403 banned/ip_banned is
+    // already surfaced by the global RateLimitInterceptor -- the first two
+    // with a cooldown on the Import button above -- so don't double the
+    // snackbar (NG-V1-01).
+    if (isLimitHandled(err)) {
       return;
     }
     this.snackBar.open('Could not build a packet. Try loosening the filters.', 'Close', { duration: 5000 });
