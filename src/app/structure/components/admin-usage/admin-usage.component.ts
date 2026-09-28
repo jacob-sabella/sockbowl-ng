@@ -25,6 +25,7 @@ import {
   UserUsageDetail,
   UserUsageSummary,
 } from '../../../core/models/usage-models';
+import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
 import { EditQuotaDialogComponent, EditQuotaDialogResult } from './edit-quota-dialog/edit-quota-dialog.component';
 import { BanUserDialogComponent } from './ban-user-dialog/ban-user-dialog.component';
 import { IpBanDialogComponent } from './ip-ban-dialog/ip-ban-dialog.component';
@@ -67,6 +68,7 @@ export class AdminUsageComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
+  private confirmDialogService = inject(ConfirmDialogService);
 
   readonly displayedColumns = ['user', 'tier', 'lastSeen', 'status', 'sessions', 'packets', 'expand'];
   readonly metricLabel = metricLabel;
@@ -89,6 +91,8 @@ export class AdminUsageComponent implements OnInit {
 
   recentEvents: RateLimitEvent[] = [];
   eventsLoading = true;
+  /** S5-06: kept separate from an empty list, so a failed fetch never reads as "No recent rejections." */
+  eventsError = false;
 
   ngOnInit(): void {
     this.load();
@@ -134,6 +138,7 @@ export class AdminUsageComponent implements OnInit {
 
   loadEvents(): void {
     this.eventsLoading = true;
+    this.eventsError = false;
     this.usageService.events(100).subscribe({
       next: (events) => {
         this.recentEvents = events;
@@ -144,9 +149,19 @@ export class AdminUsageComponent implements OnInit {
         console.error('Failed to load rejection events', err);
         this.recentEvents = [];
         this.eventsLoading = false;
+        this.eventsError = true;
         this.cdr.markForCheck();
       },
     });
+  }
+
+  /**
+   * S5-06: a degraded-dependency banner, named rather than silent, derived
+   * only from the existing "—" signal (`packetsDisplay`) — never invented.
+   * Only fires once the table has data, so it can't flash during loading.
+   */
+  get packetCountsDegraded(): boolean {
+    return !this.loading && !this.error && this.rows.length > 0 && this.rows.every((row) => row.packetsOwned == null);
   }
 
   onSearch(): void {
@@ -183,6 +198,11 @@ export class AdminUsageComponent implements OnInit {
       return;
     }
     this.expandedSub = row.keycloakId;
+    this.loadDetail(row.keycloakId);
+  }
+
+  /** Retries a failed detail fetch without collapsing the row (unlike `toggleDetail`, S5-06). */
+  retryDetail(row: UserUsageSummary): void {
     this.loadDetail(row.keycloakId);
   }
 
@@ -236,17 +256,32 @@ export class AdminUsageComponent implements OnInit {
       });
   }
 
+  /** Confirms, naming the target and the scope, before resetting one metric or every daily metric (S5-02). */
   resetUsage(row: UserUsageSummary, metric?: string): void {
-    this.usageService.resetUsage(row.keycloakId, metric).subscribe({
-      next: () => {
-        this.snackBar.open('Usage reset', 'Dismiss', { duration: 3000 });
-        this.refreshRow(row.keycloakId);
-      },
-      error: (err) => {
-        console.error('Failed to reset usage', err);
-        this.snackBar.open('Failed to reset usage', 'Dismiss', { duration: 4000 });
-      },
-    });
+    const who = row.displayName || row.username || row.keycloakId;
+    const what = metric ? `their ${metricLabel(metric)} usage` : 'all of their daily usage';
+    this.confirmDialogService
+      .confirm({
+        title: 'Reset usage',
+        message: `Reset ${what} for "${who}"?`,
+        confirmText: 'Reset',
+        destructive: true,
+      })
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.usageService.resetUsage(row.keycloakId, metric).subscribe({
+          next: () => {
+            this.snackBar.open('Usage reset', 'Dismiss', { duration: 3000 });
+            this.refreshRow(row.keycloakId);
+          },
+          error: (err) => {
+            console.error('Failed to reset usage', err);
+            this.snackBar.open(err?.error?.message || 'Failed to reset usage', 'Dismiss', { duration: 4000 });
+          },
+        });
+      });
   }
 
   banUser(row: UserUsageSummary): void {
@@ -273,7 +308,8 @@ export class AdminUsageComponent implements OnInit {
       });
   }
 
-  banIp(ip: string): void {
+  /** Bans one of a user's last-seen IPs and refreshes the detail row so the new ban is reflected (S5-16). */
+  banIp(row: UserUsageSummary, ip: string): void {
     this.dialog
       .open(IpBanDialogComponent, { width: '400px', data: { cidr: ip } })
       .afterClosed()
@@ -282,7 +318,10 @@ export class AdminUsageComponent implements OnInit {
           return;
         }
         this.banService.createIpBan(result).subscribe({
-          next: () => this.snackBar.open('IP banned', 'Dismiss', { duration: 3000 }),
+          next: () => {
+            this.snackBar.open('IP banned', 'Dismiss', { duration: 3000 });
+            this.refreshRow(row.keycloakId);
+          },
           error: (err) => {
             console.error('Failed to ban IP', err);
             this.snackBar.open(err?.error?.message || 'Failed to ban IP', 'Dismiss', { duration: 4000 });

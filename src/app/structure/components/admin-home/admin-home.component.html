@@ -20,27 +20,45 @@
       </a>
     }
 
-    <a class="admin-home__card admin-home__card-link" [routerLink]="['/admin/usage']" aria-label="Open usage and quotas">
+    <div class="admin-home__card admin-home__card--usage">
       <mat-card class="admin-home__card-inner">
-        <mat-card-content class="admin-home__card-content">
-          <mat-icon aria-hidden="true">insights</mat-icon>
-          <div class="admin-home__card-body">
-            <div class="admin-home__card-title">Usage</div>
-            <div class="admin-home__card-desc">Per-user quotas and generation usage.</div>
-            @if (globalUsage) {
-              <div class="admin-home__ai-budget">
-                <div class="admin-home__ai-budget-label">
-                  AI budget: {{ globalUsage.aiServerKey.used }} / {{ globalUsage.aiServerKey.limit === -1 ? '∞' : globalUsage.aiServerKey.limit }}
-                </div>
-                @if (globalUsage.aiServerKey.limit !== -1) {
-                  <mat-progress-bar mode="determinate" [value]="aiBudgetPercent()"></mat-progress-bar>
-                }
+        <a class="admin-home__card-link admin-home__card-link--inline" [routerLink]="['/admin/usage']" aria-label="Open usage and quotas">
+          <mat-card-content class="admin-home__card-content">
+            <mat-icon aria-hidden="true">insights</mat-icon>
+            <div class="admin-home__card-body">
+              <div class="admin-home__card-title">Usage</div>
+              <div class="admin-home__card-desc">Per-user quotas and generation usage.</div>
+            </div>
+          </mat-card-content>
+        </a>
+        <!-- Outside the link (S5-06): a slot that never disappears, so Retry is
+             never a button nested inside the card's own <a>. -->
+        <div class="admin-home__ai-budget-slot">
+          @if (globalUsageLoading) {
+            <div class="admin-home__ai-budget-status"><mat-spinner diameter="16" aria-label="Loading AI budget"></mat-spinner></div>
+          } @else if (globalUsageError) {
+            <div class="admin-home__ai-budget-degraded">
+              <span>AI budget unavailable</span>
+              <button mat-button type="button" (click)="loadGlobalUsage()">Retry</button>
+            </div>
+          } @else if (globalUsage) {
+            <div class="admin-home__ai-budget">
+              <div class="admin-home__ai-budget-label">
+                AI budget: {{ globalUsage.aiServerKey.used }} / {{ globalUsage.aiServerKey.limit === -1 ? '∞' : globalUsage.aiServerKey.limit }}
               </div>
-            }
-          </div>
-        </mat-card-content>
+              @if (globalUsage.aiServerKey.limit !== -1) {
+                <mat-progress-bar
+                  mode="determinate"
+                  [value]="aiBudgetPercent()"
+                  aria-label="AI generation budget used"
+                  [attr.aria-valuetext]="globalUsage.aiServerKey.used + ' of ' + globalUsage.aiServerKey.limit + ' AI generations used'"
+                ></mat-progress-bar>
+              }
+            </div>
+          }
+        </div>
       </mat-card>
-    </a>
+    </div>
 
     @if (auth.hasPermission('taxonomy:manage')) {
       <a class="admin-home__card admin-home__card-link" [routerLink]="['/admin/taxonomy']" aria-label="Open taxonomy">

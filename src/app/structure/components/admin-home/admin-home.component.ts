@@ -21,13 +21,27 @@ export class AdminHomeComponent implements OnInit {
   private usageService = inject(UsageService);
 
   globalUsage: GlobalUsage | null = null;
+  globalUsageLoading = true;
+  /** S5-06: kept separate from `globalUsage === null` so the card can say "unavailable" plus Retry, instead of just hiding the meter. */
+  globalUsageError = false;
 
   ngOnInit(): void {
+    this.loadGlobalUsage();
+  }
+
+  loadGlobalUsage(): void {
+    this.globalUsageLoading = true;
+    this.globalUsageError = false;
     this.usageService.global().subscribe({
-      next: (g) => (this.globalUsage = g),
+      next: (g) => {
+        this.globalUsage = g;
+        this.globalUsageLoading = false;
+      },
       error: (err) => {
         console.error('Failed to load global usage', err);
         this.globalUsage = null;
+        this.globalUsageLoading = false;
+        this.globalUsageError = true;
       },
     });
   }

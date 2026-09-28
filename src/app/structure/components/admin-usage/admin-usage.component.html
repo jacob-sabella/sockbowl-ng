@@ -12,9 +12,12 @@
     </mat-card-header>
     <mat-card-content>
       @if (globalLoading) {
-        <div class="admin-usage__status"><mat-spinner diameter="28"></mat-spinner></div>
+        <div class="admin-usage__status"><mat-spinner diameter="28" aria-label="Loading global usage"></mat-spinner></div>
       } @else if (!global) {
-        <p class="admin-usage__empty">Global usage is unavailable right now.</p>
+        <div class="admin-usage__error-row">
+          <p class="admin-usage__empty">Global usage is unavailable right now.</p>
+          <button mat-button type="button" (click)="loadGlobal()">Retry</button>
+        </div>
       } @else {
         <div class="admin-usage__global">
           <div class="admin-usage__global-meter">
@@ -70,12 +73,20 @@
       </mat-form-field>
 
       @if (loading) {
-        <div class="admin-usage__status"><mat-spinner diameter="32"></mat-spinner></div>
+        <div class="admin-usage__status"><mat-spinner diameter="32" aria-label="Loading users"></mat-spinner></div>
       } @else if (error) {
-        <p class="admin-usage__error">{{ error }}</p>
+        <div class="admin-usage__error-row">
+          <p class="admin-usage__error">{{ error }}</p>
+          <button mat-button type="button" (click)="load()">Retry</button>
+        </div>
       } @else if (rows.length === 0) {
         <p class="admin-usage__empty">No users match.</p>
       } @else {
+        @if (packetCountsDegraded) {
+          <div class="admin-usage__degraded">
+            Packet counts are unavailable (the questions service could not be reached). Other data below is unaffected.
+          </div>
+        }
         <table mat-table [dataSource]="rows" class="admin-usage__table" multiTemplateDataRows>
           <ng-container matColumnDef="user">
             <th mat-header-cell *matHeaderCellDef>User</th>
@@ -130,9 +141,12 @@
               @if (expandedSub === row.keycloakId) {
                 <div class="admin-usage__detail">
                   @if (detailLoading) {
-                    <div class="admin-usage__status"><mat-spinner diameter="24"></mat-spinner></div>
+                    <div class="admin-usage__status"><mat-spinner diameter="24" aria-label="Loading user detail"></mat-spinner></div>
                   } @else if (detailError) {
-                    <p class="admin-usage__error">{{ detailError }}</p>
+                    <div class="admin-usage__error-row">
+                      <p class="admin-usage__error">{{ detailError }}</p>
+                      <button mat-button type="button" (click)="retryDetail(row)">Retry</button>
+                    </div>
                   } @else if (detail) {
                     <p class="admin-usage__detail-help">
                       Tier sets each metric's default limit; an override replaces it for this user only.
@@ -156,12 +170,17 @@
                               <mat-progress-bar mode="determinate" [value]="meterPercent(counter)"></mat-progress-bar>
                             }
                             <div class="admin-usage__counter-actions">
-                              <button mat-button (click)="editQuota(row, counter)">
+                              <button mat-button [attr.aria-label]="'Edit ' + metricLabel(counter.metric) + ' quota'" (click)="editQuota(row, counter)">
                                 <mat-icon>edit</mat-icon>
                                 Edit quota
                               </button>
                               @if (counter.kind === 'daily') {
-                                <button mat-button class="admin-usage__danger-text-btn" (click)="resetUsage(row, counter.metric)">
+                                <button
+                                  mat-button
+                                  class="admin-usage__danger-text-btn"
+                                  [attr.aria-label]="'Reset ' + metricLabel(counter.metric) + ' usage'"
+                                  (click)="resetUsage(row, counter.metric)"
+                                >
                                   <mat-icon>restart_alt</mat-icon>
                                   Reset
                                 </button>
@@ -177,7 +196,7 @@
                           @for (ip of detail.lastIps; track ip) {
                             <div class="admin-usage__ip-row">
                               <span>{{ ip }}</span>
-                              <button mat-icon-button aria-label="Ban this IP" (click)="banIp(ip)">
+                              <button mat-icon-button [attr.aria-label]="'Ban IP ' + ip" (click)="banIp(row, ip)">
                                 <mat-icon>block</mat-icon>
                               </button>
                             </div>
@@ -188,11 +207,21 @@
                         </div>
 
                         <div class="admin-usage__actions">
-                          <button mat-raised-button class="admin-usage__danger-btn" (click)="banUser(row)">
+                          <button
+                            mat-raised-button
+                            class="admin-usage__danger-btn"
+                            [attr.aria-label]="'Ban user ' + (row.displayName || row.username || row.keycloakId)"
+                            (click)="banUser(row)"
+                          >
                             <mat-icon>gavel</mat-icon>
                             Ban user
                           </button>
-                          <button mat-button class="admin-usage__danger-text-btn" (click)="resetUsage(row)">
+                          <button
+                            mat-button
+                            class="admin-usage__danger-text-btn"
+                            [attr.aria-label]="'Reset all daily usage for ' + (row.displayName || row.username || row.keycloakId)"
+                            (click)="resetUsage(row)"
+                          >
                             <mat-icon>restart_alt</mat-icon>
                             Reset all daily
                           </button>
@@ -241,7 +270,12 @@
     </mat-card-header>
     <mat-card-content>
       @if (eventsLoading) {
-        <div class="admin-usage__status"><mat-spinner diameter="28"></mat-spinner></div>
+        <div class="admin-usage__status"><mat-spinner diameter="28" aria-label="Loading recent rejections"></mat-spinner></div>
+      } @else if (eventsError) {
+        <div class="admin-usage__error-row">
+          <p class="admin-usage__error">Recent rejections are unavailable right now.</p>
+          <button mat-button type="button" (click)="loadEvents()">Retry</button>
+        </div>
       } @else if (recentEvents.length === 0) {
         <p class="admin-usage__empty">No recent rejections.</p>
       } @else {

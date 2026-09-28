@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AdminUsageComponent } from './admin-usage.component';
 import { UsageService } from '../../../core/services/usage.service';
 import { BanService } from '../../../core/services/ban.service';
+import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
 import { EditQuotaDialogComponent } from './edit-quota-dialog/edit-quota-dialog.component';
 import { BanUserDialogComponent } from './ban-user-dialog/ban-user-dialog.component';
 import { UserUsageSummary, UsagePage, UserUsageDetail } from '../../../core/models/usage-models';
@@ -17,6 +18,7 @@ describe('AdminUsageComponent', () => {
   let usageServiceSpy: jasmine.SpyObj<UsageService>;
   let banServiceSpy: jasmine.SpyObj<BanService>;
   let dialogSpy: jasmine.SpyObj<MatDialog>;
+  let confirmDialogServiceSpy: jasmine.SpyObj<ConfirmDialogService>;
 
   const bannedRow: UserUsageSummary = {
     keycloakId: 'user-1',
@@ -68,6 +70,8 @@ describe('AdminUsageComponent', () => {
     banServiceSpy.createIpBan.and.returnValue(of({} as any));
 
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    confirmDialogServiceSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+    confirmDialogServiceSpy.confirm.and.returnValue(of(true));
 
     TestBed.configureTestingModule({
       imports: [AdminUsageComponent],
@@ -75,6 +79,7 @@ describe('AdminUsageComponent', () => {
         { provide: UsageService, useValue: usageServiceSpy },
         { provide: BanService, useValue: banServiceSpy },
         { provide: MatDialog, useValue: dialogSpy },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceSpy },
         { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
       ],
     });
@@ -103,6 +108,8 @@ describe('AdminUsageComponent', () => {
     usageServiceSpy.events.and.returnValue(of([]).pipe(delay(1)));
     banServiceSpy = jasmine.createSpyObj('BanService', ['createBan', 'createIpBan']);
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    confirmDialogServiceSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+    confirmDialogServiceSpy.confirm.and.returnValue(of(true));
 
     TestBed.configureTestingModule({
       imports: [AdminUsageComponent],
@@ -110,6 +117,7 @@ describe('AdminUsageComponent', () => {
         { provide: UsageService, useValue: usageServiceSpy },
         { provide: BanService, useValue: banServiceSpy },
         { provide: MatDialog, useValue: dialogSpy },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceSpy },
         { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
       ],
     });
@@ -256,15 +264,17 @@ describe('AdminUsageComponent', () => {
     expect(banServiceSpy.createBan).not.toHaveBeenCalled();
   });
 
-  it('banIp opens the IP-ban dialog and, on confirm, calls BanService.createIpBan', () => {
+  it('banIp opens the IP-ban dialog and, on confirm, calls BanService.createIpBan and refreshes the row (S5-16)', () => {
     configure();
     dialogSpy.open.and.returnValue({
       afterClosed: () => of({ cidr: '203.0.113.5/32', reason: undefined, ttlSeconds: 3600 }),
     } as any);
+    usageServiceSpy.list.calls.reset();
 
-    component.banIp('203.0.113.5');
+    component.banIp(bannedRow, '203.0.113.5');
 
     expect(banServiceSpy.createIpBan).toHaveBeenCalledWith({ cidr: '203.0.113.5/32', reason: undefined, ttlSeconds: 3600 });
+    expect(usageServiceSpy.list).toHaveBeenCalled();
   });
 
   it('surfaces a global-usage fetch failure gracefully (no crash, global stays null)', () => {
@@ -276,6 +286,8 @@ describe('AdminUsageComponent', () => {
     usageServiceSpy.events.and.returnValue(of([]));
     banServiceSpy = jasmine.createSpyObj('BanService', ['createBan', 'createIpBan']);
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    confirmDialogServiceSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+    confirmDialogServiceSpy.confirm.and.returnValue(of(true));
 
     TestBed.configureTestingModule({
       imports: [AdminUsageComponent],
@@ -283,6 +295,7 @@ describe('AdminUsageComponent', () => {
         { provide: UsageService, useValue: usageServiceSpy },
         { provide: BanService, useValue: banServiceSpy },
         { provide: MatDialog, useValue: dialogSpy },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceSpy },
         { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
       ],
     });
@@ -315,5 +328,104 @@ describe('AdminUsageComponent', () => {
     expect(component.pageIndex).toBe(2);
     expect(component.pageSize).toBe(50);
     expect(usageServiceSpy.list).toHaveBeenCalledWith(2, 50, undefined, 'lastSeen');
+  });
+
+  describe('resetUsage confirmation (S5-02)', () => {
+    it('confirms, naming the target and the metric, before resetting one metric', () => {
+      configure();
+
+      component.resetUsage(bannedRow, 'ai.generations');
+
+      expect(confirmDialogServiceSpy.confirm).toHaveBeenCalledWith(
+        jasmine.objectContaining({ message: jasmine.stringMatching('Jane Doe'), destructive: true })
+      );
+      expect(usageServiceSpy.resetUsage).toHaveBeenCalledWith('user-1', 'ai.generations');
+    });
+
+    it('confirms, naming the target, before resetting all daily usage', () => {
+      configure();
+
+      component.resetUsage(bannedRow);
+
+      expect(confirmDialogServiceSpy.confirm).toHaveBeenCalledWith(
+        jasmine.objectContaining({ message: jasmine.stringMatching('Jane Doe') })
+      );
+      expect(usageServiceSpy.resetUsage).toHaveBeenCalledWith('user-1', undefined);
+    });
+
+    it('never calls the service when the confirmation is cancelled', () => {
+      configure();
+      confirmDialogServiceSpy.confirm.and.returnValue(of(false));
+
+      component.resetUsage(bannedRow, 'ai.generations');
+
+      expect(usageServiceSpy.resetUsage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('degraded dependency banner (S5-06)', () => {
+    it('flags packet counts as degraded once the table has rows that are all unknown ("—")', () => {
+      configure();
+      expect(component.rows).toEqual([bannedRow]);
+
+      expect(component.packetCountsDegraded).toBeTrue();
+    });
+
+    it('does not flag it once at least one row has a real packet count', () => {
+      configure();
+      component.rows = [{ ...bannedRow, packetsOwned: 3 }];
+
+      expect(component.packetCountsDegraded).toBeFalse();
+    });
+
+    it('does not flag it while the table is still loading or empty', () => {
+      configure();
+      component.rows = [];
+
+      expect(component.packetCountsDegraded).toBeFalse();
+    });
+  });
+
+  it('a failed events fetch sets eventsError, not an empty list read as "no rejections" (S5-06)', () => {
+    usageServiceSpy = jasmine.createSpyObj('UsageService', [
+      'list', 'detail', 'global', 'events', 'setQuotaOverride', 'resetUsage',
+    ]);
+    usageServiceSpy.list.and.returnValue(of(page));
+    usageServiceSpy.global.and.returnValue(
+      of({ aiServerKey: { used: 10, limit: 200, resetsAt: null }, activeHostedSessions: 2, topGuestIps: [], rejectionsLastHour: 0 })
+    );
+    usageServiceSpy.events.and.returnValue(throwError(() => new Error('down')));
+    banServiceSpy = jasmine.createSpyObj('BanService', ['createBan', 'createIpBan']);
+    dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    confirmDialogServiceSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+
+    TestBed.configureTestingModule({
+      imports: [AdminUsageComponent],
+      providers: [
+        { provide: UsageService, useValue: usageServiceSpy },
+        { provide: BanService, useValue: banServiceSpy },
+        { provide: MatDialog, useValue: dialogSpy },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceSpy },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+      ],
+    });
+    fixture = TestBed.createComponent(AdminUsageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.eventsError).toBeTrue();
+    expect(component.eventsLoading).toBeFalse();
+    expect(component.recentEvents).toEqual([]);
+  });
+
+  it('retryDetail re-fetches a row\'s detail without collapsing it (S5-06)', () => {
+    configure();
+    component.toggleDetail(bannedRow);
+    usageServiceSpy.detail.calls.reset();
+
+    component.retryDetail(bannedRow);
+
+    expect(usageServiceSpy.detail).toHaveBeenCalledWith('user-1');
+    expect(component.expandedSub).toBe('user-1');
   });
 });
