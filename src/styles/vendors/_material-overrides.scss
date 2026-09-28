@@ -43,11 +43,11 @@
 }
 
 .cdk-overlay-dark-backdrop {
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-scrim);
 }
 
 .cdk-overlay-backdrop {
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-scrim);
 }
 
 /* ===== MATERIAL FORM FIELDS ===== */
@@ -139,7 +139,7 @@
 .mat-mdc-select-panel {
   background: var(--bg-elevated) !important;
   border: 1px solid var(--border-medium);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg) var(--shadow-color);
 }
 
 /* ===== MATERIAL LISTS ===== */
@@ -332,20 +332,39 @@ mat-icon {
 }
 
 /* ===== MATERIAL SNACKBAR ===== */
+/* Default (non-error) snackbar, e.g. M4's notifyLimit slow-down toast. Was
+   previously unthemed and fell back to MDC's near-black default surface,
+   which clashed with the token palette (M5 F1). */
+.mat-mdc-snack-bar-container {
+  .mdc-snackbar__surface {
+    background-color: var(--bg-elevated) !important;
+    border: 1px solid var(--border-medium) !important;
+    box-shadow: var(--shadow-lg) var(--shadow-color) !important;
+  }
+
+  .mdc-snackbar__label {
+    color: var(--text-primary) !important;
+  }
+
+  .mat-mdc-snack-bar-action {
+    color: var(--accent-primary-text) !important;
+  }
+}
+
 .error-snackbar {
   .mdc-snackbar__surface {
     background-color: var(--error) !important;
     border: 1px solid color-mix(in srgb, var(--error) 50%, transparent) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: var(--shadow-md) var(--shadow-color) !important;
   }
 
   .mdc-snackbar__label {
-    color: white !important;
+    color: var(--on-error) !important;
     font-weight: 500 !important;
   }
 
   .mat-mdc-snack-bar-action {
-    color: white !important;
-    border-color: white !important;
+    color: var(--on-error) !important;
+    border-color: var(--on-error) !important;
   }
 }
