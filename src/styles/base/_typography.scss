@@ -74,10 +74,10 @@ a {
  * M5 F2b (SA recheck): --focus-ring was wired to plain <a> only (above).
  * Native <button>s, every Material button (.mat-mdc-button-base covers
  * raised/flat/stroked/outlined/icon/fab), anything wired up as
- * role="button", mat-expansion-panel-header (a button-like control that
- * carries role="button" itself, not a real <button>) and mat-select's
- * host trigger had no equivalent rule, so a keyboard user tabbing onto any
- * of them got no visible ring at all (recheck's focus-ring captures on
+ * role="button", and mat-expansion-panel-header (a button-like control
+ * that carries role="button" itself, not a real <button>) had no
+ * equivalent rule, so a keyboard user tabbing onto any of them got no
+ * visible ring at all (recheck's focus-ring captures on
  * S4's "Play test" button, a tossup header, and S5's "Ban user" button
  * confirmed this — see e2e/polish/scenarios/s4.ts and s5.ts's
  * `focus-*` states).
@@ -96,12 +96,11 @@ a {
  * sits at two classes' worth (0,2,0) instead of one. That's needed
  * because MDC's own component CSS resets `outline` unconditionally at
  * one class' worth each -- `.mdc-button { outline: none; }` (button.mjs,
- * covers every `.mat-mdc-button-base`), `.mat-mdc-select { outline:
- * none; }` (select.mjs) and `.mat-expansion-panel-header { outline: 0;
- * }` (expansion.mjs) -- so a same-specificity `:focus-visible` rule here
- * won or lost per element only by which stylesheet the build happened to
- * emit later (verified against the recheck's captures: none of the
- * three showed a ring). Two classes' worth beats those resets on every
+ * covers every `.mat-mdc-button-base`) and `.mat-expansion-panel-header {
+ * outline: 0; }` (expansion.mjs) -- so a same-specificity `:focus-visible`
+ * rule here won or lost per element only by which stylesheet the build
+ * happened to emit later (verified against the recheck's captures: none
+ * of these showed a ring). Two classes' worth beats those resets on every
  * element in this list regardless of source order, without `!important`.
  *
  * outline (not box-shadow/border) never affects layout regardless of
@@ -111,12 +110,10 @@ a {
   button,
   .mat-mdc-button-base,
   [role='button'],
-  mat-expansion-panel-header,
-  .mat-mdc-select
+  mat-expansion-panel-header
 ):focus-visible:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 2px;
 }
 
 /*
