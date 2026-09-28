@@ -164,6 +164,19 @@
     background: transparent;
   }
 
+  /* M5 finish review FF2 regression fix: `&__table` above (FF1 fix 7) made
+     the table transparent, but `mat-paginator` paints its own separate
+     `--mat-sys-surface` fill (`.mat-mdc-paginator { background-color:
+     var(--mat-paginator-container-background-color, var(--mat-sys-surface));
+     }`, Material's own structural CSS, no `!important`), so it now shows as
+     an unrelated band under the transparent table instead of belonging to
+     the card. Setting the component token it reads (same pattern as
+     `--mat-icon-color` above) folds it back into the card surface — no
+     `!important` needed, nothing else sets this token. */
+  &__paginator {
+    --mat-paginator-container-background-color: transparent;
+  }
+
   /* M5 finish review FF1 fix 4: the standalone "Recent rejections" card
      had no column headers and wrapped run-on at mobile width. A real
      table gives it headers at desktop/tablet and the same data-label
@@ -221,16 +234,46 @@
     overflow-wrap: anywhere;
   }
 
-  /* M5 finish review FF1 fix 3: `<mat-chip>`'s visible fill/text come from
-     its own MDC custom properties (`--mat-chip-elevated-container-color`,
-     `--mat-chip-label-text-color`), read by a selector on `.mat-mdc-...`
-     classes this component doesn't own. Plain `background`/`color` (even
-     with a `--mat-sys-*` fallback) never reached them: the chip rendered
-     with no fill and default (neutral) text regardless. Setting the
-     custom properties themselves is what Material's own selectors read. */
+  /* M5 finish review FF2 fix 3 (was FF1 fix 3, still neutral after it):
+     `--mat-chip-elevated-container-color`/`--mat-chip-label-text-color`
+     ARE the right custom properties (confirmed against this Material
+     version's compiled structural CSS: `.mat-mdc-standard-chip
+     background-color: var(--mat-chip-elevated-container-color, transparent)`
+     and `...__text-label { color: var(--mat-chip-label-text-color, ...) }`),
+     and they were reaching those rules. What was winning over them is the
+     frozen `.mat-mdc-chip { background-color: ... !important; color: ...
+     !important; .mat-mdc-chip-action-label { color: ... !important; } }`
+     blanket in `vendors/_material-overrides.scss` (F1; themes every
+     unthemed chip, with no `.mat-primary`/`.mat-accent`/`.mat-warn` escape
+     the way its own button rule has). A frozen `!important` can only be
+     out-ranked, not out-read, so this bridges locally with matching
+     `!important` at higher specificity: the container
+     (`.admin-usage__banned-chip[_ngcontent]` at 0,2,0 beats `.mat-mdc-chip`
+     at 0,1,0), and the label — a Material element inside this component's
+     own host, the sanctioned `::ng-deep` case (M5 plan §5 rule 4) — one
+     level deeper (0,3,0 beats the vendor's `.mat-mdc-chip
+     .mat-mdc-chip-action-label` at 0,2,0).
+
+     A second, separate frozen-file bug sits under that one: `--danger-
+     surface` (`abstracts/_variables.scss`) is itself guaranteed-invalid
+     everywhere in the app. It's declared once, at `:root`, as `color-mix(in
+     srgb, var(--error) 12%, var(--surface))`, but `--error`/`--surface`
+     are only ever set on `body.theme-*` — a *descendant* of `:root`, whose
+     values `:root` can't see. The resulting invalid value is what every
+     element then inherits (confirmed live: `getComputedStyle(document.body)
+     .getPropertyValue('--danger-surface')` is `""`, same for the sibling
+     aliases `--focus-ring`/`--warn-color`/`--surface-raised`). Filed as
+     handoff H-09 for F2 (both bugs). Meanwhile this recomputes the same
+     12%-tint formula locally from `--error`/`--surface`, which *do*
+     resolve correctly this far down the tree, instead of the broken alias. */
   &__banned-chip {
-    --mat-chip-elevated-container-color: var(--danger-surface);
+    --mat-chip-elevated-container-color: color-mix(in srgb, var(--error) 12%, var(--surface));
     --mat-chip-label-text-color: var(--error);
+    background-color: color-mix(in srgb, var(--error) 12%, var(--surface)) !important;
+
+    ::ng-deep .mat-mdc-chip-action-label {
+      color: var(--error) !important;
+    }
   }
 
   &__override-chip {
