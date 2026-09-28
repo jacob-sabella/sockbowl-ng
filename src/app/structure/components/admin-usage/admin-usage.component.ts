@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -66,6 +66,14 @@ export class AdminUsageComponent implements OnInit {
   private banService = inject(BanService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  // This component is OnPush, and every state change below happens inside an
+  // HTTP `subscribe`/dialog `afterClosed` callback rather than a template
+  // event handler on this component itself -- zone.js still runs a global
+  // CD tick when those settle, but OnPush skips this subtree unless it's
+  // explicitly marked dirty first (found live, WP-E1: the page's own
+  // network calls always completed and returned 200, but the spinner and
+  // table never left their initial state).
+  private cdr = inject(ChangeDetectorRef);
 
   readonly displayedColumns = ['user', 'tier', 'lastSeen', 'status', 'sessions', 'packets', 'expand'];
   readonly metricLabel = metricLabel;
@@ -103,11 +111,13 @@ export class AdminUsageComponent implements OnInit {
         this.rows = page.content;
         this.totalElements = page.totalElements;
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load usage', err);
         this.error = 'Failed to load usage data.';
         this.loading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -118,11 +128,13 @@ export class AdminUsageComponent implements OnInit {
       next: (g) => {
         this.global = g;
         this.globalLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load global usage', err);
         this.global = null;
         this.globalLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -133,11 +145,13 @@ export class AdminUsageComponent implements OnInit {
       next: (events) => {
         this.recentEvents = events;
         this.eventsLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load rejection events', err);
         this.recentEvents = [];
         this.eventsLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -187,11 +201,13 @@ export class AdminUsageComponent implements OnInit {
       next: (detail) => {
         this.detail = detail;
         this.detailLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load usage detail', err);
         this.detailError = 'Failed to load detail.';
         this.detailLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -218,10 +234,12 @@ export class AdminUsageComponent implements OnInit {
           next: () => {
             this.snackBar.open('Quota updated', 'Dismiss', { duration: 3000 });
             this.refreshRow(row.keycloakId);
+            this.cdr.markForCheck();
           },
           error: (err) => {
             console.error('Failed to set quota override', err);
             this.snackBar.open('Failed to update quota', 'Dismiss', { duration: 4000 });
+            this.cdr.markForCheck();
           },
         });
       });
@@ -232,10 +250,12 @@ export class AdminUsageComponent implements OnInit {
       next: () => {
         this.snackBar.open('Usage reset', 'Dismiss', { duration: 3000 });
         this.refreshRow(row.keycloakId);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to reset usage', err);
         this.snackBar.open('Failed to reset usage', 'Dismiss', { duration: 4000 });
+        this.cdr.markForCheck();
       },
     });
   }
@@ -255,10 +275,12 @@ export class AdminUsageComponent implements OnInit {
           next: () => {
             this.snackBar.open('User banned', 'Dismiss', { duration: 3000 });
             this.refreshRow(row.keycloakId);
+            this.cdr.markForCheck();
           },
           error: (err) => {
             console.error('Failed to ban user', err);
             this.snackBar.open('Failed to ban user', 'Dismiss', { duration: 4000 });
+            this.cdr.markForCheck();
           },
         });
       });
@@ -273,10 +295,14 @@ export class AdminUsageComponent implements OnInit {
           return;
         }
         this.banService.createIpBan(result).subscribe({
-          next: () => this.snackBar.open('IP banned', 'Dismiss', { duration: 3000 }),
+          next: () => {
+            this.snackBar.open('IP banned', 'Dismiss', { duration: 3000 });
+            this.cdr.markForCheck();
+          },
           error: (err) => {
             console.error('Failed to ban IP', err);
             this.snackBar.open(err?.error?.message || 'Failed to ban IP', 'Dismiss', { duration: 4000 });
+            this.cdr.markForCheck();
           },
         });
       });
