@@ -188,6 +188,10 @@ export class GameWebSocketService {
 
   /** `beforeConnect`: runs before every CONNECT, including reconnects. */
   private async buildConnectHeaders(client: Client): Promise<void> {
+    // Wait out start-up (discovery, the login callback, the reload refresh)
+    // so a CONNECT racing app boot doesn't read a token AuthService hasn't
+    // finished loading yet (NG-R4-01). A no-op once auth is off or ready.
+    await this.authService.whenInitialized();
     const headers: Record<string, string> = {
       gameSessionId: this.gameSessionId,
       playerSessionId: this.playerSessionId,
@@ -336,7 +340,17 @@ export class GameWebSocketService {
 
   private async refreshAndReconnect(client: Client, error: StompError): Promise<void> {
     await client.deactivate();
-    const token = await this.authService.refreshToken().catch(() => null);
+    await this.authService.whenInitialized();
+    // try/catch, not `.catch()` chained onto the call: AuthService.refreshToken
+    // is documented to always return a promise, but this must still fall
+    // through to stop() rather than leave an unhandled rejection if it (or a
+    // test double standing in for it) ever throws synchronously (NG-R4-01).
+    let token: string | null;
+    try {
+      token = await this.authService.refreshToken();
+    } catch {
+      token = null;
+    }
     if (client !== this.stompClient) {
       return;
     }

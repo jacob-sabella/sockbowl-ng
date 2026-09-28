@@ -14,7 +14,9 @@ import { StompError } from '../../models/sockbowl/sockbowl-interfaces';
 describe('GameCanvasComponent', () => {
   let params$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let errors$: Subject<StompError>;
-  let gameStateService: { gameSession$: typeof NEVER; errors$: Subject<StompError>; initialize: jasmine.Spy };
+  let gameStateService: {
+    gameSession$: typeof NEVER; errors$: Subject<StompError>; initialize: jasmine.Spy; leaveGame: jasmine.Spy;
+  };
   let location: jasmine.SpyObj<Location>;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
   let authService: jasmine.SpyObj<AuthService>;
@@ -24,7 +26,11 @@ describe('GameCanvasComponent', () => {
     sessionStorage.removeItem(gameJoinStorageKey('g1'));
     params$ = new BehaviorSubject(convertToParamMap({}));
     errors$ = new Subject<StompError>();
-    gameStateService = { gameSession$: NEVER, errors$, initialize: jasmine.createSpy('initialize') };
+    gameStateService = {
+      gameSession$: NEVER, errors$,
+      initialize: jasmine.createSpy('initialize'),
+      leaveGame: jasmine.createSpy('leaveGame'),
+    };
     location = jasmine.createSpyObj<Location>('Location', ['replaceState']);
     snackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
     authService = jasmine.createSpyObj<AuthService>('AuthService', ['getAccessToken', 'handleSessionEnded']);
@@ -128,5 +134,13 @@ describe('GameCanvasComponent', () => {
     expect(component.latestStompError?.code).toBe('RATE_LIMITED');
     expect(router.navigate).not.toHaveBeenCalled();
     expect(snackBar.open).not.toHaveBeenCalled();
+  });
+
+  it('leaves the game in GameStateService when the canvas is destroyed (NG-R4-02)', () => {
+    const component = start({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+    component.ngOnDestroy();
+
+    expect(gameStateService.leaveGame).toHaveBeenCalledTimes(1);
   });
 });
