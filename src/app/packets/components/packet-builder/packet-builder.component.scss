@@ -703,6 +703,25 @@
     display: grid;
     grid-template-rows: auto auto;
     grid-template-columns: minmax(0, 1fr);
+
+    /*
+     * FF4 (finish review #5): Material's own structural rule,
+     * `.mat-expansion-panel-header.mat-expanded { height: var(--mat-expansion-header-expanded-state-height, 64px); }`,
+     * keeps the *expanded* header at a fixed 64px even though the frozen
+     * override only sets `height: auto` on the base (non-expanded) header
+     * (S4-09 above). At mobile widths the wrapped title/chip/reorder-button
+     * content needs more than 64px, so it clipped at the top and the
+     * category chip overlapped the Preamble field below.
+     *
+     * Overriding the custom property (which Material's own rule already
+     * reads via `var()`) resolves this without a specificity fight against
+     * Material's `.mat-expanded` selector and without `!important`: the
+     * property inherits from this grid host down to the projected header,
+     * same as any other CSS custom property, regardless of Angular's
+     * emulated view encapsulation. Padding is untouched, so the header's
+     * existing vertical padding is unchanged.
+     */
+    --mat-expansion-header-expanded-state-height: auto;
   }
 
   &__panel--managed ::ng-deep .mat-expansion-panel-header {
