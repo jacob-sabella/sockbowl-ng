@@ -73,32 +73,45 @@ Before pointing either suite at a stack built from a local branch, run
 `npm run buildprod` first (the compose image copies the prebuilt `dist/`; a
 stale or missing build serves stale or missing app code, not a build error).
 
-**Known gap (M3 follow-up):** the packet-search "Generate" tab (bank-random,
-D15) reads local `:BankTossup`/`:BankBonus` nodes that this compose stack's
-seed data doesn't populate — only whole existing packets (`:Packet`
-`CONTAINS_TOSSUP`/`CONTAINS_BONUS`, used by "Search Existing") are seeded.
-Against a fresh local stack that tab always reports 0 matches, regardless of
-filters. `auth-login-play.spec.ts`, `auth-refresh-logout.spec.ts` and
-`security-headers.spec.ts` use Search Existing instead (the smallest seeded
-packet, 13 tossups, for the one spec — `auth-login-play.spec.ts` — that plays
-a multiplayer match through to the match summary). The pre-existing guest
-`tests/*.spec.ts` suite has several specs (`generate.spec.ts`,
-`generateFilters.spec.ts`, `match.spec.ts`, `proctored.spec.ts`,
-`spectator.spec.ts`, `solo.spec.ts`, `bonus.spec.ts`) that still use that tab
-and so still hit this gap when pointed at a local stack instead of the live
-site they default to; they aren't rewritten here (`bonus.spec.ts` also has an
-independent, hardcoded dependency on the production GraphQL endpoint for its
-answer lookup).
+**Question bank for the "Generate" tab.** The packet-search "Generate" tab
+(bank-random, D15) draws from local `:BankTossup`/`:BankBonus` nodes, which
+M2's compose seed data does not populate (M3 adds a bank seed); only whole
+packets (`:Packet` with `CONTAINS_TOSSUP`/`CONTAINS_BONUS`, used by "Search
+Existing") are seeded. Against an unseeded stack the tab reports 0 matches.
 
-`e2e/`'s bot harness (`npm run full-match`) now imports its packet the same
-way the "Generate" tab does: `POST /api/qbreader/import-random`, generating
-from the local question bank by tossup/bonus count instead of a qbreader.org
-set/packet-number lookup (the old `/api/qbreader/import` this harness used to
-call doesn't exist any more). `import-random` is guest-allowed in both auth
-modes (D15: with `AUTH_ENABLED=true` and no bearer it returns an ownerless,
-game-only EPHEMERAL packet instead of an owned DRAFT; the harness's bots are
-guest-only and never send one), so `full-match` passes against both an
-auth-on and an auth-off stack with no login support needed in the harness.
+- `tests-auth/auth-generate.spec.ts` plays that path with auth on: a guest and
+  `player2` (player tier, so both get an EPHEMERAL packet) each generate a
+  packet, the other joins, and the match starts. It seeds a small tagged bank
+  fixture itself through Neo4j's HTTP API when `SOCKBOWL_E2E_NEO4J_PASSWORD`
+  (or `NEO4J_PASSWORD`) is set; `SOCKBOWL_E2E_NEO4J_URL` defaults to
+  `http://localhost:7474`. Otherwise seed the bank before running it.
+- The other `tests-auth/` specs use Search Existing. `auth-login-play.spec.ts`
+  plays the smallest seeded packet (13 tossups,
+  `SOCKBOWL_E2E_PACKET_NAME`, default `2010 Collaborative MS Tournament - Round
+  05`) to the match summary, answering the first tossup correctly; it reads
+  that answer over GraphQL as the admin demo account (`E2E_ADMIN`, default
+  `player1`).
+- The guest `tests/*.spec.ts` suite's Generate specs (`generate.spec.ts`,
+  `generateFilters.spec.ts`, `match.spec.ts`, `proctored.spec.ts`,
+  `spectator.spec.ts`, `solo.spec.ts`, `bonus.spec.ts`) need a seeded bank too
+  when pointed at a local stack. `bonus.spec.ts` looks up its answers over
+  GraphQL at `SOCKBOWL_QUESTIONS_GRAPHQL_URL`, or at
+  `SOCKBOWL_QUESTIONS_BASE_URL` + `/graphql` (default
+  `https://questions.sockbowl.com`); point it at the local stack, e.g.
+  `SOCKBOWL_QUESTIONS_BASE_URL=http://localhost:7009`. With auth on, a guest's
+  generated packet is EPHEMERAL and that lookup returns null, so run
+  `bonus.spec.ts` against an auth-off stack.
+
+`e2e/`'s bot harness (`npm run full-match`) plays a seeded PUBLISHED packet:
+`findSeededPacket` (`e2e/harness/rest.ts`) looks it up by name over GraphQL
+(`searchPacketsByName`, then `getPacketById` for the tossup and bonus
+counts), using `SOCKBOWL_E2E_PACKET_NAME` (same default as above). It does not
+use `import-random`, so it needs no bank seed. SetMatchPacket on a PUBLISHED
+packet is allowed for a guest proctor in both auth modes, so `full-match`
+runs against auth-on and auth-off stacks with no login support in the
+harness. Point it at the stack with `SOCKBOWL_API`, `SOCKBOWL_WS` and
+`SOCKBOWL_QUESTIONS` (e.g. `http://localhost:7000`,
+`ws://localhost:7000/sockbowl-game`, `http://localhost:7009`).
 
 Traces, screenshots and videos for `tests-auth/` land under
 `artifacts/m2-auth/` (see `playwright.auth.config.ts`'s `outputDir`).

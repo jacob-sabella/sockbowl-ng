@@ -269,16 +269,26 @@ export class SockbowlOutMessage {
   }
 }
 
+/**
+ * A packet was set on (or cleared from) the match. The game server sends it
+ * per recipient (WP-FIXG5): the proctor, or the owner in a proctorless mode,
+ * gets the packet id; everyone else gets `packetId: null` with only the name
+ * and counts, so the id can't be replayed as SetMatchPacket in another game.
+ * A cleared packet is `{packetId: null, packetName: null, tossupCount: 0}`.
+ */
 export class MatchPacketUpdate extends SockbowlOutMessage {
-  packetId: string;
-  packetName: string;
+  packetId: string | null;
+  packetName: string | null;
   tossupCount: number;
+  /** Number of bonuses; absent from servers that predate WP-FIXG5. */
+  bonusCount?: number;
 
   constructor(data: MatchPacketUpdate) {
     super(data);
     this.packetId = data.packetId;
     this.packetName = data.packetName;
     this.tossupCount = data.tossupCount;
+    this.bonusCount = data.bonusCount;
   }
 }
 
@@ -295,11 +305,34 @@ export class PlayerRosterUpdate extends SockbowlOutMessage {
 
 export class ProcessError extends SockbowlOutMessage {
   error: string;
+  /**
+   * Optional machine-readable reason (UPPER_SNAKE), e.g. `PACKET_NOT_AVAILABLE`
+   * or `PACKET_NOT_FOUND`. Absent on generic errors, which carry only `error`.
+   */
+  code?: string | null;
 
   constructor(data: ProcessError) {
     super(data);
     this.error = data.error;
+    this.code = data.code;
   }
+}
+
+/** ProcessError codes the client handles specifically (see game ConfigurationMessageProcessor). */
+export const PROCESS_ERROR_PACKET_NOT_AVAILABLE = 'PACKET_NOT_AVAILABLE';
+
+/**
+ * The text to show for a ProcessError. A packet that can't be loaded here (a
+ * draft that isn't yours, or a generated packet already bound to another game)
+ * gets a message that says what to do next instead of the server's raw text,
+ * which names the packet id.
+ */
+export function processErrorMessage(error: ProcessError | null | undefined): string {
+  if (!error) return '';
+  if (error.code === PROCESS_ERROR_PACKET_NOT_AVAILABLE) {
+    return 'That packet can\'t be used in this game. Generate a new packet or pick a published one.';
+  }
+  return error.error;
 }
 
 export class AnswerUpdate extends SockbowlOutMessage {

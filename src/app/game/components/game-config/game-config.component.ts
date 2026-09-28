@@ -8,12 +8,13 @@ import {
   Packet,
   PlayerMode,
   ProcessError,
+  PROCESS_ERROR_PACKET_NOT_AVAILABLE,
+  processErrorMessage,
   Team
 } from '../../models/sockbowl/sockbowl-interfaces';
 import { Observable } from 'rxjs';
 import { GameStateService } from '../../services/game-state.service';
 import { GameMessageService } from '../../services/game-message.service';
-import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
@@ -33,7 +34,6 @@ const PREVIEW_TIMEOUT_MS = 5000;
 export class GameConfigComponent implements OnInit {
   gameStateService = inject(GameStateService);
   private gameMessageService = inject(GameMessageService);
-  private sockbowlQuestionsService = inject(SockbowlQuestionsService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private presentationConnectionService = inject(PresentationConnectionService);
@@ -86,42 +86,9 @@ export class GameConfigComponent implements OnInit {
         this.readingWordsPerSecond = gameSession.gameSettings.timerSettings.readingWordsPerSecond;
       }
 
-      const sessionPacket = gameSession.currentMatch?.packet;
-      if (sessionPacket?.id && this.selectedPacketId !== sessionPacket.id.toString()) {
-        this.selectedPacketId = sessionPacket.id.toString();
-        if (GameConfigComponent.hasQuestions(sessionPacket)) {
-          // The proctor's copy of the session carries the whole packet.
-          this.selectedPacket = sessionPacket;
-        } else if (this.gameStateService.isSelfProctor()) {
-          // A packet change arrives without questions; the proctor gets the
-          // full packet from the game server, never from questions (D2).
-          this.selectedPacket = sessionPacket;
-          this.gameStateService.requestGameSession();
-        } else {
-          // Everyone else only needs packet metadata (the bonus count), and
-          // questions serves them the answer-free projection.
-          this.selectedPacket = sessionPacket;
-          this.sockbowlQuestionsService.getPacketById(this.selectedPacketId).subscribe({
-            next: (packet) => {
-              if (packet && packet.id === this.selectedPacketId) {
-                this.selectedPacket = packet;
-              }
-            },
-            error: (error) => console.error('Error fetching packet details:', error),
-          });
-        }
-      } else if (sessionPacket?.id && GameConfigComponent.hasQuestions(sessionPacket)
-          && !GameConfigComponent.hasQuestions(this.selectedPacket)) {
-        this.selectedPacket = sessionPacket;
-      } else if (!sessionPacket?.id && this.selectedPacketId) {
-        // A proctor seat change or mode change cleared the packet
-        // (MatchPacketUpdate{packetId:null, tossupCount:0}); drop our stale
-        // display so the config UI doesn't keep showing a packet that no
-        // longer exists on the session.
-        this.selectedPacketId = '';
-        this.selectedPacket = null;
-      }
+      this.syncSelectedPacket(gameSession.currentMatch?.packet);
 
+      const sessionPacket = gameSession.currentMatch?.packet;
       if (this.previewPending && sessionPacket?.id && GameConfigComponent.hasQuestions(sessionPacket)) {
         this.previewPending = false;
         this.clearPreviewTimer();
@@ -133,10 +100,75 @@ export class GameConfigComponent implements OnInit {
     this.gameMessageService.gameEventObservables['ProcessError']
       ?.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((error: ProcessError) => {
-        if (error?.error) {
-          this.snack.open(error.error, 'Dismiss', { duration: 5000 });
+        if (error?.error || error?.code) {
+          this.snack.open(processErrorMessage(error), 'Dismiss', { duration: 5000 });
+        }
+        if (error?.code === PROCESS_ERROR_PACKET_NOT_AVAILABLE) {
+          // The dialog's pick was optimistic; the server kept the old packet
+          // (or none), so show what the session really has.
+          this.revertToSessionPacket();
         }
       });
+  }
+
+  /**
+   * Keep the config screen's packet (name, bonus count) in step with the
+   * session. Nothing here asks the questions service: the proctor's full
+   * packet comes from the game server (D2), and everyone else takes the name
+   * and counts from MatchPacketUpdate, which game-state keeps on the session
+   * packet. A non-proctor's session packet has no id (WP-FIXG5), so "a packet
+   * is set" is decided by isPacketSet, not by the id.
+   */
+  private syncSelectedPacket(sessionPacket: Packet | null | undefined): void {
+    if (!GameConfigComponent.isPacketSet(sessionPacket)) {
+      // A proctor seat change or mode change cleared the packet
+      // (MatchPacketUpdate{packetId:null, tossupCount:0}); drop our stale
+      // display so the config UI doesn't keep showing a packet that no
+      // longer exists on the session.
+      if (this.selectedPacketId || this.selectedPacket) {
+        this.selectedPacketId = '';
+        this.selectedPacket = null;
+      }
+      return;
+    }
+    if (!sessionPacket.id) {
+      // Non-proctor view: metadata only, never an id to fetch by.
+      this.selectedPacketId = '';
+      this.selectedPacket = sessionPacket;
+      return;
+    }
+    if (this.selectedPacketId !== sessionPacket.id.toString()) {
+      this.selectedPacketId = sessionPacket.id.toString();
+      this.selectedPacket = sessionPacket;
+      if (!GameConfigComponent.hasQuestions(sessionPacket) && this.gameStateService.isSelfProctor()) {
+        // A packet change arrives without questions; the proctor gets the
+        // full packet from the game server, never from questions (D2).
+        this.gameStateService.requestGameSession();
+      }
+    } else if (!GameConfigComponent.hasQuestions(this.selectedPacket)
+        && (Array.isArray(sessionPacket.bonuses) || GameConfigComponent.hasQuestions(sessionPacket))) {
+      // The full packet (proctor), or the server's own counts from
+      // MatchPacketUpdate, replace what the packet dialog handed us.
+      this.selectedPacket = sessionPacket;
+    }
+  }
+
+  /** Drop an optimistic pick the server refused, back to the session's packet. */
+  private revertToSessionPacket(): void {
+    const sessionPacket = this.gameSession?.currentMatch?.packet;
+    this.packetId = sessionPacket?.id ?? '';
+    this.selectedPacketId = '';
+    this.selectedPacket = null;
+    this.syncSelectedPacket(sessionPacket);
+  }
+
+  /** Whether the session has a packet set (by id, or by name and count for a non-proctor). */
+  isPacketSet(): boolean {
+    return GameConfigComponent.isPacketSet(this.gameSession?.currentMatch?.packet);
+  }
+
+  private static isPacketSet(packet: Packet | null | undefined): packet is Packet {
+    return !!packet && (!!packet.id || !!packet.name || (packet.tossups?.length ?? 0) > 0);
   }
 
   /* ─── Teams ─────────────────────────────────────────────────────────────── */

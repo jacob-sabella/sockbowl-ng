@@ -1,4 +1,4 @@
-import { TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
+import { TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 import {
@@ -415,14 +415,15 @@ describe('AuthService login callback', () => {
     environment.authEnabled = originalAuthEnabled;
   });
 
-  function setup(opts: { validToken: boolean; refreshToken: string | null }) {
+  function setup(opts: { validToken: boolean; refreshToken: string | null; discoveryFails?: boolean }) {
     const oauth = jasmine.createSpyObj(
       'OAuthService',
       ['configure', 'loadDiscoveryDocument', 'tryLoginCodeFlow', 'hasValidAccessToken',
         'getAccessToken', 'getRefreshToken', 'getIdentityClaims', 'refreshToken', 'logOut'],
       { events: EMPTY }
     );
-    oauth.loadDiscoveryDocument.and.returnValue(Promise.resolve({}));
+    oauth.loadDiscoveryDocument.and.returnValue(
+      opts.discoveryFails ? Promise.reject(new Error('down')) : Promise.resolve({}));
     oauth.tryLoginCodeFlow.and.returnValue(Promise.resolve());
     oauth.hasValidAccessToken.and.returnValue(opts.validToken);
     oauth.getRefreshToken.and.returnValue(opts.refreshToken);
@@ -455,4 +456,48 @@ describe('AuthService login callback', () => {
     flushMicrotasks();
     expect(oauth.refreshToken).not.toHaveBeenCalled();
   }));
+  // NG-R3-05: route guards wait on whenInitialized, so it must not resolve
+  // until the refresh-on-reload has finished.
+  it('is initialized only after the refresh-on-reload has finished', fakeAsync(() => {
+    let finishRefresh!: () => void;
+    const { oauth, service } = setup({ validToken: false, refreshToken: 'r1' });
+    oauth.refreshToken.and.callFake(() => new Promise(resolve => {
+      finishRefresh = () => { oauth.hasValidAccessToken.and.returnValue(true); resolve({}); };
+    }));
+    let resolved = false;
+    service.whenInitialized().then(() => (resolved = true));
+
+    flushMicrotasks();
+    expect(oauth.refreshToken).toHaveBeenCalledTimes(1);
+    expect(service.isInitialized()).toBeFalse();
+    expect(resolved).toBeFalse();
+
+    finishRefresh();
+    flushMicrotasks();
+    expect(service.isInitialized()).toBeTrue();
+    expect(resolved).toBeTrue();
+    expect(service.isAuthenticated()).toBeTrue();
+  }));
+
+  it('is initialized even when discovery fails', fakeAsync(() => {
+    const { service } = setup({ validToken: false, refreshToken: null, discoveryFails: true });
+    flushMicrotasks();
+    expect(service.isInitialized()).toBeTrue();
+  }));
+
+  it('gives up waiting after a timeout when start-up never finishes', fakeAsync(() => {
+    const { oauth, service } = setup({ validToken: false, refreshToken: 'r1' });
+    oauth.refreshToken.and.returnValue(new Promise(() => { /* never settles */ }));
+    flushMicrotasks();
+    expect(service.isInitialized()).toBeFalse();
+
+    tick(10_000);
+    expect(service.isInitialized()).toBeTrue();
+  }));
+
+  it('is initialized immediately when auth is off', () => {
+    environment.authEnabled = false;
+    const { service } = setup({ validToken: false, refreshToken: null });
+    expect(service.isInitialized()).toBeTrue();
+  });
 });

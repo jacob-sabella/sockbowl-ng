@@ -18,6 +18,9 @@ export const PERMISSION_DENIED_MESSAGE = "You don't have permission to view that
  *   route as the return target, so they land back here after signing in.
  * - Auth enabled, signed in but lacking the permission: redirected to
  *   `/game-session` with a snackbar, rather than a silent block.
+ *
+ * With auth on, it decides only after AuthService start-up has finished
+ * (see afterAuthInitialized).
  */
 export function permissionGuard(permission: string): CanActivateFn {
   // Angular can evaluate a route's guards more than once for a single
@@ -33,19 +36,37 @@ export function permissionGuard(permission: string): CanActivateFn {
     const router = inject(Router);
     const snackBar = inject(MatSnackBar);
 
-    if (auth.hasPermission(permission)) {
-      return true;
-    }
-    if (!auth.isAuthenticated()) {
-      auth.login(state.url);
-      return false;
-    }
-    if (!openSnackBarRef) {
-      openSnackBarRef = snackBar.open(PERMISSION_DENIED_MESSAGE, 'Dismiss', { duration: 4000 });
-      openSnackBarRef.afterDismissed().subscribe(() => { openSnackBarRef = null; });
-    }
-    return router.createUrlTree(['/game-session']);
+    const decide = () => {
+      if (auth.hasPermission(permission)) {
+        return true;
+      }
+      if (!auth.isAuthenticated()) {
+        auth.login(state.url);
+        return false;
+      }
+      if (!openSnackBarRef) {
+        openSnackBarRef = snackBar.open(PERMISSION_DENIED_MESSAGE, 'Dismiss', { duration: 4000 });
+        openSnackBarRef.afterDismissed().subscribe(() => { openSnackBarRef = null; });
+      }
+      return router.createUrlTree(['/game-session']);
+    };
+    return afterAuthInitialized(auth, decide);
   };
+}
+
+/**
+ * Runs `decide` once AuthService has finished start-up (NG-R3-05). On a
+ * reload with an expired access token, start-up refreshes it from the
+ * refresh token; deciding before that would see "not signed in" and start a
+ * full Keycloak redirect that throws away the just-rotated refresh token.
+ * Synchronous when start-up is already done, which is every navigation
+ * after the first.
+ */
+function afterAuthInitialized<T>(auth: AuthService, decide: () => T): T | Promise<T> {
+  if (auth.isInitialized()) {
+    return decide();
+  }
+  return auth.whenInitialized().then(decide);
 }
 
 /**
@@ -58,9 +79,14 @@ export function permissionGuard(permission: string): CanActivateFn {
  */
 export const authenticatedGuard: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const auth = inject(AuthService);
-  if (!environment.authEnabled || auth.isAuthenticated()) {
+  if (!environment.authEnabled) {
     return true;
   }
-  auth.login(state.url);
-  return false;
+  return afterAuthInitialized(auth, () => {
+    if (auth.isAuthenticated()) {
+      return true;
+    }
+    auth.login(state.url);
+    return false;
+  });
 };

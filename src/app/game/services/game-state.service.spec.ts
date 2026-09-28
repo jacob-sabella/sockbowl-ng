@@ -137,3 +137,143 @@ describe('GameStateService bonus updates (NG-R2-06)', () => {
     expect(seen[seen.length - 1].currentMatch.currentRound.currentBonusPartIndex).toBe(1);
   });
 });
+
+/**
+ * WP-FIXN4 / WP-FIXG5: a non-proctor's MatchPacketUpdate carries no packet id,
+ * only the name and the tossup and bonus counts, and a PACKET_NOT_AVAILABLE
+ * refusal gets a message that says what to do instead of the raw server text.
+ */
+describe('GameStateService packet updates (WP-FIXN4)', () => {
+  let service: GameStateService;
+  let eventSubjects: Record<string, Subject<any>>;
+  let snackBar: jasmine.SpyObj<MatSnackBar>;
+
+  const EVENT_KEYS = [
+    'GameSessionUpdate', 'PlayerRosterUpdate', 'GameStartedMessage', 'MatchPacketUpdate',
+    'ProcessError', 'AnswerUpdate', 'RoundUpdate', 'PlayerBuzzed', 'BonusUpdate', 'TimerUpdate',
+    'ReadingUpdate',
+  ];
+
+  function session(): GameSession {
+    let s!: GameSession;
+    service.gameSession$.subscribe(gs => (s = gs)).unsubscribe();
+    return s;
+  }
+
+  beforeEach(() => {
+    eventSubjects = {};
+    const gameEventObservables: Record<string, any> = {};
+    for (const key of EVENT_KEYS) {
+      eventSubjects[key] = new Subject<any>();
+      gameEventObservables[key] = eventSubjects[key].asObservable();
+    }
+    snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
+
+    TestBed.configureTestingModule({
+      providers: [
+        GameStateService,
+        {
+          provide: GameMessageService,
+          useValue: {
+            gameEventObservables,
+            sendMessage: jasmine.createSpy('sendMessage'),
+            initialize: jasmine.createSpy('initialize'),
+            errors$: new Subject<any>().asObservable(),
+          },
+        },
+        { provide: MatSnackBar, useValue: snackBar },
+      ],
+    });
+
+    service = TestBed.inject(GameStateService);
+    service.initialize('g1', 'p1', {});
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { packet: { id: null, name: null } } } as unknown as GameSession,
+    });
+  });
+
+  it('applies a non-proctor MatchPacketUpdate with no packet id: name and length-only counts', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+
+    const packet = session().currentMatch.packet;
+    expect(packet.id).toBeNull();
+    expect(packet.name).toBe('Generated Packet');
+    expect(packet.tossups.length).toBe(10);
+    expect(packet.bonuses.length).toBe(4);
+    // Counts only: nothing that could carry question text.
+    expect(packet.tossups.some(t => !!t)).toBeFalse();
+    expect(packet.bonuses.some(b => !!b)).toBeFalse();
+  });
+
+  it('keeps the proctor update\'s packet id', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: 'packet-1', packetName: 'Packet One', tossupCount: 20, bonusCount: 20,
+    });
+
+    expect(session().currentMatch.packet.id).toBe('packet-1');
+    expect(session().currentMatch.packet.bonuses.length).toBe(20);
+  });
+
+  it('treats a missing bonusCount (an older game server) as no bonuses', () => {
+    eventSubjects['MatchPacketUpdate'].next({ packetId: null, packetName: 'Old', tossupCount: 3 });
+
+    expect(session().currentMatch.packet.bonuses.length).toBe(0);
+  });
+
+  it('keeps the counts when the server resends a non-proctor session without questions', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+
+    // The sanitized non-proctor view: no id, no tossups, no bonuses.
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { packet: { id: null, name: 'Generated Packet', tossups: null, bonuses: null } } },
+    });
+
+    const packet = session().currentMatch.packet;
+    expect(packet.tossups.length).toBe(10);
+    expect(packet.bonuses.length).toBe(4);
+  });
+
+  it('does not carry the counts over to a different packet', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { packet: { id: null, name: 'Another Packet', tossups: null, bonuses: null } } },
+    });
+
+    expect(session().currentMatch.packet.tossups).toBeNull();
+  });
+
+  it('forgets the counts once the packet is cleared', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+    eventSubjects['MatchPacketUpdate'].next({ packetId: null, packetName: null, tossupCount: 0 });
+
+    const packet = session().currentMatch.packet;
+    expect(packet.name).toBeNull();
+    expect(packet.tossups.length).toBe(0);
+    expect(packet.bonuses.length).toBe(0);
+  });
+
+  it('explains a PACKET_NOT_AVAILABLE ProcessError instead of showing the raw server text', () => {
+    eventSubjects['ProcessError'].next({
+      code: 'PACKET_NOT_AVAILABLE',
+      error: 'Packet id abc is not available for play',
+    });
+
+    expect(snackBar.open).toHaveBeenCalledOnceWith(
+      jasmine.stringMatching(/can't be used in this game/), 'Dismiss', jasmine.anything());
+  });
+
+  it('shows a ProcessError without a code as the server sent it', () => {
+    eventSubjects['ProcessError'].next({ error: 'StartMatch: Permission Denied' });
+
+    expect(snackBar.open).toHaveBeenCalledOnceWith('StartMatch: Permission Denied', 'Dismiss', jasmine.anything());
+  });
+});
