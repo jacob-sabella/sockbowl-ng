@@ -59,6 +59,8 @@ test('cast receiver renders config + in-game states', async ({ browser }) => {
   await expect(page.locator('#config-view')).toContainText('ABCDEF');
   await expect(page.locator('#config-teams')).toContainText('Ada');
   await expect(page.locator('#config-teams')).toContainText('Blaise');
+  // M5 S2-17: the TV shows a readable mode name, not the wire enum value.
+  await expect(page.locator('#config-game-mode')).toHaveText('Classic');
   await page.screenshot({ path: `${ART}/cast-01-config.png` });
 
   // --- active match ---
@@ -67,6 +69,8 @@ test('cast receiver renders config + in-game states', async ({ browser }) => {
   await expect(page.locator('#scoreboard')).toContainText('30');
   await expect(page.locator('#scoreboard')).toContainText('Team 1');
   await expect(page.locator('#match-view')).toContainText('Anxiety'); // question rendered
+  // M5 S2-17: category/subcategory join with a middle dot, not a hyphen.
+  await expect(page.locator('#category-info')).toHaveText('Literature · American Literature');
   await page.screenshot({ path: `${ART}/cast-02-ingame.png` });
 
   await ctx.close();

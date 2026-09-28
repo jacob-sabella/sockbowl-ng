@@ -40,7 +40,7 @@ body {
 #round-info {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -57,10 +57,9 @@ body {
   font-size: 1.4rem;
   font-weight: 600;
   margin-bottom: 15px;
-  opacity: 0.8;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
 }
 
 /* Content Containers */
@@ -93,13 +92,13 @@ body {
 .content-text strong,
 .content-text b {
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
 }
 
 .content-text em,
 .content-text i {
   font-style: italic;
-  color: var(--accent-secondary);
+  color: var(--accent-secondary-text);
 }
 
 /* Buzz Status */
@@ -141,19 +140,19 @@ body {
 .buzz-indicator.correct {
   background: var(--success);
   border-color: var(--success);
-  color: var(--text-primary);
+  color: var(--on-success);
 }
 
 .buzz-indicator.incorrect {
   background: var(--error);
   border-color: var(--error);
-  color: var(--text-primary);
+  color: var(--on-error);
 }
 
 .buzz-indicator.pending {
   background: var(--warning);
   border-color: var(--warning);
-  color: var(--text-primary);
+  color: var(--on-warning);
 }
 
 .buzz-indicator::before {
@@ -213,7 +212,7 @@ body {
 .team-points {
   font-size: 2.6rem;
   font-weight: 800;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   min-width: 80px;
   text-align: right;
@@ -242,8 +241,7 @@ body {
 .app-title {
   font-size: 4.5rem;
   font-weight: 800;
-  color: var(--accent-primary);
-  text-shadow: 0 4px 16px rgba(255, 235, 59, 0.4);
+  color: var(--accent-primary-text);
   letter-spacing: 0.05em;
   margin-bottom: 10px;
 }
@@ -261,7 +259,7 @@ body {
   padding: 40px;
   background: var(--surface);
   border-radius: 20px;
-  border: 3px solid rgba(255, 235, 59, 0.3);
+  border: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
@@ -270,9 +268,8 @@ body {
   font-size: 5rem;
   font-weight: 900;
   font-family: 'Courier New', monospace;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   letter-spacing: 0.3em;
-  text-shadow: 0 4px 16px rgba(255, 235, 59, 0.5);
   margin-top: 10px;
 }
 
@@ -333,7 +330,7 @@ body {
 .config-team-name {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   margin-bottom: 15px;
   display: flex;
   align-items: center;
@@ -348,8 +345,8 @@ body {
   height: 32px;
   padding: 0 10px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent-primary) 0%, #ffc107 100%);
-  color: #1a237e;
+  background: var(--accent-primary);
+  color: var(--on-accent-primary);
   font-size: 1rem;
   font-weight: 800;
 }

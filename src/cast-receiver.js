@@ -8,6 +8,16 @@
 (function() {
   'use strict';
 
+  // Readable names for the GameMode enum values the server sends
+  // (sockbowl-interfaces.ts GameMode) - the TV shows the room, not the wire
+  // format (M5 S2-17).
+  const GAME_MODE_LABELS = {
+    QUIZ_BOWL_CLASSIC: 'Classic',
+    SINGLE_PLAYER: 'Single player',
+    AUTO_PROCTOR: 'Auto proctor',
+    FREE_FOR_ALL: 'Free for all',
+  };
+
   // Cache DOM elements
   const elements = {
     app: document.getElementById('app'),
@@ -136,7 +146,7 @@
     elements.configProctor.textContent = state.proctorName || 'No proctor yet';
 
     // Update game mode
-    elements.configGameMode.textContent = state.gameMode || 'Standard';
+    elements.configGameMode.textContent = (state.gameMode && GAME_MODE_LABELS[state.gameMode]) || state.gameMode || 'Standard';
 
     // Update packet
     elements.configPacket.textContent = state.packetName || 'No packet selected';
@@ -159,7 +169,7 @@
 
     // Update category info
     if (state.category && state.subcategory) {
-      elements.categoryInfo.textContent = `${state.category} - ${state.subcategory}`;
+      elements.categoryInfo.textContent = `${state.category} · ${state.subcategory}`;
     } else if (state.category) {
       elements.categoryInfo.textContent = state.category;
     } else {
@@ -169,7 +179,7 @@
     // Show/hide question
     if (state.questionVisible) {
       elements.questionContainer.classList.remove('hidden');
-      elements.questionText.innerHTML = state.questionText || 'Question loading...';
+      elements.questionText.innerHTML = state.questionText || 'Question loading…';
     } else {
       elements.questionContainer.classList.add('hidden');
     }
@@ -180,7 +190,7 @@
     // Show/hide answer
     if (state.answerVisible) {
       elements.answerContainer.classList.remove('hidden');
-      elements.answerText.innerHTML = state.answerText || 'Answer loading...';
+      elements.answerText.innerHTML = state.answerText || 'Answer loading…';
     } else {
       elements.answerContainer.classList.add('hidden');
     }

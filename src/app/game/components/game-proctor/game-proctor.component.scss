@@ -28,29 +28,43 @@
     padding: var(--spacing-lg) !important;
   }
 
+  /* Secondary chrome: the status banner below is the primary headline now
+     (M5 S2-09), so the round position is demoted to a smaller caption. */
   mat-card-title {
-    font-size: 1.5rem !important;
-    font-weight: 700 !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--spacing-md) !important;
-    padding-bottom: 0.75rem !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: var(--spacing-sm) !important;
+    padding-bottom: 0.6rem !important;
     padding-right: 3rem !important; // keep clear of cast button on mobile
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.6rem;
 
     @media (min-width: 768px) {
-      font-size: 1.75rem !important;
+      font-size: 1.2rem !important;
     }
 
     &::before {
       content: '';
       display: inline-block;
-      width: 4px;
-      height: 1.5rem;
+      width: 3px;
+      height: 1.1rem;
       background: var(--accent-primary);
       border-radius: 2px;
+    }
+
+    .last-tossup-chip {
+      font-family: var(--font-display);
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--on-accent-primary);
+      background: var(--accent-primary);
+      padding: 0.15rem 0.5rem;
+      border-radius: var(--radius-full);
     }
   }
 
@@ -69,13 +83,11 @@
         margin: 0;
         padding: 0.5rem 0.75rem;
         border-radius: var(--radius-sm);
-        border-left: 3px solid;
 
         .info-label {
           font-size: 0.75rem;
           font-weight: 600;
           margin-right: 0.5rem;
-          opacity: 0.75;
         }
 
         .info-value {
@@ -89,7 +101,6 @@
       margin: var(--spacing-sm) 0;
       padding: 0.65rem 0.85rem;
       border-radius: var(--radius-sm);
-      border-left: 3px solid;
       background: var(--bg-secondary);
 
       .info-label {
@@ -98,7 +109,6 @@
         text-transform: uppercase;
         letter-spacing: 0.03em;
         margin-bottom: 0.35rem;
-        opacity: 0.75;
         display: block;
       }
 
@@ -109,31 +119,28 @@
       }
     }
 
+    // Metadata chips, not reading text: plain labelled rows, no stripe
+    // (M5 S2-10 - the left stripe stays on question/answer/verdict only).
     .category-section {
-      border-left-color: var(--info);
-      background: color-mix(in srgb, var(--info) 10%, transparent);
-      .info-label { color: var(--info); }
+      .info-label { color: var(--info-text); }
     }
 
     .subcategory-section {
-      border-left-color: var(--accent-secondary);
-      background: color-mix(in srgb, var(--accent-secondary) 10%, transparent);
-      .info-label { color: var(--accent-secondary); }
+      .info-label { color: var(--accent-secondary-text); }
     }
 
     .question-section {
-      border-left-color: var(--warning);
+      border-left: 3px solid var(--warning);
       background: color-mix(in srgb, var(--warning) 10%, transparent);
-      .info-label { color: var(--warning); }
+      .info-label { color: var(--warning-text); }
       .info-value { font-size: 1.05rem; }
     }
 
     // The answer is the single most important thing the proctor reads.
     .answer-section {
-      border-left-width: 4px;
-      border-left-color: var(--success);
+      border-left: 4px solid var(--success);
       background: color-mix(in srgb, var(--success) 14%, transparent);
-      .info-label { color: var(--success); }
+      .info-label { color: var(--success-text); }
       .info-value {
         font-size: 1.1rem;
         font-weight: 700;
@@ -149,31 +156,31 @@
       &:first-child { margin-top: 0; }
     }
 
-    strong { color: var(--accent-primary); }
+    strong { color: var(--accent-primary-text); }
   }
 }
 
-/* Current-state banner: tells the proctor exactly what action is expected */
+/* Current-state banner: the primary headline (M5 S2-09) - it tells the
+   proctor exactly what action is expected, ahead of the round position. */
 .proctor-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   margin-bottom: var(--spacing-sm);
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.85rem;
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  font-size: clamp(1.05rem, 0.95rem + 0.6vw, 1.4rem);
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  color: var(--text-primary);
 
   .status-dot {
     display: inline-block;
-    width: 10px;
-    height: 10px;
+    width: 11px;
+    height: 11px;
     border-radius: var(--radius-full);
     flex-shrink: 0;
   }
@@ -237,7 +244,7 @@
     color: var(--text-primary) !important;
     margin: 0 !important;
 
-    strong { color: var(--error); }
+    strong { color: var(--error-text); }
   }
 }
 
@@ -277,22 +284,22 @@
 
   #finished-reading-btn {
     background: var(--success) !important;
-    color: #fff !important;
+    color: var(--on-success) !important;
   }
 
   #timeout-btn {
     background: var(--warning) !important;
-    color: #fff !important;
+    color: var(--on-warning) !important;
   }
 
   #advance-round-btn {
     background: var(--accent-primary) !important;
-    color: #fff !important;
+    color: var(--on-accent-primary) !important;
   }
 
   .manual-timeout-btn {
     background: var(--warning) !important;
-    color: #fff !important;
+    color: var(--on-warning) !important;
   }
 
   /* Right / Wrong tossup judging: separated + icon-labelled to cut mis-clicks */
@@ -309,12 +316,12 @@
 
     #right-btn {
       background: var(--success) !important;
-      color: #fff !important;
+      color: var(--on-success) !important;
     }
 
     #wrong-btn {
       background: var(--error) !important;
-      color: #fff !important;
+      color: var(--on-error) !important;
     }
 
     // On the narrowest screens, stack so the two judgments never sit thumb-width apart
@@ -333,7 +340,7 @@
   background: color-mix(in srgb, var(--warning) 14%, var(--surface));
   border: 2px solid color-mix(in srgb, var(--warning) 45%, transparent);
   border-radius: var(--radius-md);
-  color: var(--warning);
+  color: var(--warning-text);
   font-variant-numeric: tabular-nums;
 
   p {
@@ -342,13 +349,13 @@
   }
 }
 
-// Bonus section styling
+// Bonus section: a plain section inside the one game-proctor card, divided
+// from the tossup content by a rule instead of its own border+background
+// box (M5 S2-10 - nested cards are always wrong).
 .bonus-section {
   margin-top: var(--spacing-lg);
-  padding: var(--spacing-md);
-  border: 2px solid color-mix(in srgb, var(--accent-secondary) 45%, transparent);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--accent-secondary) 8%, var(--surface));
+  padding-top: var(--spacing-lg);
+  border-top: 2px solid var(--border-subtle);
 
   .bonus-header {
     display: flex;
@@ -363,7 +370,7 @@
     h3 {
       font-size: 1.2rem;
       font-weight: 700;
-      color: var(--accent-secondary);
+      color: var(--accent-secondary-text);
       margin: 0;
       font-family: var(--font-display);
     }
@@ -371,13 +378,22 @@
     .bonus-score {
       font-size: 1.25rem;
       font-weight: 700;
-      color: var(--accent-secondary);
+      color: var(--accent-secondary-text);
       background: color-mix(in srgb, var(--accent-secondary) 16%, transparent);
       padding: 0.4rem 0.9rem;
       border-radius: var(--radius-sm);
       border: 2px solid color-mix(in srgb, var(--accent-secondary) 40%, transparent);
       font-variant-numeric: tabular-nums;
     }
+  }
+
+  // "Finished Reading Preamble" / "Finished Reading Part N": the same solid
+  // button system as the rest of the proctor's controls, not a pale
+  // Material default (M5 S2-10 - one button system).
+  #finished-reading-preamble-btn,
+  #finished-reading-part-btn {
+    background: var(--accent-primary) !important;
+    color: var(--on-accent-primary) !important;
   }
 
   .bonus-preamble-section {
@@ -388,7 +404,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: var(--accent-secondary);
+      color: var(--accent-secondary-text);
       margin: 0 0 0.5rem 0;
     }
 
@@ -407,15 +423,14 @@
   }
 
   .bonus-part {
-    padding: var(--spacing-md);
-    margin: 0.75rem 0;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-sm);
-    border: 2px solid color-mix(in srgb, var(--accent-secondary) 25%, transparent);
+    padding: var(--spacing-md) 0;
+    margin: 0;
+    border-top: 1px solid var(--border-subtle);
+
+    &:first-of-type { border-top: none; }
 
     &.completed {
-      opacity: 0.9;
-      border-color: var(--border-subtle);
+      opacity: 0.85;
 
       .part-content { display: none; }
 
@@ -424,10 +439,6 @@
         padding-bottom: 0;
         border-bottom: none;
       }
-    }
-
-    &.current {
-      border-color: var(--accent-secondary);
     }
 
     .part-header {
@@ -445,18 +456,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--accent-secondary);
-      }
-
-      .timer-badge {
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--warning);
-        background: color-mix(in srgb, var(--warning) 16%, transparent);
-        padding: 0.35rem 0.75rem;
-        border-radius: var(--radius-sm);
-        border: 2px solid color-mix(in srgb, var(--warning) 40%, transparent);
-        font-variant-numeric: tabular-nums;
+        color: var(--accent-secondary-text);
       }
 
       .part-result {
@@ -464,12 +464,12 @@
         font-weight: 600;
         padding: 0.35rem 0.75rem;
         border-radius: var(--radius-sm);
-        color: var(--error);
+        color: var(--error-text);
         background: color-mix(in srgb, var(--error) 16%, transparent);
         border: 2px solid color-mix(in srgb, var(--error) 40%, transparent);
 
         &.correct {
-          color: var(--success);
+          color: var(--success-text);
           background: color-mix(in srgb, var(--success) 16%, transparent);
           border-color: color-mix(in srgb, var(--success) 40%, transparent);
         }
@@ -479,6 +479,8 @@
     .part-content {
       margin-bottom: 0.75rem;
 
+      // The bonus part text is packet copy being read aloud, same as the
+      // top-level question/answer -> serif (M5 S2-10).
       .part-question,
       .part-answer {
         padding: 0.75rem 0.9rem;
@@ -486,24 +488,26 @@
         border-radius: var(--radius-sm);
         line-height: 1.6;
         font-size: 0.95rem;
+        font-family: var(--font-serif);
 
         strong {
           margin-right: 0.5rem;
           font-size: 0.85rem;
+          font-family: var(--font-body);
         }
       }
 
       .part-question {
         background: color-mix(in srgb, var(--warning) 10%, transparent);
         border-left: 4px solid var(--warning);
-        strong { color: var(--warning); }
+        strong { color: var(--warning-text); }
       }
 
       .part-answer {
         background: color-mix(in srgb, var(--success) 12%, transparent);
         border-left: 4px solid var(--success);
         font-weight: 600;
-        strong { color: var(--success); }
+        strong { color: var(--success-text); }
       }
     }
 
@@ -531,24 +535,26 @@
 
       .bonus-right-btn {
         background: var(--success) !important;
-        color: #fff !important;
+        color: var(--on-success) !important;
       }
 
       .bonus-wrong-btn {
         background: var(--error) !important;
-        color: #fff !important;
+        color: var(--on-error) !important;
       }
 
       #timeout-bonus-btn {
         background: var(--warning) !important;
-        color: #fff !important;
+        color: var(--on-warning) !important;
       }
     }
   }
 }
 
-// Team list styling
-::ng-deep app-team-list {
+// Team list styling: a plain component-scoped selector reaches the child's
+// host element without piercing encapsulation (M5 S2-11 - no unscoped
+// ::ng-deep / global selector).
+app-team-list {
   margin-top: var(--spacing-md);
   display: block;
 }
@@ -565,16 +571,16 @@
 }
 .answer-section .info-value { font-weight: 700; }
 
-/* Labels / bonus headings = competitive chrome -> display, eyebrow treatment */
+/* Labels = the controls/body voice, not the display face (M5 S2-18 - only
+   Space Grotesk's spread onto labels was the defect, not its use on titles
+   and numbers below). */
 .info-label {
-  font-family: var(--font-display);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.72rem;
   font-weight: 600;
 }
-.bonus-header h3,
-.bonus-preamble-section h4 {
+.bonus-header h3 {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }

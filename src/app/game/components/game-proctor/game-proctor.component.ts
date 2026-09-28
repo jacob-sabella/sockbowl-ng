@@ -83,6 +83,48 @@ export class GameProctorComponent implements OnInit {
   }
 
   /**
+   * Points a single bonus part is worth, derived from the same source as
+   * the header's own maximum (M5 S2-13) rather than a hardcoded "10 pts" in
+   * four separate template spots, so the two labels can never disagree.
+   * Falls back to the classic 10 before the current bonus's part count is
+   * known (mirrors GameStateService.getCurrentRoundMaxBonusPoints).
+   */
+  getBonusPartPointValue(): number {
+    const partCount = this.gameSession?.currentMatch?.currentRound?.currentBonus?.bonusParts?.length;
+    if (!partCount) {
+      return 10;
+    }
+    return this.gameStateService.getCurrentRoundMaxBonusPoints() / partCount;
+  }
+
+  /**
+   * Total tossups in the packet, when the server has sent it. Only a
+   * length-only tossups array is sent (anti-spoiler; see
+   * GameStateService's MatchPacketUpdate handling), so this reads
+   * packet.tossups.length rather than exposing questions. Returns null
+   * before the packet is set (or in modes that never send it), so the
+   * template can omit "Tossup N of M" and fall back to "Round N" instead of
+   * showing a bogus total (M5 S2-09; backend follow-up recorded for modes
+   * that don't carry this).
+   */
+  getTotalTossupCount(): number | null {
+    const count = this.gameSession?.currentMatch?.packet?.tossups?.length;
+    return count && count > 0 ? count : null;
+  }
+
+  /** The 1-based position of the round now playing. */
+  getTossupPosition(): number | null {
+    return this.gameSession?.currentMatch?.currentRound?.roundNumber ?? null;
+  }
+
+  /** Whether the round now playing is the last tossup in the packet. */
+  isLastTossup(): boolean {
+    const total = this.getTotalTossupCount();
+    const position = this.getTossupPosition();
+    return !!total && !!position && position === total;
+  }
+
+  /**
    * Initiates casting to a presentation device.
    * Opens the browser's device picker for the user to select a cast target.
    */
