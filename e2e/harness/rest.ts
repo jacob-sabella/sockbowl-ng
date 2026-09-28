@@ -67,6 +67,19 @@ export function postFrom(url: string, body: unknown, localAddress: string, token
       {
         method: 'POST',
         agent,
+        // `localAddress` above is always an IPv4 loopback literal
+        // (127.0.0.x). Forcing an IPv4 lookup keeps that consistent with
+        // the *destination* Node resolves `target.hostname` to: when the
+        // URL host is "localhost" (as SOCKBOWL_API/SOCKBOWL_QUESTIONS are
+        // commonly set for a local compose stack) and the host's
+        // /etc/hosts or resolver lists the IPv6 loopback (::1) before
+        // 127.0.0.1, Node's default dns.lookup() picks ::1 first, and
+        // binding an IPv6 connection to an IPv4 local address fails with
+        // "bind EINVAL" -- reproduced live in this run. Passing an IP
+        // literal (127.0.0.1) instead of "localhost" happens to dodge
+        // this too, but that's the caller's choice of env var, not
+        // something this harness function should silently depend on.
+        family: 4,
         headers: {
           'content-type': 'application/json',
           'content-length': Buffer.byteLength(data),
