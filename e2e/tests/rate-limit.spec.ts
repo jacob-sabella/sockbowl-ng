@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createGame, joinByCode, importQbreaderPacket, type JoinResult } from '../harness/rest.js';
+import { createGame, joinByCode, findSeededPacket, type JoinResult } from '../harness/rest.js';
 import { SockbowlBot, spawnBot } from '../harness/bot.js';
 import { APP_URL } from '../harness/config.js';
 
@@ -83,7 +83,13 @@ test.describe('M4 rate limiting (live)', () => {
     test.setTimeout(120_000);
 
     const game = await createGame('QUIZ_BOWL_CLASSIC', 'ONLINE_PROCTOR', false);
-    const packetId = await importQbreaderPacket('2021 SMH', 1);
+    // `import-random` draws from a separate :BankTossup/:BankBonus bank this
+    // compose stack doesn't seed (see `harness/rest.ts` and
+    // `scripts/full-match.ts`), so this looks up a real, already-seeded
+    // PUBLISHED packet instead -- any packet with at least one tossup is
+    // enough to reach AWAITING_BUZZ for the flood.
+    const packetName = process.env.SOCKBOWL_E2E_PACKET_NAME || '2010 Collaborative MS Tournament - Round 05';
+    const packetId = (await findSeededPacket(packetName)).id;
 
     const hostJoin = await joinByCode(game.joinCode, 'Proctor');
     const proctor = new SockbowlBot('Proctor', hostJoin.gameSessionId, hostJoin.playerSecret, hostJoin.playerSessionId);
