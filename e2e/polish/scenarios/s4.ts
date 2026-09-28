@@ -5,6 +5,7 @@
  */
 import { mockGraphql, type GraphqlHandlers, graphqlError } from '../mock/graphql.js';
 import { loadFixture } from '../fixtures/load.js';
+import { focusByKeyboard } from '../focus.js';
 import type { CaptureState, SurfaceScenario } from './types.js';
 
 interface PacketFixtures {
@@ -184,6 +185,36 @@ const states: CaptureState[] = [
     viewports: ['desktop'],
     themes: ['dark'],
     setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published', { loading: true })),
+  },
+  {
+    // M5 recheck: focus-ring evidence for the F2 token move's
+    // `--focus-ring`. A real `Tab` press (not a scripted `.focus()`) lands
+    // on the enabled "Play test" button (`pkt-own-published` is playable),
+    // so the capture shows the actual `:focus-visible` a keyboard user gets.
+    id: 'focus-play-test-button',
+    route: '/packets/pkt-own-published/edit',
+    role: 'author',
+    viewports: ['mobile', 'tablet'],
+    setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published')),
+    afterGoto: async page => {
+      await focusByKeyboard(page, page.getByRole('button', { name: 'Play test' }));
+      await page.waitForTimeout(150);
+    },
+  },
+  {
+    // M5 recheck: same focus-ring evidence, for a tossup's
+    // `mat-expansion-panel-header` (role="button" via Material, not a
+    // native <button>) — a different focus-ring code path than an actual
+    // <button> element.
+    id: 'focus-tossup-expansion-header',
+    route: '/packets/pkt-own-published/edit',
+    role: 'author',
+    viewports: ['mobile', 'tablet'],
+    setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published')),
+    afterGoto: async page => {
+      await focusByKeyboard(page, page.locator('.packet-builder__tossups mat-expansion-panel-header').first());
+      await page.waitForTimeout(150);
+    },
   },
 ];
 

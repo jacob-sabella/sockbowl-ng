@@ -7,16 +7,21 @@
 import { mockGraphql } from '../mock/graphql.js';
 import { mockRest, ok, apiError, type RestRoute } from '../mock/rest.js';
 import { loadFixture } from '../fixtures/load.js';
+import { focusByKeyboard } from '../focus.js';
 import type { CaptureState, SurfaceScenario } from './types.js';
 
 /**
- * M5 plan §4 AY row: the `final` capture adds tablet for S4 and S5, on top
- * of the {mobile, desktop} x {dark, light} matrix every phase captures.
- * Scoped to `POLISH_PHASE=final` only, so `baseline`/`post-f1` stay exactly
- * as H0/F1 recorded them (no retroactive tablet rows in earlier phases).
+ * M5 plan §4 AY row: adds tablet for S4 and S5, on top of the {mobile,
+ * desktop} x {dark, light} matrix every phase captures.
+ *
+ * M5 recheck: this used to be scoped to `POLISH_PHASE=final` only, but the
+ * recheck reviewer found `f2` had no tablet coverage for S5 at all — the
+ * F2 token move and shared-file handoffs need tablet evidence just as much
+ * as final does, so tablet is now unconditional. `baseline`/`post-f1`
+ * simply never re-ran after this change, so they stay exactly as H0/F1
+ * recorded them; nothing here retroactively rewrites those phases.
  */
-const FINAL_PHASE = process.env.POLISH_PHASE === 'final';
-const STANDARD_VIEWPORTS = FINAL_PHASE ? ['mobile', 'desktop', 'tablet'] : ['mobile', 'desktop'];
+const STANDARD_VIEWPORTS = ['mobile', 'desktop', 'tablet'];
 
 interface BansFixtures {
   populated: { bans: unknown[]; ipBans: unknown[] };
@@ -156,6 +161,34 @@ const states: CaptureState[] = [
     role: 'player', // lacks admin:access
     viewports: STANDARD_VIEWPORTS,
     setupMocks: async page => mockRest(page, usageRoutes()),
+  },
+  {
+    // M5 recheck: focus-ring evidence for the F2 token move's
+    // `--focus-ring`, on a native `mat-raised-button` (`admin-bans.
+    // component.html`'s "Ban user" submit button). Real `Tab` presses land
+    // here so the capture shows the actual `:focus-visible` state.
+    id: 'focus-ban-user-button',
+    route: '/admin/bans',
+    role: 'moderator',
+    viewports: ['mobile', 'tablet'],
+    setupMocks: async page => mockRest(page, bansRoutes('empty')),
+    afterGoto: async page => {
+      await focusByKeyboard(page, page.getByRole('button', { name: 'Ban user' }));
+      await page.waitForTimeout(150);
+    },
+  },
+  {
+    // M5 recheck: same focus-ring evidence for a `mat-select` trigger (a
+    // different focus-ring code path than a plain button/anchor).
+    id: 'focus-expires-select',
+    route: '/admin/bans',
+    role: 'moderator',
+    viewports: ['mobile', 'tablet'],
+    setupMocks: async page => mockRest(page, bansRoutes('empty')),
+    afterGoto: async page => {
+      await focusByKeyboard(page, page.getByLabel('Expires'));
+      await page.waitForTimeout(150);
+    },
   },
 ];
 

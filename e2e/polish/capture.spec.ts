@@ -24,7 +24,7 @@ import { mockConfig } from './mock/config.js';
 import { mockOidc } from './mock/oidc.js';
 import { mockStompReplay } from './mock/stomp-replay.js';
 import {
-  appendManifestRow, ngHead, presetTheme, runAxe, sha256File, shotsDir, slug,
+  appendManifestRow, captureAtViewportWidth, ngHead, presetTheme, runAxe, sha256File, shotsDir, slug,
   waitForFonts, CAPTURED_THEMES, VIEWPORTS, type CapturePhase,
 } from './manifest.js';
 import { checkAllControls, checkOverflow } from './checks.js';
@@ -90,7 +90,7 @@ const SURFACES: SurfaceScenario[] = [s1, s2, s3, s4, s5, s6];
                 mkdirSync(dir, { recursive: true });
                 const fileName = `${slug(state.id)}__${state.role}__${vpName}__${theme}.png`;
                 const filePath = join(dir, fileName);
-                await page.screenshot({ path: filePath, fullPage: true });
+                await captureAtViewportWidth(page, viewport, filePath);
 
                 const axeKey = slug(`${state.id}__${state.role}__${vpName}__${theme}`);
                 const axe = await runAxe(page, surface.id, PHASE, axeKey);
@@ -171,7 +171,7 @@ interface SelfCheckFixture {
         mkdirSync(dir, { recursive: true });
         const fileName = `${seatName}.png`;
         const filePath = join(dir, fileName);
-        await page.screenshot({ path: filePath, fullPage: true });
+        await captureAtViewportWidth(page, VIEWPORTS.desktop, filePath);
 
         appendManifestRow({
           surface: 'selfcheck', phase: 'self-check', state: `renders-${seatName}`, role: 'player',

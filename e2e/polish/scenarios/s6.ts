@@ -13,6 +13,7 @@ import { mockRest, ok, apiError, type RestRoute } from '../mock/rest.js';
 import { mockGraphql } from '../mock/graphql.js';
 import { mockStompReplay } from '../mock/stomp-replay.js';
 import { loadFixture } from '../fixtures/load.js';
+import { focusByKeyboard } from '../focus.js';
 import type { CaptureState, SurfaceScenario } from './types.js';
 
 interface UsersFixtures {
@@ -132,20 +133,23 @@ const states: CaptureState[] = [
     setupMocks: async () => {},
   },
   {
+    // M5 recheck: tablet added alongside the existing mobile/mobile-min/
+    // desktop set — S6 had no tablet coverage anywhere in the scenario.
     id: 'nav-moderator',
     route: '/game-session',
     role: 'moderator',
-    viewports: ['mobile', 'mobile-min', 'desktop'],
+    viewports: ['mobile', 'mobile-min', 'tablet', 'desktop'],
     setupMocks: async () => {},
   },
   {
     // S6-03: admin is the densest role (Packets + the whole Admin group) —
     // the one the backlog's "587px at 390" defect was measured against, so
     // this is the row that most directly proves the fold at 280px.
+    // M5 recheck: tablet added (see nav-moderator above).
     id: 'nav-admin',
     route: '/game-session',
     role: 'admin',
-    viewports: ['mobile', 'mobile-min', 'desktop'],
+    viewports: ['mobile', 'mobile-min', 'tablet', 'desktop'],
     setupMocks: async () => {},
   },
   {
@@ -416,6 +420,22 @@ const states: CaptureState[] = [
     route: '/this-route-does-not-exist',
     role: 'player',
     setupMocks: async () => {},
+  },
+  {
+    // M5 recheck: focus-ring evidence for the F2 token move's
+    // `--focus-ring`, on the navbar's account-menu trigger (a real `Tab`
+    // press, not a scripted `.focus()`, so the capture shows the actual
+    // `:focus-visible` a keyboard user gets — see `nav-admin-menu-open`
+    // above for the same trigger driven by a pointer click instead).
+    id: 'focus-account-menu-trigger',
+    route: '/game-session',
+    role: 'player',
+    viewports: ['mobile', 'tablet'],
+    setupMocks: async () => {},
+    afterGoto: async page => {
+      await focusByKeyboard(page, page.getByLabel(/^Account menu,/));
+      await page.waitForTimeout(150);
+    },
   },
 ];
 

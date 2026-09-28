@@ -137,24 +137,62 @@ export async function presetTheme(page: Page, theme: string): Promise<void> {
   }, { key: THEME_STORAGE_KEY, value: theme });
 }
 
-/** Waits for web fonts and reports whether they actually loaded (M5 plan §4/§8 risk 6). */
+/**
+ * Waits for web fonts and reports whether they actually loaded (M5 plan
+ * §4/§8 risk 6). Checks both the body text face (Inter) and the icon face
+ * (Material Icons, `src/index.html`): `mat-icon` renders its ligature text
+ * content (e.g. "light_mode") verbatim until that font face is actually
+ * available, so a check that only asked about Inter could pass while every
+ * icon on the page was showing raw ligature text (the recheck reviewer's
+ * "unloaded icon fonts" finding). `document.fonts.ready` resolves once the
+ * initial font set is settled, but a Google Fonts @font-face can still be
+ * mid-swap right after, so this re-checks both faces a few times before
+ * giving up rather than trusting `ready` alone.
+ */
 export async function waitForFonts(page: Page): Promise<boolean> {
-  try {
-    return await page.evaluate(async () => {
-      try {
-        await (document as any).fonts.ready;
-        // `document.fonts.ready` resolves once layout's initial font set is
-        // settled, but a Google Fonts @font-face can still be mid-swap; a
-        // spot check on one of the app's declared families confirms it's
-        // actually available, not just that the ready promise fired.
-        return (document as any).fonts.check('16px Inter') || (document as any).fonts.size > 0;
-      } catch {
-        return false;
-      }
-    });
-  } catch {
-    return false;
+  const check = () => page.evaluate(async () => {
+    try {
+      await (document as any).fonts.ready;
+      const bodyFontReady = (document as any).fonts.check('16px Inter') || (document as any).fonts.size > 0;
+      const iconFontReady = (document as any).fonts.check('24px "Material Icons"');
+      return bodyFontReady && iconFontReady;
+    } catch {
+      return false;
+    }
+  }).catch(() => false);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (await check()) return true;
+    if (attempt < 2) await page.waitForTimeout(500);
   }
+  return false;
+}
+
+/**
+ * Screenshots the page clipped to exactly `viewport.width`, regardless of
+ * horizontal overflow (M5 recheck: the invalid pre-F2 `s5/final` reference
+ * had captures at widths like 427/587/845/1200/1465 instead of their
+ * viewport's width, because a plain `fullPage` screenshot grows to fit
+ * whatever the page's scrollable content measures). `fullPage: true`
+ * computes the clip's source rect from the full document (unaffected by
+ * the page's current scroll offset), and Playwright trims the given `clip`
+ * down to that document's actual bounds — so passing `width:
+ * viewport.width` and a deliberately oversized `height` reliably crops any
+ * overflow off the right edge instead of capturing it, while the height
+ * still comes out as the page's real full height. Overflow itself stays
+ * `checkOverflow`'s job to flag, not something the screenshot should hide
+ * by silently growing.
+ */
+export async function captureAtViewportWidth(
+  page: Page,
+  viewport: { width: number; height: number },
+  filePath: string,
+): Promise<void> {
+  await page.screenshot({
+    path: filePath,
+    fullPage: true,
+    clip: { x: 0, y: 0, width: viewport.width, height: 1_000_000 },
+  });
 }
 
 /**
