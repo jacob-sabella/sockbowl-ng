@@ -55,9 +55,9 @@ async function newPacketInBuilder(page: Page, name: string): Promise<string> {
   return m[1];
 }
 
-/** Adds a tossup through the builder's "Add Tossup" form (commits immediately, no draft). */
+/** Adds a tossup through the builder's "Add tossup" form (commits immediately, no draft). */
 async function addTossup(page: Page, question: string, answer: string): Promise<void> {
-  await page.getByRole('button', { name: 'Add Tossup', exact: true }).click();
+  await page.getByRole('button', { name: 'Add tossup', exact: true }).click();
   const form = page.locator('mat-expansion-panel', { hasText: 'New tossup' });
   await form.getByLabel('Question').fill(question);
   await form.getByLabel('Answer').fill(answer);
@@ -65,13 +65,13 @@ async function addTossup(page: Page, question: string, answer: string): Promise<
   await expect(form).toBeHidden({ timeout: 10000 });
 }
 
-/** Adds a bonus (with its parts) through the builder's "Add Bonus" form. */
+/** Adds a bonus (with its parts) through the builder's "Add bonus" form. */
 async function addBonus(
   page: Page,
   preamble: string,
   parts: { question: string; answer: string }[],
 ): Promise<void> {
-  await page.getByRole('button', { name: 'Add Bonus', exact: true }).click();
+  await page.getByRole('button', { name: 'Add bonus', exact: true }).click();
   const form = page.locator('.packet-builder__generate-form');
   await form.getByLabel('Preamble').fill(preamble);
   const rows = form.locator('.packet-builder__part');
@@ -190,9 +190,10 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     const pickedSubcategory = await pickFirstSubcategory(t1PanelForSubcategory);
     if (pickedSubcategory) {
       await t1PanelForSubcategory.getByRole('button', { name: 'Save', exact: true }).click();
-      await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/All changes saved/, {
-        timeout: 10000,
-      });
+      // FF1 (finish review #6): the sticky save bar is chrome for an
+      // unsaved change, not a permanent fixture -- it's gone entirely once
+      // there's nothing left to save, rather than reading "All changes saved".
+      await expect(page.locator('.packet-builder__save-bar')).toBeHidden({ timeout: 10000 });
     }
 
     // NG-V1-08: dirty more than one entity (the bonus's preamble and two of
@@ -209,7 +210,8 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     await bonusPartRows.nth(1).getByLabel('Answer').fill('NILE (v2)');
     await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/3 unsaved changes/, { timeout: 5000 });
     await page.getByRole('button', { name: 'Save all' }).click();
-    await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/All changes saved/, { timeout: 10000 });
+    // FF1 (finish review #6): no more "All changes saved" bar -- see above.
+    await expect(page.locator('.packet-builder__save-bar')).toBeHidden({ timeout: 10000 });
     await expect(page.locator('.packet-builder__validation-badge')).toHaveText(/Playable/, { timeout: 10000 });
 
     // Step 3: drag tossup 3 (Mercury) to position 1, then confirm the order survives a reload.
@@ -252,7 +254,8 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     await expect(confirmDialog).toBeHidden({ timeout: 5000 });
     expect(page.url()).toMatch(/\/packets\/[^/]+\/edit/);
     await t2Panel.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/All changes saved/, { timeout: 10000 });
+    // FF1 (finish review #6): no more "All changes saved" bar -- see above.
+    await expect(page.locator('.packet-builder__save-bar')).toBeHidden({ timeout: 10000 });
 
     // Step 6 (auth-on only): Publish.
     if (authOn) {

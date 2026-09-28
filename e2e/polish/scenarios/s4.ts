@@ -58,6 +58,10 @@ const states: CaptureState[] = [
     id: 'list-populated-own-and-others',
     route: '/packets',
     role: 'author',
+    // S4-20: tablet (820) and the 280px floor, on top of the mobile/desktop
+    // default, so the stacked mobile row (S4-01) and the filter row are
+    // captured at every §2 viewport, not just 390/1440.
+    viewports: ['mobile-min', 'mobile', 'tablet', 'desktop'],
     setupMocks: async page => mockGraphql(page, listHandlers('own-and-others')),
   },
   {
@@ -105,13 +109,56 @@ const states: CaptureState[] = [
     id: 'builder-populated-published',
     route: '/packets/pkt-own-published/edit',
     role: 'author',
+    // S4-20: tablet layout (header action row, drag handle touch target).
+    viewports: ['mobile', 'tablet', 'desktop'],
     setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published')),
   },
   {
     id: 'builder-validation-warnings',
     route: '/packets/pkt-own-draft/edit',
     role: 'author',
+    viewports: ['mobile-min', 'mobile', 'tablet', 'desktop'],
     setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-draft')),
+  },
+  {
+    // FF2 (finish review remaining #3/fix 7): no other state expands a
+    // bonus panel, so "Parts" (packet-builder.component.scss
+    // `&__parts-title`) never appeared in any capture the reviewer could
+    // read. This state opens bonus #1 before the screenshot so the
+    // display-voice fix on that heading is actually evidenced.
+    id: 'builder-bonus-expanded',
+    route: '/packets/pkt-own-published/edit',
+    role: 'author',
+    setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published')),
+    afterGoto: async page => {
+      // Cut Material's expansion animation so the capture doesn't land
+      // mid-turn (FF2 verdict: the chevron and header were caught
+      // half-opened because the screenshot raced the panel's own CSS
+      // transition).
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const firstBonusHeader = page.locator('.packet-builder__bonuses mat-expansion-panel-header').first();
+      await firstBonusHeader.click();
+      // Wait for Material's own expanded state, not just content
+      // visibility: `.packet-builder__parts-title` is already in the DOM
+      // (see the `.first()` note below) before the panel finishes opening,
+      // so waiting on it alone resolved on a mid-animation frame.
+      // `aria-expanded="true"` only flips once the panel has actually
+      // opened.
+      await page.locator('.packet-builder__bonuses mat-expansion-panel-header[aria-expanded="true"]').first().waitFor({ state: 'visible' });
+      // `.first()` by DOM order, not `getByText` (Material keeps every
+      // panel's content in the DOM even collapsed, so "Parts" is present
+      // for every bonus and `getByText(exact)` hits strict-mode's
+      // multiple-match error). The first bonus in the list is the one the
+      // click above just expanded.
+      await page.locator('.packet-builder__parts-title').first().waitFor({ state: 'visible' });
+      // Let the animation settle even with reduced motion honoured (some
+      // Material transitions still run a short opacity/height tween) and
+      // give layout a beat to finish before the screenshot.
+      await page.waitForTimeout(400);
+      // The click can leave the page scrolled to the bonus panel; the
+      // capture harness always wants the document top, navbar included.
+      await page.evaluate(() => window.scrollTo(0, 0));
+    },
   },
   {
     id: 'builder-admin-manage-any',

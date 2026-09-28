@@ -1,6 +1,7 @@
-import { Component, OnInit, ChangeDetectionStrategy, HostListener, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { switchMap, tap } from 'rxjs/operators';
@@ -18,13 +19,16 @@ import {
   Difficulty,
   PacketValidation,
   PacketVisibility,
-  Subcategory
+  Subcategory,
+  ValidationIssue
 } from '../../models/packet-authoring.models';
 import { PACKET_LIMITS } from '../../models/packet-limits';
 import { AuthService } from '../../../core/auth/auth.service';
 import { describeGraphqlError, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
+import { limitErrorFrom, notifyLimit } from '../../../core/http/limit-errors';
+import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 import { DraftEntitySource, PacketDraftStore } from './packet-draft-store';
 
 interface TossupDraft {
@@ -64,6 +68,14 @@ type SaveWorkItem =
   | { kind: 'bonus'; id: string }
   | { kind: 'part'; id: string; bonusId: string };
 
+/** S4-13: which per-class message/recovery the builder's initial load renders. */
+type PacketLoadErrorKind = 'not-found' | 'forbidden' | 'network';
+
+interface PacketLoadError {
+  kind: PacketLoadErrorKind;
+  message: string;
+}
+
 /**
  * Packet builder / editor (M3 plan 3.3.2). Loads the full packet graph, the
  * difficulty list, and the subcategory taxonomy on init. Every tossup,
@@ -89,6 +101,8 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   private packetAuthoring = inject(PacketAuthoringService);
   private snackBar = inject(MatSnackBar);
   private confirmDialog = inject(ConfirmDialogService);
+  private rateLimitState = inject(RateLimitStateService);
+  private liveAnnouncer = inject(LiveAnnouncer);
   auth = inject(AuthService);
 
   limits = PACKET_LIMITS;
@@ -96,6 +110,8 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   packetId = '';
   packet: AuthoringPacket | null = null;
   loading = true;
+  /** S4-13: set instead of `packet` staying null when the initial load fails, so the template can render a per-class state. */
+  loadError: PacketLoadError | null = null;
 
   /** The packet's last-known-good version, sent as `expectedVersion` on every content mutation (PB-18). */
   packetVersion = 0;
@@ -106,6 +122,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   staleDraftIds = new Set<string>();
 
   savingAll = false;
+  /** S4-06: 1-based index/total of the item currently in flight, shown as "Saving N of M…" on the sticky bar. */
+  saveAllCurrent = 0;
+  saveAllTotal = 0;
+
+  /** S4-05: entity ids with a Save mutation in flight, so a second click before the response lands is a no-op. */
+  savingTossupIds = new Set<string>();
+  savingBonusIds = new Set<string>();
+  savingPartIds = new Set<string>();
+
+  /** S4-06: the last Save-all failure's message, keyed by entity id, rendered inline on that card. Cleared on the next attempt to save that card. */
+  entitySaveErrors: Record<string, string> = {};
 
   /** Preview tab toggle (PB-07): swaps the editor cards for {@link PacketReadingViewComponent}. */
   showPreview = false;
@@ -137,6 +164,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   newPartOpen: Record<string, boolean> = {};
   newPartDrafts: Record<string, NewBonusPartDraft> = {};
 
+  /**
+   * S4-08: which tossup/bonus panel a validation issue link opened. Synced
+   * from the panel's own (opened)/(closed) events so a manual click on a
+   * different panel (and the accordion's own close-others behavior) always
+   * wins over this state, never fights it.
+   */
+  expandedTossupId: string | null = null;
+  expandedBonusId: string | null = null;
+  /** Set by {@link focusIssue}; consumed once by the matching panel's (afterExpand) to scroll/focus it, then cleared. */
+  private pendingFocusEntityId: string | null = null;
+
   // AI-assist form. apiKey/model are owned by the embedded AiKeyPickerComponent
   // (PB-08, N5's shared/ai-key), which seeds them from AiKeyService on init.
   genOpen = false;
@@ -150,10 +188,42 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   taxonomyNewCategoryName = '';
   taxonomyNewSubcategoryName = '';
   private taxonomyTarget: ((subcategoryId: string) => void) | null = null;
+  /** S4-17: the element that opened the dialog (a "Create new subcategory" icon button), so focus can return to it on close. */
+  private taxonomyTriggerEl: HTMLElement | null = null;
+
+  /**
+   * S4-17: the taxonomy overlay is a hand-rolled dialog (no MatDialog/
+   * cdkTrapFocus — see H-02), so moving focus in has to happen once the
+   * `@if` actually renders it. A `ViewChild` setter fires exactly then,
+   * synchronously with change detection, which a `ngOnChanges`/`ngOnInit`
+   * hook on the component itself cannot (they only see `taxonomyFormOpen`
+   * flip, not the child's presence in the DOM).
+   */
+  @ViewChild('taxonomyDialog', { read: ElementRef }) set taxonomyDialogRef(ref: ElementRef<HTMLElement> | undefined) {
+    if (ref) {
+      queueMicrotask(() => this.focusFirstFocusable(ref.nativeElement));
+    }
+  }
 
   ngOnInit(): void {
     this.packetId = this.route.snapshot.paramMap.get('id') || '';
+    this.loadPacket();
+  }
+
+  /**
+   * S4-13: the initial load, factored out of ngOnInit so {@link retryLoad}
+   * can call it again after a network/500 failure. A 404/403 renders a
+   * per-class state with no Retry (loading the same id again can't help);
+   * anything else renders "Couldn't load this packet" with Retry. Unlike
+   * the old behavior, a load failure never shows a generic snackbar here —
+   * the state block is the single source of truth for why the page is
+   * empty (H-06/S4-13: a NOT_FOUND-flavored snackbar text was previously
+   * shown for every failure, including ones that had nothing to do with
+   * deletion).
+   */
+  private loadPacket(): void {
     this.loading = true;
+    this.loadError = null;
 
     forkJoin({
       packet: this.sockbowlQuestionsService.getPacketById(this.packetId),
@@ -170,10 +240,27 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.loading = false;
       },
       error: (err) => {
-        this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
         this.loading = false;
+        this.loadError = this.classifyLoadError(err);
       }
     });
+  }
+
+  /** S4-13: retry for the network/500 load-error state. */
+  retryLoad(): void {
+    this.loadPacket();
+  }
+
+  private classifyLoadError(err: unknown): PacketLoadError {
+    if (err instanceof GraphqlRequestError) {
+      if (err.classification === 'NOT_FOUND') {
+        return { kind: 'not-found', message: "This packet doesn't exist or was deleted" };
+      }
+      if (err.classification === 'FORBIDDEN') {
+        return { kind: 'forbidden', message: "You don't have access to this packet" };
+      }
+    }
+    return { kind: 'network', message: "Couldn't load this packet" };
   }
 
   /**
@@ -189,6 +276,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     if (this.hasUnsavedChanges()) {
       event.preventDefault();
       event.returnValue = true;
+    }
+  }
+
+  /** S4-21: Ctrl/Cmd+S saves every dirty card, same as pressing "Save all". Only claims the shortcut when there's something to save. */
+  @HostListener('window:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (this.canManagePacket && this.dirtyCount > 0 && !this.savingAll) {
+        event.preventDefault();
+        this.saveAll();
+      }
     }
   }
 
@@ -353,6 +451,127 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     return this.staleDraftIds.has(id);
   }
 
+  isSavingTossup(id: string): boolean {
+    return this.savingTossupIds.has(id);
+  }
+
+  isSavingBonus(id: string): boolean {
+    return this.savingBonusIds.has(id);
+  }
+
+  isSavingPart(id: string): boolean {
+    return this.savingPartIds.has(id);
+  }
+
+  /** S4-16: true while any save (a single card, or Save all) is in flight, so drag/reorder can refuse to start. */
+  get anySavingInFlight(): boolean {
+    return (
+      this.savingAll ||
+      this.savingName ||
+      this.savingTossupIds.size > 0 ||
+      this.savingBonusIds.size > 0 ||
+      this.savingPartIds.size > 0
+    );
+  }
+
+  /**
+   * S4-15/FF1 (finish review #3): an admin (or other `packet:manage-any`
+   * holder) editing someone else's packet sees whose it is. Null for the
+   * owner themself, and for an ownerless/nameless packet with no display
+   * name to show.
+   *
+   * `owner.id` is redacted to `null` for a non-owner's read (`PacketOwner`,
+   * D2/Q-M2-01) — a viewer who isn't the owner never gets a real id back,
+   * only a name. The old guard required a truthy `owner.id` before it would
+   * even consider showing the name, so the redacted (and by definition
+   * "not you") case fell through to `null` and hid the line on exactly the
+   * admin-viewing-someone-else's-packet capture this exists for. A
+   * redacted id therefore always means "not you"; only a *present* id is
+   * worth comparing against the current user's own Keycloak id
+   * (`auth.getCurrentUserId()`, the `sub` claim — the same space `owner.id`
+   * is in when it isn't redacted).
+   */
+  get ownerDisplayName(): string | null {
+    const owner = this.packet?.owner;
+    if (!owner?.name) {
+      return null;
+    }
+    if (owner.id == null) {
+      return owner.name;
+    }
+    return owner.id === this.auth.getCurrentUserId() ? null : owner.name;
+  }
+
+  /* --------------------------- validation issue links ------------------------ */
+
+  /**
+   * S4-08: a validation issue naming a tossup or bonus opens that card,
+   * scrolls it into view, and focuses its first field. Issues with no
+   * target (a packet-wide rule) render as plain text in the template
+   * instead of calling this.
+   */
+  focusIssue(issue: ValidationIssue): void {
+    if (issue.tossupId) {
+      this.pendingFocusEntityId = issue.tossupId;
+      this.expandedTossupId = issue.tossupId;
+    } else if (issue.bonusId) {
+      this.pendingFocusEntityId = issue.bonusId;
+      this.expandedBonusId = issue.bonusId;
+    }
+  }
+
+  onTossupPanelClosed(id: string): void {
+    if (this.expandedTossupId === id) {
+      this.expandedTossupId = null;
+    }
+  }
+
+  onTossupPanelExpanded(id: string): void {
+    if (this.pendingFocusEntityId && this.expandedTossupId === id) {
+      const target = this.pendingFocusEntityId;
+      this.pendingFocusEntityId = null;
+      this.scrollAndFocusEntity(target);
+    }
+  }
+
+  onBonusPanelClosed(id: string): void {
+    if (this.expandedBonusId === id) {
+      this.expandedBonusId = null;
+    }
+  }
+
+  /**
+   * The pending focus target can be the bonus itself (a bonus-level
+   * validation issue) or one of its parts (a Save-all failure on a part,
+   * S4-06) — either way, the target is only reachable once *this* bonus's
+   * panel ({@link expandedBonusId}) is the one that just opened.
+   */
+  onBonusPanelExpanded(id: string): void {
+    if (this.pendingFocusEntityId && this.expandedBonusId === id) {
+      const target = this.pendingFocusEntityId;
+      this.pendingFocusEntityId = null;
+      this.scrollAndFocusEntity(target);
+    }
+  }
+
+  /** Scrolls the card carrying `data-entity-id="id"` into view and focuses its first field (S4-08). */
+  private scrollAndFocusEntity(id: string): void {
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-entity-id="${id}"]`);
+      if (!el) {
+        return;
+      }
+      let reduceMotion = false;
+      try {
+        reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      } catch {
+        // matchMedia can be unavailable in some test environments; default to smooth.
+      }
+      el.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+      el.querySelector<HTMLElement>('textarea, input')?.focus();
+    });
+  }
+
   startEditName(): void {
     if (!this.packet) {
       return;
@@ -366,6 +585,9 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   saveName(): void {
+    if (this.savingName) {
+      return;
+    }
     const name = this.nameDraft.trim();
     if (!name) {
       this.snackBar.open('Packet name is required', 'Dismiss', { duration: 3000 });
@@ -402,10 +624,11 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     if (!this.packet) {
       return;
     }
+    const owner = this.ownerDisplayName;
     this.confirmDialog
       .confirm({
         title: `Delete packet "${this.packet.name}"?`,
-        message: 'This cannot be undone.',
+        message: owner ? `This cannot be undone. Owned by ${owner}.` : 'This cannot be undone.',
         confirmText: 'Delete',
         destructive: true
       })
@@ -535,7 +758,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
    * error. The up/down buttons remain for keyboard use.
    */
   dropTossup(event: CdkDragDrop<TossupElement[]>): void {
-    if (!this.packet || event.previousIndex === event.currentIndex) {
+    if (!this.packet || event.previousIndex === event.currentIndex || this.anySavingInFlight) {
       return;
     }
     const items = this.sortedTossups;
@@ -558,7 +781,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   dropBonus(event: CdkDragDrop<BonusElement[]>): void {
-    if (!this.packet || event.previousIndex === event.currentIndex) {
+    if (!this.packet || event.previousIndex === event.currentIndex || this.anySavingInFlight) {
       return;
     }
     const items = this.sortedBonuses;
@@ -581,7 +804,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   dropPart(be: BonusElement, event: CdkDragDrop<BonusPartElement[]>): void {
-    if (!this.packet || event.previousIndex === event.currentIndex) {
+    if (!this.packet || event.previousIndex === event.currentIndex || this.anySavingInFlight) {
       return;
     }
     const items = this.sortedParts(be);
@@ -609,11 +832,25 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     this.packetVersion = this.packetVersion + 1;
   }
 
-  /** Every mutation's error handler: a CONFLICT opens the persistent banner instead of a snackbar. */
+  /**
+   * Every mutation's error handler (HD: wires every §2 error class to one
+   * outcome). A CONFLICT opens the persistent banner instead of a snackbar.
+   * RATE_LIMITED, QUOTA_EXCEEDED, and BANNED go through M4's `notifyLimit`
+   * so the message includes the cooldown/quota/ban detail instead of the
+   * generic text `describeGraphqlError` would otherwise show — exactly one
+   * snackbar either way, never both.
+   */
   private handleMutationError(err: unknown): void {
-    if (err instanceof GraphqlRequestError && err.classification === 'CONFLICT') {
-      this.conflictBanner = true;
-      return;
+    if (err instanceof GraphqlRequestError) {
+      if (err.classification === 'CONFLICT') {
+        this.conflictBanner = true;
+        return;
+      }
+      const limitError = limitErrorFrom(err.classification, err.extensions);
+      if (limitError) {
+        notifyLimit(limitError, this.snackBar, this.rateLimitState);
+        return;
+      }
     }
     this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
   }
@@ -645,14 +882,24 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     );
   }
 
+  /** S4-05: a click while this tossup's own Save is already in flight is a no-op (the template also disables the button). */
   saveTossup(te: TossupElement): void {
+    if (this.savingTossupIds.has(te.tossup.id)) {
+      return;
+    }
+    this.savingTossupIds.add(te.tossup.id);
+    delete this.entitySaveErrors[te.tossup.id];
     this.saveTossupMutations(te.tossup.id).subscribe({
       next: () => {
+        this.savingTossupIds.delete(te.tossup.id);
         this.tossupDraftStore.markSaved(te.tossup.id);
         this.refetch();
         this.snackBar.open('Tossup saved', 'Dismiss', { duration: 2500 });
       },
-      error: (err) => this.handleMutationError(err)
+      error: (err) => {
+        this.savingTossupIds.delete(te.tossup.id);
+        this.handleMutationError(err);
+      }
     });
   }
 
@@ -683,15 +930,22 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       });
   }
 
+  /** S4-16/S4-19: the keyboard/header reorder path — same guard as the drag drop lists, and a live-region announcement (S4-19) since the mover may be a collapsed header button, not just the always-visible drag handle. */
   moveTossup(te: TossupElement, delta: number): void {
+    if (this.anySavingInFlight) {
+      return;
+    }
     const newOrder = te.order + delta;
     if (newOrder < 0 || newOrder >= this.sortedTossups.length) {
       return;
     }
+    const fromPosition = te.order + 1;
+    const toPosition = newOrder + 1;
     this.packetAuthoring.reorderTossup(this.packetId, te.tossup.id, newOrder, this.packetVersion).subscribe({
       next: () => {
         this.bumpLocalVersion();
         this.refetch();
+        this.liveAnnouncer.announce(`Tossup ${fromPosition} moved to position ${toPosition}`, 'polite');
       },
       error: (err) => this.handleMutationError(err)
     });
@@ -794,14 +1048,24 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     );
   }
 
+  /** S4-05: a click while this bonus's own Save is already in flight is a no-op (the template also disables the button). */
   saveBonus(be: BonusElement): void {
+    if (this.savingBonusIds.has(be.bonus.id)) {
+      return;
+    }
+    this.savingBonusIds.add(be.bonus.id);
+    delete this.entitySaveErrors[be.bonus.id];
     this.saveBonusMutations(be.bonus.id).subscribe({
       next: () => {
+        this.savingBonusIds.delete(be.bonus.id);
         this.bonusDraftStore.markSaved(be.bonus.id);
         this.refetch();
         this.snackBar.open('Bonus saved', 'Dismiss', { duration: 2500 });
       },
-      error: (err) => this.handleMutationError(err)
+      error: (err) => {
+        this.savingBonusIds.delete(be.bonus.id);
+        this.handleMutationError(err);
+      }
     });
   }
 
@@ -832,15 +1096,22 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       });
   }
 
+  /** S4-16/S4-19: see {@link moveTossup}. */
   moveBonus(be: BonusElement, delta: number): void {
+    if (this.anySavingInFlight) {
+      return;
+    }
     const newOrder = be.order + delta;
     if (newOrder < 0 || newOrder >= this.sortedBonuses.length) {
       return;
     }
+    const fromPosition = be.order + 1;
+    const toPosition = newOrder + 1;
     this.packetAuthoring.reorderBonus(this.packetId, be.bonus.id, newOrder, this.packetVersion).subscribe({
       next: () => {
         this.bumpLocalVersion();
         this.refetch();
+        this.liveAnnouncer.announce(`Bonus ${fromPosition} moved to position ${toPosition}`, 'polite');
       },
       error: (err) => this.handleMutationError(err)
     });
@@ -927,14 +1198,24 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       .pipe(tap(() => this.bumpLocalVersion()));
   }
 
+  /** S4-05: a click while this part's own Save is already in flight is a no-op (the template also disables the button). */
   savePart(be: BonusElement, pe: BonusPartElement): void {
+    if (this.savingPartIds.has(pe.bonusPart.id)) {
+      return;
+    }
+    this.savingPartIds.add(pe.bonusPart.id);
+    delete this.entitySaveErrors[pe.bonusPart.id];
     this.savePartMutations(be.bonus.id, pe.bonusPart.id).subscribe({
       next: () => {
+        this.savingPartIds.delete(pe.bonusPart.id);
         this.bonusPartDraftStore.markSaved(pe.bonusPart.id);
         this.refetch();
         this.snackBar.open('Bonus part saved', 'Dismiss', { duration: 2500 });
       },
-      error: (err) => this.handleMutationError(err)
+      error: (err) => {
+        this.savingPartIds.delete(pe.bonusPart.id);
+        this.handleMutationError(err);
+      }
     });
   }
 
@@ -1073,32 +1354,73 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       return;
     }
     this.savingAll = true;
+    this.saveAllTotal = worklist.length;
+    this.saveAllCurrent = 0;
+    this.entitySaveErrors = {};
     this.runSaveWorklist(worklist, 0);
   }
 
+  /**
+   * S4-06: sequential save, one item at a time, in packet order. On
+   * failure it stops (remaining dirty cards stay dirty), refetches, expands
+   * + scrolls + focuses the failing card and renders the error inline on
+   * it, and routes the failure through {@link handleMutationError} so a
+   * 429/QUOTA/BANNED response shows exactly one snackbar (via
+   * `notifyLimit`) instead of stacking a second generic one on top.
+   */
   private runSaveWorklist(items: SaveWorkItem[], index: number): void {
     if (index >= items.length) {
       this.savingAll = false;
+      this.saveAllTotal = 0;
+      this.saveAllCurrent = 0;
       this.refetch();
       this.snackBar.open('All changes saved', 'Dismiss', { duration: 2500 });
       return;
     }
-    this.saveOneEntity(items[index]).subscribe({
+    this.saveAllCurrent = index + 1;
+    const item = items[index];
+    this.saveOneEntity(item).subscribe({
       next: () => {
-        this.markEntitySaved(items[index]);
+        this.markEntitySaved(item);
         this.runSaveWorklist(items, index + 1);
       },
       error: (err) => {
         this.savingAll = false;
+        this.saveAllTotal = 0;
+        this.saveAllCurrent = 0;
         this.refetch();
+        this.entitySaveErrors[item.id] = this.extractError(err);
+        this.focusSaveWorkItem(item);
         this.handleMutationError(err);
       }
     });
   }
 
+  /** S4-06: expands (if needed) and scrolls/focuses the card a failed Save-all item belongs to. A bonus part's target is its parent bonus panel. */
+  private focusSaveWorkItem(item: SaveWorkItem): void {
+    if (item.kind === 'tossup') {
+      const alreadyOpen = this.expandedTossupId === item.id;
+      this.expandedTossupId = item.id;
+      this.pendingFocusEntityId = item.id;
+      if (alreadyOpen) {
+        this.scrollAndFocusEntity(item.id);
+      }
+      return;
+    }
+    const bonusId = item.kind === 'bonus' ? item.id : item.bonusId;
+    const alreadyOpen = this.expandedBonusId === bonusId;
+    this.expandedBonusId = bonusId;
+    this.pendingFocusEntityId = item.id;
+    if (alreadyOpen) {
+      this.scrollAndFocusEntity(item.id);
+    }
+  }
+
   /* --------------------------- taxonomy quick-add --------------------------- */
 
+  /** S4-17: captures the trigger (the "Create new subcategory" icon button) so {@link closeTaxonomyForm} can return focus to it. */
   openTaxonomyForm(setter: (subcategoryId: string) => void): void {
+    this.taxonomyTriggerEl = document.activeElement as HTMLElement | null;
     this.taxonomyFormOpen = true;
     this.taxonomyTarget = setter;
     this.taxonomyNewCategoryId = null;
@@ -1107,8 +1429,57 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   cancelTaxonomyForm(): void {
-    this.taxonomyFormOpen = false;
     this.taxonomyTarget = null;
+    this.closeTaxonomyForm();
+  }
+
+  /** S4-17: closes the dialog and returns focus to whatever opened it (Cancel, Escape, or a successful Create). */
+  private closeTaxonomyForm(): void {
+    this.taxonomyFormOpen = false;
+    const trigger = this.taxonomyTriggerEl;
+    this.taxonomyTriggerEl = null;
+    if (trigger) {
+      queueMicrotask(() => trigger.focus());
+    }
+  }
+
+  /**
+   * S4-17: a manual focus trap for the hand-rolled taxonomy dialog (no
+   * cdkTrapFocus — see H-02/openTaxonomyForm's doc comment). Wraps Tab at
+   * the last focusable element and Shift+Tab at the first.
+   */
+  /** Bound to `(keydown.tab)`, whose Angular template typing is the plain `Event` its filter dispatches from, not `KeyboardEvent`. */
+  onTaxonomyDialogTab(domEvent: Event): void {
+    const event = domEvent as KeyboardEvent;
+    const container = event.currentTarget as HTMLElement;
+    const focusable = this.getFocusableElements(container);
+    if (!focusable.length) {
+      event.preventDefault();
+      container.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private focusFirstFocusable(container: HTMLElement): void {
+    const focusable = this.getFocusableElements(container);
+    (focusable[0] ?? container).focus();
+  }
+
+  private getFocusableElements(container: HTMLElement): HTMLElement[] {
+    return Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(el => el.offsetParent !== null);
   }
 
   submitTaxonomyForm(): void {
@@ -1130,7 +1501,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       this.packetAuthoring.createSubcategory(subName, categoryId).subscribe({
         next: (sub) => {
           this.taxonomySubmitting = false;
-          this.taxonomyFormOpen = false;
+          this.closeTaxonomyForm();
           this.allSubcategories.push(sub);
           this.rebuildSubcategoryGroups();
           if (this.taxonomyTarget) {

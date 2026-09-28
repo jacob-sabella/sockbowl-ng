@@ -2,7 +2,7 @@
   <div class="packet-list__header">
     <h1 class="packet-list__title">
       <mat-icon aria-hidden="true">edit_note</mat-icon>
-      Packet Builder
+      Packets
     </h1>
     <div class="packet-list__header-actions">
       @if (auth.hasPermission('packet:create')) {
@@ -82,36 +82,71 @@
       </div>
 
       @if (loading) {
-        <div class="packet-list__status">
-          <mat-spinner diameter="32"></mat-spinner>
+        <div class="packet-list__status" role="status">
+          <mat-spinner diameter="32" aria-hidden="true"></mat-spinner>
+          <p class="packet-list__status-label">Loading packets…</p>
+        </div>
+      } @else if (loadError) {
+        <div class="packet-list__state packet-list__state--error" role="alert">
+          <mat-icon aria-hidden="true">error_outline</mat-icon>
+          <p class="packet-list__state-message">Couldn't load packets.</p>
+          <button mat-raised-button class="packet-list__new-btn" (click)="load()">Retry</button>
         </div>
       } @else if (packets.length === 0) {
-        <p class="packet-list__empty">No packets found.</p>
+        <!-- S4-13: "no packets yet" (with a way to create one) vs. "no matches" (with a way out of the filters). -->
+        <div class="packet-list__state" role="status">
+          <mat-icon aria-hidden="true">{{ hasActiveFilters ? 'filter_alt_off' : 'inbox' }}</mat-icon>
+          @if (hasActiveFilters) {
+            <p class="packet-list__state-message">No packets match these filters.</p>
+            <button mat-stroked-button (click)="clearFilters()">Clear filters</button>
+          } @else {
+            <p class="packet-list__state-message">No packets yet.</p>
+            @if (auth.hasPermission('packet:create')) {
+              <div class="packet-list__state-actions">
+                <button mat-raised-button class="packet-list__new-btn" (click)="toggleCreateForm()">
+                  <mat-icon aria-hidden="true">add</mat-icon>
+                  New Packet
+                </button>
+                <button mat-stroked-button (click)="openImportDialog()">
+                  <mat-icon aria-hidden="true">upload_file</mat-icon>
+                  Import
+                </button>
+              </div>
+            }
+          }
+        </div>
       } @else {
         <div class="packet-list__items">
           @for (packet of packets; track packet.id) {
             <div class="packet-list__item">
               <div class="packet-list__item-info">
-                <span class="packet-list__item-name">{{ packet.name }}</span>
-                <span
-                  class="packet-list__item-chip packet-list__item-chip--visibility"
-                  [class.packet-list__item-chip--draft]="packet.visibility === 'DRAFT'"
-                >
-                  {{ packet.visibility === 'DRAFT' ? 'Draft' : 'Published' }}
-                </span>
-                <span
-                  class="packet-list__item-chip packet-list__item-chip--playable"
-                  [class.packet-list__item-chip--unplayable]="!packet.playable"
-                >
-                  {{ packet.playable ? 'Playable' : 'Not playable' }}
-                </span>
-                @if (packet.difficulty?.name) {
-                  <span class="packet-list__item-chip">{{ packet.difficulty?.name }}</span>
+                <!-- S4-01: an editor's row name opens the builder directly; a caller who can't edit gets the name as plain text (Play test still covers them). -->
+                @if (auth.hasPermission('packet:update') && canManage(packet)) {
+                  <a class="packet-list__item-name" [routerLink]="['/packets', packet.id, 'edit']">{{ packet.name }}</a>
+                } @else {
+                  <span class="packet-list__item-name">{{ packet.name }}</span>
                 }
-                <span class="packet-list__item-counts">
-                  {{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses
-                </span>
-                <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
+                <div class="packet-list__item-meta">
+                  <span
+                    class="packet-list__item-chip packet-list__item-chip--visibility"
+                    [class.packet-list__item-chip--draft]="packet.visibility === 'DRAFT'"
+                  >
+                    {{ packet.visibility === 'DRAFT' ? 'Draft' : 'Published' }}
+                  </span>
+                  <span
+                    class="packet-list__item-chip packet-list__item-chip--playable"
+                    [class.packet-list__item-chip--unplayable]="!packet.playable"
+                  >
+                    {{ packet.playable ? 'Playable' : 'Not playable' }}
+                  </span>
+                  @if (packet.difficulty?.name) {
+                    <span class="packet-list__item-chip">{{ packet.difficulty?.name }}</span>
+                  }
+                  <span class="packet-list__item-counts">
+                    {{ packet.tossupCount }} tossup{{ packet.tossupCount === 1 ? '' : 's' }} &middot; {{ packet.bonusCount }} bonus{{ packet.bonusCount === 1 ? '' : 'es' }}
+                  </span>
+                  <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
+                </div>
               </div>
               <div class="packet-list__item-actions">
                 @if (auth.hasPermission('packet:update') && canManage(packet)) {

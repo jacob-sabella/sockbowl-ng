@@ -1,9 +1,10 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
-import { of, throwError } from 'rxjs';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { Subject, of, throwError } from 'rxjs';
 
 import { PacketBuilderComponent } from './packet-builder.component';
 import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questions.service';
@@ -56,6 +57,7 @@ describe('PacketBuilderComponent', () => {
   let snackBarSpy: jasmine.SpyObj<MatSnackBar>;
   let routerSpy: jasmine.SpyObj<Router>;
   let pendingPacketSpy: jasmine.SpyObj<PendingPacketService>;
+  let liveAnnouncerSpy: jasmine.SpyObj<LiveAnnouncer>;
 
   function configure(
     packet: AuthoringPacket,
@@ -89,6 +91,8 @@ describe('PacketBuilderComponent', () => {
     snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
     pendingPacketSpy = jasmine.createSpyObj('PendingPacketService', ['set', 'get', 'clear']);
+    liveAnnouncerSpy = jasmine.createSpyObj('LiveAnnouncer', ['announce']);
+    liveAnnouncerSpy.announce.and.returnValue(Promise.resolve());
 
     TestBed.configureTestingModule({
       declarations: [PacketBuilderComponent],
@@ -101,6 +105,7 @@ describe('PacketBuilderComponent', () => {
         { provide: MatSnackBar, useValue: snackBarSpy },
         { provide: Router, useValue: routerSpy },
         { provide: PendingPacketService, useValue: pendingPacketSpy },
+        { provide: LiveAnnouncer, useValue: liveAnnouncerSpy },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => (key === 'id' ? 'p1' : null) } } } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -728,7 +733,7 @@ describe('PacketBuilderComponent', () => {
       configure(packet);
 
       const html: string = fixture.nativeElement.innerHTML;
-      expect(html).toContain('An empty preamble is allowed, but not recommended (D7)');
+      expect(html).toContain('An empty preamble is allowed, but not recommended');
       // Structurally a hint, not an error: an empty preamble is valid by
       // design (D7), so it must never gate Save or look like a failure.
       const warningHint = fixture.nativeElement.querySelector('.packet-builder__field-warning-hint');
@@ -767,16 +772,502 @@ describe('PacketBuilderComponent', () => {
 
     it('hides the unsaved-changes / Save all bar entirely', () => {
       configureAsNonManager();
-      expect(fixture.nativeElement.querySelector('.packet-builder__unsaved-bar')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).toBeNull();
     });
 
-    it('shows editable textareas and the unsaved bar for a manager (control)', () => {
+    it('shows editable textareas for a manager (control)', () => {
       configure(makePacket());
       expect(component.canManagePacket).toBeTrue();
       const areas: HTMLTextAreaElement[] = Array.from(fixture.nativeElement.querySelectorAll('textarea'));
       expect(areas.length).toBeGreaterThan(0);
       areas.forEach((ta) => expect(ta.readOnly).toBeFalse());
-      expect(fixture.nativeElement.querySelector('.packet-builder__unsaved-bar')).not.toBeNull();
+    });
+
+    // FF1 (finish review #6): the sticky save bar is chrome for an unsaved
+    // change, not a permanent fixture — it renders only while a manager
+    // actually has something dirty, and disappears again once clean.
+    it('shows the save bar for a manager only once something is dirty, and hides it again once clean', () => {
+      configure(makePacket());
+      expect(component.canManagePacket).toBeTrue();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).toBeNull();
+
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).not.toBeNull();
+
+      component.tossupDraftStore.markSaved('t1');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).toBeNull();
+    });
+  });
+
+  describe('S4-05: per-card Save busy state and double-submit guard', () => {
+    it('a second click on tossup Save while the first is in flight issues no second mutation', () => {
+      configure(makePacket());
+      const subject = new Subject<string>();
+      authoringSpy.updateTossup.and.returnValue(subject.asObservable());
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+      const te = component.sortedTossups[0];
+
+      component.saveTossup(te);
+      component.saveTossup(te);
+
+      expect(authoringSpy.updateTossup).toHaveBeenCalledTimes(1);
+      expect(component.isSavingTossup('t1')).toBeTrue();
+
+      subject.next('t1');
+      subject.complete();
+      expect(component.isSavingTossup('t1')).toBeFalse();
+    });
+
+    it('the tossup card Save button shows a busy label and aria-busy while saving', () => {
+      configure(makePacket());
+      const subject = new Subject<string>();
+      authoringSpy.updateTossup.and.returnValue(subject.asObservable());
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+
+      component.saveTossup(component.sortedTossups[0]);
+      fixture.detectChanges();
+
+      const saveBtn = fixture.nativeElement.querySelector('.packet-builder__tossups .packet-builder__card-save-btn') as HTMLButtonElement;
+      expect(saveBtn.getAttribute('aria-busy')).toBe('true');
+      expect(saveBtn.disabled).toBeTrue();
+      expect(saveBtn.textContent).toContain('Saving');
+    });
+
+    it('a second click on bonus Save while the first is in flight issues no second mutation', () => {
+      configure(makePacket());
+      const subject = new Subject<string>();
+      authoringSpy.updateBonus.and.returnValue(subject.asObservable());
+      component.bonusDraftStore.get('b1')!.preamble = 'Edited';
+      component.bonusDraftStore.markDirty('b1');
+      const be = component.sortedBonuses[0];
+
+      component.saveBonus(be);
+      component.saveBonus(be);
+
+      expect(authoringSpy.updateBonus).toHaveBeenCalledTimes(1);
+      subject.next('b1');
+      subject.complete();
+    });
+
+    it('a second click on bonus-part Save while the first is in flight issues no second mutation', () => {
+      configure(makePacket());
+      const subject = new Subject<string>();
+      authoringSpy.updateBonusPart.and.returnValue(subject.asObservable());
+      component.bonusPartDraftStore.get('bp1')!.answer = 'Edited';
+      component.bonusPartDraftStore.markDirty('bp1');
+      const be = component.sortedBonuses[0];
+      const pe = component.sortedParts(be)[0];
+
+      component.savePart(be, pe);
+      component.savePart(be, pe);
+
+      expect(authoringSpy.updateBonusPart).toHaveBeenCalledTimes(1);
+      subject.next('bp1');
+      subject.complete();
+    });
+
+    it('a second click on Save name while the first is in flight issues no second mutation', () => {
+      configure(makePacket());
+      const subject = new Subject<string>();
+      authoringSpy.renamePacket.and.returnValue(subject.asObservable());
+      component.startEditName();
+      component.nameDraft = 'New Name';
+
+      component.saveName();
+      component.saveName();
+
+      expect(authoringSpy.renamePacket).toHaveBeenCalledTimes(1);
+      subject.next('p1');
+      subject.complete();
+    });
+  });
+
+  describe('S4-06: Save all progress, error targeting, and the graphql-write limit', () => {
+    it('reports "Saving N of M" while in flight and clears when done', () => {
+      configure(makePacket());
+      const subject = new Subject<string>();
+      authoringSpy.updateTossup.and.returnValue(subject.asObservable());
+      authoringSpy.updateBonusPart.and.returnValue(of('bp1'));
+
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+      component.bonusPartDraftStore.get('bp1')!.answer = 'Edited';
+      component.bonusPartDraftStore.markDirty('bp1');
+
+      component.saveAll();
+
+      expect(component.savingAll).toBeTrue();
+      expect(component.saveAllCurrent).toBe(1);
+      expect(component.saveAllTotal).toBe(2);
+
+      subject.next('t1');
+      subject.complete();
+
+      expect(component.savingAll).toBeFalse();
+      expect(component.saveAllTotal).toBe(0);
+      expect(component.saveAllCurrent).toBe(0);
+    });
+
+    it('the sticky save bar shows "Saving N of M…" while Save all is running', () => {
+      configure(makePacket());
+      const subject = new Subject<string>();
+      authoringSpy.updateTossup.and.returnValue(subject.asObservable());
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+
+      component.saveAll();
+      fixture.detectChanges();
+
+      const bar = fixture.nativeElement.querySelector('.packet-builder__save-bar');
+      expect(bar.textContent).toContain('Saving 1 of 1');
+    });
+
+    it('a failure expands, scrolls to, and renders the error inline on the failing card; remaining dirty cards stay dirty', () => {
+      configure(makePacket());
+      authoringSpy.updateTossup.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'That change is not valid.', classification: 'VALIDATION_FAILED' }))
+      );
+      authoringSpy.updateBonusPart.and.returnValue(of('bp1'));
+
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+      component.bonusPartDraftStore.get('bp1')!.answer = 'Edited';
+      component.bonusPartDraftStore.markDirty('bp1');
+
+      component.saveAll();
+
+      expect(component.expandedTossupId).toBe('t1');
+      expect(component.entitySaveErrors['t1']).toContain('not valid');
+      expect(component.savingAll).toBeFalse();
+      expect(component.tossupDraftStore.isDirty('t1')).toBeTrue();
+      expect(component.bonusPartDraftStore.isDirty('bp1')).toBeTrue();
+      expect(authoringSpy.updateBonusPart).not.toHaveBeenCalled();
+    });
+
+    it('a failure on a bonus part expands its parent bonus panel and targets the part', () => {
+      configure(makePacket());
+      authoringSpy.updateBonusPart.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'boom', classification: 'INTERNAL_ERROR' }))
+      );
+      component.bonusPartDraftStore.get('bp1')!.answer = 'Edited';
+      component.bonusPartDraftStore.markDirty('bp1');
+
+      component.saveAll();
+
+      expect(component.expandedBonusId).toBe('b1');
+      expect(component.entitySaveErrors['bp1']).toBeDefined();
+    });
+
+    it('a RATE_LIMITED failure shows exactly one snackbar, via notifyLimit', () => {
+      configure(makePacket());
+      authoringSpy.updateTossup.and.returnValue(
+        throwError(() => new GraphqlRequestError({
+          message: 'slow down',
+          classification: 'RATE_LIMITED',
+          extensions: { retryAfterSeconds: 5 }
+        }))
+      );
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+
+      component.saveAll();
+
+      expect(snackBarSpy.open).toHaveBeenCalledTimes(1);
+      expect(snackBarSpy.open.calls.mostRecent().args[0]).toContain('try again');
+    });
+
+    it('a QUOTA_EXCEEDED failure shows exactly one snackbar, via notifyLimit', () => {
+      configure(makePacket());
+      authoringSpy.updateTossup.and.returnValue(
+        throwError(() => new GraphqlRequestError({
+          message: 'quota',
+          classification: 'QUOTA_EXCEEDED',
+          extensions: { metric: 'packet-writes', limit: 100 }
+        }))
+      );
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+
+      component.saveAll();
+
+      expect(snackBarSpy.open).toHaveBeenCalledTimes(1);
+      expect(snackBarSpy.open.calls.mostRecent().args[0]).toContain('limit');
+    });
+
+    it('a BANNED mutation failure (any mutation, not just Save all) routes through notifyLimit for one snackbar', () => {
+      configure(makePacket());
+      authoringSpy.setPacketVisibility.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'banned', classification: 'BANNED', extensions: { reason: 'Spam' } }))
+      );
+
+      component.setVisibility('PUBLISHED');
+
+      expect(snackBarSpy.open).toHaveBeenCalledTimes(1);
+      expect(snackBarSpy.open.calls.mostRecent().args[0]).toBe('Spam');
+    });
+  });
+
+  describe('S4-13: initial load per-class states (404/403/network) and Retry', () => {
+    it('a NOT_FOUND load failure renders the not-found state with no snackbar', () => {
+      configure(makePacket());
+      snackBarSpy.open.calls.reset();
+      questionsSpy.getPacketById.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'nope', classification: 'NOT_FOUND' }))
+      );
+
+      component.retryLoad();
+
+      expect(component.loadError).toEqual({ kind: 'not-found', message: "This packet doesn't exist or was deleted" });
+      expect(snackBarSpy.open).not.toHaveBeenCalled();
+    });
+
+    it('a FORBIDDEN load failure renders the forbidden state', () => {
+      configure(makePacket());
+      questionsSpy.getPacketById.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'nope', classification: 'FORBIDDEN' }))
+      );
+
+      component.retryLoad();
+
+      expect(component.loadError?.kind).toBe('forbidden');
+    });
+
+    it('a network/500 load failure renders the network state, and Retry reloads successfully', () => {
+      configure(makePacket());
+      questionsSpy.getPacketById.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'boom', classification: 'INTERNAL_ERROR' }))
+      );
+
+      component.retryLoad();
+      expect(component.loadError?.kind).toBe('network');
+
+      questionsSpy.getPacketById.and.returnValue(of(makePacket()));
+      component.retryLoad();
+
+      expect(component.loadError).toBeNull();
+      expect(component.packet).not.toBeNull();
+    });
+
+    it('renders the loading label, and on a network failure the message and a Retry button', () => {
+      configure(makePacket());
+      questionsSpy.getPacketById.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'boom', classification: 'INTERNAL_ERROR' }))
+      );
+
+      component.retryLoad();
+      fixture.detectChanges();
+
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain("Couldn't load this packet");
+      expect(fixture.nativeElement.querySelector('.packet-builder__state-actions button')).not.toBeNull();
+    });
+  });
+
+  describe('S4-15: conflict draft count, and admin owner context', () => {
+    it('the conflict banner states how many unsaved changes will be kept on Reload', () => {
+      configure(makePacket());
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+      component.conflictBanner = true;
+      fixture.detectChanges();
+
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('1 unsaved change');
+      expect(text).toContain('kept on Reload');
+    });
+
+    it('ownerDisplayName is null for the owner themself', () => {
+      configure(makePacket({ owner: { id: 'user-1', name: 'Me' } }), [], 'user-1');
+      expect(component.ownerDisplayName).toBeNull();
+    });
+
+    it('ownerDisplayName names the owner for an admin viewing someone else\'s packet', () => {
+      configure(makePacket({ owner: { id: 'user-2', name: 'Alex Owner' } }), ['packet:manage-any'], 'user-1');
+      expect(component.ownerDisplayName).toBe('Alex Owner');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Owned by Alex Owner');
+    });
+
+    // FF1 (finish review #3): a non-owner's read redacts owner.id to null
+    // (D2/Q-M2-01, PacketOwner) even though owner.name still comes back —
+    // the old guard required a truthy id first and hid the name in exactly
+    // this case.
+    it('ownerDisplayName names the owner when the read redacts owner.id to null', () => {
+      configure(makePacket({ owner: { id: null, name: 'Alex Owner' } }), ['packet:manage-any'], 'user-1');
+      expect(component.ownerDisplayName).toBe('Alex Owner');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Owned by Alex Owner');
+    });
+
+    it('the delete confirmation names the owner when an admin deletes someone else\'s packet', () => {
+      configure(makePacket({ owner: { id: 'user-2', name: 'Alex Owner' } }), ['packet:manage-any', 'packet:delete'], 'user-1');
+      authoringSpy.deletePacket.and.returnValue(of(true));
+
+      component.deletePacket();
+
+      const confirmArg = confirmSpy.confirm.calls.mostRecent().args[0];
+      expect(confirmArg.message).toContain('Alex Owner');
+    });
+  });
+
+  describe('S4-16: reorder refuses to start while any save is in flight', () => {
+    it('a tossup drop is ignored while another card\'s Save is in flight', () => {
+      configure(makePacket());
+      component.savingTossupIds.add('t2');
+
+      component.dropTossup({ previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(authoringSpy.reorderTossup).not.toHaveBeenCalled();
+    });
+
+    it('a bonus-part drop is ignored while Save all is running', () => {
+      const packet = makePacket();
+      packet.bonuses[0].bonus.bonusParts!.push({
+        id: 2,
+        order: 1,
+        bonusPart: { id: 'bp2', question: 'PQ2', answer: 'PA2' }
+      } as any);
+      configure(packet);
+      component.savingAll = true;
+
+      component.dropPart(component.sortedBonuses[0], { previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(authoringSpy.reorderBonusPart).not.toHaveBeenCalled();
+    });
+
+    it('drag handles carry a touch start delay so scrolling a long list never starts a drag', () => {
+      configure(makePacket());
+      const handle = fixture.nativeElement.querySelector('.packet-builder__tossups [cdkDrag]');
+      expect(handle).not.toBeNull();
+    });
+  });
+
+  describe('S4-19: keyboard-reachable reorder', () => {
+    it('the collapsed tossup header exposes a focusable Move up / Move down pair, not just the drag handle', () => {
+      configure(makePacket());
+      const up = fixture.nativeElement.querySelector('.packet-builder__tossups .packet-builder__reorder-btn[aria-label="Move tossup 1 up"]');
+      const down = fixture.nativeElement.querySelector('.packet-builder__tossups .packet-builder__reorder-btn[aria-label="Move tossup 1 down"]');
+      expect(up).not.toBeNull();
+      expect(down).not.toBeNull();
+      expect(up.tagName.toLowerCase()).toBe('button');
+    });
+
+    it('the first item\'s Move up and the last item\'s Move down are disabled', () => {
+      configure(makePacket());
+      const up = fixture.nativeElement.querySelector('.packet-builder__reorder-btn[aria-label="Move tossup 1 up"]');
+      const down = fixture.nativeElement.querySelector('.packet-builder__reorder-btn[aria-label="Move tossup 2 down"]');
+      expect(up.disabled).toBeTrue();
+      expect(down.disabled).toBeTrue();
+    });
+
+    it('moveTossup is ignored while any save is in flight', () => {
+      configure(makePacket());
+      component.savingTossupIds.add('t2');
+
+      component.moveTossup(component.sortedTossups[0], 1);
+
+      expect(authoringSpy.reorderTossup).not.toHaveBeenCalled();
+    });
+
+    it('moveTossup announces the new position on success', () => {
+      configure(makePacket());
+      authoringSpy.reorderTossup.and.returnValue(of('t1'));
+
+      component.moveTossup(component.sortedTossups[0], 1);
+
+      expect(liveAnnouncerSpy.announce).toHaveBeenCalledWith('Tossup 1 moved to position 2', 'polite');
+    });
+
+    it('moveBonus is ignored while Save all is running', () => {
+      configure(makePacket());
+      component.savingAll = true;
+
+      component.moveBonus(component.sortedBonuses[0], 1);
+
+      expect(authoringSpy.reorderBonus).not.toHaveBeenCalled();
+    });
+
+    it('moveBonus announces the new position on success', () => {
+      configure(makePacket({
+        bonuses: [
+          { id: 1, order: 0, bonus: { id: 'b1', preamble: 'P1', remoteId: '', subcategory: null as any, bonusParts: [] } },
+          { id: 2, order: 1, bonus: { id: 'b2', preamble: 'P2', remoteId: '', subcategory: null as any, bonusParts: [] } }
+        ]
+      } as any));
+      authoringSpy.reorderBonus.and.returnValue(of('b1'));
+
+      component.moveBonus(component.sortedBonuses[0], 1);
+
+      expect(liveAnnouncerSpy.announce).toHaveBeenCalledWith('Bonus 1 moved to position 2', 'polite');
+    });
+  });
+
+  describe('S4-18: heading order', () => {
+    it('the Tossups and Bonuses sections are real h2 headings under the packet name h1, not a skipped h1 -> h4', () => {
+      configure(makePacket());
+      const h1 = fixture.nativeElement.querySelectorAll('h1');
+      const h2 = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((el: any) => el.textContent.trim());
+
+      expect(h1.length).toBe(1);
+      expect(h2).toContain('Tossups');
+      expect(h2).toContain('Bonuses');
+    });
+
+    it('the readiness line is a polite live region', () => {
+      configure(makePacket());
+      const validation = fixture.nativeElement.querySelector('.packet-builder__validation');
+      expect(validation.getAttribute('role')).toBe('status');
+    });
+  });
+
+  describe('S4-17: the "New subcategory" overlay behaves like a dialog', () => {
+    it('is marked up as a modal dialog labelled by its own heading', () => {
+      configure(makePacket());
+      component.openTaxonomyForm(() => undefined);
+      fixture.detectChanges();
+
+      const dialog = fixture.nativeElement.querySelector('.packet-builder__taxonomy-card');
+      expect(dialog.getAttribute('role')).toBe('dialog');
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      expect(dialog.getAttribute('aria-labelledby')).toBe('taxonomy-dialog-title');
+
+      const title = fixture.nativeElement.querySelector('#taxonomy-dialog-title');
+      expect(title.tagName.toLowerCase()).toBe('h2');
+      expect(title.textContent).toContain('New subcategory');
+    });
+
+    it('captures the triggering element on open and returns focus to it once closed', fakeAsync(() => {
+      configure(makePacket());
+      const trigger = document.createElement('button');
+      document.body.appendChild(trigger);
+      trigger.focus();
+
+      component.openTaxonomyForm(() => undefined);
+      fixture.detectChanges();
+      expect(component['taxonomyTriggerEl']).toBe(trigger);
+
+      component.cancelTaxonomyForm();
+      flushMicrotasks();
+
+      expect(document.activeElement).toBe(trigger);
+      expect(component.taxonomyFormOpen).toBeFalse();
+      document.body.removeChild(trigger);
+    }));
+
+    it('Escape closes the dialog', () => {
+      configure(makePacket());
+      component.openTaxonomyForm(() => undefined);
+      fixture.detectChanges();
+
+      const dialog = fixture.nativeElement.querySelector('.packet-builder__taxonomy-card');
+      dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(component.taxonomyFormOpen).toBeFalse();
     });
   });
 });

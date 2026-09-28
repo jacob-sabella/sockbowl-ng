@@ -1,6 +1,6 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
@@ -10,6 +10,7 @@ import { PacketAuthoringService } from '../../services/packet-authoring.service'
 import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questions.service';
 import { ImportPacketResult } from '../../models/packet-authoring.models';
 import { IMPORT_MAX_BYTES } from '../../models/packet-limits';
+import { GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 
 describe('PacketImportDialogComponent', () => {
   let fixture: ComponentFixture<PacketImportDialogComponent>;
@@ -189,5 +190,86 @@ describe('PacketImportDialogComponent', () => {
     component.cancel();
     expect(dialogRefSpy.close).toHaveBeenCalledWith();
     expect(authoringSpy.importPacket).not.toHaveBeenCalled();
+  });
+
+  describe('S4-14: quota/rate-limit routing, busy state, and stable issue keys', () => {
+    it('a QUOTA_EXCEEDED preview failure shows exactly one snackbar (via notifyLimit) and an inline dialog message', () => {
+      configure();
+      const snackBar = TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>;
+      authoringSpy.importPacket.and.returnValue(
+        throwError(() => new GraphqlRequestError({
+          message: 'quota',
+          classification: 'QUOTA_EXCEEDED',
+          extensions: { metric: 'packet-imports', limit: 5 }
+        }))
+      );
+      component.text = 'some text';
+
+      component.preview();
+
+      expect(snackBar.open).toHaveBeenCalledTimes(1);
+      expect(component.dialogError).toBeTruthy();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="import-dialog-error"]')).not.toBeNull();
+    });
+
+    it('a RATE_LIMITED import failure shows exactly one snackbar and an inline dialog message', () => {
+      configure();
+      const snackBar = TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>;
+      authoringSpy.importPacket.and.returnValue(of(cleanResult));
+      component.text = 'some text';
+      component.preview();
+
+      authoringSpy.importPacket.and.returnValue(
+        throwError(() => new GraphqlRequestError({
+          message: 'slow down',
+          classification: 'RATE_LIMITED',
+          extensions: { retryAfterSeconds: 3 }
+        }))
+      );
+      snackBar.open.calls.reset();
+
+      component.import();
+
+      expect(snackBar.open).toHaveBeenCalledTimes(1);
+      expect(component.dialogError).toBeTruthy();
+    });
+
+    it('a plain (non-limit) preview failure does not set an inline dialog message', () => {
+      configure();
+      authoringSpy.importPacket.and.returnValue(
+        throwError(() => new GraphqlRequestError({ message: 'boom', classification: 'INTERNAL_ERROR' }))
+      );
+      component.text = 'some text';
+
+      component.preview();
+
+      expect(component.dialogError).toBeNull();
+    });
+
+    it('issueKey is stable across a re-preview that reorders issues (not $index)', () => {
+      configure();
+      const first = { severity: 'ERROR' as const, line: 5, message: 'Missing answer' };
+      const second = { severity: 'WARNING' as const, line: 9, message: 'Unrecognized tag' };
+      expect(component.issueKey(first)).toBe(component.issueKey({ ...first }));
+      expect(component.issueKey(first)).not.toBe(component.issueKey(second));
+    });
+
+    it('Preview shows aria-busy and a visually-hidden "Working…" label while the request is in flight', () => {
+      configure();
+      const subject = new Subject<ImportPacketResult>();
+      authoringSpy.importPacket.and.returnValue(subject.asObservable());
+      component.text = 'some text';
+
+      component.preview();
+      fixture.detectChanges();
+
+      const btn = fixture.nativeElement.querySelector('[data-testid="import-preview-btn"]') as HTMLButtonElement;
+      expect(btn.getAttribute('aria-busy')).toBe('true');
+      expect(btn.textContent).toContain('Working');
+
+      subject.next(cleanResult);
+      subject.complete();
+    });
   });
 });

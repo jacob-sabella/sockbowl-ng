@@ -8,14 +8,70 @@
 
   &__status {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
     padding: 32px;
+  }
+
+  &__status-label {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin: 0;
   }
 
   &__empty {
     color: var(--text-muted);
     text-align: center;
     padding: 32px;
+  }
+
+  /*
+   * S4-13: the initial-load error state. Deliberately plain (no border,
+   * no shadow) per DESIGN.md/craft-floor — an error is a message and a
+   * recovery action, not a card.
+   */
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 16px;
+    text-align: center;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  &__state--error mat-icon {
+    color: var(--error-text);
+  }
+
+  &__state-message {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--text-base, 1rem);
+    max-width: 40ch;
+  }
+
+  &__state-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__owner-line {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  &__entity-error {
+    margin: 0 0 4px;
+    color: var(--error-text);
+    font-size: var(--text-sm);
   }
 
   &__header,
@@ -27,18 +83,47 @@
     border: 1px solid var(--border-subtle);
   }
 
+  /*
+   * FF2 (finish review #4): `flex-wrap: wrap` made the row itself wrap
+   * whenever the *unshrunk* name (its hypothetical main size before
+   * flex-shrink is applied) was wider than the row, even when the name's
+   * actual rendered (shrunk + line-clamped) width left plenty of room for
+   * the edit/delete buttons. That pushed the buttons onto their own line
+   * for names that render on one line just fine. `nowrap` keeps the
+   * buttons on the name's row always; the name itself still wraps to 2
+   * lines internally via its own `-webkit-line-clamp`, so a 100+ char name
+   * still can't push the row's height around.
+   */
   &__name-row {
     display: flex;
     align-items: center;
     gap: 4px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   &__name {
     margin: 0;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
     color: var(--text-primary);
     overflow-wrap: anywhere;
+    /* S4-15: a 100+ character name clamps to 2 lines instead of pushing the whole header down. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    /*
+     * FF1 (finish review #4/FIRST VIEWPORT): without a basis to shrink to,
+     * a flex item's default min-width is its own min-content size, so at
+     * 390px the row itself (not just the name's own text) wrapped and
+     * pushed the edit pencil onto its own line. `flex:1 1 auto` lets the
+     * name take the row's remaining space and `min-width:0` lets it
+     * actually shrink into that space (the clamp above still caps it at 2
+     * lines), so the pencil — and the delete button — stay on the name's
+     * own row at every width.
+     */
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__name-field {
@@ -61,9 +146,11 @@
   }
 
   &__index {
+    font-family: var(--font-display);
     font-weight: 600;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     margin-right: 10px;
+    flex: 0 0 auto;
   }
 
   /*
@@ -77,20 +164,57 @@
     display: none;
   }
 
+  /*
+   * S4-09: the header's title area wraps onto a second line instead of
+   * clipping. `.mat-expansion-panel-header` is `height: auto` globally
+   * (F1), so a taller wrapped header is expected to grow the row.
+   */
+  &__panel-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__panel-title-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+
+  &__panel-title-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
   &__preview {
     color: var(--text-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-right: 10px;
+    max-width: 100%;
   }
 
+  /*
+   * AY: an opaque `--surface` fill instead of a translucent accent tint.
+   * The chip's ambient parent varies (card `--surface`, a hovered/expanded
+   * panel header's `--surface-hover`/`--bg-elevated`), and `--accent-primary-text`
+   * only clears 4.5:1 reliably against `--surface`/`--bg-primary` in every
+   * theme (audit/m5/s4 contrast check) — a translucent tint compounds with
+   * whichever of those sits underneath and drops below AA in several themes.
+   */
   &__chip {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
-    color: var(--accent-primary);
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    color: var(--accent-primary-text);
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
   }
@@ -126,13 +250,39 @@
     flex: 1 1 auto;
   }
 
+  /*
+   * S4-04: reserved for the one filled-accent action on screen at a time
+   * (Play test in the header, "Save all" in the sticky bar, and the
+   * short-lived "Add X"/"Generate"/"Create" form submits). Per-card Saves
+   * use &__card-save-btn (a plain stroked button) instead, so an editable
+   * card never competes with Play test for the single filled accent.
+   *
+   * FF1 (finish review #2): the old rule used `!important` on both
+   * properties, which also beat Material's own `:disabled` state — a
+   * blocked Play test rendered as a fully filled, seemingly-usable button
+   * (DESIGN.md: "Don't add `!important`"). `mat-raised-button` isn't
+   * covered by the frozen global disabled override (that one only lists
+   * `.mat-mdc-button`/`.mat-mdc-outlined-button`/`.mat-mdc-icon-button`),
+   * so the plain, unqualified `&:disabled` rule below is enough on its own
+   * (no `!important` needed) and now actually takes effect.
+   */
   &__save-btn {
-    background: var(--accent-primary) !important;
-    color: #fff !important;
+    background: var(--accent-primary);
+    color: var(--on-accent-primary);
 
     &:hover:not(:disabled) {
       filter: brightness(1.06);
     }
+
+    &:disabled {
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+  }
+
+  &__card-save-btn {
+    font-weight: var(--font-semibold);
   }
 
   &__section-actions {
@@ -148,7 +298,7 @@
     gap: 10px;
     margin-top: 12px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--border-subtle);
     background: var(--surface-hover);
   }
@@ -159,9 +309,17 @@
     border-top: 1px solid var(--border-subtle);
   }
 
+  /* FF1 (finish review #7): "Tossups"/"Bonuses" (mat-card-title, above) and
+   * "Parts" are section titles, not body copy — the Three-Voice Rule puts
+   * titles in Space Grotesk (DESIGN.md). */
+  &__section-title {
+    font-family: var(--font-display);
+  }
+
   &__parts-title {
     margin: 0 0 8px;
-    font-size: 0.9rem;
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -179,7 +337,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--surface-hover);
     border: 1px solid var(--border-subtle);
   }
@@ -191,8 +349,8 @@
     align-items: flex-start;
     justify-content: center;
     padding: 48px 16px;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    background: var(--overlay-scrim);
+    z-index: var(--z-modal);
     overflow-y: auto;
   }
 
@@ -205,31 +363,52 @@
 
   &__taxonomy-hint {
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     margin: 0 0 8px;
   }
 
+  /* S4-02: a local tint/text pair instead of the frozen --danger-surface
+   * alias (H-01: it's declared on :root but references body.theme-*-only
+   * variables, so it silently falls back per theme). Left-stripe info block
+   * per DESIGN.md's status pattern (S4-08 contract). */
   &__conflict-banner {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--warn-color, #b00020) 12%, transparent);
-    border: 1px solid var(--warn-color, #b00020);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--error);
+    background: color-mix(in srgb, var(--error) 12%, var(--surface));
     color: var(--text-primary);
+
+    mat-icon {
+      color: var(--error-text);
+    }
   }
 
-  &__unsaved-bar {
+  /*
+   * S4-07: pinned while scrolling (top on desktop; bottom, safe-area aware,
+   * on mobile below). Kept visible in both the dirty and clean state, same
+   * as before the sticky move, so e2e's "All changes saved" assertion still
+   * finds it.
+   */
+  &__save-bar {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm, 0 2px 8px) var(--shadow-color, rgba(0, 0, 0, 0.3));
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
   }
 
   &__unsaved-count {
     font-weight: 600;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
 
     &--clean {
       font-weight: 400;
@@ -237,83 +416,193 @@
     }
   }
 
+  /* S4-08: the validation summary as a left-stripe info block instead of a
+   * loose row of chips (DESIGN.md status pattern). */
   &__validation {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--success);
+    background: color-mix(in srgb, var(--success) 10%, transparent);
+
+    &--unplayable {
+      border-left-color: var(--error);
+      background: color-mix(in srgb, var(--error) 10%, transparent);
+    }
+  }
+
+  &__validation-head {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin-top: 12px;
   }
 
+  /*
+   * AY: an opaque `--surface` punch through the parent `.packet-builder__validation`
+   * block's own 10% status tint (DESIGN.md's info-block pattern, kept), not
+   * a second status tint stacked on top of it. Two stacked translucent tints
+   * push `--success-text`/`--error-text` below 4.5:1 in several themes
+   * (measured 3.94-4.28:1 for --unplayable in dark/light); a solid badge
+   * sitting on the tinted stripe reads the same and stays AA everywhere.
+   */
   &__validation-badge {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     padding: 2px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
+    background: var(--surface);
 
     &--playable {
-      background: color-mix(in srgb, #2e7d32 18%, transparent);
-      color: #2e7d32;
+      color: var(--success-text);
+      border: 1px solid var(--success-text);
     }
 
     &--unplayable {
-      background: color-mix(in srgb, var(--warn-color, #b00020) 18%, transparent);
-      color: var(--warn-color, #b00020);
+      color: var(--error-text);
+      border: 1px solid var(--error-text);
     }
   }
 
   &__validation-counts {
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
   }
 
   &__issue-list {
-    flex-basis: 100%;
-    margin: 4px 0 0;
-    padding-left: 18px;
-    font-size: 0.85rem;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px 0 0;
+    padding: 0;
+    font-size: var(--text-sm);
   }
 
-  &__issue--error {
-    color: var(--warn-color, #b00020);
+  /*
+   * AY: severity is now an icon (a graphical indicator, WCAG 1.4.11's 3:1
+   * floor) plus `--text-primary` message text, not `--error-text`/
+   * `--warning-text` set directly on the issue text. Both -text tokens sit
+   * on the parent `.packet-builder__validation` block's own 10% status tint
+   * (DESIGN.md's info-block pattern, kept) and measured under 4.5:1 for
+   * small text in several themes; the icon alone clears 3:1 with room to
+   * spare in every theme.
+   */
+  &__issue {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
   }
 
+  &__issue-icon {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    line-height: 16px;
+    margin-top: 1px;
+  }
+
+  &__issue--error &__issue-icon {
+    color: var(--error-text);
+  }
+
+  &__issue--warning &__issue-icon {
+    color: var(--warning-text);
+  }
+
+  &__issue-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration-thickness: 2px;
+    }
+
+    &:focus-visible {
+      /* H-01: --focus-ring is broken at :root (references a body.theme-*-only
+       * var), so this bridges locally with the same underlying token instead
+       * of consuming the alias. */
+      outline: 2px solid var(--accent-primary-text);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+
+  &__validation-hint {
+    margin: 8px 0 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+
+  /*
+   * AY: the message text stays `--text-primary` (see &__issue-icon above);
+   * severity is carried by the icon plus the ERROR/WARNING wording itself,
+   * not by tinting small text on an already-tinted background.
+   */
+  &__issue--error,
   &__issue--warning {
-    color: #b26a00;
+    color: var(--text-primary);
+  }
+
+  /*
+   * S4-07: a visible "Unsaved" text chip; the dot is now only its leading
+   * glyph. AY: opaque `--surface` fill, not a translucent accent tint — see
+   * &__chip above for why (same token/ambient combination, same fix).
+   */
+  &__dirty-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    color: var(--accent-primary-text);
+    background: var(--surface);
+    border: 1px solid var(--accent-primary-text);
+    white-space: nowrap;
   }
 
   &__dirty-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--accent-primary);
-    margin-right: 8px;
+    background: currentColor;
     flex: 0 0 auto;
   }
 
+  /* AY: opaque `--surface` fill, not a translucent warning tint — see &__chip above. */
   &__warning-chip {
     font-size: 0.72rem;
     padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, #b26a00 16%, transparent);
-    color: #b26a00;
-    border: 1px solid color-mix(in srgb, #b26a00 40%, transparent);
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    color: var(--warning-text);
+    border: 1px solid var(--warning-text);
     white-space: nowrap;
     margin-right: 6px;
   }
 
   &__stale-hint {
     margin: 0 0 8px;
-    font-size: 0.85rem;
-    color: #b26a00;
+    font-size: var(--text-sm);
+    color: var(--warning-text);
   }
 
   /* NG-V1-03: the D7 "empty preamble" note is advisory, not a validation
    * failure (an empty preamble is allowed), so it renders as a warning-toned
    * mat-hint rather than a mat-error. */
   &__field-warning-hint {
-    color: #b26a00;
+    color: var(--warning-text);
   }
 
   &__actions-row {
@@ -324,19 +613,48 @@
     margin-top: 12px;
   }
 
+  /*
+   * FF1 (finish review #4): `display:contents` keeps Duplicate/Export/Preview
+   * as ordinary flex items of &__actions-row above 600px (desktop/tablet
+   * layout is unchanged); the 600px query below hides this whole span and
+   * shows &__actions-row-more instead, so the row wraps to at most 2 lines
+   * at 390px (chip + Publish + More on one line, Play test on the next).
+   */
+  &__actions-row-full {
+    display: contents;
+  }
+
+  &__actions-row-more {
+    display: none;
+  }
+
+  /* S4-08: the Play test block reason, next to the button instead of a tooltip. */
+  &__play-test-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__play-test-hint {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  /* AY: an opaque `--surface` fill for the published state, not a translucent
+   * success tint — see &__chip above. */
   &__visibility-chip {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     padding: 2px 10px;
-    border-radius: 999px;
-    background: var(--surface-hover);
+    border-radius: var(--radius-full);
+    background: var(--surface);
     color: var(--text-secondary);
     border: 1px solid var(--border-subtle);
 
     &--published {
-      background: color-mix(in srgb, #2e7d32 18%, transparent);
-      color: #2e7d32;
-      border-color: transparent;
+      color: var(--success-text);
+      border-color: var(--success-text);
     }
   }
 
@@ -350,29 +668,187 @@
       cursor: grabbing;
     }
   }
+
+  /*
+   * S4-AY: `mat-expansion-panel-header` carries `role="button"` itself, so a
+   * real `<button>` anywhere inside it is a "nested interactive control"
+   * (axe: nested-interactive, serious) — assistive tech can't reliably
+   * reach it. The reorder buttons are DOM siblings of the header (via
+   * `ngProjectAs` in the template, so both land in Material's header
+   * projection slot — see FF1's comment there).
+   *
+   * FF1: a wrapping div around the header broke content projection (it no
+   * longer matched `<ng-content select="mat-expansion-panel-header">`, so
+   * the header fell into the collapsed body — finish review finding #1).
+   * `mat-expansion-panel` is made a grid instead, with the header and the
+   * reorder span sharing row 1: row 1's height is then the header's own
+   * height (not the whole panel, which changes height on expand), so the
+   * buttons stay correctly centered over the header whether the panel is
+   * open or closed.
+   */
+  /*
+   * FF2 (finish review #1): the grid had no `grid-template-columns`, and
+   * only `&__reorder-btns` (below) carried an explicit `grid-column: 1`.
+   * With the header's column left auto, the auto-placement algorithm
+   * treated column 1 (row 1) as taken and placed the header into a new,
+   * implicit, content-sized column instead of overlapping it in column 1
+   * as intended — pushing the header out to the right on desktop/tablet
+   * and off the card entirely at mobile widths. A single `minmax(0, 1fr)`
+   * column, with the header and content wrapper both pinned to
+   * `grid-column: 1`, makes the header share column 1 with the reorder
+   * buttons (which render on top via z-index) and span the panel's full
+   * width, so the buttons overlay it instead of displacing it.
+   */
+  &__panel--managed {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: minmax(0, 1fr);
+
+    /*
+     * FF4 (finish review #5): Material's own structural rule,
+     * `.mat-expansion-panel-header.mat-expanded { height: var(--mat-expansion-header-expanded-state-height, 64px); }`,
+     * keeps the *expanded* header at a fixed 64px even though the frozen
+     * override only sets `height: auto` on the base (non-expanded) header
+     * (S4-09 above). At mobile widths the wrapped title/chip/reorder-button
+     * content needs more than 64px, so it clipped at the top and the
+     * category chip overlapped the Preamble field below.
+     *
+     * Overriding the custom property (which Material's own rule already
+     * reads via `var()`) resolves this without a specificity fight against
+     * Material's `.mat-expanded` selector and without `!important`: the
+     * property inherits from this grid host down to the projected header,
+     * same as any other CSS custom property, regardless of Angular's
+     * emulated view encapsulation. Padding is untouched, so the header's
+     * existing vertical padding is unchanged.
+     */
+    --mat-expansion-header-expanded-state-height: auto;
+  }
+
+  &__panel--managed ::ng-deep .mat-expansion-panel-header {
+    grid-row: 1;
+    grid-column: 1;
+    padding-left: 84px;
+  }
+
+  /*
+   * `.mat-expansion-panel-content` (the collapse/expand region Material
+   * animates) sits one level *inside* `.mat-expansion-panel-content-wrapper`
+   * — the wrapper is the actual direct child of `mat-expansion-panel`, so
+   * it's the one that needs placing in our grid's row 2. (It runs its own,
+   * unrelated `display:grid` internally for the collapse animation; placing
+   * it as an item of *our* grid doesn't touch that.)
+   */
+  &__panel--managed ::ng-deep .mat-expansion-panel-content-wrapper {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  /*
+   * S4-19: a keyboard-reachable alternative to the drag handle, sized to
+   * match it (icon-button's own 44px touch target comes from the global
+   * --mdc-icon-button-state-layer-size, F1 — see S4-01).
+   */
+  &__reorder-btns {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+    align-self: center;
+    margin-left: 16px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__reorder-btn {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+
+    .mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+    }
+  }
 }
 
-/* Drag-and-drop feedback (PB-20): the CDK clones the dragged node into an
-   overlay outside this component's view, but `::ng-deep` keeps this
-   component's emulated-encapsulation attribute on the clone, so these rules
-   still reach it. */
-::ng-deep {
-  .cdk-drag-preview {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
-    border-radius: 8px;
+/*
+ * S4-20: the drag handle is a bare mat-icon (24px), well under the 44px
+ * touch-target floor. `--mdc-icon-button-state-layer-size` (material-theme.scss)
+ * only covers actual mat-icon-button hosts, so this bridges the same floor
+ * onto the handle itself, scoped to coarse pointers (touch) so the mouse
+ * hit target on desktop/tablet-with-trackpad stays visually unchanged.
+ */
+@media (pointer: coarse) {
+  .packet-builder__drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -10px -2px -10px -10px;
   }
+}
 
-  .cdk-drag-placeholder {
-    opacity: 0.3;
-  }
+/*
+ * Drag-and-drop feedback (PB-20). `.cdk-drag-preview` is cloned into the CDK
+ * overlay, outside this component's view, so it needs `::ng-deep`; S4-12
+ * scopes it to our own `cdkDragPreviewClass` under `:host` instead of the
+ * bare global class, so it can't reach another component's drag preview.
+ * `.cdk-drag-placeholder` and the dragging transition below target elements
+ * that stay inside this component's own view (the source list), so they're
+ * already scoped by Angular's emulated encapsulation without `::ng-deep`.
+ */
+:host ::ng-deep .packet-builder__drag-preview {
+  box-shadow: var(--shadow-md, 0 4px 20px) var(--shadow-color, rgba(0, 0, 0, 0.28));
+  border-radius: var(--radius-lg);
+}
 
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
   .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
-    transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+    transition: none;
   }
 }
 
 @media (max-width: 600px) {
   .packet-builder {
     padding: 8px;
+
+    &--with-save-bar {
+      padding-bottom: 72px;
+    }
+  }
+
+  .packet-builder__save-bar {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-fixed);
+    border-radius: 0;
+    border-width: 1px 0 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* FF1 (finish review #4/FIRST VIEWPORT): collapse Duplicate/Export/Preview
+   * into the "More actions" menu so the header's action row wraps to at
+   * most 2 lines at 390px. */
+  .packet-builder__actions-row-full {
+    display: none;
+  }
+
+  .packet-builder__actions-row-more {
+    display: inline-flex;
   }
 }

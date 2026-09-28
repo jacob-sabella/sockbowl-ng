@@ -18,12 +18,13 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
     margin: 0;
     color: var(--text-primary);
 
     mat-icon {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
     }
   }
 
@@ -83,10 +84,12 @@
 
   &__search-field {
     flex: 1 1 240px;
+    min-width: 0;
   }
 
   &__difficulty-field {
     flex: 0 1 200px;
+    min-width: 0;
   }
 
   &__mine {
@@ -96,14 +99,56 @@
 
   &__status {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
     padding: 16px;
+  }
+
+  &__status-label {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin: 0;
   }
 
   &__empty {
     color: var(--text-muted);
     text-align: center;
     padding: 16px;
+  }
+
+  /* S4-13: empty ("no packets yet") and error ("couldn't load") states. Plain, no card/border, per craft-floor. */
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--text-muted);
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  &__state--error mat-icon {
+    color: var(--error-text);
+  }
+
+  &__state-message {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--text-base, 1rem);
+  }
+
+  &__state-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   &__items {
@@ -118,65 +163,100 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--surface-hover);
     border: 1px solid var(--border-subtle);
-  }
-
-  &__item-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
     min-width: 0;
   }
 
+  /* S4-01: name on its own line, everything else (visibility, playable,
+   * difficulty, counts, owner) wraps in its own row below it, so a long name
+   * or a narrow viewport never pushes the row into horizontal scroll. */
+  &__item-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   &__item-name {
+    flex: 1 1 100%;
     font-weight: 600;
     color: var(--text-primary);
+    text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
   }
 
+  &__item-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: 10px;
+    min-width: 0;
+  }
+
+  /*
+   * AY: an opaque `--surface` fill, not a translucent tint. The row itself
+   * (`.packet-list__item`) is `--surface-hover`, and the `-text` tokens
+   * measure under 4.5:1 for 12px chip text against `--surface-hover` (and
+   * further under it once a status tint is layered on top) in several
+   * themes; `--surface` is the one background every `-text` token was
+   * proven against (audit/m5/s4 contrast check) and clears AA everywhere.
+   */
   &__item-chip {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
-    color: var(--accent-primary);
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    color: var(--accent-primary-text);
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
   }
 
   &__item-chip--visibility {
-    background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+    background: var(--surface);
     color: var(--text-secondary, var(--text-muted));
     border-color: var(--border-subtle);
   }
 
   &__item-chip--draft {
-    background: color-mix(in srgb, var(--warning) 18%, transparent);
-    color: var(--warning);
+    background: var(--surface);
+    color: var(--warning-text);
+    border-color: var(--warning-text);
   }
 
   &__item-chip--playable {
-    background: color-mix(in srgb, var(--success) 16%, transparent);
-    color: var(--success);
+    background: var(--surface);
+    color: var(--success-text);
+    border-color: var(--success-text);
   }
 
   &__item-chip--unplayable {
-    background: color-mix(in srgb, var(--error) 16%, transparent);
-    color: var(--error);
+    background: var(--surface);
+    color: var(--error-text);
+    border-color: var(--error-text);
   }
 
   &__item-counts {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
     white-space: nowrap;
   }
 
   &__item-owner {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
     white-space: nowrap;
   }
@@ -189,7 +269,8 @@
   }
 }
 
-::ng-deep .packet-list mat-paginator {
+/* S4-12: scoped under :host so this can't reach a paginator in another component's view. */
+:host ::ng-deep mat-paginator {
   background: transparent;
   color: var(--text-primary);
 }
@@ -201,6 +282,35 @@
     &__filters {
       flex-direction: column;
       align-items: stretch;
+    }
+
+    /* S4-01: the search/difficulty fields' flex-basis (240px/200px) was
+     * becoming a *height* once the filter row goes column, so pin them to
+     * the column's full width instead. */
+    &__search-field,
+    &__difficulty-field {
+      flex: none;
+      width: 100%;
+    }
+
+    /* S4-01: stack name / chip line / actions instead of the desktop row,
+     * which was collapsing the name to near-zero width and pushing the row
+     * into horizontal scroll at 390px and 280px. */
+    &__item {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &__item-name {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    &__item-actions {
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
   }
 }
