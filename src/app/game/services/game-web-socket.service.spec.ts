@@ -79,11 +79,12 @@ describe('GameWebSocketService', () => {
     clients = [];
     tokenChanges = new Subject<string>();
     authService = Object.assign(
-      jasmine.createSpyObj<AuthService>('AuthService', ['getFreshAccessToken', 'refreshToken']),
+      jasmine.createSpyObj<AuthService>('AuthService', ['getFreshAccessToken', 'refreshToken', 'whenInitialized']),
       { tokenChanges$: tokenChanges }
     );
     authService.getFreshAccessToken.and.resolveTo('token-1');
     authService.refreshToken.and.resolveTo('token-2');
+    authService.whenInitialized.and.resolveTo(undefined);
 
     TestBed.configureTestingModule({
       providers: [
@@ -144,6 +145,21 @@ describe('GameWebSocketService', () => {
         playerSessionId: 'p1',
         playerSecret: 'secret-1',
       });
+    });
+
+    it('waits for AuthService start-up before asking for a fresh token (NG-R4-01)', async () => {
+      let resolveInit!: () => void;
+      authService.whenInitialized.and.returnValue(new Promise<void>(resolve => (resolveInit = resolve)));
+      service.initialize('g1', 'p1', {});
+
+      const beforeConnect = client().beforeConnect(client());
+      await settle();
+      expect(authService.getFreshAccessToken).not.toHaveBeenCalled();
+
+      resolveInit();
+      await beforeConnect;
+
+      expect(authService.getFreshAccessToken).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -356,6 +372,34 @@ describe('GameWebSocketService', () => {
       expect(client().activate).toHaveBeenCalledTimes(1);
       expect(client().reconnectDelay).toBe(0);
       expect(errors).toEqual([jasmine.objectContaining({ code: 'TOKEN_EXPIRED', fatal: true })]);
+    });
+
+    it('stops (rather than hanging silently) when refreshToken throws synchronously (NG-R4-01)', async () => {
+      authService.refreshToken.and.throwError('boom');
+      service.initialize('g1', 'p1', {});
+      await client().connect();
+
+      client().onStompError(client().errorFrame('TOKEN_EXPIRED'));
+      await settle();
+
+      expect(client().activate).toHaveBeenCalledTimes(1);
+      expect(client().reconnectDelay).toBe(0);
+      expect(errors).toEqual([jasmine.objectContaining({ code: 'TOKEN_EXPIRED', fatal: true })]);
+    });
+
+    it('waits for AuthService start-up before refreshing on TOKEN_EXPIRED (NG-R4-01)', async () => {
+      let resolveInit!: () => void;
+      service.initialize('g1', 'p1', {});
+      await client().connect();
+      authService.whenInitialized.and.returnValue(new Promise<void>(resolve => (resolveInit = resolve)));
+
+      client().onStompError(client().errorFrame('TOKEN_EXPIRED'));
+      await settle();
+      expect(authService.refreshToken).not.toHaveBeenCalled();
+
+      resolveInit();
+      await settle();
+      expect(authService.refreshToken).toHaveBeenCalledTimes(1);
     });
 
     it('AUTH_REQUIRED for a guest seat is fatal (no token to refresh)', async () => {
