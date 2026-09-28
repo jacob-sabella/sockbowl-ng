@@ -2,14 +2,17 @@
  * Utility Helper Classes
  *
  * Reusable utility classes for common patterns.
+ *
+ * M5 F1-19: dropped the unused .text-gradient/.glow-effect legacy names
+ * (zero uses in src/app, hard-coded rgba shadow) rather than fix values
+ * nothing renders. src/styles/abstracts/_mixins.scss and
+ * src/styles/utilities/_animations.scss were true empty placeholders
+ * (no content to extract yet) and were deleted along with their @use in
+ * styles.scss; _breakpoints.scss is the one documented breakpoint set
+ * (mobile/tablet/desktop/wide, mirrored in abstracts/_variables.scss).
  */
 
 /* ===== TEXT UTILITIES ===== */
-// Solid accent, not gradient-clipped text (an AI-design tell).
-.text-gradient {
-  color: var(--accent-primary);
-}
-
 .text-center {
   text-align: center;
 }
@@ -20,12 +23,6 @@
 
 .text-right {
   text-align: right;
-}
-
-/* ===== VISUAL EFFECTS ===== */
-// Clean depth, not a neon glow.
-.glow-effect {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 /* ===== DISPLAY UTILITIES ===== */
