@@ -17,6 +17,7 @@
   &__upload {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
   }
 
@@ -167,4 +168,27 @@
 
 mat-dialog-actions mat-spinner {
   display: inline-block;
+}
+
+/*
+ * S4-20: at the 280px minimum viewport the dialog panel itself is only
+ * ~250-260px wide; the desktop side-by-side layouts below no longer have
+ * room and were forcing horizontal scroll inside the dialog content.
+ */
+@media (max-width: 480px) {
+  .import-dialog {
+    &__meta {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    &__parsed-item {
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    &__parsed-a {
+      white-space: normal;
+    }
+  }
 }

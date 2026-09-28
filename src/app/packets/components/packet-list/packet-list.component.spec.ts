@@ -175,6 +175,24 @@ describe('PacketListComponent', () => {
     expect(component.canManage(ownerlessPacket)).toBeTrue();
   });
 
+  it('S4-01: a row the caller can edit (packet:update + canManage) links its name to the builder', () => {
+    configure(['packet:create', 'packet:update'], 'user-1');
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.packet-list__item');
+    const ownedLink = items[0].querySelector('a.packet-list__item-name') as HTMLAnchorElement | null;
+    expect(ownedLink?.textContent?.trim()).toBe('Mine');
+    // Theirs (p2, no packet:manage-any): not editable, so the name is plain text, not a link.
+    expect(items[1].querySelector('a.packet-list__item-name')).toBeNull();
+    expect(items[1].querySelector('span.packet-list__item-name')?.textContent?.trim()).toBe('Theirs');
+  });
+
+  it('S4-01: without packet:update, no row name is a link even when owned', () => {
+    configure([], 'user-1');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('a.packet-list__item-name')).toBeNull();
+    expect(el.querySelectorAll('span.packet-list__item-name').length).toBe(3);
+  });
+
   it('play test navigates to the game lobby with the mode/packetId query params', () => {
     configure(['packet:create'], 'user-1');
     const router = TestBed.inject(Router) as jasmine.SpyObj<Router>;

@@ -58,6 +58,10 @@ const states: CaptureState[] = [
     id: 'list-populated-own-and-others',
     route: '/packets',
     role: 'author',
+    // S4-20: tablet (820) and the 280px floor, on top of the mobile/desktop
+    // default, so the stacked mobile row (S4-01) and the filter row are
+    // captured at every §2 viewport, not just 390/1440.
+    viewports: ['mobile-min', 'mobile', 'tablet', 'desktop'],
     setupMocks: async page => mockGraphql(page, listHandlers('own-and-others')),
   },
   {
@@ -105,12 +109,15 @@ const states: CaptureState[] = [
     id: 'builder-populated-published',
     route: '/packets/pkt-own-published/edit',
     role: 'author',
+    // S4-20: tablet layout (header action row, drag handle touch target).
+    viewports: ['mobile', 'tablet', 'desktop'],
     setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published')),
   },
   {
     id: 'builder-validation-warnings',
     route: '/packets/pkt-own-draft/edit',
     role: 'author',
+    viewports: ['mobile-min', 'mobile', 'tablet', 'desktop'],
     setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-draft')),
   },
   {

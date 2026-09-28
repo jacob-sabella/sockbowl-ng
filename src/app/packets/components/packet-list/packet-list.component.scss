@@ -84,10 +84,12 @@
 
   &__search-field {
     flex: 1 1 240px;
+    min-width: 0;
   }
 
   &__difficulty-field {
     flex: 0 1 200px;
+    min-width: 0;
   }
 
   &__mine {
@@ -164,21 +166,45 @@
     border-radius: var(--radius-sm);
     background: var(--surface-hover);
     border: 1px solid var(--border-subtle);
-  }
-
-  &__item-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
     min-width: 0;
   }
 
+  /* S4-01: name on its own line, everything else (visibility, playable,
+   * difficulty, counts, owner) wraps in its own row below it, so a long name
+   * or a narrow viewport never pushes the row into horizontal scroll. */
+  &__item-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   &__item-name {
+    flex: 1 1 100%;
     font-weight: 600;
     color: var(--text-primary);
+    text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
+
+  &__item-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: 10px;
+    min-width: 0;
   }
 
   &__item-chip {
@@ -245,6 +271,35 @@
     &__filters {
       flex-direction: column;
       align-items: stretch;
+    }
+
+    /* S4-01: the search/difficulty fields' flex-basis (240px/200px) was
+     * becoming a *height* once the filter row goes column, so pin them to
+     * the column's full width instead. */
+    &__search-field,
+    &__difficulty-field {
+      flex: none;
+      width: 100%;
+    }
+
+    /* S4-01: stack name / chip line / actions instead of the desktop row,
+     * which was collapsing the name to near-zero width and pushing the row
+     * into horizontal scroll at 390px and 280px. */
+    &__item {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &__item-name {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    &__item-actions {
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
   }
 }

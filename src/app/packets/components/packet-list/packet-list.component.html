@@ -120,26 +120,33 @@
           @for (packet of packets; track packet.id) {
             <div class="packet-list__item">
               <div class="packet-list__item-info">
-                <span class="packet-list__item-name">{{ packet.name }}</span>
-                <span
-                  class="packet-list__item-chip packet-list__item-chip--visibility"
-                  [class.packet-list__item-chip--draft]="packet.visibility === 'DRAFT'"
-                >
-                  {{ packet.visibility === 'DRAFT' ? 'Draft' : 'Published' }}
-                </span>
-                <span
-                  class="packet-list__item-chip packet-list__item-chip--playable"
-                  [class.packet-list__item-chip--unplayable]="!packet.playable"
-                >
-                  {{ packet.playable ? 'Playable' : 'Not playable' }}
-                </span>
-                @if (packet.difficulty?.name) {
-                  <span class="packet-list__item-chip">{{ packet.difficulty?.name }}</span>
+                <!-- S4-01: an editor's row name opens the builder directly; a caller who can't edit gets the name as plain text (Play test still covers them). -->
+                @if (auth.hasPermission('packet:update') && canManage(packet)) {
+                  <a class="packet-list__item-name" [routerLink]="['/packets', packet.id, 'edit']">{{ packet.name }}</a>
+                } @else {
+                  <span class="packet-list__item-name">{{ packet.name }}</span>
                 }
-                <span class="packet-list__item-counts">
-                  {{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses
-                </span>
-                <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
+                <div class="packet-list__item-meta">
+                  <span
+                    class="packet-list__item-chip packet-list__item-chip--visibility"
+                    [class.packet-list__item-chip--draft]="packet.visibility === 'DRAFT'"
+                  >
+                    {{ packet.visibility === 'DRAFT' ? 'Draft' : 'Published' }}
+                  </span>
+                  <span
+                    class="packet-list__item-chip packet-list__item-chip--playable"
+                    [class.packet-list__item-chip--unplayable]="!packet.playable"
+                  >
+                    {{ packet.playable ? 'Playable' : 'Not playable' }}
+                  </span>
+                  @if (packet.difficulty?.name) {
+                    <span class="packet-list__item-chip">{{ packet.difficulty?.name }}</span>
+                  }
+                  <span class="packet-list__item-counts">
+                    {{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses
+                  </span>
+                  <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
+                </div>
               </div>
               <div class="packet-list__item-actions">
                 @if (auth.hasPermission('packet:update') && canManage(packet)) {

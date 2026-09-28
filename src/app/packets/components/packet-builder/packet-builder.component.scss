@@ -552,6 +552,24 @@
 }
 
 /*
+ * S4-20: the drag handle is a bare mat-icon (24px), well under the 44px
+ * touch-target floor. `--mdc-icon-button-state-layer-size` (material-theme.scss)
+ * only covers actual mat-icon-button hosts, so this bridges the same floor
+ * onto the handle itself, scoped to coarse pointers (touch) so the mouse
+ * hit target on desktop/tablet-with-trackpad stays visually unchanged.
+ */
+@media (pointer: coarse) {
+  .packet-builder__drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -10px -2px -10px -10px;
+  }
+}
+
+/*
  * Drag-and-drop feedback (PB-20). `.cdk-drag-preview` is cloned into the CDK
  * overlay, outside this component's view, so it needs `::ng-deep`; S4-12
  * scopes it to our own `cdkDragPreviewClass` under `:host` instead of the
