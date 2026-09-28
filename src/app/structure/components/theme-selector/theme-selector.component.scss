@@ -72,11 +72,23 @@
       height: 1.25rem;
     }
 
-    // Theme label
+    // Theme label. FF2 fix 1: now a flex row itself (text + the optional
+    // trailing check), so every row's text starts at the same column
+    // whether or not it's the active one.
     .theme-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
       font-weight: 500;
       color: var(--text-primary);
       flex: 1;
+      min-width: 0;
+    }
+
+    .theme-label__text {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     // Check icon (only rendered on the active row)

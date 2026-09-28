@@ -10,6 +10,7 @@
  */
 import type { Page } from '@playwright/test';
 import { mockRest, ok, apiError, type RestRoute } from '../mock/rest.js';
+import { mockGraphql } from '../mock/graphql.js';
 import { mockStompReplay } from '../mock/stomp-replay.js';
 import { loadFixture } from '../fixtures/load.js';
 import type { CaptureState, SurfaceScenario } from './types.js';
@@ -21,6 +22,20 @@ interface UsersFixtures {
 }
 
 const usersFx = loadFixture<UsersFixtures>('users.json');
+
+/**
+ * FF2 material fix 5 (STORY 3 evidence): `/packets` (author) and `/admin`
+ * (admin) are S4's and S5's own pages, not S6's — these two capture rows
+ * only need those pages to render *something* stable behind the chrome, so
+ * the navbar's current-destination mark (S6-05) has a real, non-`/game-
+ * session` route to show off. Minimal, self-contained mocks (own copy of
+ * just the fields each page's first paint needs), not a dependency on S4's
+ * or S5's own scenario files.
+ */
+interface PacketsNavFixtures { difficulties: unknown[]; categories: unknown[]; subcategories: unknown[] }
+const packetsNavFx = loadFixture<PacketsNavFixtures>('packets.json');
+interface UsageNavFixtures { global: unknown; events: unknown[]; page: unknown }
+const usageNavFx = loadFixture<UsageNavFixtures>('usage.json');
 
 /** Distinct-copy error classes wired by the profile page (S6-10). */
 type ProfileErrorKind = 401 | 403 | 500;
@@ -357,6 +372,44 @@ const states: CaptureState[] = [
     role: 'anonymous',
     setupMocks: async () => {},
     skip: 'redirects off-app to Keycloak login before any Sockbowl UI renders (authenticatedGuard); nothing in-app to capture',
+  },
+  {
+    // FF2 material fix 5 (STORY 3 evidence): every other nav capture is on
+    // /game-session, so the current-destination mark (S6-05: accent text +
+    // a 2px inset, distinct from hover/focus) had CSS but no screenshot of
+    // it actually rendering. An author's toolbar copy of "Packets" marks
+    // itself active on its own route.
+    id: 'nav-active-destination-packets',
+    route: '/packets',
+    role: 'author',
+    viewports: ['desktop'],
+    setupMocks: async page => mockGraphql(page, {
+      getAllDifficulties: () => ({ data: { getAllDifficulties: packetsNavFx.difficulties } }),
+      getAllCategories: () => ({ data: { getAllCategories: packetsNavFx.categories } }),
+      getAllSubcategories: () => ({ data: { getAllSubcategories: packetsNavFx.subcategories } }),
+      packets: () => ({ data: { packets: { items: [], total: 0, page: 0, size: 25 } } }),
+    }),
+  },
+  {
+    // FF2 material fix 5: same for the Admin-menu case — the "Admin" entry
+    // is only marked active inside the `mat-menu` (`[mat-menu-item].
+    // navbar__active` gets the leading-edge inset, not the toolbar's
+    // underside one — the closed "Admin ▾" trigger itself is a menu opener,
+    // not a routerLink, so it never carries the mark), which no capture had
+    // opened on its own route before.
+    id: 'nav-active-destination-admin',
+    route: '/admin',
+    role: 'admin',
+    viewports: ['desktop'],
+    setupMocks: async page => mockRest(page, [
+      { method: 'GET', template: '/api/v1/admin/usage/global', handler: () => ok(usageNavFx.global) },
+      { method: 'GET', template: '/api/v1/admin/usage/events', handler: () => ok(usageNavFx.events) },
+      { method: 'GET', template: '/api/v1/admin/usage', handler: () => ok(usageNavFx.page) },
+    ]),
+    afterGoto: async page => {
+      await page.getByLabel('Admin menu').click();
+      await page.waitForTimeout(150);
+    },
   },
   {
     id: 'unknown-route-current',

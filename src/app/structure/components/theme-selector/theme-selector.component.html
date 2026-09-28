@@ -16,16 +16,27 @@
     @for (themeOption of allThemes; track themeOption) {
       <!-- S6-09: a set of mutually-exclusive options reads as a radio group
            to assistive tech, not a plain list of commands. -->
+      <!-- FF2 material fix 1: `MatMenuItem`'s own template has a single
+           `<ng-content select="mat-icon, [matMenuItemIcon]">` leading slot
+           that projects EVERY top-level `mat-icon` child into it together,
+           regardless of source order — so a second, trailing `mat-icon`
+           here (the check) was landing right after the leading icon and
+           before the label, not after it. Nesting the check inside
+           `.theme-label` keeps it out of that top-level icon selector, so
+           it renders where the markup already said it should: trailing the
+           text, in the label's own flex row. -->
       <button mat-menu-item
         role="menuitemradio"
         [attr.aria-checked]="isActive(themeOption.value, currentTheme)"
         (click)="setTheme(themeOption.value)"
         [class.active]="isActive(themeOption.value, currentTheme)">
         <mat-icon aria-hidden="true">{{ themeOption.icon }}</mat-icon>
-        <span class="theme-label">{{ themeOption.label }}</span>
-        @if (isActive(themeOption.value, currentTheme)) {
-          <mat-icon class="check-icon" aria-hidden="true">check</mat-icon>
-        }
+        <span class="theme-label">
+          <span class="theme-label__text">{{ themeOption.label }}</span>
+          @if (isActive(themeOption.value, currentTheme)) {
+            <mat-icon class="check-icon" aria-hidden="true">check</mat-icon>
+          }
+        </span>
       </button>
     }
   </mat-menu>

@@ -84,10 +84,17 @@
               }
               <!-- Admin: Admin, Usage, Bans (and Taxonomy) grouped under one menu -->
               @if ((userProfile$ | async) && authService.hasPermission('admin:access')) {
+                <!-- FF2 material fix 2: `mat-button`'s own template only has
+                     a leading (`:not([iconPositionEnd])`) and a trailing
+                     (`[iconPositionEnd]`) icon slot either side of the
+                     label; without the attribute this caret was matching
+                     the leading selector same as the admin_panel_settings
+                     icon and rendering before the label instead of after
+                     it. -->
                 <button mat-button class="navbar__role-btn" [matMenuTriggerFor]="adminMenu" aria-label="Admin menu" aria-haspopup="menu" matTooltip="Admin menu">
                   <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
                   <span class="navbar__btn-label">Admin</span>
-                  <mat-icon aria-hidden="true" class="navbar__caret">arrow_drop_down</mat-icon>
+                  <mat-icon aria-hidden="true" iconPositionEnd class="navbar__caret">arrow_drop_down</mat-icon>
                 </button>
                 <mat-menu #adminMenu="matMenu">
                   <a mat-menu-item [routerLink]="['/admin']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Admin">
@@ -139,7 +146,9 @@
                   dir="auto"
                   [title]="(userProfile$ | async)?.name || 'User'"
                 >{{ (userProfile$ | async)?.name || 'User' }}</span>
-                <mat-icon aria-hidden="true" class="navbar__caret">arrow_drop_down</mat-icon>
+                <!-- FF2 material fix 2: see the matching comment on the
+                     Admin menu trigger above. -->
+                <mat-icon aria-hidden="true" iconPositionEnd class="navbar__caret">arrow_drop_down</mat-icon>
               </button>
               <mat-menu #accountMenu="matMenu">
                 <a mat-menu-item [routerLink]="['/profile']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Profile">

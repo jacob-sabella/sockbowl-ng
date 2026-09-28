@@ -1,3 +1,15 @@
+/* FF2 material fix 3: `mat-raised-button` (the whole-page error's Retry/
+   Sign In) and `mat-stroked-button` (the history card's Retry) both default
+   to Material's pill shape (`--mat-sys-corner-full`) unless the shape token
+   is overridden. FORM reserves `--radius-full` for the buzzer and status
+   dots, so both buttons get the same `--radius-md` every other button in
+   this surface uses — a scoped `:host` custom-property override, matching
+   the navbar's own pattern for Sign In (S6-07), not `!important`. */
+:host {
+  --mat-button-protected-container-shape: var(--radius-md);
+  --mat-button-outlined-container-shape: var(--radius-md);
+}
+
 .profile-container {
   width: 100%;
   max-width: 1200px;
@@ -99,8 +111,14 @@ button:focus-visible {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
 
+  /* FF2 material fix 6: this used to add its own 1rem below the header, on
+     top of Material's own `.mat-mdc-card-content:first-child` 16px
+     top-padding *and* `.user-info`'s own 1rem top margin below — three
+     stacked gaps read as a ~50px dead band between the identity block and
+     "Member Since" (desktop). Material's built-in content padding is now
+     the only gap, so the record reads as one card. */
   mat-card-header {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
   }
 
   /* S6-13: `id="profile-name"` is now an `<h1 mat-card-title>`, not a
@@ -134,7 +152,7 @@ button:focus-visible {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    margin: 1rem 0 0;
+    margin: 0;
 
     .info-item {
       display: flex;
