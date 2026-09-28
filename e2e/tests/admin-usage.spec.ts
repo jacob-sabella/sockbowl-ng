@@ -148,7 +148,22 @@ async function provisionUser(page: Page) {
  */
 async function openPlayer2Detail(page: Page) {
   await page.goto('/admin/usage');
+  // `ngOnInit` fires an unfiltered `load()` the moment this component
+  // mounts; typing into search and pressing Enter immediately fires a
+  // second, filtered `load()`. Neither request is cancelled or switchMap'd,
+  // so if the first (unfiltered, potentially many-row) response happens to
+  // resolve *after* the second (filtered) one, it silently overwrites
+  // `rows` with the unfiltered page and player2's row may not be on it.
+  // Waiting for the initial load's spinner to clear before searching keeps
+  // the two requests from racing at all. `.admin-usage__status` is reused
+  // by four independent spinners on this page (global, table, detail,
+  // events), all mounted at once on a fresh navigation, so this scopes to
+  // the one inside the same card as the search box rather than matching all
+  // of them (Playwright's `getByLabel`-on-"Reason" lesson from
+  // `admin-bans.component.html` applies here too).
   const search = page.locator('input[name="search"]');
+  const usersCard = page.locator('mat-card', { has: search });
+  await expect(usersCard.locator('.admin-usage__status')).toBeHidden({ timeout: 20_000 });
   await search.fill('player2');
   await search.press('Enter');
   const row = page.locator('tr.admin-usage__row', { hasText: 'player2' });
