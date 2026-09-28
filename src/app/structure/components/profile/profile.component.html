@@ -28,7 +28,8 @@
         <mat-card class="profile-card" aria-labelledby="profile-name">
           <mat-card-header>
             <mat-icon mat-card-avatar class="profile-icon" aria-hidden="true">account_circle</mat-icon>
-            <mat-card-title id="profile-name">{{ user.name }}</mat-card-title>
+            <!-- S6-13: the page's h1 — styled as today, just a real heading now. -->
+            <h1 mat-card-title id="profile-name">{{ user.name }}</h1>
             <mat-card-subtitle>{{ user.email }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -86,10 +87,11 @@
       <!-- Game History -->
       <mat-card class="history-card" aria-labelledby="history-heading">
         <mat-card-header>
-          <mat-card-title id="history-heading" class="section-heading">
+          <!-- S6-13: Statistics (below) and Game History share the h2 level. -->
+          <h2 mat-card-title id="history-heading" class="section-heading">
             <mat-icon aria-hidden="true">history</mat-icon>
             Game History
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle class="history-subtitle">{{ totalElements }} total games played</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>

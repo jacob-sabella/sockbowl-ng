@@ -1,7 +1,8 @@
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { Component, NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of } from 'rxjs';
 import { Router } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 import { MatIconRegistry } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { OverlayContainer } from '@angular/cdk/overlay';
@@ -44,29 +45,36 @@ describe('NavbarComponent', () => {
     fixture.detectChanges();
   }
 
+  /**
+   * S6-05: real destinations (Packets, Moderation, Taxonomy, Admin, Usage,
+   * Bans, Profile...) are `<a routerLink>` now, not `<button>` — only the
+   * menu triggers, Sign In and Sign out stay `<button>`. This reads both.
+   */
+  const LABELED_SELECTOR = 'button[aria-label], a[aria-label]';
+
   function visibleLabels(): string[] {
     const root: HTMLElement = fixture.nativeElement;
-    const buttons = root.querySelectorAll<HTMLElement>('button[aria-label]');
-    return Array.from(buttons).map(el => el.getAttribute('aria-label') ?? '');
+    const els = root.querySelectorAll<HTMLElement>(LABELED_SELECTOR);
+    return Array.from(els).map(el => el.getAttribute('aria-label') ?? '');
   }
 
   /**
    * Opens the mat-menu whose trigger carries this aria-label and returns the
-   * aria-labels of the buttons inside its panel. Menu panels render through
+   * aria-labels of the elements inside its panel. Menu panels render through
    * the CDK overlay (appended to the document, not the fixture), so this
    * reads from the overlay container rather than `fixture.nativeElement`.
    */
   function openMenuLabels(triggerAriaLabel: string): string[] {
     const root: HTMLElement = fixture.nativeElement;
-    const trigger = Array.from(root.querySelectorAll<HTMLElement>('button[aria-label]'))
+    const trigger = Array.from(root.querySelectorAll<HTMLElement>(LABELED_SELECTOR))
       .find(el => el.getAttribute('aria-label') === triggerAriaLabel);
     if (!trigger) {
       return [];
     }
     trigger.click();
     fixture.detectChanges();
-    const panelButtons = overlayContainer.getContainerElement().querySelectorAll<HTMLElement>('button[aria-label]');
-    return Array.from(panelButtons).map(el => el.getAttribute('aria-label') ?? '');
+    const panelItems = overlayContainer.getContainerElement().querySelectorAll<HTMLElement>(LABELED_SELECTOR);
+    return Array.from(panelItems).map(el => el.getAttribute('aria-label') ?? '');
   }
 
   beforeEach(() => {
@@ -181,9 +189,11 @@ describe('NavbarComponent', () => {
       setUp(PERMISSION_SETS['admin']);
       const root: HTMLElement = fixture.nativeElement;
       const roleButtons = Array.from(root.querySelectorAll<HTMLElement>('.navbar__role-btn'));
-      // Admin: Admin-menu trigger + Packets = 2 toolbar role buttons.
+      // Admin: Admin-menu trigger (opens a submenu, stays a <button>) + the
+      // Packets link (a real destination, an <a> since S6-05) = 2.
       expect(roleButtons.length).toBe(2);
-      expect(roleButtons.every(el => el.tagName === 'BUTTON')).toBeTrue();
+      const tags = roleButtons.map(el => el.tagName).sort();
+      expect(tags).toEqual(['A', 'BUTTON']);
     });
 
     it('folds Packets, Admin, Usage, Bans and Taxonomy into the account menu for an admin', () => {
@@ -219,6 +229,88 @@ describe('NavbarComponent', () => {
       setUp(PERMISSION_SETS['player']);
       const menuLabels = openMenuLabels('Account menu, Test User');
       expect(menuLabels).toEqual(['Profile', 'Sign out']);
+    });
+  });
+
+  it('wraps the role destinations in a nav landmark (S6-05)', () => {
+    setUp(PERMISSION_SETS['player']);
+    const root: HTMLElement = fixture.nativeElement;
+    const nav = root.querySelector('nav[aria-label="Main"]');
+    expect(nav).not.toBeNull();
+    expect(nav?.querySelector('.navbar__account-trigger')).not.toBeNull();
+  });
+
+  it('renders the brand as a real link, not a role=button div (S6-05)', () => {
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    const brand = root.querySelector('.navbar__brand');
+    expect(brand?.tagName).toBe('A');
+    expect(brand?.getAttribute('role')).toBeNull();
+  });
+
+  describe('current destination (S6-05)', () => {
+    @Component({ template: '', standalone: true })
+    class BlankComponent {}
+
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      environment.authEnabled = true;
+
+      isAuthenticatedSubject = new BehaviorSubject<boolean>(true);
+      userProfileSubject = new BehaviorSubject({ sub: 'u1', name: 'Test User', roles: PERMISSION_SETS['admin'] });
+      sessionEndedSubject = new BehaviorSubject<boolean>(false);
+      authSpy = jasmine.createSpyObj(
+        'AuthService',
+        ['login', 'logout', 'hasPermission'],
+        {
+          isAuthenticated$: isAuthenticatedSubject.asObservable(),
+          userProfile$: userProfileSubject.asObservable(),
+          sessionEnded$: sessionEndedSubject.asObservable(),
+        }
+      );
+      authSpy.hasPermission.and.callFake((p: string) => PERMISSION_SETS['admin'].includes(p));
+      confirmDialogSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+
+      TestBed.configureTestingModule({
+        declarations: [NavbarComponent],
+        imports: [
+          MatMenuModule,
+          NoopAnimationsModule,
+          RouterTestingModule.withRoutes([
+            { path: 'packets', component: BlankComponent },
+            { path: 'admin', component: BlankComponent },
+          ]),
+        ],
+        providers: [
+          { provide: AuthService, useValue: authSpy },
+          { provide: ConfirmDialogService, useValue: confirmDialogSpy },
+          { provide: MatIconRegistry, useValue: jasmine.createSpyObj('MatIconRegistry', ['addSvgIconLiteral']) },
+          { provide: DomSanitizer, useValue: jasmine.createSpyObj('DomSanitizer', ['bypassSecurityTrustHtml']) },
+        ],
+        schemas: [NO_ERRORS_SCHEMA],
+      });
+
+      overlayContainer = TestBed.inject(OverlayContainer);
+      fixture = TestBed.createComponent(NavbarComponent);
+      fixture.detectChanges();
+
+      const router: Router = TestBed.inject(Router);
+      await router.navigate(['/packets']);
+      fixture.detectChanges();
+    });
+
+    it('marks the current page\'s link with aria-current="page" and the active class', () => {
+      const root: HTMLElement = fixture.nativeElement;
+      const packetsLink = root.querySelector<HTMLElement>('a[aria-label="Packet Builder"]');
+      expect(packetsLink?.getAttribute('aria-current')).toBe('page');
+      expect(packetsLink?.classList.contains('navbar__active')).toBeTrue();
+    });
+
+    it('leaves every other destination without aria-current or the active class', () => {
+      const root: HTMLElement = fixture.nativeElement;
+      const adminTrigger = root.querySelector<HTMLElement>('button[aria-label="Admin menu"]');
+      expect(adminTrigger?.hasAttribute('aria-current')).toBeFalse();
+      expect(adminTrigger?.classList.contains('navbar__active')).toBeFalse();
     });
   });
 

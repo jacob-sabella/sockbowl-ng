@@ -117,6 +117,25 @@ describe('ProfileComponent', () => {
     expect(text).not.toContain('Game: session-');
   });
 
+  it('gives the page a single h1 (the player\'s name) and h2s for Statistics/Game History (S6-13)', () => {
+    userServiceSpy.getCurrentUser.and.returnValue(of(user));
+    userServiceSpy.getUserStats.and.returnValue(of(stats));
+    userServiceSpy.getUserHistory.and.returnValue(of(historyPage()));
+    setUp();
+
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const h1s = el.querySelectorAll('h1');
+    expect(h1s.length).toBe(1);
+    expect(h1s[0].textContent?.trim()).toBe('Test Player');
+    expect(h1s[0].id).toBe('profile-name');
+
+    const h2s = Array.from(el.querySelectorAll('h2')).map(h => h.id);
+    expect(h2s).toContain('stats-heading');
+    expect(h2s).toContain('history-heading');
+  });
+
   it('shows the empty state when there is no game history', () => {
     userServiceSpy.getCurrentUser.and.returnValue(of(user));
     userServiceSpy.getUserStats.and.returnValue(of(stats));

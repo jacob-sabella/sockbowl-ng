@@ -102,6 +102,19 @@ export class ThemeSelectorComponent {
   }
 
   /**
+   * The current theme's display label (S6-09), read into the trigger's
+   * `aria-describedby` text so assistive tech can announce it without
+   * changing the trigger's own accessible name ("Theme selector").
+   *
+   * @param theme Current theme
+   * @returns Label for the theme
+   */
+  getCurrentLabel(theme: Theme): string {
+    const themeOption = this.allThemes.find(t => t.value === theme);
+    return themeOption ? themeOption.label : 'Unknown';
+  }
+
+  /**
    * Check if a theme is currently active
    *
    * @param theme Theme to check

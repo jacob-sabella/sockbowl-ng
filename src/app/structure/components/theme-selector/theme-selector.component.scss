@@ -2,6 +2,22 @@
  * Theme Selector Component Styles
  */
 
+/* S6-09: the trigger's current-theme description (aria-describedby) is
+   sighted-hidden, not removed from the accessibility tree — a component-
+   local rule rather than assuming a global `.cdk-visually-hidden` utility
+   is bundled (styles/** is frozen for S6, so this stays surface-scoped). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .theme-toggle {
   color: var(--text-secondary);
   transition: all var(--transition-base);

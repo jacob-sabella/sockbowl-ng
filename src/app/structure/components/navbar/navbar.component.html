@@ -1,17 +1,13 @@
 <mat-toolbar class="navbar">
   <div class="navbar__content">
-    <div
+    <a
       class="navbar__brand"
-      role="button"
-      tabindex="0"
       aria-label="Sockbowl, go to home"
       [routerLink]="['/']"
-      (keydown.enter)="navigateHome()"
-      (keydown.space)="navigateHome(); $event.preventDefault()"
     >
       <mat-icon class="navbar__icon" aria-hidden="true">sports_esports</mat-icon>
       <span class="navbar__title">Sockbowl</span>
-    </div>
+    </a>
 
     <!-- Right side actions: theme selector + auth -->
     <div class="navbar__actions">
@@ -64,62 +60,68 @@
           }
           <!-- Authenticated -->
           @if (isAuthenticated$ | async) {
-            <div class="navbar__auth-user">
+            <nav class="navbar__auth-user" aria-label="Main">
               <!-- S6-03: every destination below is a `.navbar__role-btn` —
                    visible in this bar at 641px and up, and hidden below
                    640px, where the same destination is reachable instead as
                    a `.navbar__role-menu-item` inside the account menu
                    (below). Exactly one copy is ever visible: CSS `display`
                    is the only thing toggling between them, so there's never
-                   a duplicate stop in the tab order at any one width. -->
+                   a duplicate stop in the tab order at any one width.
+                   S6-05: every real destination is an `<a routerLink>` with
+                   `routerLinkActive` + `ariaCurrentWhenActive="page"`, so
+                   the current page carries `aria-current="page"` and a
+                   token active mark distinct from hover/focus (navbar scss).
+                   `matTooltip` backs the icon-only range (<=820px) with the
+                   same text as the accessible name. -->
 
               <!-- Moderator without admin:access: standalone Moderation link -->
               @if ((userProfile$ | async) && authService.hasPermission('user:ban') && !authService.hasPermission('admin:access')) {
-                <button mat-button class="navbar__role-btn" [routerLink]="['/admin/bans']" aria-label="Moderation">
+                <a mat-button class="navbar__role-btn" [routerLink]="['/admin/bans']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Moderation" matTooltip="Moderation">
                   <mat-icon aria-hidden="true">gavel</mat-icon>
                   <span class="navbar__btn-label">Moderation</span>
-                </button>
+                </a>
               }
               <!-- Admin: Admin, Usage, Bans (and Taxonomy) grouped under one menu -->
               @if ((userProfile$ | async) && authService.hasPermission('admin:access')) {
-                <button mat-button class="navbar__role-btn" [matMenuTriggerFor]="adminMenu" aria-label="Admin menu" aria-haspopup="menu">
+                <button mat-button class="navbar__role-btn" [matMenuTriggerFor]="adminMenu" aria-label="Admin menu" aria-haspopup="menu" matTooltip="Admin menu">
                   <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
                   <span class="navbar__btn-label">Admin</span>
                   <mat-icon aria-hidden="true" class="navbar__caret">arrow_drop_down</mat-icon>
                 </button>
                 <mat-menu #adminMenu="matMenu">
-                  <button mat-menu-item [routerLink]="['/admin']" aria-label="Admin">
+                  <a mat-menu-item [routerLink]="['/admin']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Admin">
                     <mat-icon aria-hidden="true">dashboard</mat-icon>
                     <span>Admin</span>
-                  </button>
-                  <button mat-menu-item [routerLink]="['/admin/usage']" aria-label="Usage">
+                  </a>
+                  <a mat-menu-item [routerLink]="['/admin/usage']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Usage">
                     <mat-icon aria-hidden="true">insights</mat-icon>
                     <span>Usage</span>
-                  </button>
-                  <button mat-menu-item [routerLink]="['/admin/bans']" aria-label="Bans">
+                  </a>
+                  <a mat-menu-item [routerLink]="['/admin/bans']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Bans">
                     <mat-icon aria-hidden="true">gavel</mat-icon>
                     <span>Bans</span>
-                  </button>
+                  </a>
                   @if ((userProfile$ | async) && authService.hasPermission('taxonomy:manage')) {
-                    <button mat-menu-item [routerLink]="['/admin/taxonomy']" aria-label="Taxonomy">
+                    <a mat-menu-item [routerLink]="['/admin/taxonomy']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Taxonomy">
                       <mat-icon aria-hidden="true">category</mat-icon>
                       <span>Taxonomy</span>
-                    </button>
+                    </a>
                   }
                 </mat-menu>
               }
               <!-- Taxonomy manager without admin:access: standalone link (permission gating unchanged) -->
               @if ((userProfile$ | async) && !authService.hasPermission('admin:access') && authService.hasPermission('taxonomy:manage')) {
-                <button mat-button class="navbar__role-btn" [routerLink]="['/admin/taxonomy']" aria-label="Taxonomy">
+                <a mat-button class="navbar__role-btn" [routerLink]="['/admin/taxonomy']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Taxonomy" matTooltip="Taxonomy">
                   <mat-icon aria-hidden="true">category</mat-icon>
                   <span class="navbar__btn-label">Taxonomy</span>
-                </button>
+                </a>
               }
               @if ((userProfile$ | async) && authService.hasPermission('packet:create')) {
-                <button mat-button class="navbar__role-btn" [routerLink]="['/packets']" aria-label="Packet Builder">
+                <a mat-button class="navbar__role-btn" [routerLink]="['/packets']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Packet Builder" matTooltip="Packets">
                   <mat-icon aria-hidden="true">edit_note</mat-icon>
                   <span class="navbar__btn-label">Packets</span>
-                </button>
+                </a>
               }
 
               <!-- Account trigger: opens Profile and Sign out -->
@@ -129,6 +131,7 @@
                 [matMenuTriggerFor]="accountMenu"
                 aria-haspopup="menu"
                 [attr.aria-label]="'Account menu, ' + ((userProfile$ | async)?.name || 'User')"
+                [matTooltip]="(userProfile$ | async)?.name || 'Account'"
               >
                 <mat-icon aria-hidden="true">account_circle</mat-icon>
                 <span
@@ -139,10 +142,10 @@
                 <mat-icon aria-hidden="true" class="navbar__caret">arrow_drop_down</mat-icon>
               </button>
               <mat-menu #accountMenu="matMenu">
-                <button mat-menu-item [routerLink]="['/profile']" aria-label="Profile">
+                <a mat-menu-item [routerLink]="['/profile']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Profile">
                   <mat-icon aria-hidden="true">person</mat-icon>
                   <span>Profile</span>
-                </button>
+                </a>
 
                 <!-- S6-03: below 640px the bar itself keeps only brand, theme
                      and this account trigger, so every role destination that
@@ -153,42 +156,42 @@
                      hidden at 641px and up, where the toolbar copy is the
                      one and only visible destination. -->
                 @if ((userProfile$ | async) && authService.hasPermission('packet:create')) {
-                  <button mat-menu-item class="navbar__role-menu-item" [routerLink]="['/packets']" aria-label="Packet Builder">
+                  <a mat-menu-item class="navbar__role-menu-item" [routerLink]="['/packets']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Packet Builder">
                     <mat-icon aria-hidden="true">edit_note</mat-icon>
                     <span>Packets</span>
-                  </button>
+                  </a>
                 }
                 @if ((userProfile$ | async) && authService.hasPermission('user:ban') && !authService.hasPermission('admin:access')) {
-                  <button mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/bans']" aria-label="Moderation">
+                  <a mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/bans']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Moderation">
                     <mat-icon aria-hidden="true">gavel</mat-icon>
                     <span>Moderation</span>
-                  </button>
+                  </a>
                 }
                 @if ((userProfile$ | async) && authService.hasPermission('admin:access')) {
-                  <button mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin']" aria-label="Admin">
+                  <a mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Admin">
                     <mat-icon aria-hidden="true">dashboard</mat-icon>
                     <span>Admin</span>
-                  </button>
-                  <button mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/usage']" aria-label="Usage">
+                  </a>
+                  <a mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/usage']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Usage">
                     <mat-icon aria-hidden="true">insights</mat-icon>
                     <span>Usage</span>
-                  </button>
-                  <button mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/bans']" aria-label="Bans">
+                  </a>
+                  <a mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/bans']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Bans">
                     <mat-icon aria-hidden="true">gavel</mat-icon>
                     <span>Bans</span>
-                  </button>
+                  </a>
                   @if ((userProfile$ | async) && authService.hasPermission('taxonomy:manage')) {
-                    <button mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/taxonomy']" aria-label="Taxonomy">
+                    <a mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/taxonomy']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Taxonomy">
                       <mat-icon aria-hidden="true">category</mat-icon>
                       <span>Taxonomy</span>
-                    </button>
+                    </a>
                   }
                 }
                 @if ((userProfile$ | async) && !authService.hasPermission('admin:access') && authService.hasPermission('taxonomy:manage')) {
-                  <button mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/taxonomy']" aria-label="Taxonomy">
+                  <a mat-menu-item class="navbar__role-menu-item" [routerLink]="['/admin/taxonomy']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Taxonomy">
                     <mat-icon aria-hidden="true">category</mat-icon>
                     <span>Taxonomy</span>
-                  </button>
+                  </a>
                 }
 
                 <mat-divider class="navbar__mobile-divider"></mat-divider>
@@ -198,7 +201,7 @@
                   <span>Sign out</span>
                 </button>
               </mat-menu>
-            </div>
+            </nav>
           }
         </div>
       }

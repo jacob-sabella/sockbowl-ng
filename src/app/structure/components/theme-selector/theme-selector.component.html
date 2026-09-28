@@ -1,13 +1,24 @@
 @if (theme$ | async; as currentTheme) {
+  <!-- S6-09: the trigger keeps the accessible name "Theme selector" (tests
+       rely on it — see this component's spec and e2e/polish/scenarios/s6.ts)
+       and additionally exposes the current theme through aria-describedby,
+       pointing at a visually-hidden description rather than changing the
+       name itself. -->
   <button mat-icon-button
     [matMenuTriggerFor]="themeMenu"
     class="theme-toggle"
-    [attr.aria-label]="'Theme selector'">
+    aria-label="Theme selector"
+    aria-describedby="theme-selector-current">
     <mat-icon>{{ getCurrentIcon(currentTheme) }}</mat-icon>
   </button>
+  <span id="theme-selector-current" class="visually-hidden">Current theme: {{ getCurrentLabel(currentTheme) }}</span>
   <mat-menu #themeMenu="matMenu" class="theme-menu">
     @for (themeOption of allThemes; track themeOption) {
+      <!-- S6-09: a set of mutually-exclusive options reads as a radio group
+           to assistive tech, not a plain list of commands. -->
       <button mat-menu-item
+        role="menuitemradio"
+        [attr.aria-checked]="isActive(themeOption.value, currentTheme)"
         (click)="setTheme(themeOption.value)"
         [class.active]="isActive(themeOption.value, currentTheme)">
         <mat-icon aria-hidden="true">{{ themeOption.icon }}</mat-icon>

@@ -30,7 +30,7 @@ export async function loginAs(page: Page, username: string, password: string = D
   await page.locator('#kc-login').click();
 
   await page.waitForURL('**/game-session**', { timeout: 20_000 });
-  await page.locator('.navbar__user-name').waitFor({ state: 'visible', timeout: 10_000 });
+  await page.locator('.navbar__account-trigger').waitFor({ state: 'visible', timeout: 10_000 });
 }
 
 /**

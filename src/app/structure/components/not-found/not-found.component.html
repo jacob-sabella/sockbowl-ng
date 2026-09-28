@@ -1,6 +1,9 @@
-<main class="not-found">
+<!-- S6-05: the app shell (`app.component.html`) now wraps every routed page
+     in one `<main>` landmark, so this page is a plain `<div>` rather than a
+     second, nested `<main>`. -->
+<div class="not-found">
   <h1 class="not-found__headline">Page not found</h1>
   <p>There's no page at this address.</p>
   <p class="not-found__path"><code>{{ attemptedPath }}</code></p>
   <a routerLink="/" mat-flat-button class="not-found__home">Back to Sockbowl</a>
-</main>
+</div>

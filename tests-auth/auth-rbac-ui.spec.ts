@@ -25,9 +25,9 @@ test.describe('RBAC-gated navigation and routes', () => {
   test('player (player2): no Packets/Moderation/Admin links; protected routes redirect with a snackbar; no AI-generate tab', async ({ page }) => {
     await loginAs(page, 'player2');
 
-    await expect(page.locator('button[aria-label="Packet Builder"]')).toBeHidden();
-    await expect(page.locator('button[aria-label="Moderation"]')).toBeHidden();
-    await expect(page.locator('button[aria-label="Admin"]')).toBeHidden();
+    await expect(page.locator('[aria-label="Packet Builder"]')).toBeHidden();
+    await expect(page.locator('[aria-label="Moderation"]')).toBeHidden();
+    await expect(page.locator('button[aria-label="Admin menu"]')).toBeHidden();
 
     // /packets/:id/edit (packet:update): the guard shows the snackbar and
     // redirects. Each route below is gated by its own permissionGuard()
@@ -64,9 +64,9 @@ test.describe('RBAC-gated navigation and routes', () => {
   test('moderator: Moderation visible and reachable; /admin still redirects', async ({ page }) => {
     await loginAs(page, 'moderator');
 
-    await expect(page.locator('button[aria-label="Moderation"]')).toBeVisible();
-    await expect(page.locator('button[aria-label="Admin"]')).toBeHidden();
-    await expect(page.locator('button[aria-label="Packet Builder"]')).toBeHidden();
+    await expect(page.locator('[aria-label="Moderation"]')).toBeVisible();
+    await expect(page.locator('button[aria-label="Admin menu"]')).toBeHidden();
+    await expect(page.locator('[aria-label="Packet Builder"]')).toBeHidden();
 
     await page.goto('/admin/bans');
     await expect(page).toHaveURL(/\/admin\/bans/);
@@ -80,9 +80,16 @@ test.describe('RBAC-gated navigation and routes', () => {
   test('admin (player1): every gated link visible and every gated route reachable', async ({ page }) => {
     await loginAs(page, 'player1');
 
-    await expect(page.locator('button[aria-label="Packet Builder"]')).toBeVisible();
-    await expect(page.locator('button[aria-label="Moderation"]')).toBeVisible();
-    await expect(page.locator('button[aria-label="Admin"]')).toBeVisible();
+    await expect(page.locator('[aria-label="Packet Builder"]')).toBeVisible();
+    // S6-02: an admin has no standalone Moderation link — it folds into the
+    // Admin menu as "Bans" (admin:access implies user:ban's UI already).
+    await expect(page.locator('[aria-label="Moderation"]')).toBeHidden();
+    await expect(page.locator('button[aria-label="Admin menu"]')).toBeVisible();
+    await page.locator('button[aria-label="Admin menu"]').click();
+    await expect(page.getByRole('menuitem', { name: 'Admin' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Usage' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Bans' })).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/admin$/);
@@ -101,9 +108,9 @@ test.describe('RBAC-gated navigation and routes', () => {
   test('author (testuser): Packets and New Packet visible; Moderation and Admin hidden', async ({ page }) => {
     await loginAs(page, 'testuser');
 
-    await expect(page.locator('button[aria-label="Packet Builder"]')).toBeVisible();
-    await expect(page.locator('button[aria-label="Moderation"]')).toBeHidden();
-    await expect(page.locator('button[aria-label="Admin"]')).toBeHidden();
+    await expect(page.locator('[aria-label="Packet Builder"]')).toBeVisible();
+    await expect(page.locator('[aria-label="Moderation"]')).toBeHidden();
+    await expect(page.locator('button[aria-label="Admin menu"]')).toBeHidden();
 
     await page.goto('/packets');
     await expect(page).toHaveURL(/\/packets$/);

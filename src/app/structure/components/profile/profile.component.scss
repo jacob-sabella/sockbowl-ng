@@ -103,11 +103,17 @@ button:focus-visible {
     margin-bottom: 1rem;
   }
 
-  ::ng-deep mat-card-title {
+  /* S6-13: `id="profile-name"` is now an `<h1 mat-card-title>`, not a
+     `<mat-card-title>` element — `MatCardTitle` is an attribute directive
+     too (`mat-card-title, [mat-card-title], [matCardTitle]`) and always
+     adds the `.mat-mdc-card-title` host class regardless of host tag, so
+     the class selector keeps matching either way. */
+  ::ng-deep .mat-mdc-card-title {
     font-size: var(--text-2xl);
     font-weight: 700;
     color: var(--text-primary);
     overflow-wrap: anywhere;
+    margin: 0;
   }
 
   ::ng-deep mat-card-subtitle {
@@ -229,7 +235,10 @@ button:focus-visible {
   mat-card-header {
     margin-bottom: 0.5rem;
 
-    mat-card-title.section-heading {
+    // S6-13: `#history-heading` is now `<h2 mat-card-title>`; `.mat-mdc-card-title`
+    // (the directive's own host class, added regardless of host tag) keeps
+    // this matching either way — see the `.profile-card` rule above.
+    .mat-mdc-card-title.section-heading {
       display: flex;
       align-items: center;
       gap: 0.5rem;

@@ -36,8 +36,12 @@ describe('NotFoundComponent', () => {
 
   it('does not use 100dvh (so it sizes to the content area, not the full viewport)', () => {
     const el: HTMLElement = fixture.nativeElement;
-    const main = el.querySelector('main');
-    expect(main).not.toBeNull();
+    expect(el.querySelector('.not-found')).not.toBeNull();
+  });
+
+  it('does not render its own <main> landmark (the app shell provides one, S6-05)', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('main')).toBeNull();
   });
 
   it('echoes the requested path', async () => {

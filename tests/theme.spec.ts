@@ -6,7 +6,9 @@ test('Theme selector switches the app theme', async ({ page }) => {
   await page.waitForTimeout(900);
   for (const name of ['Light', 'Monokai', 'Nord', 'Dark']) {
     await page.getByRole('button', { name: 'Theme selector' }).click();
-    await page.getByRole('menuitem', { name, exact: true }).click();
+    // S6-09: theme options are role=menuitemradio (a mutually-exclusive set),
+    // not plain menuitem commands.
+    await page.getByRole('menuitemradio', { name, exact: true }).click();
     await page.waitForTimeout(1100);
   }
 });
