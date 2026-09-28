@@ -75,10 +75,26 @@ describe('limitErrorFrom', () => {
 // 403 classified as `banned`/`ip_banned`) share this one check, so a new
 // caller can't drift from the interceptor's own classification.
 describe('isLimitHandled', () => {
-  it('is true for 429 and 503 regardless of body', () => {
-    expect(isLimitHandled({ status: 429 })).toBeTrue();
+  it('is true for a 429 or 503 whose body classifies (the interceptor showed a snackbar)', () => {
     expect(isLimitHandled({ status: 429, error: { error: 'rate_limited' } })).toBeTrue();
-    expect(isLimitHandled({ status: 503 })).toBeTrue();
+    expect(isLimitHandled({ status: 429, error: { error: 'quota_exceeded' } })).toBeTrue();
+    expect(isLimitHandled({ status: 503, error: { error: 'limiter_unavailable' } })).toBeTrue();
+  });
+
+  // FIX3-NG: isLimitHandled must mirror limitErrorFrom -- RateLimitInterceptor
+  // only shows a snackbar when the body's `error` field classifies, so a
+  // plain 503/429 (no body, or a body with no recognized `error` field) is
+  // NOT already handled, and a caller that skips its own error handling here
+  // would swallow it with no message shown at all.
+  it('is false for a plain 503 with no classifiable body (nothing was shown for it)', () => {
+    expect(isLimitHandled({ status: 503 })).toBeFalse();
+    expect(isLimitHandled({ status: 503, error: {} })).toBeFalse();
+    expect(isLimitHandled({ status: 503, error: { message: 'Service Unavailable' } })).toBeFalse();
+  });
+
+  it('is false for a plain 429 with no classifiable body', () => {
+    expect(isLimitHandled({ status: 429 })).toBeFalse();
+    expect(isLimitHandled({ status: 429, error: { error: 'something_else' } })).toBeFalse();
   });
 
   it('is true for a 403 whose body classifies as banned or ip_banned', () => {

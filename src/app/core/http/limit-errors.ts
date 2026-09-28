@@ -159,18 +159,24 @@ export function notifyLimit(
  * body at all) returns `false` -- `RateLimitInterceptor` doesn't touch it
  * either (`limitErrorFrom` returns `null` for it), so the caller's own
  * error handling still needs to run.
+ *
+ * FIX3-NG: this must mirror `limitErrorFrom` exactly, for every status the
+ * interceptor reacts to, not just 403. `RateLimitInterceptor` only shows a
+ * snackbar when the body's `error` field classifies (`handle()` bails out
+ * early otherwise), so a plain 429/503 -- no body, or a body with no
+ * recognized `error` field -- was NOT already handled. Returning `true` for
+ * it anyway made a caller skip its own error handling too, so a plain 503
+ * (e.g. an upstream outage with no JSON body) was swallowed with no message
+ * shown at all.
  */
 export function isLimitHandled(err: unknown): boolean {
   const candidate = err as { status?: number; error?: { error?: unknown } } | null | undefined;
   if (!candidate || typeof candidate.status !== 'number') {
     return false;
   }
-  if (candidate.status === 429 || candidate.status === 503) {
-    return true;
-  }
-  if (candidate.status === 403) {
+  if (candidate.status === 429 || candidate.status === 503 || candidate.status === 403) {
     const bodyError = candidate.error?.error;
-    return bodyError === 'banned' || bodyError === 'ip_banned';
+    return typeof bodyError === 'string' && limitErrorFrom(bodyError, null) !== null;
   }
   return false;
 }
