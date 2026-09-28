@@ -1,0 +1,2699 @@
+{
+  "_meta": {
+    "source": "M5 H0 follow-up (hand-authored, not record-stomp.ts)",
+    "synthesized": true,
+    "gameMode": "QUIZ_BOWL_CLASSIC",
+    "seat": "proctor",
+    "recordedAt": null,
+    "derivedFrom": [
+      "e2e/polish/fixtures/stomp/quiz-bowl-classic/proctor.json frame 3 (real, IN_GAME) for gameSettings/playerList/teamList/proctor and the one real full packet object with an id+tossups+bonuses (only ever sent to the real proctor seat)."
+    ],
+    "note": "s3.ts's own header (M5 H0 follow-up, pre-dating this file) found that no record-stomp.ts recording contains a CONFIG-phase frame for the seats it checked (quiz-bowl-classic proctor/buzzer). That turned out to be true for quiz-bowl-classic/proctor.json specifically (its earliest GameSessionUpdate, frame 3, is already IN_GAME) but NOT true fleet-wide: quiz-bowl-classic/spectator.json frame 0, auto-proctor/buzzer.json frame 1 and free-for-all/buzzer.json frames 0+2 are all genuinely-real, unsynthesized CONFIG frames (see config-quiz-bowl-classic/{player,spectator}.json and s3.ts's use of auto-proctor/buzzer.json directly for config-owner-view). This file exists only because the *proctor* seat specifically (id+tossups+bonuses packet visibility, one-team/many-team roster shapes) has no real CONFIG frame at all -- every frame below patches matchState back to CONFIG on top of quiz-bowl-classic/proctor.json's real frame 3, changing only the field(s) each frame's own comment in this script names (see build_config_fixtures.py in the M5 session scratchpad, or this note) -- gameSettings, playerList identities, proctor-claim state and the packet's own tossup/bonus content (where kept) are the real recording's, not invented."
+  },
+  "gameSessionId": "01M3MV2203452HWQ345XNGCVY7",
+  "playerSessionId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+  "frames": [
+    {
+      "target": "self",
+      "kind": "message",
+      "delayMs": 1,
+      "synthesized": true,
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION",
+        "gameSession": {
+          "id": "01M3MV2203452HWQ345XNGCVY7",
+          "joinCode": "YS63SY",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": false
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Proctor",
+              "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+              "playerMode": "PROCTOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ada",
+              "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Blaise",
+              "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Cleo",
+              "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Dov",
+              "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Sam Spectator",
+              "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
+              "playerMode": "SPECTATOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "f72a2ccb-e955-493e-b534-b0c005eab3cc",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ada",
+                  "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Cleo",
+                  "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "159dd1af-b868-4501-965c-e71652741b08",
+              "teamName": "Team 2",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Blaise",
+                  "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Dov",
+                  "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": null,
+            "matchState": "CONFIG",
+            "packet": {
+              "id": null,
+              "name": null,
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": null,
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": null,
+              "bonuses": null
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 4,
+          "currentRound": null,
+          "proctor": {
+            "gameOwner": true,
+            "guest": true,
+            "keycloakId": null,
+            "name": "Proctor",
+            "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+            "playerMode": "PROCTOR",
+            "playerSecret": "",
+            "playerStatus": "DISCONNECTED",
+            "userId": null
+          }
+        }
+      }
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "delayMs": 1,
+      "synthesized": true,
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION",
+        "gameSession": {
+          "id": "01M3MV2203452HWQ345XNGCVY7",
+          "joinCode": "YS63SY",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": false
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Proctor",
+              "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+              "playerMode": "PROCTOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ada",
+              "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Blaise",
+              "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Cleo",
+              "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Dov",
+              "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Sam Spectator",
+              "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
+              "playerMode": "SPECTATOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "f72a2ccb-e955-493e-b534-b0c005eab3cc",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ada",
+                  "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Cleo",
+                  "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "159dd1af-b868-4501-965c-e71652741b08",
+              "teamName": "Team 2",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Blaise",
+                  "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Dov",
+                  "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": null,
+            "matchState": "CONFIG",
+            "packet": {
+              "id": "4edacc0a-6145-4be0-9ce8-49aea3782bfa",
+              "name": "M5 H0 QUIZ_BOWL_CLASSIC 1790627087583",
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": "PUBLISHED",
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": [
+                {
+                  "id": 6812,
+                  "order": 0,
+                  "tossup": {
+                    "id": "ffdbce4a-4586-4324-a494-f838639f7de1",
+                    "question": "Placeholder tossup 1 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 1",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6813,
+                  "order": 1,
+                  "tossup": {
+                    "id": "1515f59f-ce27-410b-ae26-817bd9177a40",
+                    "question": "Placeholder tossup 2 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 2",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6814,
+                  "order": 2,
+                  "tossup": {
+                    "id": "f7b81858-f968-4cd5-9fd3-723c33b5f78d",
+                    "question": "Placeholder tossup 3 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 3",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6815,
+                  "order": 3,
+                  "tossup": {
+                    "id": "90120005-b2f1-4b97-b0c1-d2bd5728956a",
+                    "question": "Placeholder tossup 4 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 4",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6816,
+                  "order": 4,
+                  "tossup": {
+                    "id": "76bee54f-b9ab-4673-b950-6b6d10e11923",
+                    "question": "Placeholder tossup 5 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 5",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6817,
+                  "order": 5,
+                  "tossup": {
+                    "id": "595b12b1-d59c-4c5e-8d4f-d2f8a000b782",
+                    "question": "Placeholder tossup 6 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 6",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6818,
+                  "order": 6,
+                  "tossup": {
+                    "id": "747131e3-1660-48eb-951a-b04089f34644",
+                    "question": "Placeholder tossup 7 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 7",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6819,
+                  "order": 7,
+                  "tossup": {
+                    "id": "98114a92-1ee0-4c2d-a081-6995445972a8",
+                    "question": "Placeholder tossup 8 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 8",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6820,
+                  "order": 8,
+                  "tossup": {
+                    "id": "e8fb2d4f-692f-4daf-98d1-7617757a0490",
+                    "question": "Placeholder tossup 9 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 9",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                }
+              ],
+              "bonuses": [
+                {
+                  "bonus": {
+                    "id": "747b255c-4a1f-49e8-a6ac-4e9d21329202",
+                    "preamble": "Placeholder bonus 4 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "bb8670ec-c21f-405b-ab82-d913dd257f9a",
+                          "question": "Bonus 4, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6836,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "f4217909-96e9-499b-892e-1d9ab838aefc",
+                          "question": "Bonus 4, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6837,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "165e12b0-bda1-44a0-bc3f-0d7ceee77c82",
+                          "question": "Bonus 4, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6838,
+                        "order": 2
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6842,
+                  "order": 3
+                },
+                {
+                  "bonus": {
+                    "id": "3ab06f5b-ede0-4bab-a9a1-5765b0fc1fa6",
+                    "preamble": "Placeholder bonus 2 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "cc825f04-315b-4a57-9b9e-d98dfad7f285",
+                          "question": "Bonus 2, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6825,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "e2e9ea5e-76e8-49e3-bede-d8fb73e3d80b",
+                          "question": "Bonus 2, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6826,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "eb1d87fe-812a-453a-8303-1d16f3a95aea",
+                          "question": "Bonus 2, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6827,
+                        "order": 2
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6840,
+                  "order": 1
+                },
+                {
+                  "bonus": {
+                    "id": "50248d57-3839-49a2-9a12-a68aa45ef244",
+                    "preamble": "Placeholder bonus 1 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "45dcf41c-f32c-46c1-b7d7-128c567e1fa9",
+                          "question": "Bonus 1, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6823,
+                        "order": 2
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "a5602584-82bb-4300-b090-4e3d5327a044",
+                          "question": "Bonus 1, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6822,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "96c66059-5290-45af-9c0e-7b60d857f2c8",
+                          "question": "Bonus 1, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6821,
+                        "order": 0
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6839,
+                  "order": 0
+                },
+                {
+                  "bonus": {
+                    "id": "d0004d65-c6e1-4cea-a859-be25eb6e9e77",
+                    "preamble": "Placeholder bonus 3 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "14dd14bb-c7c6-419e-a8b1-2b34183134cf",
+                          "question": "Bonus 3, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 3.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6830,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "e1beda1b-be67-4ef4-a75c-e7eb10a1cc55",
+                          "question": "Bonus 3, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 3.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6832,
+                        "order": 2
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "7977330b-9d29-4237-8bf2-7d89d6d8c720",
+                          "question": "Bonus 3, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 3.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6831,
+                        "order": 1
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6841,
+                  "order": 2
+                }
+              ]
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 4,
+          "currentRound": null,
+          "proctor": {
+            "gameOwner": true,
+            "guest": true,
+            "keycloakId": null,
+            "name": "Proctor",
+            "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+            "playerMode": "PROCTOR",
+            "playerSecret": "",
+            "playerStatus": "DISCONNECTED",
+            "userId": null
+          }
+        }
+      }
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "delayMs": 1,
+      "synthesized": true,
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION",
+        "gameSession": {
+          "id": "01M3MV2203452HWQ345XNGCVY7",
+          "joinCode": "YS63SY",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": false
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Proctor",
+              "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+              "playerMode": "PROCTOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ada",
+              "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Blaise",
+              "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Cleo",
+              "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Dov",
+              "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Sam Spectator",
+              "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
+              "playerMode": "SPECTATOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "f72a2ccb-e955-493e-b534-b0c005eab3cc",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ada",
+                  "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Cleo",
+                  "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "159dd1af-b868-4501-965c-e71652741b08",
+              "teamName": "Team 2",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Blaise",
+                  "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Dov",
+                  "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": null,
+            "matchState": "CONFIG",
+            "packet": {
+              "id": "4edacc0a-6145-4be0-9ce8-49aea3782bfa",
+              "name": "M5 H0 QUIZ_BOWL_CLASSIC 1790627087583 (draft revision)",
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": "DRAFT",
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": [
+                {
+                  "id": 6812,
+                  "order": 0,
+                  "tossup": {
+                    "id": "ffdbce4a-4586-4324-a494-f838639f7de1",
+                    "question": "Placeholder tossup 1 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 1",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6813,
+                  "order": 1,
+                  "tossup": {
+                    "id": "1515f59f-ce27-410b-ae26-817bd9177a40",
+                    "question": "Placeholder tossup 2 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 2",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6814,
+                  "order": 2,
+                  "tossup": {
+                    "id": "f7b81858-f968-4cd5-9fd3-723c33b5f78d",
+                    "question": "Placeholder tossup 3 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 3",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6815,
+                  "order": 3,
+                  "tossup": {
+                    "id": "90120005-b2f1-4b97-b0c1-d2bd5728956a",
+                    "question": "Placeholder tossup 4 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 4",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6816,
+                  "order": 4,
+                  "tossup": {
+                    "id": "76bee54f-b9ab-4673-b950-6b6d10e11923",
+                    "question": "Placeholder tossup 5 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 5",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6817,
+                  "order": 5,
+                  "tossup": {
+                    "id": "595b12b1-d59c-4c5e-8d4f-d2f8a000b782",
+                    "question": "Placeholder tossup 6 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 6",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6818,
+                  "order": 6,
+                  "tossup": {
+                    "id": "747131e3-1660-48eb-951a-b04089f34644",
+                    "question": "Placeholder tossup 7 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 7",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6819,
+                  "order": 7,
+                  "tossup": {
+                    "id": "98114a92-1ee0-4c2d-a081-6995445972a8",
+                    "question": "Placeholder tossup 8 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 8",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6820,
+                  "order": 8,
+                  "tossup": {
+                    "id": "e8fb2d4f-692f-4daf-98d1-7617757a0490",
+                    "question": "Placeholder tossup 9 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 9",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                }
+              ],
+              "bonuses": [
+                {
+                  "bonus": {
+                    "id": "747b255c-4a1f-49e8-a6ac-4e9d21329202",
+                    "preamble": "Placeholder bonus 4 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "bb8670ec-c21f-405b-ab82-d913dd257f9a",
+                          "question": "Bonus 4, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6836,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "f4217909-96e9-499b-892e-1d9ab838aefc",
+                          "question": "Bonus 4, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6837,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "165e12b0-bda1-44a0-bc3f-0d7ceee77c82",
+                          "question": "Bonus 4, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6838,
+                        "order": 2
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6842,
+                  "order": 3
+                },
+                {
+                  "bonus": {
+                    "id": "3ab06f5b-ede0-4bab-a9a1-5765b0fc1fa6",
+                    "preamble": "Placeholder bonus 2 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "cc825f04-315b-4a57-9b9e-d98dfad7f285",
+                          "question": "Bonus 2, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6825,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "e2e9ea5e-76e8-49e3-bede-d8fb73e3d80b",
+                          "question": "Bonus 2, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6826,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "eb1d87fe-812a-453a-8303-1d16f3a95aea",
+                          "question": "Bonus 2, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6827,
+                        "order": 2
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6840,
+                  "order": 1
+                },
+                {
+                  "bonus": {
+                    "id": "50248d57-3839-49a2-9a12-a68aa45ef244",
+                    "preamble": "Placeholder bonus 1 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "45dcf41c-f32c-46c1-b7d7-128c567e1fa9",
+                          "question": "Bonus 1, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6823,
+                        "order": 2
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "a5602584-82bb-4300-b090-4e3d5327a044",
+                          "question": "Bonus 1, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6822,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "96c66059-5290-45af-9c0e-7b60d857f2c8",
+                          "question": "Bonus 1, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6821,
+                        "order": 0
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6839,
+                  "order": 0
+                }
+              ]
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 4,
+          "currentRound": null,
+          "proctor": {
+            "gameOwner": true,
+            "guest": true,
+            "keycloakId": null,
+            "name": "Proctor",
+            "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+            "playerMode": "PROCTOR",
+            "playerSecret": "",
+            "playerStatus": "DISCONNECTED",
+            "userId": null
+          }
+        }
+      }
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "delayMs": 1,
+      "synthesized": true,
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION",
+        "gameSession": {
+          "id": "01M3MV2203452HWQ345XNGCVY7",
+          "joinCode": "YS63SY",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": false
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Proctor",
+              "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+              "playerMode": "PROCTOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ada",
+              "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Blaise",
+              "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Cleo",
+              "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Dov",
+              "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Sam Spectator",
+              "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
+              "playerMode": "SPECTATOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "f72a2ccb-e955-493e-b534-b0c005eab3cc",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ada",
+                  "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Cleo",
+                  "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "159dd1af-b868-4501-965c-e71652741b08",
+              "teamName": "Team 2",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Blaise",
+                  "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Dov",
+                  "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": null,
+            "matchState": "CONFIG",
+            "packet": {
+              "id": null,
+              "name": "M5 H0 QUIZ_BOWL_CLASSIC 1790627087583",
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": "EPHEMERAL",
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": [
+                {
+                  "id": 6812,
+                  "order": 0,
+                  "tossup": {
+                    "id": "ffdbce4a-4586-4324-a494-f838639f7de1",
+                    "question": "Placeholder tossup 1 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 1",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6813,
+                  "order": 1,
+                  "tossup": {
+                    "id": "1515f59f-ce27-410b-ae26-817bd9177a40",
+                    "question": "Placeholder tossup 2 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 2",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6814,
+                  "order": 2,
+                  "tossup": {
+                    "id": "f7b81858-f968-4cd5-9fd3-723c33b5f78d",
+                    "question": "Placeholder tossup 3 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 3",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6815,
+                  "order": 3,
+                  "tossup": {
+                    "id": "90120005-b2f1-4b97-b0c1-d2bd5728956a",
+                    "question": "Placeholder tossup 4 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 4",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6816,
+                  "order": 4,
+                  "tossup": {
+                    "id": "76bee54f-b9ab-4673-b950-6b6d10e11923",
+                    "question": "Placeholder tossup 5 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 5",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6817,
+                  "order": 5,
+                  "tossup": {
+                    "id": "595b12b1-d59c-4c5e-8d4f-d2f8a000b782",
+                    "question": "Placeholder tossup 6 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 6",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6818,
+                  "order": 6,
+                  "tossup": {
+                    "id": "747131e3-1660-48eb-951a-b04089f34644",
+                    "question": "Placeholder tossup 7 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 7",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6819,
+                  "order": 7,
+                  "tossup": {
+                    "id": "98114a92-1ee0-4c2d-a081-6995445972a8",
+                    "question": "Placeholder tossup 8 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 8",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6820,
+                  "order": 8,
+                  "tossup": {
+                    "id": "e8fb2d4f-692f-4daf-98d1-7617757a0490",
+                    "question": "Placeholder tossup 9 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 9",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                }
+              ],
+              "bonuses": [
+                {
+                  "bonus": {
+                    "id": "747b255c-4a1f-49e8-a6ac-4e9d21329202",
+                    "preamble": "Placeholder bonus 4 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "bb8670ec-c21f-405b-ab82-d913dd257f9a",
+                          "question": "Bonus 4, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6836,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "f4217909-96e9-499b-892e-1d9ab838aefc",
+                          "question": "Bonus 4, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6837,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "165e12b0-bda1-44a0-bc3f-0d7ceee77c82",
+                          "question": "Bonus 4, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6838,
+                        "order": 2
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6842,
+                  "order": 3
+                }
+              ]
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 4,
+          "currentRound": null,
+          "proctor": {
+            "gameOwner": true,
+            "guest": true,
+            "keycloakId": null,
+            "name": "Proctor",
+            "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+            "playerMode": "PROCTOR",
+            "playerSecret": "",
+            "playerStatus": "DISCONNECTED",
+            "userId": null
+          }
+        }
+      }
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "delayMs": 1,
+      "synthesized": true,
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION",
+        "gameSession": {
+          "id": "01M3MV2203452HWQ345XNGCVY7",
+          "joinCode": "YS63SY",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": false
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Proctor",
+              "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+              "playerMode": "PROCTOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ada",
+              "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Blaise",
+              "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Cleo",
+              "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Dov",
+              "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Sam Spectator",
+              "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
+              "playerMode": "SPECTATOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "f72a2ccb-e955-493e-b534-b0c005eab3cc",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ada",
+                  "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Cleo",
+                  "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": null,
+            "matchState": "CONFIG",
+            "packet": {
+              "id": null,
+              "name": null,
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": null,
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": null,
+              "bonuses": null
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 4,
+          "currentRound": null,
+          "proctor": {
+            "gameOwner": true,
+            "guest": true,
+            "keycloakId": null,
+            "name": "Proctor",
+            "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+            "playerMode": "PROCTOR",
+            "playerSecret": "",
+            "playerStatus": "DISCONNECTED",
+            "userId": null
+          }
+        }
+      }
+    },
+    {
+      "target": "self",
+      "kind": "message",
+      "delayMs": 1,
+      "synthesized": true,
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION",
+        "gameSession": {
+          "id": "01M3MV2203452HWQ345XNGCVY7",
+          "joinCode": "YS63SY",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": false
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Proctor",
+              "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+              "playerMode": "PROCTOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ada",
+              "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Blaise",
+              "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Cleo",
+              "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Dov",
+              "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Elan",
+              "playerId": "h0-config-filler-00",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Farah",
+              "playerId": "h0-config-filler-01",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Grigor",
+              "playerId": "h0-config-filler-02",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Hana",
+              "playerId": "h0-config-filler-03",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ines",
+              "playerId": "h0-config-filler-04",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Jaxon",
+              "playerId": "h0-config-filler-05",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Kira",
+              "playerId": "h0-config-filler-06",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Leo",
+              "playerId": "h0-config-filler-07",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Sam Spectator",
+              "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
+              "playerMode": "SPECTATOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "h0-config-team-1",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ada",
+                  "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Cleo",
+                  "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Blaise",
+                  "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Dov",
+                  "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Elan",
+                  "playerId": "h0-config-filler-00",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "h0-config-team-2",
+              "teamName": "Team 2",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Farah",
+                  "playerId": "h0-config-filler-01",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Grigor",
+                  "playerId": "h0-config-filler-02",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Hana",
+                  "playerId": "h0-config-filler-03",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ines",
+                  "playerId": "h0-config-filler-04",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "h0-config-team-3",
+              "teamName": "Team 3",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Jaxon",
+                  "playerId": "h0-config-filler-05",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Kira",
+                  "playerId": "h0-config-filler-06",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "h0-config-team-4",
+              "teamName": "Team 4",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Leo",
+                  "playerId": "h0-config-filler-07",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": null,
+            "matchState": "CONFIG",
+            "packet": {
+              "id": "4edacc0a-6145-4be0-9ce8-49aea3782bfa",
+              "name": "M5 H0 QUIZ_BOWL_CLASSIC 1790627087583",
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": "PUBLISHED",
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": [
+                {
+                  "id": 6812,
+                  "order": 0,
+                  "tossup": {
+                    "id": "ffdbce4a-4586-4324-a494-f838639f7de1",
+                    "question": "Placeholder tossup 1 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 1",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6813,
+                  "order": 1,
+                  "tossup": {
+                    "id": "1515f59f-ce27-410b-ae26-817bd9177a40",
+                    "question": "Placeholder tossup 2 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 2",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6814,
+                  "order": 2,
+                  "tossup": {
+                    "id": "f7b81858-f968-4cd5-9fd3-723c33b5f78d",
+                    "question": "Placeholder tossup 3 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 3",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6815,
+                  "order": 3,
+                  "tossup": {
+                    "id": "90120005-b2f1-4b97-b0c1-d2bd5728956a",
+                    "question": "Placeholder tossup 4 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 4",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6816,
+                  "order": 4,
+                  "tossup": {
+                    "id": "76bee54f-b9ab-4673-b950-6b6d10e11923",
+                    "question": "Placeholder tossup 5 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 5",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6817,
+                  "order": 5,
+                  "tossup": {
+                    "id": "595b12b1-d59c-4c5e-8d4f-d2f8a000b782",
+                    "question": "Placeholder tossup 6 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 6",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6818,
+                  "order": 6,
+                  "tossup": {
+                    "id": "747131e3-1660-48eb-951a-b04089f34644",
+                    "question": "Placeholder tossup 7 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 7",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6819,
+                  "order": 7,
+                  "tossup": {
+                    "id": "98114a92-1ee0-4c2d-a081-6995445972a8",
+                    "question": "Placeholder tossup 8 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 8",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                },
+                {
+                  "id": 6820,
+                  "order": 8,
+                  "tossup": {
+                    "id": "e8fb2d4f-692f-4daf-98d1-7617757a0490",
+                    "question": "Placeholder tossup 9 (M5 H0 QUIZ_BOWL_CLASSIC), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.",
+                    "answer": "Synthetic Answer 9",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  }
+                }
+              ],
+              "bonuses": [
+                {
+                  "bonus": {
+                    "id": "747b255c-4a1f-49e8-a6ac-4e9d21329202",
+                    "preamble": "Placeholder bonus 4 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "bb8670ec-c21f-405b-ab82-d913dd257f9a",
+                          "question": "Bonus 4, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6836,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "f4217909-96e9-499b-892e-1d9ab838aefc",
+                          "question": "Bonus 4, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6837,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "165e12b0-bda1-44a0-bc3f-0d7ceee77c82",
+                          "question": "Bonus 4, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 4.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6838,
+                        "order": 2
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6842,
+                  "order": 3
+                },
+                {
+                  "bonus": {
+                    "id": "3ab06f5b-ede0-4bab-a9a1-5765b0fc1fa6",
+                    "preamble": "Placeholder bonus 2 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "cc825f04-315b-4a57-9b9e-d98dfad7f285",
+                          "question": "Bonus 2, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6825,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "e2e9ea5e-76e8-49e3-bede-d8fb73e3d80b",
+                          "question": "Bonus 2, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6826,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "eb1d87fe-812a-453a-8303-1d16f3a95aea",
+                          "question": "Bonus 2, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 2.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6827,
+                        "order": 2
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6840,
+                  "order": 1
+                },
+                {
+                  "bonus": {
+                    "id": "50248d57-3839-49a2-9a12-a68aa45ef244",
+                    "preamble": "Placeholder bonus 1 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "45dcf41c-f32c-46c1-b7d7-128c567e1fa9",
+                          "question": "Bonus 1, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6823,
+                        "order": 2
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "a5602584-82bb-4300-b090-4e3d5327a044",
+                          "question": "Bonus 1, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6822,
+                        "order": 1
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "96c66059-5290-45af-9c0e-7b60d857f2c8",
+                          "question": "Bonus 1, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 1.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6821,
+                        "order": 0
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6839,
+                  "order": 0
+                },
+                {
+                  "bonus": {
+                    "id": "d0004d65-c6e1-4cea-a859-be25eb6e9e77",
+                    "preamble": "Placeholder bonus 3 preamble (M5 H0 QUIZ_BOWL_CLASSIC).",
+                    "remoteId": null,
+                    "subcategory": null,
+                    "bonusParts": [
+                      {
+                        "bonusPart": {
+                          "id": "14dd14bb-c7c6-419e-a8b1-2b34183134cf",
+                          "question": "Bonus 3, part 1: name this synthetic thing.",
+                          "answer": "Bonus Answer 3.1",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6830,
+                        "order": 0
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "e1beda1b-be67-4ef4-a75c-e7eb10a1cc55",
+                          "question": "Bonus 3, part 3: name this synthetic thing.",
+                          "answer": "Bonus Answer 3.3",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6832,
+                        "order": 2
+                      },
+                      {
+                        "bonusPart": {
+                          "id": "7977330b-9d29-4237-8bf2-7d89d6d8c720",
+                          "question": "Bonus 3, part 2: name this synthetic thing.",
+                          "answer": "Bonus Answer 3.2",
+                          "source": null,
+                          "aiModel": null,
+                          "createdBy": null,
+                          "createdAt": null,
+                          "lastModifiedBy": null,
+                          "lastModifiedAt": null
+                        },
+                        "id": 6831,
+                        "order": 1
+                      }
+                    ],
+                    "source": null,
+                    "aiModel": null,
+                    "createdBy": null,
+                    "createdAt": null,
+                    "lastModifiedBy": null,
+                    "lastModifiedAt": null
+                  },
+                  "id": 6841,
+                  "order": 2
+                }
+              ]
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 4,
+          "currentRound": null,
+          "proctor": {
+            "gameOwner": true,
+            "guest": true,
+            "keycloakId": null,
+            "name": "Proctor",
+            "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+            "playerMode": "PROCTOR",
+            "playerSecret": "",
+            "playerStatus": "DISCONNECTED",
+            "userId": null
+          }
+        }
+      }
+    }
+  ]
+}
