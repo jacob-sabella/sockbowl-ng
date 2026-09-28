@@ -1,0 +1,21 @@
+.not-found {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: var(--spacing-xl, 2rem);
+  text-align: center;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+
+  h1 {
+    font-family: var(--font-display);
+  }
+
+  p {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+}
