@@ -39,6 +39,8 @@ export class PacketListComponent implements OnInit {
   packets: PacketSummary[] = [];
   difficulties: Difficulty[] = [];
   loading = true;
+  /** S4-13: set instead of quietly leaving `packets` at its last value when a page load fails. */
+  loadError: string | null = null;
 
   total = 0;
   pageIndex = 0;
@@ -94,6 +96,7 @@ export class PacketListComponent implements OnInit {
 
   load(): void {
     this.loading = true;
+    this.loadError = null;
     this.sockbowlQuestionsService.listPackets(this.buildFilter(), this.pageIndex, this.pageSize).subscribe({
       next: (page) => {
         this.packets = page.items;
@@ -103,10 +106,25 @@ export class PacketListComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
         this.loading = false;
+        // S4-13: a per-class state block replaces the snackbar for a page
+        // load failure (an action failure, e.g. delete, still gets one).
+        this.loadError = this.extractError(err);
       }
     });
+  }
+
+  /** S4-13: whether any filter is narrowing the empty result, so the empty state can tell "no packets yet" from "no matches". */
+  get hasActiveFilters(): boolean {
+    return this.showMineOnly || !!this.searchQuery.trim() || !!this.selectedDifficultyId;
+  }
+
+  clearFilters(): void {
+    this.searchQuery = '';
+    this.showMineOnly = false;
+    this.selectedDifficultyId = null;
+    this.pageIndex = 0;
+    this.load();
   }
 
   onSearchInput(value: string): void {

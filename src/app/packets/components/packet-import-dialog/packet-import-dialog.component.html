@@ -73,7 +73,7 @@
       @if ((result?.issues?.length ?? 0) > 0) {
         <div class="import-dialog__issues" data-testid="import-issues">
           @for (severity of severityOrder; track severity) {
-            @for (issue of issuesBySeverity(severity); track $index) {
+            @for (issue of issuesBySeverity(severity); track issueKey(issue)) {
               <div class="import-dialog__issue" [class]="'import-dialog__issue--' + severity.toLowerCase()">
                 <mat-icon aria-hidden="true">
                   {{ severity === 'ERROR' ? 'error' : severity === 'WARNING' ? 'warning' : 'info' }}
@@ -134,33 +134,42 @@
   }
 </mat-dialog-content>
 
+@if (dialogError) {
+  <!-- S4-14: a RATE_LIMITED/QUOTA_EXCEEDED failure's message, mirrored here (the snackbar times out; this doesn't). -->
+  <p class="import-dialog__error import-dialog__error--dialog" role="alert" data-testid="import-dialog-error">{{ dialogError }}</p>
+}
+
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-button [disabled]="previewing || importing" (click)="cancel()">Cancel</button>
   @if (step === 'input') {
     <button
       mat-raised-button
       color="primary"
       [disabled]="!canPreview"
+      [attr.aria-busy]="previewing ? 'true' : null"
       data-testid="import-preview-btn"
       (click)="preview()"
     >
       @if (previewing) {
         <mat-spinner diameter="18"></mat-spinner>
+        <span class="import-dialog__visually-hidden">Working…</span>
       } @else {
         Preview
       }
     </button>
   } @else {
-    <button mat-button (click)="backToInput()">Back</button>
+    <button mat-button [disabled]="previewing || importing" (click)="backToInput()">Back</button>
     <button
       mat-raised-button
       color="primary"
       [disabled]="!canImport"
+      [attr.aria-busy]="importing ? 'true' : null"
       data-testid="import-commit-btn"
       (click)="import()"
     >
       @if (importing) {
         <mat-spinner diameter="18"></mat-spinner>
+        <span class="import-dialog__visually-hidden">Working…</span>
       } @else {
         Import
       }

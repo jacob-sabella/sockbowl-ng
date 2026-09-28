@@ -26,6 +26,8 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { describeGraphqlError, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
+import { limitErrorFrom, notifyLimit } from '../../../core/http/limit-errors';
+import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 import { DraftEntitySource, PacketDraftStore } from './packet-draft-store';
 
 interface TossupDraft {
@@ -65,6 +67,14 @@ type SaveWorkItem =
   | { kind: 'bonus'; id: string }
   | { kind: 'part'; id: string; bonusId: string };
 
+/** S4-13: which per-class message/recovery the builder's initial load renders. */
+type PacketLoadErrorKind = 'not-found' | 'forbidden' | 'network';
+
+interface PacketLoadError {
+  kind: PacketLoadErrorKind;
+  message: string;
+}
+
 /**
  * Packet builder / editor (M3 plan 3.3.2). Loads the full packet graph, the
  * difficulty list, and the subcategory taxonomy on init. Every tossup,
@@ -90,6 +100,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   private packetAuthoring = inject(PacketAuthoringService);
   private snackBar = inject(MatSnackBar);
   private confirmDialog = inject(ConfirmDialogService);
+  private rateLimitState = inject(RateLimitStateService);
   auth = inject(AuthService);
 
   limits = PACKET_LIMITS;
@@ -97,6 +108,8 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   packetId = '';
   packet: AuthoringPacket | null = null;
   loading = true;
+  /** S4-13: set instead of `packet` staying null when the initial load fails, so the template can render a per-class state. */
+  loadError: PacketLoadError | null = null;
 
   /** The packet's last-known-good version, sent as `expectedVersion` on every content mutation (PB-18). */
   packetVersion = 0;
@@ -107,6 +120,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   staleDraftIds = new Set<string>();
 
   savingAll = false;
+  /** S4-06: 1-based index/total of the item currently in flight, shown as "Saving N of M…" on the sticky bar. */
+  saveAllCurrent = 0;
+  saveAllTotal = 0;
+
+  /** S4-05: entity ids with a Save mutation in flight, so a second click before the response lands is a no-op. */
+  savingTossupIds = new Set<string>();
+  savingBonusIds = new Set<string>();
+  savingPartIds = new Set<string>();
+
+  /** S4-06: the last Save-all failure's message, keyed by entity id, rendered inline on that card. Cleared on the next attempt to save that card. */
+  entitySaveErrors: Record<string, string> = {};
 
   /** Preview tab toggle (PB-07): swaps the editor cards for {@link PacketReadingViewComponent}. */
   showPreview = false;
@@ -165,7 +189,23 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
 
   ngOnInit(): void {
     this.packetId = this.route.snapshot.paramMap.get('id') || '';
+    this.loadPacket();
+  }
+
+  /**
+   * S4-13: the initial load, factored out of ngOnInit so {@link retryLoad}
+   * can call it again after a network/500 failure. A 404/403 renders a
+   * per-class state with no Retry (loading the same id again can't help);
+   * anything else renders "Couldn't load this packet" with Retry. Unlike
+   * the old behavior, a load failure never shows a generic snackbar here —
+   * the state block is the single source of truth for why the page is
+   * empty (H-06/S4-13: a NOT_FOUND-flavored snackbar text was previously
+   * shown for every failure, including ones that had nothing to do with
+   * deletion).
+   */
+  private loadPacket(): void {
     this.loading = true;
+    this.loadError = null;
 
     forkJoin({
       packet: this.sockbowlQuestionsService.getPacketById(this.packetId),
@@ -182,10 +222,27 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.loading = false;
       },
       error: (err) => {
-        this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
         this.loading = false;
+        this.loadError = this.classifyLoadError(err);
       }
     });
+  }
+
+  /** S4-13: retry for the network/500 load-error state. */
+  retryLoad(): void {
+    this.loadPacket();
+  }
+
+  private classifyLoadError(err: unknown): PacketLoadError {
+    if (err instanceof GraphqlRequestError) {
+      if (err.classification === 'NOT_FOUND') {
+        return { kind: 'not-found', message: "This packet doesn't exist or was deleted" };
+      }
+      if (err.classification === 'FORBIDDEN') {
+        return { kind: 'forbidden', message: "You don't have access to this packet" };
+      }
+    }
+    return { kind: 'network', message: "Couldn't load this packet" };
   }
 
   /**
@@ -376,6 +433,42 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     return this.staleDraftIds.has(id);
   }
 
+  isSavingTossup(id: string): boolean {
+    return this.savingTossupIds.has(id);
+  }
+
+  isSavingBonus(id: string): boolean {
+    return this.savingBonusIds.has(id);
+  }
+
+  isSavingPart(id: string): boolean {
+    return this.savingPartIds.has(id);
+  }
+
+  /** S4-16: true while any save (a single card, or Save all) is in flight, so drag/reorder can refuse to start. */
+  get anySavingInFlight(): boolean {
+    return (
+      this.savingAll ||
+      this.savingName ||
+      this.savingTossupIds.size > 0 ||
+      this.savingBonusIds.size > 0 ||
+      this.savingPartIds.size > 0
+    );
+  }
+
+  /**
+   * S4-15: an admin (or other `packet:manage-any` holder) editing someone
+   * else's packet sees whose it is. Null for the owner themself, and for an
+   * ownerless/redacted-owner packet with no display name to show.
+   */
+  get ownerDisplayName(): string | null {
+    const owner = this.packet?.owner;
+    if (!owner?.id || !owner.name) {
+      return null;
+    }
+    return owner.id === this.auth.getCurrentUserId() ? null : owner.name;
+  }
+
   /* --------------------------- validation issue links ------------------------ */
 
   /**
@@ -401,9 +494,10 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   onTossupPanelExpanded(id: string): void {
-    if (this.pendingFocusEntityId === id) {
+    if (this.pendingFocusEntityId && this.expandedTossupId === id) {
+      const target = this.pendingFocusEntityId;
       this.pendingFocusEntityId = null;
-      this.scrollAndFocusEntity(id);
+      this.scrollAndFocusEntity(target);
     }
   }
 
@@ -413,10 +507,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     }
   }
 
+  /**
+   * The pending focus target can be the bonus itself (a bonus-level
+   * validation issue) or one of its parts (a Save-all failure on a part,
+   * S4-06) — either way, the target is only reachable once *this* bonus's
+   * panel ({@link expandedBonusId}) is the one that just opened.
+   */
   onBonusPanelExpanded(id: string): void {
-    if (this.pendingFocusEntityId === id) {
+    if (this.pendingFocusEntityId && this.expandedBonusId === id) {
+      const target = this.pendingFocusEntityId;
       this.pendingFocusEntityId = null;
-      this.scrollAndFocusEntity(id);
+      this.scrollAndFocusEntity(target);
     }
   }
 
@@ -451,6 +552,9 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   saveName(): void {
+    if (this.savingName) {
+      return;
+    }
     const name = this.nameDraft.trim();
     if (!name) {
       this.snackBar.open('Packet name is required', 'Dismiss', { duration: 3000 });
@@ -487,10 +591,11 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     if (!this.packet) {
       return;
     }
+    const owner = this.ownerDisplayName;
     this.confirmDialog
       .confirm({
         title: `Delete packet "${this.packet.name}"?`,
-        message: 'This cannot be undone.',
+        message: owner ? `This cannot be undone. Owned by ${owner}.` : 'This cannot be undone.',
         confirmText: 'Delete',
         destructive: true
       })
@@ -620,7 +725,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
    * error. The up/down buttons remain for keyboard use.
    */
   dropTossup(event: CdkDragDrop<TossupElement[]>): void {
-    if (!this.packet || event.previousIndex === event.currentIndex) {
+    if (!this.packet || event.previousIndex === event.currentIndex || this.anySavingInFlight) {
       return;
     }
     const items = this.sortedTossups;
@@ -643,7 +748,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   dropBonus(event: CdkDragDrop<BonusElement[]>): void {
-    if (!this.packet || event.previousIndex === event.currentIndex) {
+    if (!this.packet || event.previousIndex === event.currentIndex || this.anySavingInFlight) {
       return;
     }
     const items = this.sortedBonuses;
@@ -666,7 +771,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   dropPart(be: BonusElement, event: CdkDragDrop<BonusPartElement[]>): void {
-    if (!this.packet || event.previousIndex === event.currentIndex) {
+    if (!this.packet || event.previousIndex === event.currentIndex || this.anySavingInFlight) {
       return;
     }
     const items = this.sortedParts(be);
@@ -694,11 +799,25 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     this.packetVersion = this.packetVersion + 1;
   }
 
-  /** Every mutation's error handler: a CONFLICT opens the persistent banner instead of a snackbar. */
+  /**
+   * Every mutation's error handler (HD: wires every §2 error class to one
+   * outcome). A CONFLICT opens the persistent banner instead of a snackbar.
+   * RATE_LIMITED, QUOTA_EXCEEDED, and BANNED go through M4's `notifyLimit`
+   * so the message includes the cooldown/quota/ban detail instead of the
+   * generic text `describeGraphqlError` would otherwise show — exactly one
+   * snackbar either way, never both.
+   */
   private handleMutationError(err: unknown): void {
-    if (err instanceof GraphqlRequestError && err.classification === 'CONFLICT') {
-      this.conflictBanner = true;
-      return;
+    if (err instanceof GraphqlRequestError) {
+      if (err.classification === 'CONFLICT') {
+        this.conflictBanner = true;
+        return;
+      }
+      const limitError = limitErrorFrom(err.classification, err.extensions);
+      if (limitError) {
+        notifyLimit(limitError, this.snackBar, this.rateLimitState);
+        return;
+      }
     }
     this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
   }
@@ -730,14 +849,24 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     );
   }
 
+  /** S4-05: a click while this tossup's own Save is already in flight is a no-op (the template also disables the button). */
   saveTossup(te: TossupElement): void {
+    if (this.savingTossupIds.has(te.tossup.id)) {
+      return;
+    }
+    this.savingTossupIds.add(te.tossup.id);
+    delete this.entitySaveErrors[te.tossup.id];
     this.saveTossupMutations(te.tossup.id).subscribe({
       next: () => {
+        this.savingTossupIds.delete(te.tossup.id);
         this.tossupDraftStore.markSaved(te.tossup.id);
         this.refetch();
         this.snackBar.open('Tossup saved', 'Dismiss', { duration: 2500 });
       },
-      error: (err) => this.handleMutationError(err)
+      error: (err) => {
+        this.savingTossupIds.delete(te.tossup.id);
+        this.handleMutationError(err);
+      }
     });
   }
 
@@ -879,14 +1008,24 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     );
   }
 
+  /** S4-05: a click while this bonus's own Save is already in flight is a no-op (the template also disables the button). */
   saveBonus(be: BonusElement): void {
+    if (this.savingBonusIds.has(be.bonus.id)) {
+      return;
+    }
+    this.savingBonusIds.add(be.bonus.id);
+    delete this.entitySaveErrors[be.bonus.id];
     this.saveBonusMutations(be.bonus.id).subscribe({
       next: () => {
+        this.savingBonusIds.delete(be.bonus.id);
         this.bonusDraftStore.markSaved(be.bonus.id);
         this.refetch();
         this.snackBar.open('Bonus saved', 'Dismiss', { duration: 2500 });
       },
-      error: (err) => this.handleMutationError(err)
+      error: (err) => {
+        this.savingBonusIds.delete(be.bonus.id);
+        this.handleMutationError(err);
+      }
     });
   }
 
@@ -1012,14 +1151,24 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       .pipe(tap(() => this.bumpLocalVersion()));
   }
 
+  /** S4-05: a click while this part's own Save is already in flight is a no-op (the template also disables the button). */
   savePart(be: BonusElement, pe: BonusPartElement): void {
+    if (this.savingPartIds.has(pe.bonusPart.id)) {
+      return;
+    }
+    this.savingPartIds.add(pe.bonusPart.id);
+    delete this.entitySaveErrors[pe.bonusPart.id];
     this.savePartMutations(be.bonus.id, pe.bonusPart.id).subscribe({
       next: () => {
+        this.savingPartIds.delete(pe.bonusPart.id);
         this.bonusPartDraftStore.markSaved(pe.bonusPart.id);
         this.refetch();
         this.snackBar.open('Bonus part saved', 'Dismiss', { duration: 2500 });
       },
-      error: (err) => this.handleMutationError(err)
+      error: (err) => {
+        this.savingPartIds.delete(pe.bonusPart.id);
+        this.handleMutationError(err);
+      }
     });
   }
 
@@ -1158,27 +1307,66 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       return;
     }
     this.savingAll = true;
+    this.saveAllTotal = worklist.length;
+    this.saveAllCurrent = 0;
+    this.entitySaveErrors = {};
     this.runSaveWorklist(worklist, 0);
   }
 
+  /**
+   * S4-06: sequential save, one item at a time, in packet order. On
+   * failure it stops (remaining dirty cards stay dirty), refetches, expands
+   * + scrolls + focuses the failing card and renders the error inline on
+   * it, and routes the failure through {@link handleMutationError} so a
+   * 429/QUOTA/BANNED response shows exactly one snackbar (via
+   * `notifyLimit`) instead of stacking a second generic one on top.
+   */
   private runSaveWorklist(items: SaveWorkItem[], index: number): void {
     if (index >= items.length) {
       this.savingAll = false;
+      this.saveAllTotal = 0;
+      this.saveAllCurrent = 0;
       this.refetch();
       this.snackBar.open('All changes saved', 'Dismiss', { duration: 2500 });
       return;
     }
-    this.saveOneEntity(items[index]).subscribe({
+    this.saveAllCurrent = index + 1;
+    const item = items[index];
+    this.saveOneEntity(item).subscribe({
       next: () => {
-        this.markEntitySaved(items[index]);
+        this.markEntitySaved(item);
         this.runSaveWorklist(items, index + 1);
       },
       error: (err) => {
         this.savingAll = false;
+        this.saveAllTotal = 0;
+        this.saveAllCurrent = 0;
         this.refetch();
+        this.entitySaveErrors[item.id] = this.extractError(err);
+        this.focusSaveWorkItem(item);
         this.handleMutationError(err);
       }
     });
+  }
+
+  /** S4-06: expands (if needed) and scrolls/focuses the card a failed Save-all item belongs to. A bonus part's target is its parent bonus panel. */
+  private focusSaveWorkItem(item: SaveWorkItem): void {
+    if (item.kind === 'tossup') {
+      const alreadyOpen = this.expandedTossupId === item.id;
+      this.expandedTossupId = item.id;
+      this.pendingFocusEntityId = item.id;
+      if (alreadyOpen) {
+        this.scrollAndFocusEntity(item.id);
+      }
+      return;
+    }
+    const bonusId = item.kind === 'bonus' ? item.id : item.bonusId;
+    const alreadyOpen = this.expandedBonusId === bonusId;
+    this.expandedBonusId = bonusId;
+    this.pendingFocusEntityId = item.id;
+    if (alreadyOpen) {
+      this.scrollAndFocusEntity(item.id);
+    }
   }
 
   /* --------------------------- taxonomy quick-add --------------------------- */

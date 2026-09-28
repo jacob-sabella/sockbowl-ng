@@ -1,6 +1,6 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
@@ -226,5 +226,67 @@ describe('PacketListComponent', () => {
     const filterArg = questionsSpy.listPackets.calls.mostRecent().args[0] as PacketFilter;
     expect(filterArg.mine).toBeTrue();
     expect(component.packets).toEqual([]);
+  });
+
+  describe('S4-13: load error and per-class empty states', () => {
+    it('a load failure sets loadError and renders a Retry state with no snackbar', () => {
+      configure(['packet:create'], 'user-1');
+      const snackBar = TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>;
+      snackBar.open.calls.reset();
+      questionsSpy.listPackets.and.returnValue(throwError(() => new Error('network down')));
+
+      component.load();
+      fixture.detectChanges();
+
+      expect(component.loadError).not.toBeNull();
+      expect(component.loading).toBeFalse();
+      expect(snackBar.open).not.toHaveBeenCalled();
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain("Couldn't load packets");
+      expect(fixture.nativeElement.querySelector('.packet-list__state--error button')).not.toBeNull();
+    });
+
+    it('Retry (re-calling load) clears loadError on success', () => {
+      configure(['packet:create'], 'user-1');
+      questionsSpy.listPackets.and.returnValue(throwError(() => new Error('boom')));
+      component.load();
+      expect(component.loadError).not.toBeNull();
+
+      questionsSpy.listPackets.and.returnValue(of(pageOf([ownedPacket])));
+      component.load();
+
+      expect(component.loadError).toBeNull();
+      expect(component.packets.length).toBe(1);
+    });
+
+    it('shows "No packets yet" with New Packet/Import when there are no filters and no packets', () => {
+      configure(['packet:create'], 'user-1');
+      questionsSpy.listPackets.and.returnValue(of(pageOf([])));
+      component.load();
+      fixture.detectChanges();
+
+      expect(component.hasActiveFilters).toBeFalse();
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('No packets yet');
+    });
+
+    it('shows "No packets match these filters" with Clear filters when a filter narrowed the result to nothing', () => {
+      configure(['packet:create'], 'user-1');
+      questionsSpy.listPackets.and.returnValue(of(pageOf([])));
+      component.showMineOnly = true;
+      component.load();
+      fixture.detectChanges();
+
+      expect(component.hasActiveFilters).toBeTrue();
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('No packets match these filters');
+
+      questionsSpy.listPackets.calls.reset();
+      questionsSpy.listPackets.and.returnValue(of(pageOf([ownedPacket])));
+      component.clearFilters();
+
+      expect(component.showMineOnly).toBeFalse();
+      expect(questionsSpy.listPackets).toHaveBeenCalled();
+    });
   });
 });

@@ -47,6 +47,25 @@
     margin: 0;
   }
 
+  /* S4-14: the RATE_LIMITED/QUOTA_EXCEEDED inline mirror of the notifyLimit snackbar, shown outside the scrolling content so it can't get scrolled out of view. */
+  &__error--dialog {
+    color: var(--error-text);
+    padding: 0 24px;
+  }
+
+  /* S4-14: "Working…" for aria-busy Preview/Import buttons — visible to assistive tech only, same pattern as a standard sr-only utility. */
+  &__visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   &__counts {
     display: flex;
     gap: 8px;
