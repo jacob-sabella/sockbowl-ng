@@ -168,5 +168,85 @@ describe('PacketSearchComponent', () => {
       fixture.detectChanges();
       expect(button.disabled).toBeTrue();
     });
+
+    // NG-V1-03: 'import-ip' and 'ai-concurrency' are policies the questions
+    // backend can also reject these same two actions under, distinct from
+    // 'import'/'ai-generate' (plan §2.1) -- a cooldown on either must lock
+    // the same button.
+    it('also disables Generate while the ai-concurrency policy cools down', () => {
+      configure(['question:generate']);
+      const rateLimitState = TestBed.inject(RateLimitStateService);
+      component.generateTopic = 'Topic';
+      component.apiKey = 'sk-test';
+      component.selectedModel = 'gpt-5';
+      fixture.detectChanges();
+
+      const button = (fixture.nativeElement as HTMLElement).querySelector('.generate-btn') as HTMLButtonElement;
+      expect(button.disabled).toBeFalse();
+
+      rateLimitState.setCooldown('ai-concurrency', 5);
+      fixture.detectChanges();
+      expect(button.disabled).toBeTrue();
+    });
+
+    it('also disables Import while the import-ip policy cools down', () => {
+      configure([]);
+      const rateLimitState = TestBed.inject(RateLimitStateService);
+      component.availTossups = 5;
+      fixture.detectChanges();
+
+      const button = (fixture.nativeElement as HTMLElement).querySelector('.qb-import-btn') as HTMLButtonElement;
+      expect(button.disabled).toBeFalse();
+
+      rateLimitState.setCooldown('import-ip', 5);
+      fixture.detectChanges();
+      expect(button.disabled).toBeTrue();
+    });
+  });
+
+  // NG-V1-01: a 403 {error:'banned'}/{error:'ip_banned'} is already surfaced
+  // by the global RateLimitInterceptor (plan §2.9); these two flows must not
+  // show a second, component-level snackbar for the same rejection.
+  describe('NG-V1-01 banned/ip_banned rejections (no double snackbar)', () => {
+    it('opens no snackbar when AI generation 403s with {error: "banned"}', () => {
+      configure(['question:generate']);
+      questions['generatePacket'] = jasmine.createSpy('generatePacket').and.returnValue(
+        throwError(() => ({ status: 403, error: { error: 'banned' } }))
+      );
+      component.generateTopic = 'Topic';
+      component.apiKey = 'sk-test';
+      component.selectedModel = 'gpt-5';
+
+      component.generateAIPacket();
+
+      expect(snackOpen).not.toHaveBeenCalled();
+      expect(component.isGenerating).toBeFalse();
+    });
+
+    it('opens no snackbar when import-random 403s with {error: "ip_banned"}', () => {
+      configure([]);
+      questions['importQbreaderRandom'] = jasmine.createSpy('importQbreaderRandom').and.returnValue(
+        throwError(() => ({ status: 403, error: { error: 'ip_banned' } }))
+      );
+
+      component.generateFromBank();
+
+      expect(snackOpen).not.toHaveBeenCalled();
+      expect(component.qbImporting).toBeFalse();
+    });
+
+    it('still shows the generic error for an unrelated 403 (not a ban)', () => {
+      configure(['question:generate']);
+      questions['generatePacket'] = jasmine.createSpy('generatePacket').and.returnValue(
+        throwError(() => ({ status: 403, error: { error: 'forbidden' } }))
+      );
+      component.generateTopic = 'Topic';
+      component.apiKey = 'sk-test';
+      component.selectedModel = 'gpt-5';
+
+      component.generateAIPacket();
+
+      expect(snackOpen).toHaveBeenCalled();
+    });
   });
 });

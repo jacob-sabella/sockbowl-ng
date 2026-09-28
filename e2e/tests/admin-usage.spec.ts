@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../../tests-auth/helpers/login.js';
+import { getDemoAccessToken } from '../harness/auth.js';
+import { HTTP_BASE } from '../harness/config.js';
+import { postFrom } from '../harness/rest.js';
 
 // M4 plan WP-E1: live proof of the admin usage/quota view (M4-AD-02) against
 // a real stack. Two signed-in browser contexts play the two roles the plan's
@@ -106,40 +109,98 @@ test.describe('M4 admin usage view (live)', () => {
     const recovered = await attemptHostSolo(playerPage);
     expect(recovered.result, `expected the cleared override to let this create through: ${JSON.stringify(recovered)}`).toBe('ok');
 
-    // ---- IP ban round trip ----
-    // Deliberately a TEST-NET-3 (RFC 5737) address, not player2's real IP.
-    // This stack runs with `network_mode: host` on a single machine, so
-    // every Playwright context here — admin, player, and the harness's own
-    // REST calls — is likely to appear to the backend as the same address.
-    // `RequestGuardFilter`'s IP-ban check has no admin-route exemption
-    // (plan §2.1), so banning the real shared address would 403 every
-    // request this test makes afterwards, including the admin's own
-    // "remove ban" call: a self-inflicted deadlock, not a useful test. This
-    // proves the admin UI's create → list → remove round trip; live
-    // block/recover behavior for a banned IP is already covered by G4's
-    // `IpBanIT`, which simulates a distinct remote address at the servlet
-    // filter level.
-    const decoyCidr = '203.0.113.77/32';
-    row = await openPlayer2Detail(adminPage);
-    const ipRow = row.locator('xpath=following-sibling::tr[1]').locator('.admin-usage__ip-row').first();
-    await expect(ipRow).toBeVisible({ timeout: 20_000 });
-    await ipRow.getByRole('button', { name: 'Ban this IP' }).click();
+    // ---- IP ban round trip (proves enforcement, not just the admin UI) ----
+    // This stack runs with `network_mode: host` on a single machine, so both
+    // browser contexts above (admin, player) are likely to appear to the
+    // backend as the same loopback address. Rather than ban that shared
+    // address -- `RequestGuardFilter`'s IP-ban check has no admin-route
+    // exemption (plan §2.1), so that would 403 every request this test makes
+    // afterwards, including the admin's own "remove ban" call: a
+    // self-inflicted deadlock, not a useful test -- this bans a second,
+    // distinct loopback address (127.0.0.2) that only `postFrom` below ever
+    // binds an outbound connection to (`http.Agent({ localAddress })`,
+    // `harness/rest.ts`). 127.0.0.0/8 is loopback in full, so this needs no
+    // extra host setup. The admin's own browser stays on 127.0.0.1
+    // (`APP_URL`, untouched here), so it's a genuinely different client as
+    // far as the backend's IP-keyed ban/limit state is concerned.
+    const bannedIp = '127.0.0.2';
+    const bannedCidr = `${bannedIp}/32`;
+    const bannedClientBody = {
+      gameSettings: { gameMode: 'QUIZ_BOWL_CLASSIC', proctorType: 'ONLINE_PROCTOR', bonusesEnabled: true },
+    };
+    const createFromBannedIp = () =>
+      postFrom(`${HTTP_BASE}/api/v1/session/create-new-game-session`, bannedClientBody, bannedIp, player2Token);
 
+    // Authenticate this raw client as player2 too (not a plain guest fetch),
+    // so a create it makes is keyed by player2's own `sub` -- same as the
+    // hosted-sessions/quota state this spec has already been exercising --
+    // and, one call first, so 127.0.0.2 has a chance to land in player2's
+    // `usage:{sub}:ips` (plan §2.1) before the detail view below is opened.
+    // Best-effort: `UsageTracker.touch` is throttled server-side, so this can
+    // race the detail fetch and simply not show up yet; the fallback below
+    // (typing the CIDR straight into the dialog) bans the same address
+    // regardless of whether it does.
+    const player2Token = await getDemoAccessToken('player2');
+    await createFromBannedIp().catch(() => { /* best-effort IP-tracking primer */ });
+
+    row = await openPlayer2Detail(adminPage);
+    const bannedIpRow = row.locator('xpath=following-sibling::tr[1]')
+      .locator('.admin-usage__ip-row', { hasText: bannedIp });
     const banDialog = adminPage.locator('mat-dialog-container');
-    await expect(banDialog).toBeVisible();
+    if (await bannedIpRow.count()) {
+      await bannedIpRow.getByRole('button', { name: 'Ban this IP' }).click();
+      await expect(banDialog).toBeVisible();
+    } else {
+      // 127.0.0.2 didn't land in "Last IPs" in time -- ban it directly by
+      // typing the CIDR into the dialog instead (any row's button opens the
+      // same dialog; its pre-filled value is simply overwritten below).
+      const anyIpRow = row.locator('xpath=following-sibling::tr[1]').locator('.admin-usage__ip-row').first();
+      await expect(anyIpRow).toBeVisible({ timeout: 20_000 });
+      await anyIpRow.getByRole('button', { name: 'Ban this IP' }).click();
+      await expect(banDialog).toBeVisible();
+    }
     const cidrInput = banDialog.locator('input[name="cidr"]');
     await cidrInput.fill('');
-    await cidrInput.fill(decoyCidr);
-    await banDialog.locator('input[name="reason"]').fill('M4 WP-E1 e2e round trip (decoy address, see spec comment)');
+    await cidrInput.fill(bannedCidr);
+    await banDialog.locator('input[name="reason"]').fill('M4 WP-FIX-NG e2e IP ban enforcement (127.0.0.2, see spec comment)');
     await banDialog.getByRole('button', { name: 'Ban IP' }).click();
     await expect(adminPage.getByText('IP banned')).toBeVisible({ timeout: 15_000 });
 
+    // ---- enforcement: 127.0.0.2 is rejected, the admin (127.0.0.1) is not ----
+    // Each game instance reloads `ipban:all` into memory every 15s (plan
+    // §2.1) rather than checking Postgres/Redis per request, so the ban
+    // isn't necessarily live the instant the "Ban IP" call above resolves.
+    // Poll for up to twice that refresh window. The ban check runs before
+    // the rate limiter in `RequestGuardFilter`'s order (plan §2.2), so this
+    // keeps returning 403 regardless of player2's session-create bucket
+    // state -- polling it here never risks tripping a 429 instead.
+    await expect(async () => {
+      const res = await createFromBannedIp();
+      expect(res.status).toBe(403);
+      expect(res.body?.error).toBe('ip_banned');
+    }).toPass({ timeout: 30_000, intervals: [1_000] });
+
+    // The admin's own session (a different, unbanned address) is unaffected
+    // by the ban above -- proven by every admin action from here on
+    // (navigation, the unban click, its toast) continuing to succeed exactly
+    // as it did before the ban was placed.
+
+    // ---- remove the ban; the same client recovers ----
     await adminPage.goto('/admin/bans');
-    const banItem = adminPage.locator('.admin-bans__item', { hasText: '203.0.113.77' });
+    const banItem = adminPage.locator('.admin-bans__item', { hasText: bannedIp });
     await expect(banItem).toBeVisible({ timeout: 20_000 });
     await banItem.getByRole('button', { name: 'Remove IP ban' }).click();
     await expect(adminPage.getByText('IP ban removed')).toBeVisible({ timeout: 15_000 });
-    await expect(adminPage.locator('.admin-bans__item', { hasText: '203.0.113.77' })).toHaveCount(0);
+    await expect(adminPage.locator('.admin-bans__item', { hasText: bannedIp })).toHaveCount(0);
+
+    // Once unbanned, the request falls through to the ordinary session-create
+    // rate limit again, so this poll's timeout is generous enough to also
+    // cover that bucket refilling (capacity 2 / 20s in this overlay) on top
+    // of the 15s ban-cache refresh above, not just the ban check itself.
+    await expect(async () => {
+      const res = await createFromBannedIp();
+      expect(res.status).toBe(200);
+    }).toPass({ timeout: 45_000, intervals: [2_000] });
 
     await adminCtx.close();
     await playerCtx.close();

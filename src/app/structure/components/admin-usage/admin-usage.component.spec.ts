@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -135,6 +135,50 @@ describe('AdminUsageComponent', () => {
     component.toggleDetail(bannedRow);
     expect(component.expandedSub).toBeNull();
     expect(component.detail).toBeNull();
+  });
+
+  // NG-V1-04: A's request goes out first but its response arrives last,
+  // after B's -- a classic slow-first-request race. A's stale response must
+  // never overwrite B's, which is the row still actually expanded.
+  it('ignores a stale detail response for a row that is no longer expanded', () => {
+    usageServiceSpy = jasmine.createSpyObj('UsageService', [
+      'list', 'detail', 'global', 'events', 'setQuotaOverride', 'resetUsage',
+    ]);
+    usageServiceSpy.list.and.returnValue(of(page));
+    usageServiceSpy.global.and.returnValue(
+      of({ aiServerKey: { used: 10, limit: 200, resetsAt: null }, activeHostedSessions: 2, topGuestIps: [], rejectionsLastHour: 0 })
+    );
+    usageServiceSpy.events.and.returnValue(of([]));
+    const detailA: UserUsageDetail = { ...detail, keycloakId: 'user-1' };
+    const detailB: UserUsageDetail = { ...detail, keycloakId: 'user-2' };
+    const subA = new Subject<UserUsageDetail>();
+    const subB = new Subject<UserUsageDetail>();
+    usageServiceSpy.detail.and.callFake((sub: string) => (sub === 'user-1' ? subA : subB).asObservable());
+    banServiceSpy = jasmine.createSpyObj('BanService', ['createBan', 'createIpBan']);
+    dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+
+    TestBed.configureTestingModule({
+      imports: [AdminUsageComponent],
+      providers: [
+        { provide: UsageService, useValue: usageServiceSpy },
+        { provide: BanService, useValue: banServiceSpy },
+        { provide: MatDialog, useValue: dialogSpy },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+      ],
+    });
+    fixture = TestBed.createComponent(AdminUsageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const rowB: UserUsageSummary = { ...bannedRow, keycloakId: 'user-2', username: 'bob' };
+    component.toggleDetail(bannedRow); // expands A ('user-1'), fires its request
+    component.toggleDetail(rowB);      // switches to B ('user-2') before A resolves
+
+    subB.next(detailB); // B's response arrives first
+    subA.next(detailA); // A's response arrives late, after the switch to B
+
+    expect(component.expandedSub).toBe('user-2');
+    expect(component.detail).toEqual(detailB);
   });
 
   it('reset calls the service with the metric and refreshes the list', () => {
@@ -276,5 +320,86 @@ describe('AdminUsageComponent', () => {
     expect(component.pageIndex).toBe(2);
     expect(component.pageSize).toBe(50);
     expect(usageServiceSpy.list).toHaveBeenCalledWith(2, 50, undefined, 'lastSeen');
+  });
+
+  // NG-V1-01: a 429 or a 403 banned/ip_banned rejection on one of THIS
+  // component's own admin actions is already surfaced by the global
+  // RateLimitInterceptor (plan §2.9); these handlers must not show a second,
+  // generic "Failed to..." snackbar for the same rejection.
+  //
+  // `AdminUsageComponent` is standalone and imports `MatSnackBarModule`
+  // directly, and that module's own `@NgModule` `providers: [MatSnackBar]`
+  // (see its compiled declaration) gives every component that imports it a
+  // fresh `MatSnackBar` scoped to that component's own injector -- so a
+  // `{ provide: MatSnackBar, useValue: ... }` override registered at the
+  // TestBed root (as `configure()` does, and as the sibling
+  // `packet-search.component.spec.ts` relies on for its own, *non*-standalone
+  // component) is shadowed and never reaches `this.snackBar` here. Spying
+  // directly on the component's own instance sidesteps that shadowing
+  // instead of fighting it.
+  describe('NG-V1-01 isLimitHandled: no duplicate snackbar for 429/403-ban', () => {
+    function spyOnOwnSnackBar(): jasmine.Spy {
+      return spyOn((component as any).snackBar, 'open');
+    }
+
+    it('editQuota: no "Failed to update quota" snackbar on a 429', () => {
+      configure();
+      dialogSpy.open.and.returnValue({ afterClosed: () => of({ limit: 30 }) } as any);
+      usageServiceSpy.setQuotaOverride.and.returnValue(throwError(() => ({ status: 429 })));
+      const open = spyOnOwnSnackBar();
+
+      component.editQuota(bannedRow, bannedRow.counters[0]);
+
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('resetUsage: no "Failed to reset usage" snackbar on a 403 ip_banned', () => {
+      configure();
+      usageServiceSpy.resetUsage.and.returnValue(
+        throwError(() => ({ status: 403, error: { error: 'ip_banned' } }))
+      );
+      const open = spyOnOwnSnackBar();
+
+      component.resetUsage(bannedRow, 'ai.generations');
+
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('banUser: no "Failed to ban user" snackbar on a 403 banned', () => {
+      configure();
+      dialogSpy.open.and.returnValue({
+        afterClosed: () => of({ bannedKeycloakId: 'user-1', reason: 'x', expiresAt: null }),
+      } as any);
+      banServiceSpy.createBan.and.returnValue(throwError(() => ({ status: 403, error: { error: 'banned' } })));
+      const open = spyOnOwnSnackBar();
+
+      component.banUser(bannedRow);
+
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('banIp: no "Failed to ban IP" snackbar on a 429', () => {
+      configure();
+      dialogSpy.open.and.returnValue({
+        afterClosed: () => of({ cidr: '203.0.113.5/32', reason: undefined, ttlSeconds: 3600 }),
+      } as any);
+      banServiceSpy.createIpBan.and.returnValue(throwError(() => ({ status: 429 })));
+      const open = spyOnOwnSnackBar();
+
+      component.banIp('203.0.113.5');
+
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('still shows "Failed to update quota" for an unrelated error (e.g. 500)', () => {
+      configure();
+      dialogSpy.open.and.returnValue({ afterClosed: () => of({ limit: 30 }) } as any);
+      usageServiceSpy.setQuotaOverride.and.returnValue(throwError(() => ({ status: 500 })));
+      const open = spyOnOwnSnackBar();
+
+      component.editQuota(bannedRow, bannedRow.counters[0]);
+
+      expect(open).toHaveBeenCalledWith('Failed to update quota', 'Dismiss', jasmine.anything());
+    });
   });
 });
