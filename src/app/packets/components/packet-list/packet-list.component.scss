@@ -207,35 +207,46 @@
     min-width: 0;
   }
 
+  /*
+   * AY: an opaque `--surface` fill, not a translucent tint. The row itself
+   * (`.packet-list__item`) is `--surface-hover`, and the `-text` tokens
+   * measure under 4.5:1 for 12px chip text against `--surface-hover` (and
+   * further under it once a status tint is layered on top) in several
+   * themes; `--surface` is the one background every `-text` token was
+   * proven against (audit/m5/s4 contrast check) and clears AA everywhere.
+   */
   &__item-chip {
     font-size: var(--text-xs);
     padding: 2px 8px;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+    background: var(--surface);
     color: var(--accent-primary-text);
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
   }
 
   &__item-chip--visibility {
-    background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+    background: var(--surface);
     color: var(--text-secondary, var(--text-muted));
     border-color: var(--border-subtle);
   }
 
   &__item-chip--draft {
-    background: color-mix(in srgb, var(--warning) 18%, transparent);
+    background: var(--surface);
     color: var(--warning-text);
+    border-color: var(--warning-text);
   }
 
   &__item-chip--playable {
-    background: color-mix(in srgb, var(--success) 16%, transparent);
+    background: var(--surface);
     color: var(--success-text);
+    border-color: var(--success-text);
   }
 
   &__item-chip--unplayable {
-    background: color-mix(in srgb, var(--error) 16%, transparent);
+    background: var(--surface);
     color: var(--error-text);
+    border-color: var(--error-text);
   }
 
   &__item-counts {

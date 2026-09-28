@@ -1,6 +1,7 @@
-import { Component, OnInit, ChangeDetectionStrategy, HostListener, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { switchMap, tap } from 'rxjs/operators';
@@ -101,6 +102,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   private snackBar = inject(MatSnackBar);
   private confirmDialog = inject(ConfirmDialogService);
   private rateLimitState = inject(RateLimitStateService);
+  private liveAnnouncer = inject(LiveAnnouncer);
   auth = inject(AuthService);
 
   limits = PACKET_LIMITS;
@@ -186,6 +188,22 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   taxonomyNewCategoryName = '';
   taxonomyNewSubcategoryName = '';
   private taxonomyTarget: ((subcategoryId: string) => void) | null = null;
+  /** S4-17: the element that opened the dialog (a "Create new subcategory" icon button), so focus can return to it on close. */
+  private taxonomyTriggerEl: HTMLElement | null = null;
+
+  /**
+   * S4-17: the taxonomy overlay is a hand-rolled dialog (no MatDialog/
+   * cdkTrapFocus — see H-02), so moving focus in has to happen once the
+   * `@if` actually renders it. A `ViewChild` setter fires exactly then,
+   * synchronously with change detection, which a `ngOnChanges`/`ngOnInit`
+   * hook on the component itself cannot (they only see `taxonomyFormOpen`
+   * flip, not the child's presence in the DOM).
+   */
+  @ViewChild('taxonomyDialog', { read: ElementRef }) set taxonomyDialogRef(ref: ElementRef<HTMLElement> | undefined) {
+    if (ref) {
+      queueMicrotask(() => this.focusFirstFocusable(ref.nativeElement));
+    }
+  }
 
   ngOnInit(): void {
     this.packetId = this.route.snapshot.paramMap.get('id') || '';
@@ -897,15 +915,22 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       });
   }
 
+  /** S4-16/S4-19: the keyboard/header reorder path — same guard as the drag drop lists, and a live-region announcement (S4-19) since the mover may be a collapsed header button, not just the always-visible drag handle. */
   moveTossup(te: TossupElement, delta: number): void {
+    if (this.anySavingInFlight) {
+      return;
+    }
     const newOrder = te.order + delta;
     if (newOrder < 0 || newOrder >= this.sortedTossups.length) {
       return;
     }
+    const fromPosition = te.order + 1;
+    const toPosition = newOrder + 1;
     this.packetAuthoring.reorderTossup(this.packetId, te.tossup.id, newOrder, this.packetVersion).subscribe({
       next: () => {
         this.bumpLocalVersion();
         this.refetch();
+        this.liveAnnouncer.announce(`Tossup ${fromPosition} moved to position ${toPosition}`, 'polite');
       },
       error: (err) => this.handleMutationError(err)
     });
@@ -1056,15 +1081,22 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       });
   }
 
+  /** S4-16/S4-19: see {@link moveTossup}. */
   moveBonus(be: BonusElement, delta: number): void {
+    if (this.anySavingInFlight) {
+      return;
+    }
     const newOrder = be.order + delta;
     if (newOrder < 0 || newOrder >= this.sortedBonuses.length) {
       return;
     }
+    const fromPosition = be.order + 1;
+    const toPosition = newOrder + 1;
     this.packetAuthoring.reorderBonus(this.packetId, be.bonus.id, newOrder, this.packetVersion).subscribe({
       next: () => {
         this.bumpLocalVersion();
         this.refetch();
+        this.liveAnnouncer.announce(`Bonus ${fromPosition} moved to position ${toPosition}`, 'polite');
       },
       error: (err) => this.handleMutationError(err)
     });
@@ -1371,7 +1403,9 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
 
   /* --------------------------- taxonomy quick-add --------------------------- */
 
+  /** S4-17: captures the trigger (the "Create new subcategory" icon button) so {@link closeTaxonomyForm} can return focus to it. */
   openTaxonomyForm(setter: (subcategoryId: string) => void): void {
+    this.taxonomyTriggerEl = document.activeElement as HTMLElement | null;
     this.taxonomyFormOpen = true;
     this.taxonomyTarget = setter;
     this.taxonomyNewCategoryId = null;
@@ -1380,8 +1414,57 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   cancelTaxonomyForm(): void {
-    this.taxonomyFormOpen = false;
     this.taxonomyTarget = null;
+    this.closeTaxonomyForm();
+  }
+
+  /** S4-17: closes the dialog and returns focus to whatever opened it (Cancel, Escape, or a successful Create). */
+  private closeTaxonomyForm(): void {
+    this.taxonomyFormOpen = false;
+    const trigger = this.taxonomyTriggerEl;
+    this.taxonomyTriggerEl = null;
+    if (trigger) {
+      queueMicrotask(() => trigger.focus());
+    }
+  }
+
+  /**
+   * S4-17: a manual focus trap for the hand-rolled taxonomy dialog (no
+   * cdkTrapFocus — see H-02/openTaxonomyForm's doc comment). Wraps Tab at
+   * the last focusable element and Shift+Tab at the first.
+   */
+  /** Bound to `(keydown.tab)`, whose Angular template typing is the plain `Event` its filter dispatches from, not `KeyboardEvent`. */
+  onTaxonomyDialogTab(domEvent: Event): void {
+    const event = domEvent as KeyboardEvent;
+    const container = event.currentTarget as HTMLElement;
+    const focusable = this.getFocusableElements(container);
+    if (!focusable.length) {
+      event.preventDefault();
+      container.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private focusFirstFocusable(container: HTMLElement): void {
+    const focusable = this.getFocusableElements(container);
+    (focusable[0] ?? container).focus();
+  }
+
+  private getFocusableElements(container: HTMLElement): HTMLElement[] {
+    return Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(el => el.offsetParent !== null);
   }
 
   submitTaxonomyForm(): void {
@@ -1403,7 +1486,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       this.packetAuthoring.createSubcategory(subName, categoryId).subscribe({
         next: (sub) => {
           this.taxonomySubmitting = false;
-          this.taxonomyFormOpen = false;
+          this.closeTaxonomyForm();
           this.allSubcategories.push(sub);
           this.rebuildSubcategoryGroups();
           if (this.taxonomyTarget) {

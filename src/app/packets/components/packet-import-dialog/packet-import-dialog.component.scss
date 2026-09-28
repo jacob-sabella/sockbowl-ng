@@ -72,17 +72,23 @@
     gap: 8px;
   }
 
+  /*
+   * AY: `--accent-primary-text` (not the raw `--accent-primary` fill, which
+   * isn't tuned for 4.5:1 text use) on an opaque `--surface`, not a
+   * translucent tint — see packet-builder.component.scss's &__chip for the
+   * same fix and why.
+   */
   &__count-chip {
     font-size: var(--text-sm);
     padding: 2px 10px;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
-    color: var(--accent-primary);
+    background: var(--surface);
+    color: var(--accent-primary-text);
     border: 1px solid var(--border-subtle);
   }
 
   &__no-issues {
-    color: var(--success);
+    color: var(--success-text);
     margin: 0;
   }
 

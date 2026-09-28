@@ -1,8 +1,9 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Subject, of, throwError } from 'rxjs';
 
 import { PacketBuilderComponent } from './packet-builder.component';
@@ -56,6 +57,7 @@ describe('PacketBuilderComponent', () => {
   let snackBarSpy: jasmine.SpyObj<MatSnackBar>;
   let routerSpy: jasmine.SpyObj<Router>;
   let pendingPacketSpy: jasmine.SpyObj<PendingPacketService>;
+  let liveAnnouncerSpy: jasmine.SpyObj<LiveAnnouncer>;
 
   function configure(
     packet: AuthoringPacket,
@@ -89,6 +91,8 @@ describe('PacketBuilderComponent', () => {
     snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
     pendingPacketSpy = jasmine.createSpyObj('PendingPacketService', ['set', 'get', 'clear']);
+    liveAnnouncerSpy = jasmine.createSpyObj('LiveAnnouncer', ['announce']);
+    liveAnnouncerSpy.announce.and.returnValue(Promise.resolve());
 
     TestBed.configureTestingModule({
       declarations: [PacketBuilderComponent],
@@ -101,6 +105,7 @@ describe('PacketBuilderComponent', () => {
         { provide: MatSnackBar, useValue: snackBarSpy },
         { provide: Router, useValue: routerSpy },
         { provide: PendingPacketService, useValue: pendingPacketSpy },
+        { provide: LiveAnnouncer, useValue: liveAnnouncerSpy },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (key: string) => (key === 'id' ? 'p1' : null) } } } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -1111,6 +1116,130 @@ describe('PacketBuilderComponent', () => {
       configure(makePacket());
       const handle = fixture.nativeElement.querySelector('.packet-builder__tossups [cdkDrag]');
       expect(handle).not.toBeNull();
+    });
+  });
+
+  describe('S4-19: keyboard-reachable reorder', () => {
+    it('the collapsed tossup header exposes a focusable Move up / Move down pair, not just the drag handle', () => {
+      configure(makePacket());
+      const up = fixture.nativeElement.querySelector('.packet-builder__tossups .packet-builder__reorder-btn[aria-label="Move tossup 1 up"]');
+      const down = fixture.nativeElement.querySelector('.packet-builder__tossups .packet-builder__reorder-btn[aria-label="Move tossup 1 down"]');
+      expect(up).not.toBeNull();
+      expect(down).not.toBeNull();
+      expect(up.tagName.toLowerCase()).toBe('button');
+    });
+
+    it('the first item\'s Move up and the last item\'s Move down are disabled', () => {
+      configure(makePacket());
+      const up = fixture.nativeElement.querySelector('.packet-builder__reorder-btn[aria-label="Move tossup 1 up"]');
+      const down = fixture.nativeElement.querySelector('.packet-builder__reorder-btn[aria-label="Move tossup 2 down"]');
+      expect(up.disabled).toBeTrue();
+      expect(down.disabled).toBeTrue();
+    });
+
+    it('moveTossup is ignored while any save is in flight', () => {
+      configure(makePacket());
+      component.savingTossupIds.add('t2');
+
+      component.moveTossup(component.sortedTossups[0], 1);
+
+      expect(authoringSpy.reorderTossup).not.toHaveBeenCalled();
+    });
+
+    it('moveTossup announces the new position on success', () => {
+      configure(makePacket());
+      authoringSpy.reorderTossup.and.returnValue(of('t1'));
+
+      component.moveTossup(component.sortedTossups[0], 1);
+
+      expect(liveAnnouncerSpy.announce).toHaveBeenCalledWith('Tossup 1 moved to position 2', 'polite');
+    });
+
+    it('moveBonus is ignored while Save all is running', () => {
+      configure(makePacket());
+      component.savingAll = true;
+
+      component.moveBonus(component.sortedBonuses[0], 1);
+
+      expect(authoringSpy.reorderBonus).not.toHaveBeenCalled();
+    });
+
+    it('moveBonus announces the new position on success', () => {
+      configure(makePacket({
+        bonuses: [
+          { id: 1, order: 0, bonus: { id: 'b1', preamble: 'P1', remoteId: '', subcategory: null as any, bonusParts: [] } },
+          { id: 2, order: 1, bonus: { id: 'b2', preamble: 'P2', remoteId: '', subcategory: null as any, bonusParts: [] } }
+        ]
+      } as any));
+      authoringSpy.reorderBonus.and.returnValue(of('b1'));
+
+      component.moveBonus(component.sortedBonuses[0], 1);
+
+      expect(liveAnnouncerSpy.announce).toHaveBeenCalledWith('Bonus 1 moved to position 2', 'polite');
+    });
+  });
+
+  describe('S4-18: heading order', () => {
+    it('the Tossups and Bonuses sections are real h2 headings under the packet name h1, not a skipped h1 -> h4', () => {
+      configure(makePacket());
+      const h1 = fixture.nativeElement.querySelectorAll('h1');
+      const h2 = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((el: any) => el.textContent.trim());
+
+      expect(h1.length).toBe(1);
+      expect(h2).toContain('Tossups');
+      expect(h2).toContain('Bonuses');
+    });
+
+    it('the readiness line is a polite live region', () => {
+      configure(makePacket());
+      const validation = fixture.nativeElement.querySelector('.packet-builder__validation');
+      expect(validation.getAttribute('role')).toBe('status');
+    });
+  });
+
+  describe('S4-17: the "New subcategory" overlay behaves like a dialog', () => {
+    it('is marked up as a modal dialog labelled by its own heading', () => {
+      configure(makePacket());
+      component.openTaxonomyForm(() => undefined);
+      fixture.detectChanges();
+
+      const dialog = fixture.nativeElement.querySelector('.packet-builder__taxonomy-card');
+      expect(dialog.getAttribute('role')).toBe('dialog');
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      expect(dialog.getAttribute('aria-labelledby')).toBe('taxonomy-dialog-title');
+
+      const title = fixture.nativeElement.querySelector('#taxonomy-dialog-title');
+      expect(title.tagName.toLowerCase()).toBe('h2');
+      expect(title.textContent).toContain('New subcategory');
+    });
+
+    it('captures the triggering element on open and returns focus to it once closed', fakeAsync(() => {
+      configure(makePacket());
+      const trigger = document.createElement('button');
+      document.body.appendChild(trigger);
+      trigger.focus();
+
+      component.openTaxonomyForm(() => undefined);
+      fixture.detectChanges();
+      expect(component['taxonomyTriggerEl']).toBe(trigger);
+
+      component.cancelTaxonomyForm();
+      flushMicrotasks();
+
+      expect(document.activeElement).toBe(trigger);
+      expect(component.taxonomyFormOpen).toBeFalse();
+      document.body.removeChild(trigger);
+    }));
+
+    it('Escape closes the dialog', () => {
+      configure(makePacket());
+      component.openTaxonomyForm(() => undefined);
+      fixture.detectChanges();
+
+      const dialog = fixture.nativeElement.querySelector('.packet-builder__taxonomy-card');
+      dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(component.taxonomyFormOpen).toBeFalse();
     });
   });
 });

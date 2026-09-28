@@ -151,7 +151,7 @@
       (click)="preview()"
     >
       @if (previewing) {
-        <mat-spinner diameter="18"></mat-spinner>
+        <mat-spinner diameter="18" aria-hidden="true"></mat-spinner>
         <span class="import-dialog__visually-hidden">Working…</span>
       } @else {
         Preview
@@ -168,7 +168,7 @@
       (click)="import()"
     >
       @if (importing) {
-        <mat-spinner diameter="18"></mat-spinner>
+        <mat-spinner diameter="18" aria-hidden="true"></mat-spinner>
         <span class="import-dialog__visually-hidden">Working…</span>
       } @else {
         Import

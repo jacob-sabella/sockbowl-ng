@@ -83,7 +83,7 @@
 
       @if (loading) {
         <div class="packet-list__status" role="status">
-          <mat-spinner diameter="32"></mat-spinner>
+          <mat-spinner diameter="32" aria-hidden="true"></mat-spinner>
           <p class="packet-list__status-label">Loading packets…</p>
         </div>
       } @else if (loadError) {

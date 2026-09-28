@@ -178,11 +178,19 @@
     max-width: 100%;
   }
 
+  /*
+   * AY: an opaque `--surface` fill instead of a translucent accent tint.
+   * The chip's ambient parent varies (card `--surface`, a hovered/expanded
+   * panel header's `--surface-hover`/`--bg-elevated`), and `--accent-primary-text`
+   * only clears 4.5:1 reliably against `--surface`/`--bg-primary` in every
+   * theme (audit/m5/s4 contrast check) — a translucent tint compounds with
+   * whichever of those sits underneath and drops below AA in several themes.
+   */
   &__chip {
     font-size: var(--text-xs);
     padding: 2px 8px;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+    background: var(--surface);
     color: var(--accent-primary-text);
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
@@ -384,20 +392,29 @@
     flex-wrap: wrap;
   }
 
+  /*
+   * AY: an opaque `--surface` punch through the parent `.packet-builder__validation`
+   * block's own 10% status tint (DESIGN.md's info-block pattern, kept), not
+   * a second status tint stacked on top of it. Two stacked translucent tints
+   * push `--success-text`/`--error-text` below 4.5:1 in several themes
+   * (measured 3.94-4.28:1 for --unplayable in dark/light); a solid badge
+   * sitting on the tinted stripe reads the same and stays AA everywhere.
+   */
   &__validation-badge {
     font-size: var(--text-xs);
     font-weight: 600;
     padding: 2px 10px;
     border-radius: var(--radius-full);
+    background: var(--surface);
 
     &--playable {
-      background: color-mix(in srgb, var(--success) 18%, transparent);
       color: var(--success-text);
+      border: 1px solid var(--success-text);
     }
 
     &--unplayable {
-      background: color-mix(in srgb, var(--error) 18%, transparent);
       color: var(--error-text);
+      border: 1px solid var(--error-text);
     }
   }
 
@@ -414,6 +431,38 @@
     margin: 8px 0 0;
     padding: 0;
     font-size: var(--text-sm);
+  }
+
+  /*
+   * AY: severity is now an icon (a graphical indicator, WCAG 1.4.11's 3:1
+   * floor) plus `--text-primary` message text, not `--error-text`/
+   * `--warning-text` set directly on the issue text. Both -text tokens sit
+   * on the parent `.packet-builder__validation` block's own 10% status tint
+   * (DESIGN.md's info-block pattern, kept) and measured under 4.5:1 for
+   * small text in several themes; the icon alone clears 3:1 with room to
+   * spare in every theme.
+   */
+  &__issue {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  &__issue-icon {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    line-height: 16px;
+    margin-top: 1px;
+  }
+
+  &__issue--error &__issue-icon {
+    color: var(--error-text);
+  }
+
+  &__issue--warning &__issue-icon {
+    color: var(--warning-text);
   }
 
   &__issue-link {
@@ -448,15 +497,21 @@
     color: var(--text-secondary);
   }
 
-  &__issue--error {
-    color: var(--error-text);
-  }
-
+  /*
+   * AY: the message text stays `--text-primary` (see &__issue-icon above);
+   * severity is carried by the icon plus the ERROR/WARNING wording itself,
+   * not by tinting small text on an already-tinted background.
+   */
+  &__issue--error,
   &__issue--warning {
-    color: var(--warning-text);
+    color: var(--text-primary);
   }
 
-  /* S4-07: a visible "Unsaved" text chip; the dot is now only its leading glyph. */
+  /*
+   * S4-07: a visible "Unsaved" text chip; the dot is now only its leading
+   * glyph. AY: opaque `--surface` fill, not a translucent accent tint — see
+   * &__chip above for why (same token/ambient combination, same fix).
+   */
   &__dirty-chip {
     display: inline-flex;
     align-items: center;
@@ -466,7 +521,8 @@
     padding: 2px 8px;
     border-radius: var(--radius-full);
     color: var(--accent-primary-text);
-    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+    background: var(--surface);
+    border: 1px solid var(--accent-primary-text);
     white-space: nowrap;
   }
 
@@ -478,13 +534,14 @@
     flex: 0 0 auto;
   }
 
+  /* AY: opaque `--surface` fill, not a translucent warning tint — see &__chip above. */
   &__warning-chip {
     font-size: 0.72rem;
     padding: 2px 8px;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--warning) 16%, transparent);
+    background: var(--surface);
     color: var(--warning-text);
-    border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+    border: 1px solid var(--warning-text);
     white-space: nowrap;
     margin-right: 6px;
   }
@@ -523,19 +580,20 @@
     font-size: var(--text-sm);
   }
 
+  /* AY: an opaque `--surface` fill for the published state, not a translucent
+   * success tint — see &__chip above. */
   &__visibility-chip {
     font-size: var(--text-xs);
     font-weight: 600;
     padding: 2px 10px;
     border-radius: var(--radius-full);
-    background: var(--surface-hover);
+    background: var(--surface);
     color: var(--text-secondary);
     border: 1px solid var(--border-subtle);
 
     &--published {
-      background: color-mix(in srgb, var(--success) 18%, transparent);
       color: var(--success-text);
-      border-color: transparent;
+      border-color: var(--success-text);
     }
   }
 
@@ -547,6 +605,53 @@
 
     &:active {
       cursor: grabbing;
+    }
+  }
+
+  /*
+   * S4-AY: `mat-expansion-panel-header` carries `role="button"` itself, so a
+   * real `<button>` anywhere inside it is a "nested interactive control"
+   * (axe: nested-interactive, serious) — assistive tech can't reliably
+   * reach it. The reorder buttons below are DOM siblings of the header
+   * instead, absolutely positioned into a left gutter the header reserves
+   * for them via `padding-left` (`::ng-deep` below), so a mouse or touch
+   * user sees the same layout as before without the two controls actually
+   * nesting.
+   */
+  &__panel-header-row {
+    position: relative;
+  }
+
+  &__panel-header-row--managed ::ng-deep .mat-expansion-panel-header {
+    padding-left: 84px;
+  }
+
+  /*
+   * S4-19: a keyboard-reachable alternative to the drag handle, sized to
+   * match it (icon-button's own 44px touch target comes from the global
+   * --mdc-icon-button-state-layer-size, F1 — see S4-01).
+   */
+  &__reorder-btns {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    transform: translateY(-50%);
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__reorder-btn {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+
+    .mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
     }
   }
 }
