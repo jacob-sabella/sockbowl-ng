@@ -228,6 +228,15 @@ export class SockbowlBot {
 
   // ---- player actions ----
   buzz() { this.publish('/app/game/player-incoming-buzz', {}); }
+  /**
+   * Single-player: buzzes and answers in one step (state PROCTOR_READING or
+   * AWAITING_BUZZ). Auto-judged multiplayer (AUTO_PROCTOR/FREE_FOR_ALL):
+   * answers the tossup after a separate `buzz()` (state AWAITING_ANSWER), or
+   * answers the current bonus part (state BONUS_AWAITING_ANSWER) — the judge
+   * routes on the round's current state, not on any field of this message.
+   * See `GameMessageProcessor#playerSubmitAnswer`/`#autoProctorSubmit`.
+   */
+  submitAnswer(answerText: string) { this.publish('/app/game/submit-answer', { answerText }); }
 
   disconnect() { try { this.client?.deactivate(); } catch { /* ignore */ } }
 }
