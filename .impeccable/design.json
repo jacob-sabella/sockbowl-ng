@@ -1,0 +1,744 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-28T12:41:55.996Z",
+  "title": "Design System: Sockbowl",
+  "extensions": {
+    "colorMeta": {
+      "bg-primary": {
+        "role": "neutral",
+        "displayName": "Midnight (inferred)",
+        "canonical": "#0a0e1a",
+        "tonalRamp": [
+          "#020305",
+          "#04060a",
+          "#060810",
+          "#080b15",
+          "#3b3e48",
+          "#6c6e76",
+          "#9d9fa3",
+          "#cecfd1"
+        ],
+        "perTheme": {
+          "dark": "#0a0e1a",
+          "light": "#ffffff",
+          "nord": "#2E3440",
+          "monokai": "#272822",
+          "catppuccin": "#1e1e2e",
+          "dracula": "#282a36",
+          "solarized-dark": "#002b36",
+          "solarized-light": "#fdf6e3"
+        }
+      },
+      "bg-secondary": {
+        "role": "neutral",
+        "displayName": "Slate Deep (inferred)",
+        "canonical": "#111827",
+        "tonalRamp": [
+          "#030508",
+          "#070a10",
+          "#0a0e17",
+          "#0e131f",
+          "#414652",
+          "#70747d",
+          "#a0a3a9",
+          "#cfd1d4"
+        ],
+        "perTheme": {
+          "dark": "#111827",
+          "light": "#f9fafb",
+          "nord": "#3B4252",
+          "monokai": "#3E3D32",
+          "catppuccin": "#181825",
+          "dracula": "#21222c",
+          "solarized-dark": "#073642",
+          "solarized-light": "#eee8d5"
+        }
+      },
+      "bg-tertiary": {
+        "role": "neutral",
+        "displayName": "Slate (inferred)",
+        "canonical": "#1a2234",
+        "tonalRamp": [
+          "#05070a",
+          "#0a0e15",
+          "#10141f",
+          "#151b2a",
+          "#484e5d",
+          "#767a85",
+          "#a3a7ae",
+          "#d1d3d6"
+        ],
+        "perTheme": {
+          "dark": "#1a2234",
+          "light": "#f3f4f6",
+          "nord": "#434C5E",
+          "monokai": "#49483E",
+          "catppuccin": "#11111b",
+          "dracula": "#191a21",
+          "solarized-dark": "#0d4451",
+          "solarized-light": "#e8e2cf"
+        }
+      },
+      "bg-elevated": {
+        "role": "neutral",
+        "displayName": "Card Slate (inferred)",
+        "canonical": "#1f2937",
+        "tonalRamp": [
+          "#06080b",
+          "#0c1016",
+          "#131921",
+          "#19212c",
+          "#4c545f",
+          "#797f87",
+          "#a5a9af",
+          "#d2d4d7"
+        ],
+        "perTheme": {
+          "dark": "#1f2937",
+          "light": "#ffffff",
+          "nord": "#3B4252",
+          "monokai": "#3E3D32",
+          "catppuccin": "#181825",
+          "dracula": "#21222c",
+          "solarized-dark": "#073642",
+          "solarized-light": "#fdf6e3"
+        }
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Card Slate (inferred)",
+        "canonical": "#1f2937",
+        "tonalRamp": [
+          "#06080b",
+          "#0c1016",
+          "#131921",
+          "#19212c",
+          "#4c545f",
+          "#797f87",
+          "#a5a9af",
+          "#d2d4d7"
+        ],
+        "perTheme": {
+          "dark": "#1f2937",
+          "light": "#ffffff",
+          "nord": "#3B4252",
+          "monokai": "#3E3D32",
+          "catppuccin": "#181825",
+          "dracula": "#21222c",
+          "solarized-dark": "#073642",
+          "solarized-light": "#fdf6e3"
+        }
+      },
+      "surface-hover": {
+        "role": "neutral",
+        "displayName": "Hover Slate (inferred)",
+        "canonical": "#374151",
+        "tonalRamp": [
+          "#0b0d10",
+          "#161a20",
+          "#212731",
+          "#2c3441",
+          "#5f6774",
+          "#878d97",
+          "#afb3b9",
+          "#d7d9dc"
+        ],
+        "perTheme": {
+          "dark": "#374151",
+          "light": "#f3f4f6",
+          "nord": "#434C5E",
+          "monokai": "#49483E",
+          "catppuccin": "#313244",
+          "dracula": "#44475a",
+          "solarized-dark": "#0d4451",
+          "solarized-light": "#eee8d5"
+        }
+      },
+      "surface-active": {
+        "role": "neutral",
+        "displayName": "Pressed Slate (inferred)",
+        "canonical": "#4b5563",
+        "tonalRamp": [
+          "#0f1114",
+          "#1e2228",
+          "#2d333b",
+          "#3c444f",
+          "#6f7782",
+          "#9399a1",
+          "#b7bbc1",
+          "#dbdde0"
+        ],
+        "perTheme": {
+          "dark": "#4b5563",
+          "light": "#e5e7eb",
+          "nord": "#4C566A",
+          "monokai": "#5A5A4E",
+          "catppuccin": "#45475a",
+          "dracula": "#6272a4",
+          "solarized-dark": "#165261",
+          "solarized-light": "#e8e2cf"
+        }
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Paper (inferred)",
+        "canonical": "#f9fafb",
+        "tonalRamp": [
+          "#323232",
+          "#646464",
+          "#959697",
+          "#c7c8c9",
+          "#fafbfc",
+          "#fbfcfd",
+          "#fdfdfd",
+          "#fefefe"
+        ],
+        "perTheme": {
+          "dark": "#f9fafb",
+          "light": "#111827",
+          "nord": "#ECEFF4",
+          "monokai": "#F8F8F2",
+          "catppuccin": "#cdd6f4",
+          "dracula": "#f8f8f2",
+          "solarized-dark": "#fdf6e3",
+          "solarized-light": "#002b36"
+        }
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Mist (inferred)",
+        "canonical": "#d1d5db",
+        "tonalRamp": [
+          "#2a2b2c",
+          "#545558",
+          "#7d8083",
+          "#a7aaaf",
+          "#dadde2",
+          "#e3e6e9",
+          "#edeef1",
+          "#f6f7f8"
+        ],
+        "perTheme": {
+          "dark": "#d1d5db",
+          "light": "#4b5563",
+          "nord": "#E5E9F0",
+          "monokai": "#CFCFC2",
+          "catppuccin": "#bac2de",
+          "dracula": "#bfbfbf",
+          "solarized-dark": "#93a1a1",
+          "solarized-light": "#657b83"
+        }
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Fog (inferred)",
+        "canonical": "#9ca3af",
+        "tonalRamp": [
+          "#1f2123",
+          "#3e4146",
+          "#5e6269",
+          "#7d828c",
+          "#b0b5bf",
+          "#c4c8cf",
+          "#d7dadf",
+          "#ebedef"
+        ],
+        "perTheme": {
+          "dark": "#9ca3af",
+          "light": "#6b7280",
+          "nord": "#D8DEE9",
+          "monokai": "#9D9D8E",
+          "catppuccin": "#a6adc8",
+          "dracula": "#6272a4",
+          "solarized-dark": "#586e75",
+          "solarized-light": "#839496"
+        }
+      },
+      "accent-primary": {
+        "role": "primary",
+        "displayName": "Electric Indigo (inferred)",
+        "canonical": "#6366f1",
+        "tonalRamp": [
+          "#141430",
+          "#282960",
+          "#3b3d91",
+          "#4f52c1",
+          "#8285f4",
+          "#a1a3f7",
+          "#c1c2f9",
+          "#e0e0fc"
+        ],
+        "perTheme": {
+          "dark": "#6366f1",
+          "light": "#4f46e5",
+          "nord": "#88C0D0",
+          "monokai": "#66D9EF",
+          "catppuccin": "#89b4fa",
+          "dracula": "#bd93f9",
+          "solarized-dark": "#268bd2",
+          "solarized-light": "#268bd2"
+        }
+      },
+      "accent-primary-hover": {
+        "role": "primary",
+        "displayName": "Lifted Indigo (inferred)",
+        "canonical": "#818cf8",
+        "tonalRamp": [
+          "#1a1c32",
+          "#343863",
+          "#4d5495",
+          "#6770c6",
+          "#9aa3f9",
+          "#b3bafb",
+          "#cdd1fc",
+          "#e6e8fe"
+        ],
+        "perTheme": {
+          "dark": "#818cf8",
+          "light": "#6366f1",
+          "nord": "#8FBCBB",
+          "monokai": "#7FE3F7",
+          "catppuccin": "#a6c9ff",
+          "dracula": "#d4bfff",
+          "solarized-dark": "#3fa5f5",
+          "solarized-light": "#1a75b8"
+        }
+      },
+      "accent-secondary": {
+        "role": "secondary",
+        "displayName": "Violet (inferred)",
+        "canonical": "#8b5cf6",
+        "tonalRamp": [
+          "#1c1231",
+          "#382562",
+          "#533794",
+          "#6f4ac5",
+          "#a27df8",
+          "#b99dfa",
+          "#d1befb",
+          "#e8defd"
+        ],
+        "perTheme": {
+          "dark": "#8b5cf6",
+          "light": "#7c3aed",
+          "nord": "#81A1C1",
+          "monokai": "#AE81FF",
+          "catppuccin": "#cba6f7",
+          "dracula": "#ff79c6",
+          "solarized-dark": "#6c71c4",
+          "solarized-light": "#6c71c4"
+        }
+      },
+      "accent-tertiary": {
+        "role": "tertiary",
+        "displayName": "Signal Cyan (inferred)",
+        "canonical": "#06b6d4",
+        "tonalRamp": [
+          "#01242a",
+          "#024955",
+          "#046d7f",
+          "#0592aa",
+          "#38c5dd",
+          "#6ad3e5",
+          "#9be2ee",
+          "#cdf0f6"
+        ],
+        "perTheme": {
+          "dark": "#06b6d4",
+          "light": "#0891b2",
+          "nord": "#5E81AC",
+          "monokai": "#F92672",
+          "catppuccin": "#89dceb",
+          "dracula": "#8be9fd",
+          "solarized-dark": "#2aa198",
+          "solarized-light": "#2aa198"
+        }
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Success (inferred)",
+        "canonical": "#10b981",
+        "tonalRamp": [
+          "#03251a",
+          "#064a34",
+          "#0a6f4d",
+          "#0d9467",
+          "#40c79a",
+          "#70d5b3",
+          "#9fe3cd",
+          "#cff1e6"
+        ],
+        "perTheme": {
+          "dark": "#10b981",
+          "light": "#059669",
+          "nord": "#A3BE8C",
+          "monokai": "#A6E22E",
+          "catppuccin": "#a6e3a1",
+          "dracula": "#50fa7b",
+          "solarized-dark": "#859900",
+          "solarized-light": "#859900"
+        }
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning (inferred)",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "#312002",
+          "#623f04",
+          "#935f07",
+          "#c47e09",
+          "#f7b13c",
+          "#f9c56d",
+          "#fbd89d",
+          "#fdecce"
+        ],
+        "perTheme": {
+          "dark": "#f59e0b",
+          "light": "#d97706",
+          "nord": "#EBCB8B",
+          "monokai": "#FD971F",
+          "catppuccin": "#fab387",
+          "dracula": "#ffb86c",
+          "solarized-dark": "#b58900",
+          "solarized-light": "#b58900"
+        }
+      },
+      "error": {
+        "role": "status",
+        "displayName": "Error / Buzzer (inferred)",
+        "canonical": "#ef4444",
+        "tonalRamp": [
+          "#300e0e",
+          "#601b1b",
+          "#8f2929",
+          "#bf3636",
+          "#f26969",
+          "#f58f8f",
+          "#f9b4b4",
+          "#fcdada"
+        ],
+        "perTheme": {
+          "dark": "#ef4444",
+          "light": "#dc2626",
+          "nord": "#BF616A",
+          "monokai": "#F92672",
+          "catppuccin": "#f38ba8",
+          "dracula": "#ff5555",
+          "solarized-dark": "#dc322f",
+          "solarized-light": "#dc322f"
+        }
+      },
+      "info": {
+        "role": "status",
+        "displayName": "Info (inferred)",
+        "canonical": "#3b82f6",
+        "tonalRamp": [
+          "#0c1a31",
+          "#183462",
+          "#234e94",
+          "#2f68c5",
+          "#629bf8",
+          "#89b4fa",
+          "#b1cdfb",
+          "#d8e6fd"
+        ],
+        "perTheme": {
+          "dark": "#3b82f6",
+          "light": "#2563eb",
+          "nord": "#5E81AC",
+          "monokai": "#66D9EF",
+          "catppuccin": "#89b4fa",
+          "dracula": "#8be9fd",
+          "solarized-dark": "#268bd2",
+          "solarized-light": "#268bd2"
+        }
+      },
+      "border-subtle": {
+        "role": "neutral",
+        "displayName": "Hairline (inferred)",
+        "canonical": "rgba(75, 85, 99, 0.3)",
+        "perTheme": {
+          "dark": "rgba(75, 85, 99, 0.3)",
+          "light": "rgba(229, 231, 235, 0.8)",
+          "nord": "rgba(76, 86, 106, 0.3)",
+          "monokai": "rgba(73, 72, 62, 0.3)",
+          "catppuccin": "rgba(49, 50, 68, 0.3)",
+          "dracula": "rgba(68, 71, 90, 0.3)",
+          "solarized-dark": "rgba(7, 54, 66, 0.3)",
+          "solarized-light": "rgba(238, 232, 213, 0.8)"
+        }
+      },
+      "border-medium": {
+        "role": "neutral",
+        "displayName": "Line (inferred)",
+        "canonical": "rgba(107, 114, 128, 0.5)",
+        "perTheme": {
+          "dark": "rgba(107, 114, 128, 0.5)",
+          "light": "rgba(209, 213, 219, 1)",
+          "nord": "rgba(76, 86, 106, 0.5)",
+          "monokai": "rgba(73, 72, 62, 0.5)",
+          "catppuccin": "rgba(49, 50, 68, 0.5)",
+          "dracula": "rgba(68, 71, 90, 0.5)",
+          "solarized-dark": "rgba(13, 68, 81, 0.5)",
+          "solarized-light": "rgba(232, 226, 207, 1)"
+        }
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Strong Line (inferred)",
+        "canonical": "rgba(156, 163, 175, 0.6)",
+        "perTheme": {
+          "dark": "rgba(156, 163, 175, 0.6)",
+          "light": "rgba(156, 163, 175, 1)",
+          "nord": "rgba(76, 86, 106, 0.7)",
+          "monokai": "rgba(73, 72, 62, 0.7)",
+          "catppuccin": "rgba(69, 71, 90, 0.7)",
+          "dracula": "rgba(98, 114, 164, 0.6)",
+          "solarized-dark": "rgba(22, 82, 97, 0.7)",
+          "solarized-light": "rgba(147, 161, 161, 0.5)"
+        }
+      }
+    },
+    "themes": {
+      "source": "src/styles/themes/_<name>.scss (body.theme-<name>)",
+      "lineup": [
+        "dark",
+        "light",
+        "nord",
+        "monokai",
+        "catppuccin",
+        "dracula",
+        "solarized-dark",
+        "solarized-light"
+      ],
+      "colorScheme": {
+        "light": [
+          "light",
+          "solarized-light"
+        ],
+        "dark": [
+          "dark",
+          "nord",
+          "monokai",
+          "catppuccin",
+          "dracula",
+          "solarized-dark"
+        ]
+      },
+      "castReceiver": "src/cast-theme-tokens.css via npm run gen:cast-tokens"
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Brand wordmark, scores, card titles (Space Grotesk)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles h1-h2."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles such as Tossup N of M."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "UI copy and controls (Inter; currently overridden to Roboto 14px by .mat-typography, see G0 audit)."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Question and answer text only (Newsreader)."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase info-block captions."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Code, keys."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-sm",
+        "value": "0 2px 8px var(--shadow-color)",
+        "purpose": "Small lift."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 4px 20px var(--shadow-color)",
+        "purpose": "Menus."
+      },
+      {
+        "name": "shadow-lg",
+        "value": "0 10px 40px var(--shadow-color)",
+        "purpose": "Play card."
+      },
+      {
+        "name": "shadow-xl",
+        "value": "0 15px 50px var(--shadow-color)",
+        "purpose": "Dialogs."
+      },
+      {
+        "name": "shadow-2xl",
+        "value": "0 20px 60px var(--shadow-color)",
+        "purpose": "Hero containers."
+      },
+      {
+        "name": "buzzer-dome",
+        "value": "0 9px 0 -2px var(--shadow-color), 0 14px 26px var(--shadow-color), inset 0 5px 12px rgba(255,255,255,.28), inset 0 -11px 20px rgba(0,0,0,.32)",
+        "purpose": "Physical buzz button at rest."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-fast",
+        "value": "150ms ease",
+        "purpose": "Hover colour and arrow nudges."
+      },
+      {
+        "name": "transition-base",
+        "value": "200ms ease",
+        "purpose": "Default state change."
+      },
+      {
+        "name": "transition-slow",
+        "value": "300ms ease",
+        "purpose": "Panels."
+      },
+      {
+        "name": "buzz-press",
+        "value": "transform 80ms ease",
+        "purpose": "Buzzer slam-down on :active."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "768px"
+      },
+      {
+        "name": "tablet",
+        "value": "1024px"
+      },
+      {
+        "name": "desktop",
+        "value": "1280px"
+      },
+      {
+        "name": "wide",
+        "value": "1536px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Accent-filled main action (play surfaces, lobby).",
+      "html": "<button class=\"ds-btn-primary\">Buzz</button>",
+      "css": ".ds-btn-primary{min-height:48px;padding:0 1.75rem;font:700 1rem/1 var(--font-body);background:var(--accent-primary);color:var(--on-accent, #fff);border:0;border-radius:var(--radius-md);cursor:pointer;transition:filter var(--transition-fast)}.ds-btn-primary:hover{filter:brightness(1.06)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}"
+    },
+    {
+      "name": "Lobby Action",
+      "kind": "custom",
+      "refersTo": "lobby-action",
+      "description": "Full-width row button with icon, label, hint and sliding arrow.",
+      "html": "<button class=\"ds-lobby-action\"><span class=\"ds-la-text\"><span class=\"ds-la-label\">Join with a code</span><span class=\"ds-la-hint\">Enter a room’s join code</span></span><svg class=\"ds-la-arrow\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8z\"/></svg></button>",
+      "css": ".ds-lobby-action{display:flex;align-items:center;gap:1rem;width:100%;padding:1rem 1.25rem;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);text-align:left;cursor:pointer;transition:transform var(--transition-fast),border-color var(--transition-fast)}.ds-la-text{display:flex;flex-direction:column;flex:1}.ds-la-label{font-weight:600}.ds-la-hint{font-size:.85rem;color:var(--text-secondary)}.ds-la-arrow{color:var(--text-muted);transition:transform var(--transition-fast)}.ds-lobby-action:hover{transform:translateY(-2px);border-color:var(--accent-primary)}.ds-lobby-action:hover .ds-la-arrow{transform:translateX(3px);color:var(--accent-primary)}.ds-lobby-action:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}"
+    },
+    {
+      "name": "Buzz Button",
+      "kind": "custom",
+      "refersTo": "buzz-button",
+      "description": "Round domed buzzer, the one loud object in play.",
+      "html": "<button class=\"ds-buzz\">Buzz</button>",
+      "css": ".ds-buzz{width:200px;height:200px;border-radius:50%;border:0;background:var(--error);color:var(--on-error, #fff);font:800 1.75rem/1.15 var(--font-display);letter-spacing:.03em;text-transform:uppercase;box-shadow:0 9px 0 -2px var(--shadow-color),0 14px 26px var(--shadow-color),inset 0 5px 12px rgba(255,255,255,.28),inset 0 -11px 20px rgba(0,0,0,.32);transition:transform 80ms ease,box-shadow 150ms ease;cursor:pointer}.ds-buzz:active{transform:translateY(8px);box-shadow:0 2px 0 -2px var(--shadow-color),0 5px 14px var(--shadow-color),inset 0 3px 10px rgba(0,0,0,.4)}.ds-buzz:focus-visible{outline:3px solid var(--accent-primary);outline-offset:5px}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Surface container for play cards and panels.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Tossup 3 of 20</h3><p>Card body</p></div>",
+      "css": ".ds-card{background:var(--surface);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow-lg) var(--shadow-color)}.ds-card-title{margin:0 0 1rem;font:700 1.4rem/1.25 var(--font-display)}"
+    },
+    {
+      "name": "Answer Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Inset well text field used in play.",
+      "html": "<input class=\"ds-input\" placeholder=\"Your answer\">",
+      "css": ".ds-input{min-height:48px;padding:0 1rem;font-size:1.05rem;color:var(--text-primary);background:var(--bg-secondary);border:2px solid var(--border-medium);border-radius:var(--radius-md)}.ds-input::placeholder{color:var(--text-muted)}.ds-input:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}"
+    },
+    {
+      "name": "Info Block",
+      "kind": "custom",
+      "refersTo": "info-section",
+      "description": "Labelled value with status stripe (category, question, answer).",
+      "html": "<div class=\"ds-info\"><span class=\"ds-info-label\">Category</span><span class=\"ds-info-value\">Literature</span></div>",
+      "css": ".ds-info{padding:.65rem .85rem;border-radius:var(--radius-sm);border-left:3px solid var(--info);background:color-mix(in srgb,var(--info) 10%,transparent)}.ds-info-label{display:block;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--info)}.ds-info-value{font-size:1rem;font-weight:500;color:var(--text-primary)}"
+    },
+    {
+      "name": "Status Banner",
+      "kind": "custom",
+      "refersTo": "stomp-error-banner",
+      "description": "Dismissible socket error / rate-limit banner.",
+      "html": "<div class=\"ds-banner\" role=\"alert\"><span>Slow down: too many buzzes.</span></div>",
+      "css": ".ds-banner{display:flex;align-items:center;gap:12px;padding:8px 16px;border-radius:8px;border:1px solid var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface));color:var(--text-primary)}"
+    },
+    {
+      "name": "Navigation Bar",
+      "kind": "nav",
+      "refersTo": "navbar",
+      "description": "Top toolbar with accent wordmark and role-gated actions.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-brand\">SOCKBOWL</span><a class=\"ds-nav-link\" href=\"#\">Packets</a></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;gap:1rem;height:64px;padding:0 1.5rem;background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)}.ds-nav-brand{font:700 1.5rem/1 var(--font-display);letter-spacing:.06em;color:var(--accent-primary);margin-right:auto}.ds-nav-link{color:var(--text-primary);text-decoration:none;padding:.5rem .75rem;border-radius:var(--radius-sm)}.ds-nav-link:hover{background:var(--surface-hover)}.ds-nav-link:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Buzzer Room",
+    "overview": "(inferred) Sockbowl is a competition room lit by a screen. The chrome is a dark, quiet ground with one confident accent. Question text is set in a bookish serif so it reads like a real packet. The one loud object on the screen is the buzzer. The display face (Space Grotesk, tracked-in and heavy) carries scores, titles and the brand. Inter carries the controls. Newsreader carries the questions. The system is dense enough for a proctor at a laptop and big enough to use one-handed on a phone.\n\n(inferred) The theme lineup is part of the identity. The layout, type and shapes stay constant, and all colour comes from about 21 semantic tokens that each theme redefines (Dark, Light, Nord, Monokai, Catppuccin, Dracula, Solarized Dark, Solarized Light). Components must never hold a colour of their own. They name a role.",
+    "keyCharacteristics": [
+      "A theme-agnostic token contract: `--bg-*`, `--surface*`, `--text-*`, `--accent-*`, status and `--border-*`, set on `body.theme-<name>`.",
+      "Three type voices: display (Space Grotesk), UI (Inter) and reading (Newsreader).",
+      "Rounded, soft-edged containers (12–24px) with flat fills and drop shadows only for real elevation.",
+      "A single physical signature: the round, domed buzz button.",
+      "Status is also shown with a coloured left stripe on info blocks (question, answer, verdict)."
+    ],
+    "rules": [
+      {
+        "name": "The Role-Not-Hue Rule",
+        "section": "colors",
+        "body": "(inferred) Component styles name a role token (`var(--accent-primary)`, `var(--success)`) and never a hex. A colour that has to be \"white on the accent\" is a missing token (`--on-accent`), not a `#fff`."
+      },
+      {
+        "name": "The Eight-Theme Rule",
+        "section": "colors",
+        "body": "(inferred) A colour decision is not done until it passes in all 8 themes. Dark and light are the ones captured in screenshots. The other six are checked by the contrast matrix."
+      },
+      {
+        "name": "The Three-Voice Rule",
+        "section": "typography",
+        "body": "(inferred) Space Grotesk is for chrome, titles and numbers. Inter is for controls and body copy. Newsreader is only for question and answer text. Never mix the reading serif into the UI."
+      },
+      {
+        "name": "The No-Glow Rule",
+        "section": "elevation",
+        "body": "(inferred) Depth comes from shadow and tone, never a coloured glow. `--glow-*` tokens exist, but new work should not use them."
+      }
+    ],
+    "dos": [
+      "**Do** name a role token for every colour, and check the pair in all 8 themes.",
+      "**Do** keep question text in Newsreader at the reading size and line-height 1.7.",
+      "**Do** keep the primary in-game action at least 48px tall and inside thumb reach.",
+      "**Do** honour `prefers-reduced-motion` for every looping or entrance animation, as `_qb-play-card.scss` already does."
+    ],
+    "donts": [
+      "**Don't** put `#fff`/`white` text on an accent or status fill. It fails AA in most themes. Use an on-colour token.",
+      "**Don't** use gradient text, coloured glows or ambient purple washes. The incumbent code removed them on purpose.",
+      "**Don't** add `!important` or new global selectors from a component. Material theming belongs in `vendors/_material-overrides.scss`."
+    ]
+  }
+}
