@@ -102,7 +102,9 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 0.3rem;
-    opacity: 0.75;
+    /* M5 F1-05 (A3): opacity on top of an already-tuned -text colour was
+       lowering contrast further; the colour itself now carries the
+       "quieter" feel of this label. */
   }
 
   .info-value { font-size: 1rem; line-height: 1.5; font-weight: 500; overflow-wrap: break-word; }
@@ -111,14 +113,14 @@
 .category-section {
   border-left-color: var(--info);
   background: color-mix(in srgb, var(--info) 10%, transparent);
-  .info-label { color: var(--info); }
+  .info-label { color: var(--info-text); }
   display: flex; align-items: baseline; gap: 0.5rem;
   .info-label { margin-bottom: 0; }
 }
 .subcategory-section {
   border-left-color: var(--accent-secondary, var(--accent-primary));
   background: color-mix(in srgb, var(--accent-secondary, var(--accent-primary)) 10%, transparent);
-  .info-label { color: var(--accent-secondary, var(--accent-primary)); margin-bottom: 0; }
+  .info-label { color: var(--accent-secondary-text, var(--accent-primary-text)); margin-bottom: 0; }
   display: flex; align-items: baseline; gap: 0.5rem;
 }
 
@@ -130,7 +132,7 @@
     min-height: 3.5rem;
     color: var(--text-primary);
   }
-  .reveal-cursor { color: var(--accent-primary); animation: qb-blink 1s step-end infinite; }
+  .reveal-cursor { color: var(--accent-primary-text); animation: qb-blink 1s step-end infinite; }
 }
 
 @keyframes qb-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
@@ -177,7 +179,7 @@
   padding: 0 1.75rem !important;
   font-weight: 700 !important;
   background: var(--accent-primary) !important;
-  color: #fff !important;
+  color: var(--on-accent-primary) !important;
   border-radius: var(--radius-md, 10px) !important;
   &:disabled { opacity: 0.5; }
   mat-icon { margin-right: 0.4rem; }
@@ -211,7 +213,9 @@
 }
 
 .speed-preset {
-  min-height: 36px;
+  /* M5 F1-12: 44px tap floor everywhere (was 36px, and only bumped to 40px
+     under 760px before this). */
+  min-height: 44px;
   padding: 0.35rem 0.7rem;
   border: none;
   background: transparent;
@@ -223,8 +227,8 @@
 
   & + .speed-preset { border-left: 1px solid var(--border-medium); }
   &:hover { background: var(--surface-hover); color: var(--text-primary); }
-  &.active { background: var(--accent-primary); color: #fff; }
-  &:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+  &.active { background: var(--accent-primary); color: var(--on-accent-primary); }
+  &:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 }
 
 /* "of N" suffix in the Tossup N of M title */
@@ -252,7 +256,10 @@
   background: var(--bg-secondary);
   border: 2px solid var(--border-medium);
   border-radius: var(--radius-md, 10px);
-  &:focus, &:focus-visible { outline: none; border-color: var(--accent-primary); }
+  &:focus { border-color: var(--accent-primary); }
+  /* M5 F1-08 (A6/A13): keep a visible ring on top of the border-colour
+     change, rather than removing focus indication entirely. */
+  &:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-color: var(--accent-primary); }
   &::placeholder { color: var(--text-muted, var(--text-secondary)); }
 }
 
@@ -264,7 +271,7 @@
 
 /* focus-visible ring for keyboard users */
 .buzz-btn, .answer-input, .speed-control input, .reader-tools button {
-  &:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+  &:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 }
 
 /* solo-specific: score chip in the category row + buzz countdown */
@@ -272,7 +279,7 @@
   border-left-color: var(--accent-primary);
   background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
   display: flex; align-items: baseline; gap: 0.5rem;
-  .info-label { color: var(--accent-primary); margin-bottom: 0; }
+  .info-label { color: var(--accent-primary-text); margin-bottom: 0; }
   .info-value { font-variant-numeric: tabular-nums; }
 }
 
@@ -288,9 +295,9 @@
   align-self: flex-start;
   strong { font-size: 1.5rem; line-height: 1; color: var(--text-primary); }
   &--urgent {
-    color: var(--error);
+    color: var(--error-text);
     border-color: var(--error);
-    strong { color: var(--error); animation: qb-pulse 1s ease-in-out infinite; }
+    strong { color: var(--error-text); animation: qb-pulse 1s ease-in-out infinite; }
   }
 }
 @keyframes qb-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
@@ -332,9 +339,9 @@
   gap: 0.5rem;
   margin-bottom: 0.6rem;
   font-weight: 700;
-  color: var(--success);
+  color: var(--success-text);
   mat-icon { flex: 0 0 auto; }
-  &--wrong { color: var(--error); }
+  &--wrong { color: var(--error-text); }
   strong { font-weight: 800; }
 }
 
