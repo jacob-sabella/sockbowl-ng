@@ -225,6 +225,11 @@ const states: CaptureState[] = [
     afterGoto: async page => {
       await page.getByLabel('Next page').click();
       await page.waitForTimeout(200);
+      // The paginator click scrolls it into view; reset before the
+      // full-page screenshot so the sticky navbar (position: sticky,
+      // navbar.component.scss) paints at y=0 like every other capture,
+      // instead of overlapping the profile header at the scrolled offset.
+      await page.evaluate(() => window.scrollTo(0, 0));
     },
   },
   {
