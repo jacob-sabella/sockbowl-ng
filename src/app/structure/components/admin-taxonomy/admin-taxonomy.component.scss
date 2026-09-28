@@ -1,5 +1,5 @@
 .admin-taxonomy {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem;
 
@@ -7,11 +7,16 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-tight);
+    margin: 0;
   }
 
   &__hint {
-    color: rgba(0, 0, 0, 0.6);
-    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    margin: 8px 0 1rem;
   }
 
   &__status {
@@ -21,7 +26,7 @@
   }
 
   &__error {
-    color: #b00020;
+    color: var(--error-text);
   }
 
   &__card {
@@ -45,7 +50,7 @@
   }
 
   &__empty {
-    color: rgba(0, 0, 0, 0.6);
+    color: var(--text-muted);
 
     &--sub {
       margin: 0.25rem 0 0.5rem 2.5rem;
@@ -58,7 +63,7 @@
   }
 
   &__node {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid var(--border-subtle);
     padding: 0.25rem 0;
 
     &--sub {
@@ -92,8 +97,9 @@
     gap: 0.5rem;
     padding: 0.25rem 0.5rem;
     margin: 0.25rem 0;
-    background: rgba(176, 0, 32, 0.06);
-    border-radius: 4px;
+    background: var(--danger-surface);
+    border-left: 3px solid var(--error);
+    border-radius: var(--radius-sm);
     font-size: 0.9rem;
   }
 
