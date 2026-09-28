@@ -87,6 +87,13 @@ test('Auto-judged bonus flow advances through all parts without stalling', async
   await page.locator('.answer-input').fill(tossupAns);
   await page.locator('.answer-form button[type="submit"]').click();
 
+  // AUTO_PROCTOR mode pauses after a correct tossup (RoundState.BONUS_PENDING) and requires an
+  // explicit "Start bonus" press from the eligible team or the owner before the bonus begins
+  // (game-auto-proctor.component.ts's isBonusPending/canStartBonus gate) — it does not auto-start.
+  const startBonusBtn = page.getByRole('button', { name: /Start the bonus question/ });
+  await expect(startBonusBtn).toBeVisible({ timeout: 15_000 });
+  await startBonusBtn.click();
+
   // The bonus must start (correct tossup) — this is the state that used to stall the game.
   await expect(page.getByText(/Bonus for/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/part 1 of \d/)).toBeVisible({ timeout: 8_000 });
