@@ -28,6 +28,10 @@ Two separate Playwright suites, each with its own config and testDir:
   still host and play in both modes (D1), including generating a bank packet
   (D15: without `packet:create` this now yields an EPHEMERAL, game-only
   packet instead of an owned DRAFT — the UI flow is unchanged).
+  `bonus.spec.ts` also calls the questions GraphQL API directly (to look up
+  a generated packet's tossup answer); against a local stack, override that
+  too with `SOCKBOWL_QUESTIONS_BASE_URL=http://localhost:7009` (or the full
+  `SOCKBOWL_QUESTIONS_GRAPHQL_URL` if the path differs).
 - **`tests-auth/` (`npm run e2e:auth`)** — the M2 authenticated suite (WP-N5).
   Logs in through the real Keycloak hosted login page (no direct-grant
   shortcut — that's what the separate `sockbowl-e2e` client and the headless

@@ -113,6 +113,23 @@ describe('AuthService', () => {
     expect(service.getRoles()).toEqual(['packet:read', 'game:host']);
   });
 
+  it('getCurrentUserId falls back to the access token sub before the ID-token profile has loaded (NG-R2-04)', () => {
+    // getIdentityClaims isn't stubbed in this describe's default setup, so
+    // updateUserProfile never ran and getUserProfile() is still null — the
+    // exact window in which an ownership check used to compare against a
+    // stale null and could match a redacted owner.id of null.
+    expect(service.getUserProfile()).toBeNull();
+    oauthServiceSpy.getAccessToken.and.returnValue(
+      buildFakeAccessToken({ sub: 'fallback-sub', realm_access: { roles: [] } })
+    );
+    expect(service.getCurrentUserId()).toBe('fallback-sub');
+  });
+
+  it('getCurrentUserId is null with no valid access token at all', () => {
+    oauthServiceSpy.getAccessToken.and.returnValue(null as unknown as string);
+    expect(service.getCurrentUserId()).toBeNull();
+  });
+
   it('hasPermission is true for a role present in realm_access.roles', () => {
     oauthServiceSpy.hasValidAccessToken.and.returnValue(true);
     expect(service.hasPermission('packet:read')).toBeTrue();

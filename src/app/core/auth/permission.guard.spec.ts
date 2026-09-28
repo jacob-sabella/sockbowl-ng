@@ -2,6 +2,7 @@ import { EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, RouterStateSnapshot } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { EMPTY, Subject } from 'rxjs';
 
 import { authenticatedGuard, permissionGuard, PERMISSION_DENIED_MESSAGE } from './permission.guard';
 import { AuthService } from './auth.service';
@@ -23,6 +24,9 @@ describe('permissionGuard / authenticatedGuard', () => {
     routerSpy = jasmine.createSpyObj('Router', ['createUrlTree']);
     routerSpy.createUrlTree.and.returnValue(urlTree);
     snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
+    // Real MatSnackBar.open() returns a ref with afterDismissed(); the guard
+    // subscribes to it, so the spy needs one too or that subscribe throws.
+    snackBarSpy.open.and.returnValue({ afterDismissed: () => EMPTY } as any);
 
     TestBed.configureTestingModule({
       providers: [
@@ -74,6 +78,29 @@ describe('permissionGuard / authenticatedGuard', () => {
       expect(routerSpy.createUrlTree).toHaveBeenCalledWith(['/game-session']);
       expect(snackBarSpy.open).toHaveBeenCalledWith(PERMISSION_DENIED_MESSAGE, 'Dismiss', { duration: 4000 });
       expect(authSpy.login).not.toHaveBeenCalled();
+    });
+
+    it('does not stack a second denial snackbar while one is still open (NG-R2-01)', () => {
+      authSpy.hasPermission.and.returnValue(false);
+      authSpy.isAuthenticated.and.returnValue(true);
+      const dismissed$ = new Subject<void>();
+      snackBarSpy.open.and.returnValue({ afterDismissed: () => dismissed$.asObservable() } as any);
+
+      // One guard instance invoked twice, the way the router re-evaluates
+      // canActivate for the same route across a redirect chain — not two
+      // separately-constructed guards.
+      const guard = permissionGuard('admin:access');
+      const invoke = () => runInInjectionContext(injector, () => guard(null as any, fakeState));
+
+      invoke();
+      invoke();
+      expect(snackBarSpy.open).toHaveBeenCalledTimes(1);
+
+      // Once the first snackbar is actually dismissed, a later denial opens
+      // a fresh one.
+      dismissed$.next();
+      invoke();
+      expect(snackBarSpy.open).toHaveBeenCalledTimes(2);
     });
   });
 

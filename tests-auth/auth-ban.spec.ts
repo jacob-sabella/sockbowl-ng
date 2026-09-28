@@ -8,12 +8,17 @@ const MODERATOR = process.env.E2E_MODERATOR || 'moderator';
 // independently of each other's ordering.
 const TARGET = process.env.E2E_BAN_TARGET || 'player3';
 
-// Note on "returned to the lobby": GameSessionInjectionResolver re-checks
-// bans on every message for an already-connected player and reports BANNED on
-// `/user/queue/errors`. The client treats a fatal code there like a fatal
-// ERROR frame (plan m2-auth.md section 2.5): it stops reconnecting and the
-// game canvas navigates back to /game-session. The spec then reloads the
-// lobby to prove hosting is now refused too.
+// Note on "returned to the lobby": the ban is enforced synchronously,
+// server-side, the moment the moderator submits it — AdminBanController
+// pushes BANNED straight to the target's already-open socket on
+// `/user/queue/errors`, with no action needed on the target page to trigger
+// it. The client treats a fatal code there like a fatal ERROR frame (plan
+// m2-auth.md section 2.5): it stops reconnecting and the game canvas
+// navigates back to /game-session on its own. (NG-R2-01: this used to click
+// an in-game control first, expecting to trigger the check — by the time
+// that click ran, the push had already fired and navigated the page away,
+// so the click hit its own 90s timeout instead of doing anything.) The spec
+// then reloads the lobby to prove hosting is now refused too.
 test('A moderator bans a player mid-lobby; the ban is enforced and then lifted', async ({ page, browser }) => {
   test.setTimeout(90_000);
 
@@ -42,9 +47,8 @@ test('A moderator bans a player mid-lobby; the ban is enforced and then lifted',
     await expect(banRow).toBeVisible({ timeout: 10_000 });
     banned = true;
 
-    // The banned player's next STOMP action surfaces the ban, which is fatal:
-    // the socket stops and the player is sent back to the lobby.
-    await targetPage.locator('.team__actions button').first().click();
+    // The ban push is fatal and arrives on its own: the socket stops and the
+    // page navigates back to the lobby with no action needed here.
     await targetPage.waitForURL('**/game-session**', { timeout: 10_000 });
     await expect(targetPage.getByText(/banned/i).first()).toBeVisible({ timeout: 5_000 });
 

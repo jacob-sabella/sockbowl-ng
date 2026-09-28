@@ -186,8 +186,12 @@ export class PacketBuilderComponent implements OnInit {
    * grandfather rule).
    */
   get canManagePacket(): boolean {
+    const userId = this.auth.getCurrentUserId();
+    // A non-owner's read has owner.id redacted to null (D2); require a real,
+    // non-null current-user id before comparing so a not-yet-resolved id
+    // can never spuriously match that null (NG-R2-04).
     return this.auth.hasPermission('packet:manage-any')
-      || (!!this.packet?.owner && this.packet.owner.id === this.auth.getCurrentUserId());
+      || (!!userId && !!this.packet?.owner && this.packet.owner.id === userId);
   }
 
   get sortedTossups(): TossupElement[] {

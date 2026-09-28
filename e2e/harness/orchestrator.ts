@@ -10,22 +10,31 @@ export interface StagedMatch {
   joinCode: string;
   gameSessionId: string;
   packetId: string;
+  /** Tossup count of the packet in play, i.e. the number of rounds a full match plays. */
+  tossupCount: number;
+  bonusCount: number;
   cleanup: () => void;
 }
 
 /**
- * Stand up a fully configured, ready-to-start match: a proctor, a real imported
- * packet, and N players split across the two teams — all connected over STOMP.
+ * Stand up a fully configured, ready-to-start match: a proctor, a real
+ * packet, and N players split across the two teams — all connected over
+ * STOMP.
+ *
+ * By default the packet comes from `importQbreaderPacket` (the local bank).
+ * Pass `packetId` (with its actual `tossupCount`/`bonusCount`) to use an
+ * already-seeded packet instead — see `findSeededPacket`, which `full-match`
+ * uses so it doesn't depend on the separate, unseeded bank (NG-R2-02).
  */
 export async function stageMatch(
-  opts: { tossupCount?: number; bonusCount?: number; playerNames?: string[] } = {},
+  opts: { tossupCount?: number; bonusCount?: number; playerNames?: string[]; packetId?: string } = {},
 ): Promise<StagedMatch> {
   const tossupCount = opts.tossupCount ?? 13;
   const bonusCount = opts.bonusCount ?? 5;
   const playerNames = opts.playerNames ?? ['Ada', 'Blaise', 'Cleo', 'Dov'];
 
   const game = await createGame();
-  const packetId = await importQbreaderPacket(tossupCount, bonusCount);
+  const packetId = opts.packetId ?? (await importQbreaderPacket(tossupCount, bonusCount));
 
   const hostJoin = await joinByCode(game.joinCode, 'Proctor');
   const proctor = new SockbowlBot('Proctor', hostJoin.gameSessionId, hostJoin.playerSecret, hostJoin.playerSessionId);
@@ -57,6 +66,8 @@ export async function stageMatch(
     joinCode: game.joinCode,
     gameSessionId: game.gameSessionId,
     packetId,
+    tossupCount,
+    bonusCount,
     cleanup: () => [proctor, ...players].forEach((b) => b.disconnect()),
   };
 }
@@ -76,7 +87,10 @@ export async function driveFullMatch(m: StagedMatch, maxRounds = 3, verbose = tr
 
   let rounds = 0;
   let buzzer = 0;
-  const deadline = Date.now() + 120000;
+  // Scale the overall budget with maxRounds: a seeded packet's full tossup
+  // count (per NG-R2-02's fix, `full-match` now requires every one of them
+  // to complete, not just one) can be well above the default 3.
+  const deadline = Date.now() + Math.max(120000, maxRounds * 30000);
 
   while (rounds < maxRounds && Date.now() < deadline) {
     const gs = proctor.gameSession;

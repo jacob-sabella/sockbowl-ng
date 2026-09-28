@@ -122,4 +122,19 @@ describe('GameConfigComponent proctor preview', () => {
     expect(questions.getPacketById).toHaveBeenCalledOnceWith('packet-1');
     expect(gameStateService.requestGameSession).not.toHaveBeenCalled();
   });
+
+  it('resets the selected packet display when a MatchPacketUpdate clears the packet', () => {
+    component.ngOnInit();
+
+    session$.next(sessionWith({ id: 'packet-1', name: 'Packet One' } as any));
+    expect(component.selectedPacketId).toBe('packet-1');
+
+    // A proctor seat change or mode change clears the packet: the server
+    // sends MatchPacketUpdate{packetId:null, tossupCount:0}, which
+    // GameStateService turns into a packet with a null id and no tossups.
+    session$.next(sessionWith({ id: null, name: null, tossups: [] } as any));
+
+    expect(component.selectedPacketId).toBe('');
+    expect(component.selectedPacket).toBeNull();
+  });
 });
