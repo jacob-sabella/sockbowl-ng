@@ -37,6 +37,23 @@ export async function joinByCode(joinCode: string, name: string): Promise<JoinRe
 }
 
 /**
+ * Join a game by code as the signed-in account behind `accessToken` (the
+ * game backend's `join-game-session-authenticated`, mirroring
+ * `GameSessionService.joinGameAuthenticated`) — binds the seat to the
+ * Keycloak identity so the M2 draft-ownership rule (`PACKET_NOT_AVAILABLE`)
+ * sees a real, non-guest player (M3 E1's "draft privacy in game" spec).
+ */
+export async function joinByCodeAuthenticated(joinCode: string, name: string, accessToken: string): Promise<JoinResult> {
+  const res = await fetch(`${HTTP_BASE}/api/v1/session/join-game-session-authenticated`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ joinCode, name }),
+  });
+  if (!res.ok) throw new Error(`joinAuthenticated ${res.status}: ${await res.text()}`);
+  return (await res.json()) as JoinResult;
+}
+
+/**
  * Generate a packet from the local question bank and return its id, for a match
  * with genuine questions. Backed by `POST /api/qbreader/import-random` (D15),
  * which is guest-allowed in both auth modes: with auth off it returns an
