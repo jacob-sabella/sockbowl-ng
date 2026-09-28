@@ -86,4 +86,35 @@ describe('PacketReadingViewComponent', () => {
     expect(component.bonuses).toEqual([]);
     expect(() => fixture.detectChanges()).not.toThrow();
   });
+
+  describe('linear mode (NG-V1-01, print)', () => {
+    it('has both the tossups and bonuses sections in the DOM at once, unlike the default tabbed mode', () => {
+      component.packet = makePacket();
+      component.linear = true;
+      fixture.detectChanges();
+
+      const text: string = fixture.nativeElement.textContent;
+      // Every tossup question/answer.
+      expect(text).toContain('Q1');
+      expect(text).toContain('Q2');
+      expect(text).toContain('Q3');
+      // Every bonus preamble and part, from a bonus other than whichever a
+      // `mat-tab-group` would otherwise pick as the active (first) tab.
+      expect(text).toContain('First bonus preamble');
+      expect(text).toContain('Second bonus preamble');
+      expect(text).toContain('BQ1');
+      expect(text).toContain('BQ2');
+    });
+
+    it('does not render a mat-tab-group in linear mode', () => {
+      component.packet = makePacket();
+      component.linear = true;
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('mat-tab-group')).toBeNull();
+    });
+
+    it('defaults to false (tabbed) so the proctor dialog is unaffected', () => {
+      expect(component.linear).toBeFalse();
+    });
+  });
 });

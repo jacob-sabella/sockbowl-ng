@@ -139,6 +139,89 @@ describe('GameStateService bonus updates (NG-R2-06)', () => {
 });
 
 /**
+ * ng minor alongside NG-V1-02: a bonus can have 1-6 parts (D7), not always 3,
+ * since M3V1-G-01's game-side fix plays every bonus off its real part count.
+ * The proctor and buzzer "X / N points" labels must follow suit rather than
+ * hardcoding "/ 30".
+ */
+describe('GameStateService.getCurrentRoundMaxBonusPoints (ng minor, NG-V1-02)', () => {
+  let service: GameStateService;
+  let eventSubjects: Record<string, Subject<any>>;
+
+  const EVENT_KEYS = [
+    'GameSessionUpdate', 'PlayerRosterUpdate', 'GameStartedMessage', 'MatchPacketUpdate',
+    'ProcessError', 'AnswerUpdate', 'RoundUpdate', 'PlayerBuzzed', 'BonusUpdate', 'TimerUpdate',
+    'ReadingUpdate',
+  ];
+
+  function seedRound(currentBonus: any): void {
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: {
+        currentMatch: {
+          currentRound: {
+            roundState: RoundState.BONUS_AWAITING_ANSWER,
+            currentBonus,
+            currentBonusPartIndex: 0,
+            bonusPartAnswers: [],
+            bonusEligibleTeamId: 't1',
+          },
+        },
+      } as unknown as GameSession,
+    });
+  }
+
+  beforeEach(() => {
+    eventSubjects = {};
+    const gameEventObservables: Record<string, any> = {};
+    for (const key of EVENT_KEYS) {
+      eventSubjects[key] = new Subject<any>();
+      gameEventObservables[key] = eventSubjects[key].asObservable();
+    }
+
+    TestBed.configureTestingModule({
+      providers: [
+        GameStateService,
+        {
+          provide: GameMessageService,
+          useValue: {
+            gameEventObservables,
+            sendMessage: jasmine.createSpy('sendMessage'),
+            initialize: jasmine.createSpy('initialize'),
+            errors$: new Subject<any>().asObservable(),
+          },
+        },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+      ],
+    });
+
+    service = TestBed.inject(GameStateService);
+    service.initialize('g1', 'p1', {});
+  });
+
+  it('is 20 for a 2-part bonus', () => {
+    seedRound({ bonusParts: [{ id: 1 }, { id: 2 }] });
+    expect(service.getCurrentRoundMaxBonusPoints()).toBe(20);
+  });
+
+  it('is 40 for a 4-part bonus', () => {
+    seedRound({ bonusParts: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] });
+    expect(service.getCurrentRoundMaxBonusPoints()).toBe(40);
+  });
+
+  it('is 30 for the classic 3-part bonus', () => {
+    seedRound({ bonusParts: [{ id: 1 }, { id: 2 }, { id: 3 }] });
+    expect(service.getCurrentRoundMaxBonusPoints()).toBe(30);
+  });
+
+  it('falls back to 30 when no bonus is active yet', () => {
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ } } } as unknown as GameSession,
+    });
+    expect(service.getCurrentRoundMaxBonusPoints()).toBe(30);
+  });
+});
+
+/**
  * WP-FIXN4 / WP-FIXG5: a non-proctor's MatchPacketUpdate carries no packet id,
  * only the name and the tossup and bonus counts, and a PACKET_NOT_AVAILABLE
  * refusal gets a message that says what to do instead of the raw server text.
@@ -244,6 +327,35 @@ describe('GameStateService packet updates (WP-FIXN4)', () => {
 
     eventSubjects['GameSessionUpdate'].next({
       gameSession: { currentMatch: { packet: { id: null, name: 'Another Packet', tossups: null, bonuses: null } } },
+    });
+
+    expect(session().currentMatch.packet.tossups).toBeNull();
+  });
+
+  it('resets the counts on a fresh initialize, so a later resend for a same-named packet is not restored (NG-R4-02)', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+
+    // Leaving and rejoining a game seat reuses this singleton service.
+    service.initialize('g1', 'p1', {});
+
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { packet: { id: null, name: 'Generated Packet', tossups: null, bonuses: null } } },
+    });
+
+    expect(session().currentMatch.packet.tossups).toBeNull();
+  });
+
+  it('resets the counts when the player leaves the game (NG-R4-02)', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+
+    service.leaveGame();
+
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { packet: { id: null, name: 'Generated Packet', tossups: null, bonuses: null } } },
     });
 
     expect(session().currentMatch.packet.tossups).toBeNull();

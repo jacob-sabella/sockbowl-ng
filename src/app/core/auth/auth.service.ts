@@ -419,25 +419,37 @@ export class AuthService {
    * Resolves to the new access token; rejects when there is no refresh token
    * or the token endpoint refuses it (the library then emits
    * `token_refresh_error`, which ends the session).
+   *
+   * Always returns a promise, even if `oauthService` throws synchronously
+   * instead of rejecting (NG-R4-01): every caller does
+   * `refreshToken().catch(...)` or `await`s it expecting a rejection, never a
+   * thrown exception, and a synchronous throw here would otherwise escape
+   * `catch` chained onto the call and surface as an unhandled rejection out
+   * of the caller's own async function (e.g. `GameWebSocketService`'s
+   * `refreshAndReconnect`), silently skipping its `stop()` fallback.
    */
   public refreshToken(): Promise<string | null> {
-    if (!environment.authEnabled) {
-      return Promise.resolve(null);
-    }
-    if (!this.refreshInFlight) {
-      if (!this.oauthService.getRefreshToken()) {
-        return Promise.reject(new Error('No refresh token available'));
+    try {
+      if (!environment.authEnabled) {
+        return Promise.resolve(null);
       }
-      const inFlight = this.oauthService.refreshToken()
-        .then(() => this.oauthService.getAccessToken() || null)
-        .finally(() => {
-          if (this.refreshInFlight === inFlight) {
-            this.refreshInFlight = null;
-          }
-        });
-      this.refreshInFlight = inFlight;
+      if (!this.refreshInFlight) {
+        if (!this.oauthService.getRefreshToken()) {
+          return Promise.reject(new Error('No refresh token available'));
+        }
+        const inFlight = this.oauthService.refreshToken()
+          .then(() => this.oauthService.getAccessToken() || null)
+          .finally(() => {
+            if (this.refreshInFlight === inFlight) {
+              this.refreshInFlight = null;
+            }
+          });
+        this.refreshInFlight = inFlight;
+      }
+      return this.refreshInFlight;
+    } catch (err) {
+      return Promise.reject(err);
     }
-    return this.refreshInFlight;
   }
 
   /**

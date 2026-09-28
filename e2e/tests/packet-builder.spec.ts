@@ -85,6 +85,31 @@ async function addBonus(
   await expect(form).toBeHidden({ timeout: 10000 });
 }
 
+/**
+ * NG-V1-08: picks the first real (non-"None") subcategory on an
+ * already-expanded panel's Subcategory `mat-select`, and returns its name --
+ * or `null`, best-effort, if this environment's taxonomy has nothing seeded
+ * (the same posture `newPacketInBuilder`'s difficulty pick already takes).
+ * Does not save; the caller decides how.
+ */
+async function pickFirstSubcategory(panel: Locator): Promise<string | null> {
+  const page = panel.page();
+  const select = panel.locator('.packet-builder__subcategory-field mat-select');
+  await select.click();
+  const options = page.locator('.cdk-overlay-container mat-option');
+  await expect(options.first()).toBeVisible({ timeout: 5000 });
+  // Index 0 is always the "None" option (packet-builder.component.html); a
+  // real, seeded subcategory (if any) is index 1 onward.
+  if ((await options.count()) < 2) {
+    await page.keyboard.press('Escape');
+    return null;
+  }
+  const chosen = options.nth(1);
+  const name = (await chosen.textContent())?.trim() ?? null;
+  await chosen.click();
+  return name;
+}
+
 /** The tossup panel whose visible preview text contains `snippet` (question or preamble text). */
 function panelByText(page: Page, snippet: string): Locator {
   return page.locator('mat-expansion-panel').filter({ hasText: snippet });
@@ -157,13 +182,32 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
       { question: 'This is the smallest continent by area.', answer: 'AUSTRALIA' },
     ]);
 
-    // Dirty the bonus's preamble (not any tossup, so the buzz loop's expected
-    // answers below stay untouched) and exercise Save all / the dirty counter.
+    // NG-V1-08: pick a subcategory on one tossup, saved on its own (not
+    // lumped into the Save all below), and confirm it survives a reload in
+    // step 3. Best-effort: some environments seed no taxonomy at all.
+    const t1PanelForSubcategory = panelByText(page, T1.q);
+    await expandPanel(t1PanelForSubcategory);
+    const pickedSubcategory = await pickFirstSubcategory(t1PanelForSubcategory);
+    if (pickedSubcategory) {
+      await t1PanelForSubcategory.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/All changes saved/, {
+        timeout: 10000,
+      });
+    }
+
+    // NG-V1-08: dirty more than one entity (the bonus's preamble and two of
+    // its parts, not any tossup -- so the buzz loop's expected answers below
+    // stay untouched) before exercising Save all, so ordering and the
+    // version chain across several entities gets covered here too, not only
+    // in Karma.
     const bonusPanel = panelByText(page, 'Answer the following about geography');
     await expandPanel(bonusPanel);
     const preambleField = bonusPanel.getByLabel('Preamble');
     await preambleField.fill('Answer the following about geography, for 10 points each. (v2)');
-    await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/1 unsaved change/, { timeout: 5000 });
+    const bonusPartRows = bonusPanel.locator('.packet-builder__part');
+    await bonusPartRows.nth(0).getByLabel('Answer').fill('PACIFIC (v2)');
+    await bonusPartRows.nth(1).getByLabel('Answer').fill('NILE (v2)');
+    await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/3 unsaved changes/, { timeout: 5000 });
     await page.getByRole('button', { name: 'Save all' }).click();
     await expect(page.locator('.packet-builder__unsaved-count')).toHaveText(/All changes saved/, { timeout: 10000 });
     await expect(page.locator('.packet-builder__validation-badge')).toHaveText(/Playable/, { timeout: 10000 });
@@ -176,6 +220,10 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     await expect(page.locator('.packet-builder__tossups mat-expansion-panel').first()).toContainText(T3.q, {
       timeout: 10000,
     });
+    if (pickedSubcategory) {
+      // NG-V1-08: the picked subcategory's chip must have survived the reload.
+      await expect(panelByText(page, T1.q)).toContainText(pickedSubcategory);
+    }
 
     // Step 4: Preview shows all 3 tossups and the bonus's 3 parts.
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
@@ -224,12 +272,32 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     // running this while still Draft deadlocked the match at CONFIG (matchState
     // stuck, packet never set). Auth-off has no ownership gate at all, so the
     // packet's visibility doesn't matter there and this placement is still valid.
-    const bonusMatch = await stageMatch({ packetId, playerNames: ['Ada', 'Blaise'] });
+    //
+    // NG-V1-02: the packet has exactly 3 tossups and 1 bonus (step 2 above),
+    // and the game pairs each bonus with one specific tossup, chosen by the
+    // server -- not necessarily the first one played. A single round
+    // (maxRounds=1) could easily complete a tossup with no bonus attached at
+    // all, and a plain "some team scored > 0" check would still pass on that
+    // tossup's 10 points alone, proving nothing about the bonus. Driving
+    // every tossup round (maxRounds = the packet's real tossup count)
+    // guarantees the bonus-paired round is reached, and asserting the exact
+    // score of that specific round -- not just any nonzero team total --
+    // proves the bonus was actually read, judged and scored, not skipped.
+    const bonusMatch = await stageMatch({ packetId, playerNames: ['Ada', 'Blaise'], tossupCount: 3, bonusCount: 1 });
     try {
-      const result = await driveFullMatch(bonusMatch, 1, false);
-      expect(result.rounds).toBeGreaterThanOrEqual(1);
-      const scored = result.scores.some((s) => (s.score ?? 0) > 0);
-      expect(scored).toBeTruthy();
+      const result = await driveFullMatch(bonusMatch, bonusMatch.tossupCount, false);
+      expect(result.rounds).toBe(bonusMatch.tossupCount);
+      // The match actually entered bonus play (not just a lucky nonzero score).
+      expect(result.roundStatesSeen).toContain('BONUS_AWAITING_ANSWER');
+      // Exactly one of the 3 tossups carries this packet's one bonus, and it
+      // must have been played: 1 correct tossup (10) + all 3 correct parts
+      // (30) = 40, the exact score PB-15/G1 promise for this packet.
+      expect(result.bonusRounds).toHaveLength(1);
+      const [bonus] = result.bonusRounds;
+      expect(bonus.tossupCorrect).toBe(true);
+      expect(bonus.bonusPartsTotal).toBe(3);
+      expect(bonus.bonusPartsCorrect).toBe(3);
+      expect(bonus.score).toBe(40);
     } finally {
       bonusMatch.cleanup();
     }
@@ -361,6 +429,7 @@ test('draft privacy in game', async ({ page, browser }, testInfo) => {
   testInfo.skip(!isAuthOn(testInfo), 'draft ownership only applies when auth is on');
   test.setTimeout(120_000);
   let packetId: string | null = null;
+  let publishedPacketId: string | null = null;
   let authorToken: string | null = null;
 
   try {
@@ -372,8 +441,18 @@ test('draft privacy in game', async ({ page, browser }, testInfo) => {
     await addTossup(page, 'A placeholder tossup for the draft-privacy check.', 'PLACEHOLDER');
     await expect(page.locator('.packet-builder__visibility-chip')).toHaveText(/Draft/, { timeout: 10000 });
 
-    // A second demo user (a player, not the author) can't find it via the
-    // in-game packet search dialog.
+    // NG-V1-08: a positive control -- a PUBLISHED packet the search dialog
+    // must find -- so the negative assertion below (the draft is absent)
+    // actually proves the search works, rather than also passing if the
+    // whole search were silently broken.
+    const publishedName = `E2E published ${Date.now()}`;
+    publishedPacketId = await newPacketInBuilder(page, publishedName);
+    await addTossup(page, 'A placeholder tossup for the positive-control published packet.', 'PLACEHOLDER');
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await expect(page.locator('.packet-builder__visibility-chip')).toHaveText(/Published/, { timeout: 10000 });
+
+    // A second demo user (a player, not the author) can't find the draft via
+    // the in-game packet search dialog, but can find the published packet.
     const otherCtx = await browser.newContext();
     const otherPage = await otherCtx.newPage();
     await loginAs(otherPage, OTHER_USER);
@@ -386,7 +465,14 @@ test('draft privacy in game', async ({ page, browser }, testInfo) => {
     await otherPage.getByRole('button', { name: /Find a Packet/ }).click();
     const searchDialog = otherPage.locator('.packet-search-dialog');
     await expect(searchDialog).toBeVisible({ timeout: 10000 });
-    await searchDialog.locator('input[type="text"]').fill(draftName);
+
+    // Positive control first.
+    const searchInput = searchDialog.locator('input[type="text"]');
+    await searchInput.fill(publishedName);
+    await expect(searchDialog.locator('.result-item', { hasText: publishedName })).toHaveCount(1, { timeout: 10000 });
+
+    // Negative control: the draft, from the same search dialog, same user.
+    await searchInput.fill(draftName);
     await otherPage.waitForTimeout(600); // debounce
     await expect(searchDialog.locator('.result-item', { hasText: draftName })).toHaveCount(0);
     await searchDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -410,6 +496,9 @@ test('draft privacy in game', async ({ page, browser }, testInfo) => {
   } finally {
     if (packetId) {
       await deletePacket(packetId, authorToken);
+    }
+    if (publishedPacketId) {
+      await deletePacket(publishedPacketId, authorToken);
     }
   }
 });

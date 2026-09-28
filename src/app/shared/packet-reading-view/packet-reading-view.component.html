@@ -1,43 +1,66 @@
-<mat-tab-group>
-  <mat-tab label="Tossups ({{ tossups.length }})">
-    <div class="qset">
-      @for (ct of tossups; track $index) {
-        <article class="q">
-          <div class="q__num">{{ $index + 1 }}</div>
-          <div class="q__body">
-            <div class="q__question" [innerHTML]="ct.tossup?.question || '(no question)'"></div>
-            <div class="q__answer">
-              <span class="q__label">Answer</span>
-              <span [innerHTML]="$safeNavigationMigration(ct.tossup?.answer)"></span>
-            </div>
+<ng-template #tossupsContent>
+  <div class="qset">
+    @for (ct of tossups; track $index) {
+      <article class="q">
+        <div class="q__num">{{ $index + 1 }}</div>
+        <div class="q__body">
+          <div class="q__question" [innerHTML]="ct.tossup?.question || '(no question)'"></div>
+          <div class="q__answer">
+            <span class="q__label">Answer</span>
+            <span [innerHTML]="$safeNavigationMigration(ct.tossup?.answer)"></span>
           </div>
-        </article>
-      }
-    </div>
-  </mat-tab>
+        </div>
+      </article>
+    }
+  </div>
+</ng-template>
 
-  <mat-tab label="Bonuses ({{ bonuses.length }})">
-    <div class="qset">
-      @for (cb of bonuses; track $index) {
-        <article class="q">
-          <div class="q__num">{{ $index + 1 }}</div>
-          <div class="q__body">
-            <div class="q__question" [innerHTML]="cb.bonus?.preamble || '(no preamble)'"></div>
-            @for (hp of parts(cb); track $index) {
-              <div class="q__part">
-                <div class="q__part-q">
-                  <span class="q__label">[10]</span>
-                  <span [innerHTML]="$safeNavigationMigration(hp.bonusPart?.question)"></span>
-                </div>
-                <div class="q__answer">
-                  <span class="q__label">Answer</span>
-                  <span [innerHTML]="$safeNavigationMigration(hp.bonusPart?.answer)"></span>
-                </div>
+<ng-template #bonusesContent>
+  <div class="qset">
+    @for (cb of bonuses; track $index) {
+      <article class="q">
+        <div class="q__num">{{ $index + 1 }}</div>
+        <div class="q__body">
+          <div class="q__question" [innerHTML]="cb.bonus?.preamble || '(no preamble)'"></div>
+          @for (hp of parts(cb); track $index) {
+            <div class="q__part">
+              <div class="q__part-q">
+                <span class="q__label">[10]</span>
+                <span [innerHTML]="$safeNavigationMigration(hp.bonusPart?.question)"></span>
               </div>
-            }
-          </div>
-        </article>
-      }
-    </div>
-  </mat-tab>
-</mat-tab-group>
+              <div class="q__answer">
+                <span class="q__label">Answer</span>
+                <span [innerHTML]="$safeNavigationMigration(hp.bonusPart?.answer)"></span>
+              </div>
+            </div>
+          }
+        </div>
+      </article>
+    }
+  </div>
+</ng-template>
+
+@if (linear) {
+  <!--
+    Linear (print) layout (NG-V1-01): both sections render, stacked, with no
+    tabs, so nothing depends on which tab happened to be active when
+    `window.print()` was called. See PacketBuilderComponent.printPacket().
+  -->
+  <div class="qset-linear">
+    <h3 class="qset-linear__heading">Tossups ({{ tossups.length }})</h3>
+    <ng-container [ngTemplateOutlet]="tossupsContent"></ng-container>
+
+    <h3 class="qset-linear__heading">Bonuses ({{ bonuses.length }})</h3>
+    <ng-container [ngTemplateOutlet]="bonusesContent"></ng-container>
+  </div>
+} @else {
+  <mat-tab-group>
+    <mat-tab label="Tossups ({{ tossups.length }})">
+      <ng-container [ngTemplateOutlet]="tossupsContent"></ng-container>
+    </mat-tab>
+
+    <mat-tab label="Bonuses ({{ bonuses.length }})">
+      <ng-container [ngTemplateOutlet]="bonusesContent"></ng-container>
+    </mat-tab>
+  </mat-tab-group>
+}

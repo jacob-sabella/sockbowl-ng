@@ -175,16 +175,25 @@ describe('PacketListComponent', () => {
     expect(component.canManage(ownerlessPacket)).toBeTrue();
   });
 
-  it('play test stashes the pending packet id and navigates to the game lobby', () => {
+  it('play test navigates to the game lobby with the mode/packetId query params', () => {
     configure(['packet:create'], 'user-1');
-    const pending = TestBed.inject(PendingPacketService) as jasmine.SpyObj<PendingPacketService>;
     const router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
     component.playTest(othersPacket);
-    expect(pending.set).toHaveBeenCalledWith('p2');
     expect(router.navigate).toHaveBeenCalledWith(['/game-session'], {
       queryParams: { mode: 'single', packetId: 'p2' }
     });
   });
+
+  it(
+    'play test does NOT pre-set the pending packet in sessionStorage (NG-V1-05): ' +
+      'GameSessionComponent sets it from the query param it just navigated with',
+    () => {
+      configure(['packet:create'], 'user-1');
+      const pending = TestBed.inject(PendingPacketService) as jasmine.SpyObj<PendingPacketService>;
+      component.playTest(othersPacket);
+      expect(pending.set).not.toHaveBeenCalled();
+    },
+  );
 
   it('duplicate calls clonePacket and navigates to the new packet\'s builder', () => {
     configure(['packet:create'], 'user-1');

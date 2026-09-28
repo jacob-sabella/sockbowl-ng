@@ -4,8 +4,8 @@ import { test, expect } from '@playwright/test';
 // still host and play. This uses Search Existing (an existing PUBLISHED
 // packet) rather than the bank "Generate" tab, to exercise D2's anonymous
 // read path specifically (PUBLISHED packets stay world-readable, answer-free
-// where it matters); the Generate/EPHEMERAL guest path (D15) is covered by
-// the plain `tests/*.spec.ts` guest suite run against this same stack.
+// where it matters); the Generate/EPHEMERAL guest path (D15) is covered,
+// with auth on, by tests-auth/auth-generate.spec.ts.
 test('An unauthenticated guest can host and play a solo game against a published packet', async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
 

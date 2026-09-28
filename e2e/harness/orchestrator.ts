@@ -87,12 +87,36 @@ export async function stageMatch(
   };
 }
 
+/** A single played round's bonus outcome, from `driveFullMatch`'s pass over `previousRounds`. */
+export interface BonusRoundResult {
+  /** The round number (1-based) this bonus was attached to. */
+  roundNumber: number;
+  /** Whether the round's tossup was answered correctly (should always be true; the harness only judges `true`). */
+  tossupCorrect: boolean;
+  /** How many of the bonus's parts were answered, and how many were correct (the harness only judges `true`, so normally equal). */
+  bonusPartsTotal: number;
+  bonusPartsCorrect: number;
+  /** `10 * tossupCorrect + 10 * bonusPartsCorrect` — the exact score this one round is worth. */
+  score: number;
+}
+
 /**
  * Drive a staged match to completion or `maxRounds`, reacting to each round
  * state: proctor reads, a player buzzes, proctor judges, and works the bonus.
- * Returns the number of rounds played and the final team scores.
+ * Returns the number of rounds played, the final team scores, every distinct
+ * `roundState` observed (NG-V1-02: so a caller can assert the match actually
+ * passed through `BONUS_AWAITING_ANSWER` rather than inferring it from a
+ * nonzero score, which a plain tossup round also produces), and the outcome
+ * of every round whose tossup carried a bonus that was actually played
+ * (`bonusRounds`; a tossup can have an `associatedBonus` and still never
+ * reach the bonus phase if nobody answers it correctly, which is why this is
+ * derived from `bonusPartAnswers`, not from the bonus's mere presence).
  */
-export async function driveFullMatch(m: StagedMatch, maxRounds = 3, verbose = true): Promise<{ rounds: number; scores: any[] }> {
+export async function driveFullMatch(
+  m: StagedMatch,
+  maxRounds = 3,
+  verbose = true,
+): Promise<{ rounds: number; scores: any[]; roundStatesSeen: string[]; bonusRounds: BonusRoundResult[] }> {
   const { proctor, players } = m;
   const log = (...a: any[]) => verbose && console.log('   ', ...a);
 
@@ -102,6 +126,7 @@ export async function driveFullMatch(m: StagedMatch, maxRounds = 3, verbose = tr
 
   let rounds = 0;
   let buzzer = 0;
+  const roundStatesSeen = new Set<string>();
   // Scale the overall budget with maxRounds: a seeded packet's full tossup
   // count (per NG-R2-02's fix, `full-match` now requires every one of them
   // to complete, not just one) can be well above the default 3.
@@ -111,6 +136,7 @@ export async function driveFullMatch(m: StagedMatch, maxRounds = 3, verbose = tr
     const gs = proctor.gameSession;
     const round = gs?.currentMatch?.currentRound;
     const rs: string = round?.roundState;
+    if (rs) roundStatesSeen.add(rs);
     if (gs?.currentMatch?.matchState === 'COMPLETED') break;
 
     switch (rs) {
@@ -180,5 +206,27 @@ export async function driveFullMatch(m: StagedMatch, maxRounds = 3, verbose = tr
     }
     return { team: t.teamName, score, players: (t.teamPlayers ?? []).map((p: any) => p.name) };
   });
-  return { rounds, scores };
+
+  // NG-V1-02: identify every round whose bonus was actually played, so a
+  // caller can assert an exact score for it rather than a plain nonzero
+  // aggregate, which a tossup-only round satisfies just as well. A tossup
+  // can carry an `associatedBonus` and still never be scored here if nobody
+  // answers it correctly (bonusPartAnswers stays empty), so presence of
+  // bonusPartAnswers, not associatedBonus, is what "played" means.
+  const bonusRounds: BonusRoundResult[] = previousRounds
+    .filter((round: any) => (round.bonusPartAnswers ?? []).length > 0)
+    .map((round: any) => {
+      const tossupCorrect = (round.buzzList ?? []).some((b: any) => b.correct);
+      const bonusPartsTotal = (round.bonusPartAnswers ?? []).length;
+      const bonusPartsCorrect = (round.bonusPartAnswers ?? []).filter((a: any) => a.correct).length;
+      return {
+        roundNumber: round.roundNumber,
+        tossupCorrect,
+        bonusPartsTotal,
+        bonusPartsCorrect,
+        score: (tossupCorrect ? 10 : 0) + bonusPartsCorrect * 10,
+      };
+    });
+
+  return { rounds, scores, roundStatesSeen: [...roundStatesSeen], bonusRounds };
 }

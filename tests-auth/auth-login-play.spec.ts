@@ -123,19 +123,20 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
   // smallest published packet in this stack's seed data (13 tossups; no
   // subset/quantity picker exists for Search Existing, so the whole packet
   // is played). Not the qbreader "Generate" tab, which would let a host pick
-  // an exact tossup count (3, per the plan) but draws from a separate bank
-  // of :BankTossup/:BankBonus nodes this compose stack doesn't seed (a
-  // known, reported M3 follow-up — confirmed directly: `MATCH (p:Packet)
-  // ... RETURN p.name, count of :Tossup` shows only Search-Existing-style
-  // packets, and `CALL db.labels()` lists no :BankTossup/:BankBonus label at
-  // all). The M1 login+play e2e hit the same gap and made the same call.
+  // an exact tossup count (3, per the plan): that tab is exercised on its
+  // own, against a bank seeded by helpers/bank.ts's seedBankFixture(), by
+  // auth-generate.spec.ts; this spec stays independent of that fixture.
   await page.getByRole('button', { name: /Find a Packet/ }).click();
   const dialog = page.locator('.packet-search-dialog');
   await expect(dialog).toBeVisible();
   const search = dialog.locator('.search-field input');
   await search.click();
   await search.fill(PACKET_NAME);
-  const result = dialog.locator('.result-item').first();
+  // Click the result named exactly PACKET_NAME (NG-R4-03), not just
+  // whichever the search returns first: the answer lookup below is keyed on
+  // PACKET_NAME too (via searchPacketsByName), so the two must pick the same
+  // packet when the search surfaces more than one candidate.
+  const result = dialog.locator('.result-item').filter({ has: page.getByText(PACKET_NAME, { exact: true }) }).first();
   await expect(result).toBeVisible({ timeout: 20_000 });
   await result.click();
   await dialog.getByRole('button', { name: 'Use Packet' }).click();

@@ -93,11 +93,25 @@ export class GameStateService {
    */
   public initialize(gameSessionId: string, playerSessionId: string, credentials: SocketCredentials = {}) {
     this._playerSessionId = playerSessionId;
+    // This service is a singleton (providedIn: 'root'), so a fresh seat must
+    // not inherit the previous seat's MatchPacketUpdate counts (NG-R4-02).
+    this.packetCounts = null;
     this.gameMessageService.initialize(gameSessionId, playerSessionId, credentials);
     if (!this.messagesSubscribed) {
       this.messagesSubscribed = true;
       this.subscribeToGameMessages();
     }
+  }
+
+  /**
+   * Call when the player leaves the current game (e.g. GameCanvasComponent's
+   * ngOnDestroy), so the counts from the game just left can't be restored
+   * onto a later resend for a same-named packet in whatever comes next
+   * (NG-R4-02). `initialize` also clears this for the next seat; this covers
+   * the gap between leaving one and initializing another.
+   */
+  public leaveGame(): void {
+    this.packetCounts = null;
   }
 
   /**
@@ -482,7 +496,7 @@ export class GameStateService {
 
   /**
    * Calculates total bonus points for current round.
-   * @returns Total bonus points earned (0-30)
+   * @returns Total bonus points earned so far (10 per correct part)
    */
   public getCurrentRoundBonusPoints(): number {
     const round = this.gameSessionState?.currentMatch?.currentRound;
@@ -491,6 +505,21 @@ export class GameStateService {
     return round.bonusPartAnswers
       .filter(answer => answer.correct)
       .length * 10;
+  }
+
+  /**
+   * The maximum a bonus can score (10 per part). A packet's bonuses can have
+   * 1 to 6 parts (D7), not always 3 (the ng minors item alongside NG-V1-02),
+   * so this reads the current round's actual bonus rather than assuming 3
+   * parts / 30 points. Falls back to the classic 3-part default (30) only
+   * when no bonus is in play yet, so the label has something to show before
+   * `currentBonus` arrives on the wire.
+   * @returns The current bonus's max score, or 30 if none is active
+   */
+  public getCurrentRoundMaxBonusPoints(): number {
+    const round = this.gameSessionState?.currentMatch?.currentRound;
+    const partCount = round?.currentBonus?.bonusParts?.length;
+    return (partCount && partCount > 0 ? partCount : 3) * 10;
   }
 
 

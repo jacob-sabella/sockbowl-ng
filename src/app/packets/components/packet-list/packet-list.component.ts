@@ -7,7 +7,6 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questions.service';
 import { PacketAuthoringService } from '../../services/packet-authoring.service';
-import { PendingPacketService } from '../../../game/services/pending-packet.service';
 import { Difficulty, PacketFilter, PacketSummary } from '../../models/packet-authoring.models';
 import { AuthService } from '../../../core/auth/auth.service';
 import { describeGraphqlError } from '../../../core/graphql/graphql-errors';
@@ -31,7 +30,6 @@ import { PacketImportDialogComponent } from '../packet-import-dialog/packet-impo
 export class PacketListComponent implements OnInit {
   private sockbowlQuestionsService = inject(SockbowlQuestionsService);
   private packetAuthoring = inject(PacketAuthoringService);
-  private pendingPacket = inject(PendingPacketService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -216,9 +214,15 @@ export class PacketListComponent implements OnInit {
     });
   }
 
-  /** Play test (PB-15): stash the packet id and hand off to the game lobby, same as the builder's button (N3). */
+  /**
+   * Play test (PB-15): hand off to the game lobby, same as the builder's
+   * button (N3). NG-V1-05: don't pre-set the pending packet here.
+   * GameSessionComponent sets it from the `packetId` query param this
+   * navigation carries, so a second, earlier write is redundant and is
+   * exactly what goes stale if navigation is cancelled or the solo game
+   * fails to start.
+   */
   playTest(packet: PacketSummary): void {
-    this.pendingPacket.set(packet.id);
     this.router.navigate(['/game-session'], { queryParams: { mode: 'single', packetId: packet.id } });
   }
 

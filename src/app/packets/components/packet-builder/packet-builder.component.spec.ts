@@ -314,6 +314,164 @@ describe('PacketBuilderComponent', () => {
     expect(component.canManagePacket).toBeFalse();
   });
 
+  describe('bumpLocalVersion on every mutation success path (NG-V1-04)', () => {
+    // Every one of these left `packetVersion` one behind the server between
+    // its own mutation succeeding and the async refetch() landing, so a
+    // second, unrelated mutation fired in that window sent a stale
+    // expectedVersion and got a spurious CONFLICT for the user's own edit.
+    it('removeTossup bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.removeTossupFromPacket.and.returnValue(of('t1'));
+
+      component.removeTossup(component.sortedTossups[0]);
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('moveTossup (keyboard reorder) bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.reorderTossup.and.returnValue(of('t1'));
+
+      component.moveTossup(component.sortedTossups[0], 1);
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('addTossup bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.addTossupToPacket.and.returnValue(of('new-tossup-id'));
+      component.openNewTossup();
+      component.newTossupDraft = { question: 'Q', answer: 'A', subcategoryId: null };
+
+      component.addTossup();
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('generateTossup (AI-assist) bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.generateAndAddTossup.and.returnValue(of('new-tossup-id'));
+      component.openGenerate();
+      component.genDraft = { topic: 'topic', additionalContext: '', subcategoryId: null, apiKey: 'key', model: '' };
+
+      component.generateTossup();
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('removeBonus bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.removeBonusFromPacket.and.returnValue(of('b1'));
+
+      component.removeBonus(component.sortedBonuses[0]);
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('moveBonus (keyboard reorder) bumps the local version on success', () => {
+      configure(makePacket({
+        bonuses: [
+          { id: 1, order: 0, bonus: { id: 'b1', preamble: 'P1', remoteId: '', subcategory: null as any, bonusParts: [] } },
+          { id: 2, order: 1, bonus: { id: 'b2', preamble: 'P2', remoteId: '', subcategory: null as any, bonusParts: [] } }
+        ]
+      } as any));
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.reorderBonus.and.returnValue(of('b1'));
+
+      component.moveBonus(component.sortedBonuses[0], 1);
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('submitNewBonus bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.addBonusToPacket.and.returnValue(of('new-bonus-id'));
+      component.openNewBonus();
+      component.newBonusDraft.parts = component.newBonusDraft.parts.map(() => ({ question: 'Q', answer: 'A' }));
+
+      component.submitNewBonus();
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('removePart bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.removeBonusPart.and.returnValue(of('bp1'));
+      const be = component.sortedBonuses[0];
+
+      component.removePart(be, component.sortedParts(be)[0]);
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('movePart (keyboard reorder) bumps the local version on success', () => {
+      configure(makePacket({
+        bonuses: [
+          {
+            id: 1,
+            order: 0,
+            bonus: {
+              id: 'b1', preamble: 'P1', remoteId: '', subcategory: null as any,
+              bonusParts: [
+                { id: 1, order: 0, bonusPart: { id: 'bp1', question: 'PQ1', answer: 'PA1' } },
+                { id: 2, order: 1, bonusPart: { id: 'bp2', question: 'PQ2', answer: 'PA2' } }
+              ]
+            }
+          }
+        ]
+      } as any));
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.reorderBonusPart.and.returnValue(of('bp1'));
+      const be = component.sortedBonuses[0];
+
+      component.movePart(be, component.sortedParts(be)[0], 1);
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('addPart bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.addBonusPart.and.returnValue(of('new-part-id'));
+      const be = component.sortedBonuses[0];
+      component.openNewPart(be);
+      component.newPartDrafts[be.bonus.id] = { question: 'Q', answer: 'A' };
+
+      component.addPart(be);
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('saveName (rename) bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.renamePacket.and.returnValue(of('p1'));
+      component.startEditName();
+      component.nameDraft = 'New Name';
+
+      component.saveName();
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+
+    it('onDifficultyChange bumps the local version on success', () => {
+      configure(makePacket());
+      spyOn<any>(component, 'bumpLocalVersion').and.callThrough();
+      authoringSpy.setPacketDifficulty.and.returnValue(of('p1'));
+
+      component.onDifficultyChange('d2');
+
+      expect(component['bumpLocalVersion']).toHaveBeenCalled();
+    });
+  });
+
   describe('drag-and-drop reorder (PB-20)', () => {
     it('a tossup drop renumbers locally and calls reorderTossup once with the target index', () => {
       configure(makePacket());
@@ -509,13 +667,116 @@ describe('PacketBuilderComponent', () => {
       expect(questionsSpy.getPacketById).toHaveBeenCalledTimes(1);
     });
 
-    it('Play test sets the pending packet and navigates to /game-session with the mode/packetId query params', () => {
+    it('Play test navigates to /game-session with the mode/packetId query params', () => {
       configure(makePacket());
 
       component.playTest();
 
-      expect(pendingPacketSpy.set).toHaveBeenCalledWith('p1');
       expect(routerSpy.navigate).toHaveBeenCalledWith(['/game-session'], { queryParams: { mode: 'single', packetId: 'p1' } });
+    });
+
+    it(
+      'Play test does NOT pre-set the pending packet in sessionStorage (NG-V1-05): ' +
+        'GameSessionComponent sets it from the query param it just navigated with, so a second, ' +
+        'earlier write here is the one that goes stale if navigation is cancelled or the solo game fails',
+      () => {
+        configure(makePacket());
+
+        component.playTest();
+
+        expect(pendingPacketSpy.set).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe('print (NG-V1-01: the printout must include the bonuses)', () => {
+    it('printPacket shows the preview and renders a print-only linear reading view alongside the on-screen tabbed one', () => {
+      configure(makePacket());
+
+      component.printPacket();
+      fixture.detectChanges();
+
+      expect(component.showPreview).toBeTrue();
+      const readingViews = fixture.nativeElement.querySelectorAll('app-packet-reading-view');
+      // One interactive, tabbed instance for on-screen viewing, and one
+      // print-only linear instance that always has both sections in the DOM
+      // — see packet-reading-view.component's own spec for the linear-mode
+      // behavior, and _print.scss for which one @media print shows.
+      expect(readingViews.length).toBe(2);
+      expect(fixture.nativeElement.querySelector('app-packet-reading-view.packet-builder__preview-onscreen')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-packet-reading-view.packet-builder__preview-print-only')).not.toBeNull();
+    });
+
+    it('does not render the print-only reading view outside of preview mode', () => {
+      configure(makePacket());
+      expect(component.showPreview).toBeFalse();
+      expect(fixture.nativeElement.querySelector('app-packet-reading-view')).toBeNull();
+    });
+  });
+
+  describe('D7 empty-preamble note (NG-V1-03: a warning, not a mat-error)', () => {
+    it("renders the D7 note as a mat-hint, never a mat-error, for a bonus with an empty preamble", () => {
+      const packet = makePacket({
+        bonuses: [
+          {
+            id: 1,
+            order: 0,
+            bonus: { id: 'b1', preamble: '', remoteId: '', subcategory: null as any, bonusParts: [] }
+          }
+        ]
+      } as any);
+      configure(packet);
+
+      const html: string = fixture.nativeElement.innerHTML;
+      expect(html).toContain('An empty preamble is allowed, but not recommended (D7)');
+      // Structurally a hint, not an error: an empty preamble is valid by
+      // design (D7), so it must never gate Save or look like a failure.
+      const warningHint = fixture.nativeElement.querySelector('.packet-builder__field-warning-hint');
+      expect(warningHint).not.toBeNull();
+      expect(warningHint.tagName.toLowerCase()).toBe('mat-hint');
+      expect(fixture.nativeElement.querySelector('mat-error')).toBeNull();
+    });
+  });
+
+  describe('read-only view for a non-manager (NG-V1-07)', () => {
+    // A non-manager reaches /packets/:id/edit only because the route guard is
+    // gated on packet:update alone (app-routing.module.ts), not on ownership
+    // -- so it's entirely possible to land here with canManagePacket false.
+    // Before this fix, the textareas, drag handles and Save all bar were
+    // still live, so typing (or dragging) marked the page dirty and any
+    // attempt to save failed server-side with FORBIDDEN.
+    function configureAsNonManager(): void {
+      // No packet:update/packet:delete, and not the owner: canManagePacket must be false.
+      configure(makePacket({ owner: { id: 'user-2', name: 'Them' } }), [], 'user-1');
+      expect(component.canManagePacket).toBeFalse();
+    }
+
+    it('marks the tossup Question and Answer textareas readonly', () => {
+      configureAsNonManager();
+      const panel = fixture.nativeElement.querySelectorAll('.packet-builder__tossups textarea');
+      expect(panel.length).toBeGreaterThan(0);
+      panel.forEach((ta: HTMLTextAreaElement) => expect(ta.readOnly).toBeTrue());
+    });
+
+    it('marks the bonus preamble and bonus part Question/Answer textareas readonly', () => {
+      configureAsNonManager();
+      const areas = fixture.nativeElement.querySelectorAll('.packet-builder__bonuses textarea');
+      expect(areas.length).toBeGreaterThan(0);
+      areas.forEach((ta: HTMLTextAreaElement) => expect(ta.readOnly).toBeTrue());
+    });
+
+    it('hides the unsaved-changes / Save all bar entirely', () => {
+      configureAsNonManager();
+      expect(fixture.nativeElement.querySelector('.packet-builder__unsaved-bar')).toBeNull();
+    });
+
+    it('shows editable textareas and the unsaved bar for a manager (control)', () => {
+      configure(makePacket());
+      expect(component.canManagePacket).toBeTrue();
+      const areas: HTMLTextAreaElement[] = Array.from(fixture.nativeElement.querySelectorAll('textarea'));
+      expect(areas.length).toBeGreaterThan(0);
+      areas.forEach((ta) => expect(ta.readOnly).toBeFalse());
+      expect(fixture.nativeElement.querySelector('.packet-builder__unsaved-bar')).not.toBeNull();
     });
   });
 });
