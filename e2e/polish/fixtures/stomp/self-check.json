@@ -1,0 +1,85 @@
+{
+  "_comment": "SYNTHETIC, hand-authored fixture for H0's own feasibility self-check (capture.spec.ts 'stomp replay self-check'). This is NOT a recording from a live stack and must never be used for a baseline/final/v1 capture of S1/S2/S3 -- those wait on record-stomp.ts under the fullstack lock (H0 PENDING-LOCK). It exists only to prove page.routeWebSocket + mock/stomp-replay.ts can drive game-canvas.component.ts into rendering its proctor/buzzer/spectator children.",
+  "gameSessionId": "gs-selfcheck",
+  "seats": {
+    "proctor": "p-proctor",
+    "buzzer": "p-buzzer",
+    "spectator": "p-spectator"
+  },
+  "frames": [
+    {
+      "target": "broadcast",
+      "kind": "message",
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "gameSession": {
+          "id": "gs-selfcheck",
+          "joinCode": "SELFCK",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": { "tossupTimerSeconds": 5, "bonusTimerSeconds": 5, "autoTimerEnabled": true, "readingWordsPerSecond": 4 }
+          },
+          "playerList": [
+            { "playerMode": "PROCTOR", "playerStatus": "CONNECTED", "playerId": "p-proctor", "playerSecret": "", "name": "Alex Rivera", "gameOwner": true },
+            { "playerMode": "BUZZER", "playerStatus": "CONNECTED", "playerId": "p-buzzer", "playerSecret": "", "name": "Jordan Lee", "gameOwner": false },
+            { "playerMode": "SPECTATOR", "playerStatus": "CONNECTED", "playerId": "p-spectator", "playerSecret": "", "name": "Sam Kim", "gameOwner": false }
+          ],
+          "teamList": [
+            {
+              "teamId": "t1",
+              "teamName": "Team Vermeer",
+              "teamPlayers": [
+                { "playerMode": "BUZZER", "playerStatus": "CONNECTED", "playerId": "p-buzzer", "playerSecret": "", "name": "Jordan Lee", "gameOwner": false }
+              ]
+            },
+            { "teamId": "t2", "teamName": "Team Curie", "teamPlayers": [] }
+          ],
+          "proctor": { "playerMode": "PROCTOR", "playerStatus": "CONNECTED", "playerId": "p-proctor", "playerSecret": "", "name": "Alex Rivera", "gameOwner": true },
+          "currentMatch": {
+            "matchState": "IN_GAME",
+            "packet": { "name": "Self-check Packet", "tossups": [], "bonuses": [] },
+            "previousRounds": [],
+            "currentRound": {
+              "roundState": "AWAITING_BUZZ",
+              "roundNumber": 1,
+              "currentBuzz": null,
+              "buzzList": [],
+              "question": "This poet wrote that “the woods are lovely, dark and deep” in a poem about stopping by them on a snowy evening.",
+              "answer": "Robert Frost",
+              "category": "Literature",
+              "subcategory": "American Literature",
+              "proctorFinishedReading": false,
+              "associatedBonus": null,
+              "currentBonus": null,
+              "bonusPartAnswers": [],
+              "currentBonusPartIndex": 0,
+              "bonusEligibleTeamId": null,
+              "proctorFinishedReadingBonusPreamble": false,
+              "proctorFinishedReadingCurrentPart": false
+            }
+          },
+          "currentRound": {
+            "roundState": "AWAITING_BUZZ",
+            "roundNumber": 1,
+            "currentBuzz": null,
+            "buzzList": [],
+            "question": "This poet wrote that “the woods are lovely, dark and deep” in a poem about stopping by them on a snowy evening.",
+            "answer": "Robert Frost",
+            "category": "Literature",
+            "subcategory": "American Literature",
+            "proctorFinishedReading": false,
+            "associatedBonus": null,
+            "currentBonus": null,
+            "bonusPartAnswers": [],
+            "currentBonusPartIndex": 0,
+            "bonusEligibleTeamId": null,
+            "proctorFinishedReadingBonusPreamble": false,
+            "proctorFinishedReadingCurrentPart": false
+          }
+        }
+      }
+    }
+  ]
+}

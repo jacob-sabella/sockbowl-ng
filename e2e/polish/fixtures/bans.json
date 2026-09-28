@@ -1,0 +1,13 @@
+{
+  "populated": {
+    "bans": [
+      { "id": "ban-1", "bannedKeycloakId": "demo-banneduser", "reason": "Repeated abusive chat during matches", "bannedBy": "player1", "createdAt": "2026-09-20T14:03:00Z", "expiresAt": null },
+      { "id": "ban-2", "bannedKeycloakId": "demo-flooduser", "reason": "Buzzer flooding (stomp-flood policy)", "bannedBy": "moderator", "createdAt": "2026-09-25T09:12:00Z", "expiresAt": "2026-10-25T09:12:00Z" }
+    ],
+    "ipBans": [
+      { "id": "ipban-1", "cidr": "203.0.113.0/24", "reason": "Open proxy used for account creation spam", "bannedBy": "player1", "createdAt": "2026-09-18T08:00:00Z", "expiresAt": "2026-10-18T08:00:00Z" }
+    ]
+  },
+  "empty": { "bans": [], "ipBans": [] },
+  "cidrError": { "code": "INVALID_CIDR", "message": "CIDR range must be /16 or narrower for IPv4." }
+}

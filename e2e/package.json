@@ -10,13 +10,16 @@
     "audit": "AUDIT=1 playwright test usability",
     "cast": "playwright test cast-receiver",
     "m3:auth-off": "playwright test --project=m3-auth-off tests/packet-builder.spec.ts",
-    "m3:auth-on": "playwright test --project=m3-auth-on tests/packet-builder.spec.ts"
+    "m3:auth-on": "playwright test --project=m3-auth-on tests/packet-builder.spec.ts",
+    "polish": "playwright test polish",
+    "record-stomp": "tsx polish/record-stomp.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
     "@stomp/stompjs": "^7.0.0",
     "ws": "^8.18.0",
     "tsx": "^4.19.0",
-    "@playwright/test": "^1.48.0",
+    "@playwright/test": "^1.63.0",
     "typescript": "^5.6.0"
   }
 }

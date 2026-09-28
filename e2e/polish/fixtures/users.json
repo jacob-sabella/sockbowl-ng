@@ -1,0 +1,26 @@
+{
+  "me": {
+    "demo-player2": { "id": "u-player2", "keycloakId": "demo-player2", "email": "player2@sockbowl.com", "name": "Player Two", "createdAt": "2026-01-04T00:00:00Z", "lastLoginAt": "2026-09-27T21:40:00Z" },
+    "demo-testuser": { "id": "u-testuser", "keycloakId": "demo-testuser", "email": "testuser@sockbowl.com", "name": "Test User", "createdAt": "2025-11-02T00:00:00Z", "lastLoginAt": "2026-09-27T22:11:00Z" },
+    "demo-moderator": { "id": "u-moderator", "keycloakId": "demo-moderator", "email": "moderator@sockbowl.com", "name": "Mod Erator", "createdAt": "2025-08-15T00:00:00Z", "lastLoginAt": "2026-09-27T18:02:00Z" },
+    "demo-player1": { "id": "u-player1", "keycloakId": "demo-player1", "email": "player1@sockbowl.com", "name": "Player One", "createdAt": "2025-06-01T00:00:00Z", "lastLoginAt": "2026-09-27T23:00:00Z" },
+    "demo-banneduser": { "id": "u-banneduser", "keycloakId": "demo-banneduser", "email": "banneduser@sockbowl.com", "name": "Banned User", "createdAt": "2026-03-01T00:00:00Z", "lastLoginAt": "2026-09-20T14:00:00Z" }
+  },
+  "stats": {
+    "demo-player2": { "id": "st-1", "userId": "u-player2", "totalGames": 42, "totalWins": 19, "totalBuzzes": 310, "correctBuzzes": 201, "updatedAt": "2026-09-27T21:40:00Z" },
+    "demo-testuser": { "id": "st-2", "userId": "u-testuser", "totalGames": 8, "totalWins": 3, "totalBuzzes": 40, "correctBuzzes": 22, "updatedAt": "2026-09-27T22:11:00Z" }
+  },
+  "history": {
+    "populated": {
+      "content": [
+        { "id": "h-1", "userId": "u-player2", "gameSessionId": "gs-1", "playerSessionId": "ps-1", "joinedAt": "2026-09-27T20:00:00Z", "finalScore": 130, "teamName": "Team Vermeer" },
+        { "id": "h-2", "userId": "u-player2", "gameSessionId": "gs-2", "playerSessionId": "ps-2", "joinedAt": "2026-09-25T19:00:00Z", "finalScore": 95, "teamName": "Team Curie" }
+      ],
+      "totalPages": 1,
+      "totalElements": 2,
+      "size": 10,
+      "number": 0
+    },
+    "empty": { "content": [], "totalPages": 0, "totalElements": 0, "size": 10, "number": 0 }
+  }
+}
