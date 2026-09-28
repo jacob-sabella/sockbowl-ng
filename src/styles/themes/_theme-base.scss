@@ -96,6 +96,41 @@ body.theme-name {
   // Strong: Prominent borders
   --border-strong: rgba(255, 255, 255, 0.3);
 
+  // Control: >=3:1 against surface. Use for input/outlined/segmented
+  // boundaries where the border is a control's only visual edge (WCAG
+  // 1.4.11). border-subtle/-medium/-strong stay decorative-only (M5 F1-07).
+  --border-control: #808080;
+
+  // ====================
+  // Text-safe accent/status variants (M5 F1-05)
+  // ====================
+  // Same hue as the matching fill, tuned so it's >=4.5:1 as text on
+  // bg-primary and surface. Use these (not the fill tokens) for labels,
+  // links, icons and any other text/icon color drawn from an accent or
+  // status hue. Alias to the fill (`var(--accent-primary)`) when the fill
+  // already passes as text.
+  --accent-primary-text: #0066ff;
+  --accent-secondary-text: #6600ff;
+  --accent-tertiary-text: #00ccff;
+  --success-text: #00cc66;
+  --warning-text: #ff9900;
+  --error-text: #ff3333;
+  --info-text: #0099ff;
+
+  // ====================
+  // On-colour tokens (M5 F1-03)
+  // ====================
+  // Text/icon colour to place ON TOP of the matching solid fill (a filled
+  // button, a status chip), >=4.5:1 against that fill. Not necessarily
+  // white or black - pick whichever passes, per theme. If neither black nor
+  // white passes, the fill itself needs a small shift (see _dark.scss and
+  // _nord.scss for worked examples).
+  --on-accent-primary: #ffffff;
+  --on-success: #000000;
+  --on-warning: #000000;
+  --on-error: #ffffff;
+  --on-info: #ffffff;
+
   // ====================
   // Glow Effects
   // ====================

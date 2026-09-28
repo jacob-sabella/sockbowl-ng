@@ -18,9 +18,14 @@ body.theme-solarized-dark {
   --surface-active: #165261;
 
   /* Text colors */
+  /* M5 G0 default: text-secondary and text-muted tuned toward white to
+     reach AA, off Solarized's canonical values; see PROGRESS.md Needs
+     input, M5 G0 theme defaults. F1-05 widened text-muted further
+     (1.99:1 -> 4.59:1 against the hardest case, --surface-hover); see
+     audit/m5/g0/contrast.mjs. */
   --text-primary: #fdf6e3;
-  --text-secondary: #93a1a1;
-  --text-muted: #586e75;
+  --text-secondary: #9fabab;
+  --text-muted: #a0acb0;
 
   /* Accent colors */
   --accent-primary: #268bd2;
@@ -38,6 +43,31 @@ body.theme-solarized-dark {
   --border-subtle: rgba(7, 54, 66, 0.3);
   --border-medium: rgba(13, 68, 81, 0.5);
   --border-strong: rgba(22, 82, 97, 0.7);
+
+  /* Text-safe accent/status variants (M5 F1-05): >=4.5:1 as text on
+     bg-primary and surface, AND on that status colour's own ~10% tint over
+     surface (the "status-on-tint" case: text inside its matching tinted
+     badge/banner) — see audit/m5/g0/contrast.mjs. Every accent/status
+     colour needed tuning in this theme; widened past the initial
+     token-suggestions.json values where the tint case needed more room. */
+  --accent-primary-text: #61aade;
+  --accent-secondary-text: #8f93d2;
+  --accent-tertiary-text: #3ba9a0;
+  --success-text: #9cac30;
+  --warning-text: #c29e2e;
+  --error-text: #e97c7a;
+  --info-text: #61aade;
+
+  /* On-colour tokens (M5 F1-03): text/icon colour placed on top of the
+     matching solid fill, >=4.5:1 in every theme. */
+  --on-accent-primary: #111827;
+  --on-success: #111827;
+  --on-warning: #111827;
+  --on-error: #ffffff;
+  --on-info: #111827;
+
+  /* Control boundary (M5 F1-07): >=3:1 against surface. */
+  --border-control: #59808a;
 
   /* Glow effects */
   --glow-primary: rgba(38, 139, 210, 0.3);

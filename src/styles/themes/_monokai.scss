@@ -17,9 +17,11 @@ body.theme-monokai {
   --surface-active: #5A5A4E;
 
   /* Text colors */
+  /* M5 F1-05: text-muted tuned toward white (3.83:1 -> 4.59:1 against the
+     hardest case, --surface-hover); see audit/m5/g0/contrast.mjs. */
   --text-primary: #F8F8F2;
   --text-secondary: #CFCFC2;
-  --text-muted: #9D9D8E;
+  --text-muted: #b8b8ac;
 
   /* Accent colors - Monokai vibrant */
   --accent-primary: #66D9EF;
@@ -37,6 +39,30 @@ body.theme-monokai {
   --border-subtle: rgba(73, 72, 62, 0.3);
   --border-medium: rgba(73, 72, 62, 0.5);
   --border-strong: rgba(73, 72, 62, 0.7);
+
+  /* Text-safe accent/status variants (M5 F1-05): >=4.5:1 as text on
+     bg-primary and surface, AND on that status colour's own ~10% tint over
+     surface (the "status-on-tint" case: text inside its matching tinted
+     badge/banner) — see audit/m5/g0/contrast.mjs. error-text widened past
+     the initial token-suggestions.json value for the tint case. */
+  --accent-primary-text: var(--accent-primary);
+  --accent-secondary-text: #b993ff;
+  --accent-tertiary-text: #fb7fac;
+  --success-text: var(--success);
+  --warning-text: #fda135;
+  --error-text: #fc88b1;
+  --info-text: var(--info);
+
+  /* On-colour tokens (M5 F1-03): text/icon colour placed on top of the
+     matching solid fill, >=4.5:1 in every theme. */
+  --on-accent-primary: #111827;
+  --on-success: #111827;
+  --on-warning: #111827;
+  --on-error: #111827;
+  --on-info: #111827;
+
+  /* Control boundary (M5 F1-07): >=3:1 against surface. */
+  --border-control: #888881;
 
   /* Glow effects */
   --glow-primary: rgba(102, 217, 239, 0.3);
