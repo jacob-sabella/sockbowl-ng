@@ -1,3 +1,5 @@
+import http from 'node:http';
+import https from 'node:https';
 import { HTTP_BASE, QUESTIONS_BASE } from './config.js';
 
 export interface CreatedGame { gameSessionId: string; joinCode: string; }
@@ -36,6 +38,56 @@ export async function createGame(
   if (!res.ok) throw new Error(`createGame ${res.status}: ${await res.text()}`);
   const d: any = await res.json();
   return { gameSessionId: d.id, joinCode: d.joinCode };
+}
+
+export interface RawResponse { status: number; body: any; }
+
+/**
+ * A raw JSON POST whose outbound TCP connection is bound to a specific
+ * *source* address (`http.Agent({ localAddress })`), so the backend sees a
+ * client IP of our choosing rather than whatever this host's default route
+ * picks. Node's global `fetch` has no equivalent option, which is why this
+ * uses `node:http`/`node:https` directly.
+ *
+ * Every other loopback address (127.0.0.2, .3, ...) is routable on Linux/macOS
+ * without any extra setup -- the whole 127.0.0.0/8 block is loopback -- which
+ * is what lets `admin-usage.spec.ts` (NG-V1-02) simulate a second, distinct
+ * client on the same host this suite (and the `network_mode: host` compose
+ * stack) already runs on, to prove IP-ban enforcement without a second real
+ * machine.
+ */
+export function postFrom(url: string, body: unknown, localAddress: string, token?: string): Promise<RawResponse> {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url);
+    const transport = target.protocol === 'https:' ? https : http;
+    const agent = new transport.Agent({ localAddress });
+    const data = JSON.stringify(body);
+    const req = transport.request(
+      target,
+      {
+        method: 'POST',
+        agent,
+        headers: {
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(data),
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+      },
+      (res) => {
+        let raw = '';
+        res.on('data', (chunk) => { raw += chunk; });
+        res.on('end', () => {
+          let parsed: unknown = undefined;
+          try { parsed = raw ? JSON.parse(raw) : undefined; } catch { parsed = raw; }
+          resolve({ status: res.statusCode ?? 0, body: parsed });
+          agent.destroy();
+        });
+      },
+    );
+    req.on('error', (err) => { agent.destroy(); reject(err); });
+    req.write(data);
+    req.end();
+  });
 }
 
 /** Join a game by its join code as a guest with a display name. */
