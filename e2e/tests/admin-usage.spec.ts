@@ -144,6 +144,25 @@ test.describe('M4 admin usage view (live)', () => {
     await createFromBannedIp().catch(() => { /* best-effort IP-tracking primer */ });
 
     row = await openPlayer2Detail(adminPage);
+
+    // The primer call above is a real, successful session-create (its
+    // "best-effort IP-tracking" comment describes its *purpose*, not that it
+    // usually fails) and lands as player2's 3rd hosted session -- exactly at
+    // this overlay's default quota (SOCKBOWL_QUOTA_PLAYER_HOSTED_SESSIONS=3).
+    // Left alone, the recovery poll at the very end of this test (after the
+    // ban is lifted) would keep hitting 429 quota_exceeded forever instead
+    // of the transient rate-limit 429 it's written to tolerate --
+    // `HostedSessionQuota` only decrements a session when it goes idle or its
+    // document disappears, neither of which happens inside this test's
+    // lifetime. Clear it the same way the baseline section above does, so
+    // only session-create's own (self-refilling) rate limit stands between
+    // that final poll and its 200. This has no effect on the "Last IPs" list
+    // the lookup just below reads -- `resetUsage` only clears the
+    // hosted-sessions ZSET, not IP-tracking state (`AdminUsageService`).
+    await clickAction(adminPage, 'Reset all daily');
+    await expect(adminPage.getByText('Usage reset')).toBeVisible({ timeout: 15_000 });
+    await expect(adminPage.getByText('Usage reset')).toBeHidden({ timeout: 10_000 });
+
     const bannedIpRow = row.locator('xpath=following-sibling::tr[1]')
       .locator('.admin-usage__ip-row', { hasText: bannedIp });
     const banDialog = adminPage.locator('mat-dialog-container');
