@@ -27,21 +27,45 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const deepLink = (j: JoinResult) =>
   `${APP_URL}/game;gameSessionId=${j.gameSessionId};playerSecret=${j.playerSecret};playerSessionId=${j.playerSessionId}`;
 
-/** Opens the lobby fresh and fires one "Solo practice" quick-launch create. */
-async function attemptSoloCreate(page: Page): Promise<'ok' | 'blocked' | 'unknown'> {
+/**
+ * Opens the lobby fresh and reveals the mode picker ("New game" clicked),
+ * returning the "Solo practice" button. `RateLimitStateService`'s cooldown
+ * state (plan §2.9) lives only in memory for this one Angular app instance,
+ * so every caller that needs to observe it must reuse the same `Page`
+ * without an intervening `page.goto`/reload, which would boot a fresh app
+ * instance and silently "clear" a cooldown that the server still enforces.
+ */
+async function openModeSelect(page: Page) {
   await page.goto('/game-session');
   await page.locator('.lobby-action').filter({ hasText: 'New game' }).click();
   const solo = page.locator('.lobby-action').filter({ hasText: 'Solo practice' });
   await expect(solo).toBeVisible();
+  return solo;
+}
+
+/**
+ * Clicks the already-visible "Solo practice" button and classifies what
+ * happens: a successful create navigates to `/game;...` via `Router.navigate`
+ * (no reload -- see `game-session.component.ts` `submitJoinGame`); a 429
+ * leaves the SPA on the same route and shows the "Slow down" snackbar
+ * without navigating anywhere.
+ */
+async function attemptSoloCreate(page: Page, solo: ReturnType<Page['locator']>): Promise<'ok' | 'blocked' | 'unknown'> {
   await solo.click();
 
+  // 20s legs, not 8s: this machine runs this stack alongside other
+  // milestones' own suites (see plan/RULES on shared-host concurrency), so
+  // an otherwise-instant REST round trip can occasionally queue behind CPU
+  // contention. The 20s budget is slack for that, not a weaker assertion --
+  // both legs still race, and `attempt N was neither a create nor a 429`
+  // still fails the test if genuinely neither happens.
   const okP = page
-    .waitForURL(/\/game;/, { timeout: 8000 })
+    .waitForURL(/\/game;/, { timeout: 20000 })
     .then(() => 'ok' as const)
     .catch(() => null);
   const blockedP = page
     .getByText(/Slow down, try again in/i)
-    .waitFor({ state: 'visible', timeout: 8000 })
+    .waitFor({ state: 'visible', timeout: 20000 })
     .then(() => 'blocked' as const)
     .catch(() => null);
   const result = await Promise.race([okP, blockedP]);
@@ -53,34 +77,49 @@ test.describe('M4 rate limiting (live)', () => {
     test.setTimeout(120_000);
 
     let blockedOnAttempt = -1;
+    let solo = await openModeSelect(page);
     const MAX_ATTEMPTS = 4;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const result = await attemptSoloCreate(page);
+      const result = await attemptSoloCreate(page, solo);
       expect(result, `attempt ${attempt} was neither a create nor a 429`).not.toBe('unknown');
       if (result === 'blocked') {
         blockedOnAttempt = attempt;
         break;
       }
+      // A successful create navigated away to /game;...; go back to the
+      // lobby (a fresh mode-select instance) for the next attempt.
+      solo = await openModeSelect(page);
     }
     expect(blockedOnAttempt, `session-create never tripped in ${MAX_ATTEMPTS} guest attempts`).toBeGreaterThan(0);
 
-    // The trip disables every session-create button on this page (shared
-    // cooldown state, plan §2.9) for as long as the client thinks the
-    // window is open.
-    await page.goto('/game-session');
-    await page.locator('.lobby-action').filter({ hasText: 'New game' }).click();
-    await expect(page.locator('.lobby-action').filter({ hasText: 'Solo practice' })).toBeDisabled();
+    // The trip disables every session-create button on THIS SAME page
+    // instance (shared cooldown state, plan §2.9): the blocked attempt above
+    // never navigated anywhere, so `solo` is still the live element the
+    // cooldown signal just disabled -- no reload needed, and a reload would
+    // wipe the very in-memory state this assertion is checking.
+    await expect(solo).toBeDisabled();
 
     // Recovery: the server-side bucket refills on its own clock, independent
-    // of this page. Reload well past the configured refill window and the
-    // next create succeeds.
+    // of this page. Wait well past the configured refill window and the
+    // same button re-enables itself and the next create succeeds.
     await sleep(21_000);
-    const recovered = await attemptSoloCreate(page);
+    const recovered = await attemptSoloCreate(page, solo);
     expect(recovered).toBe('ok');
   });
 
   test('STOMP stomp-buzz: a flooding connection is throttled, another player still buzzes in', async ({ browser }) => {
     test.setTimeout(120_000);
+
+    // The previous test (guest session-create) deliberately trips and then
+    // recovers the guest `session-create` bucket, ending with one more
+    // successful create that spends a just-refilled token. This test's
+    // own `createGame` below is *also* an unauthenticated, IP-keyed guest
+    // request (harness/rest.ts sends no Authorization header) -- under
+    // `network_mode: host` every guest-ish caller in this suite shares one
+    // bucket -- so without a pause here it can arrive before the bucket has
+    // refilled and get rejected with the same `rate_limited` 429 the prior
+    // test just proved. Wait out the full refill window first.
+    await sleep(21_000);
 
     const game = await createGame('QUIZ_BOWL_CLASSIC', 'ONLINE_PROCTOR', false);
     // `import-random` draws from a separate :BankTossup/:BankBonus bank this

@@ -25,6 +25,14 @@ import { loginAs } from '../../tests-auth/helpers/login.js';
 // admin's own "Reset all daily" action to clear player2's hosted-sessions
 // count first, making each run independent of how many times it's run before.
 
+// Assertion timeouts below are generous (15-20s, not Playwright's 5s
+// default) because this stack runs on a machine shared with other
+// milestones' own suites (see plan/RULES): an otherwise-fast REST round
+// trip can occasionally queue behind CPU contention. This is slack for
+// that, not a weaker assertion -- verified directly against this same live
+// stack that the underlying flow (login -> provision -> admin search ->
+// row visible) normally completes in well under a second.
+
 test.describe('M4 admin usage view (live)', () => {
   test('quota override blocks a player, active sessions are visible, override clears and recovers, IP ban round trips', async ({ browser }) => {
     test.setTimeout(180_000);
@@ -51,21 +59,21 @@ test.describe('M4 admin usage view (live)', () => {
     // ---- clean baseline ----
     await openPlayer2Detail(adminPage);
     await clickAction(adminPage, 'Reset all daily');
-    await expect(adminPage.getByText('Usage reset')).toBeVisible({ timeout: 8000 });
+    await expect(adminPage.getByText('Usage reset')).toBeVisible({ timeout: 15_000 });
 
     let row = await openPlayer2Detail(adminPage);
-    await expect(sessionsCell(row)).toHaveText('0', { timeout: 10_000 });
+    await expect(sessionsCell(row)).toHaveText('0', { timeout: 20_000 });
 
     // ---- baseline host: a real hosted session shows up in the admin view ----
     const baseline = await attemptHostSolo(playerPage);
     expect(baseline.result, `baseline host failed unexpectedly: ${JSON.stringify(baseline)}`).toBe('ok');
 
     row = await openPlayer2Detail(adminPage);
-    await expect(sessionsCell(row)).toHaveText('1', { timeout: 10_000 });
+    await expect(sessionsCell(row)).toHaveText('1', { timeout: 20_000 });
 
     // ---- admin sets the hosted-sessions override to 0 ----
     await editHostedSessionsQuota(adminPage, { limit: 0 });
-    await expect(adminPage.getByText('Quota updated')).toBeVisible({ timeout: 8000 });
+    await expect(adminPage.getByText('Quota updated')).toBeVisible({ timeout: 15_000 });
 
     const blocked = await attemptHostSolo(playerPage);
     expect(blocked.result, `expected the override to block this create: ${JSON.stringify(blocked)}`).toBe('quota');
@@ -74,7 +82,7 @@ test.describe('M4 admin usage view (live)', () => {
 
     // ---- admin clears the override; the player's next create recovers ----
     await editHostedSessionsQuota(adminPage, { resetToDefault: true });
-    await expect(adminPage.getByText('Quota updated')).toBeVisible({ timeout: 8000 });
+    await expect(adminPage.getByText('Quota updated')).toBeVisible({ timeout: 15_000 });
 
     // The two attempts above (baseline + blocked) already spent both tokens
     // in player2's session-create bucket (capacity 2 / 20s — the quota check
@@ -101,7 +109,7 @@ test.describe('M4 admin usage view (live)', () => {
     const decoyCidr = '203.0.113.77/32';
     row = await openPlayer2Detail(adminPage);
     const ipRow = row.locator('xpath=following-sibling::tr[1]').locator('.admin-usage__ip-row').first();
-    await expect(ipRow).toBeVisible({ timeout: 10_000 });
+    await expect(ipRow).toBeVisible({ timeout: 20_000 });
     await ipRow.getByRole('button', { name: 'Ban this IP' }).click();
 
     const banDialog = adminPage.locator('mat-dialog-container');
@@ -111,13 +119,13 @@ test.describe('M4 admin usage view (live)', () => {
     await cidrInput.fill(decoyCidr);
     await banDialog.locator('input[name="reason"]').fill('M4 WP-E1 e2e round trip (decoy address, see spec comment)');
     await banDialog.getByRole('button', { name: 'Ban IP' }).click();
-    await expect(adminPage.getByText('IP banned')).toBeVisible({ timeout: 8000 });
+    await expect(adminPage.getByText('IP banned')).toBeVisible({ timeout: 15_000 });
 
     await adminPage.goto('/admin/bans');
     const banItem = adminPage.locator('.admin-bans__item', { hasText: '203.0.113.77' });
-    await expect(banItem).toBeVisible({ timeout: 10_000 });
+    await expect(banItem).toBeVisible({ timeout: 20_000 });
     await banItem.getByRole('button', { name: 'Remove IP ban' }).click();
-    await expect(adminPage.getByText('IP ban removed')).toBeVisible({ timeout: 8000 });
+    await expect(adminPage.getByText('IP ban removed')).toBeVisible({ timeout: 15_000 });
     await expect(adminPage.locator('.admin-bans__item', { hasText: '203.0.113.77' })).toHaveCount(0);
 
     await adminCtx.close();
@@ -130,7 +138,7 @@ test.describe('M4 admin usage view (live)', () => {
 /** Visits the signed-in user's own profile page, which lazily provisions their Postgres `User` row. */
 async function provisionUser(page: Page) {
   await page.goto('/profile');
-  await expect(page.locator('.profile-card')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.profile-card')).toBeVisible({ timeout: 20_000 });
 }
 
 /**
@@ -144,9 +152,9 @@ async function openPlayer2Detail(page: Page) {
   await search.fill('player2');
   await search.press('Enter');
   const row = page.locator('tr.admin-usage__row', { hasText: 'player2' });
-  await expect(row).toBeVisible({ timeout: 10_000 });
+  await expect(row).toBeVisible({ timeout: 20_000 });
   await row.getByRole('button', { name: 'Expand' }).click();
-  await expect(page.locator('.admin-usage__detail')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.admin-usage__detail')).toBeVisible({ timeout: 20_000 });
   return row;
 }
 
@@ -166,7 +174,7 @@ async function clickAction(page: Page, label: string) {
  */
 async function editHostedSessionsQuota(page: Page, opts: { limit?: number; resetToDefault?: boolean }) {
   const counter = page.locator('.admin-usage__counter', { hasText: 'hosted session' });
-  await expect(counter).toBeVisible({ timeout: 10_000 });
+  await expect(counter).toBeVisible({ timeout: 20_000 });
   await counter.getByRole('button', { name: 'Edit quota' }).click();
 
   const dialog = page.locator('mat-dialog-container');
@@ -181,7 +189,7 @@ async function editHostedSessionsQuota(page: Page, opts: { limit?: number; reset
     await dialog.locator('input[name="limitValue"]').fill(String(opts.limit ?? 0));
     await dialog.getByRole('button', { name: 'Save' }).click();
   }
-  await expect(dialog).toBeHidden({ timeout: 8000 });
+  await expect(dialog).toBeHidden({ timeout: 15_000 });
 }
 
 interface HostAttempt {
@@ -201,15 +209,15 @@ async function attemptHostSolo(page: Page): Promise<HostAttempt> {
   const rateText = page.getByText(/Slow down, try again in/i);
 
   const okP = page
-    .waitForURL(/\/game;/, { timeout: 8000 })
+    .waitForURL(/\/game;/, { timeout: 15_000 })
     .then((): HostAttempt => ({ result: 'ok' }))
     .catch(() => null);
   const quotaP = quotaText
-    .waitFor({ state: 'visible', timeout: 8000 })
+    .waitFor({ state: 'visible', timeout: 15_000 })
     .then(async (): Promise<HostAttempt> => ({ result: 'quota', message: await quotaText.first().innerText() }))
     .catch(() => null);
   const rateP = rateText
-    .waitFor({ state: 'visible', timeout: 8000 })
+    .waitFor({ state: 'visible', timeout: 15_000 })
     .then((): HostAttempt => ({ result: 'rate' }))
     .catch(() => null);
 
