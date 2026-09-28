@@ -1,5 +1,5 @@
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { limitErrorFrom, notifyLimit } from './limit-errors';
+import { isLimitHandled, limitErrorFrom, notifyLimit } from './limit-errors';
 import { RateLimitStateService } from './rate-limit-state.service';
 
 describe('limitErrorFrom', () => {
@@ -67,6 +67,36 @@ describe('limitErrorFrom', () => {
     expect(limitErrorFrom('something_else', {})).toBeNull();
     expect(limitErrorFrom(undefined, {})).toBeNull();
     expect(limitErrorFrom(null, null)).toBeNull();
+  });
+});
+
+// NG-V1-01: components that already skip re-showing a snackbar for the
+// status codes `RateLimitInterceptor` handles globally (429, 503, and now a
+// 403 classified as `banned`/`ip_banned`) share this one check, so a new
+// caller can't drift from the interceptor's own classification.
+describe('isLimitHandled', () => {
+  it('is true for 429 and 503 regardless of body', () => {
+    expect(isLimitHandled({ status: 429 })).toBeTrue();
+    expect(isLimitHandled({ status: 429, error: { error: 'rate_limited' } })).toBeTrue();
+    expect(isLimitHandled({ status: 503 })).toBeTrue();
+  });
+
+  it('is true for a 403 whose body classifies as banned or ip_banned', () => {
+    expect(isLimitHandled({ status: 403, error: { error: 'banned' } })).toBeTrue();
+    expect(isLimitHandled({ status: 403, error: { error: 'ip_banned' } })).toBeTrue();
+  });
+
+  it('is false for a 403 that is not a ban (e.g. a plain permission failure)', () => {
+    expect(isLimitHandled({ status: 403, error: { error: 'forbidden' } })).toBeFalse();
+    expect(isLimitHandled({ status: 403 })).toBeFalse();
+    expect(isLimitHandled({ status: 403, error: {} })).toBeFalse();
+  });
+
+  it('is false for other statuses, and for null/undefined', () => {
+    expect(isLimitHandled({ status: 400 })).toBeFalse();
+    expect(isLimitHandled({ status: 500 })).toBeFalse();
+    expect(isLimitHandled(null)).toBeFalse();
+    expect(isLimitHandled(undefined)).toBeFalse();
   });
 });
 

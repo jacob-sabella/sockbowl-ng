@@ -144,6 +144,37 @@ export function notifyLimit(
   }
 }
 
+/**
+ * True when `err` (an `HttpErrorResponse`, or anything shaped like one --
+ * component `error` callbacks in tests are often given a plain object) is
+ * one `RateLimitInterceptor` already turned into a snackbar (plan §2.9,
+ * NG-V1-01): 429 `rate_limited`/`quota_exceeded`, 503 `limiter_unavailable`,
+ * or a 403 whose body classifies as `banned`/`ip_banned`. Callers whose own
+ * error handler would otherwise show a second, generic failure message
+ * (`packet-search`'s Generate/Import, `admin-usage`'s quota/ban/reset
+ * actions) check this first and return early when it's true, so a rejection
+ * the interceptor already reported is never shown twice.
+ *
+ * A 403 that ISN'T a ban (a plain permission failure, or no classifiable
+ * body at all) returns `false` -- `RateLimitInterceptor` doesn't touch it
+ * either (`limitErrorFrom` returns `null` for it), so the caller's own
+ * error handling still needs to run.
+ */
+export function isLimitHandled(err: unknown): boolean {
+  const candidate = err as { status?: number; error?: { error?: unknown } } | null | undefined;
+  if (!candidate || typeof candidate.status !== 'number') {
+    return false;
+  }
+  if (candidate.status === 429 || candidate.status === 503) {
+    return true;
+  }
+  if (candidate.status === 403) {
+    const bodyError = candidate.error?.error;
+    return bodyError === 'banned' || bodyError === 'ip_banned';
+  }
+  return false;
+}
+
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
