@@ -53,10 +53,10 @@
       flex: 1;
     }
 
-    // Check icon
+    // Check icon (only rendered on the active row)
     .check-icon {
       flex-shrink: 0;
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       font-size: 1.125rem;
       width: 1.125rem;
       height: 1.125rem;
@@ -67,21 +67,26 @@
       background: var(--surface-hover) !important;
 
       mat-icon:first-child {
-        color: var(--accent-primary);
+        color: var(--accent-primary-text);
       }
     }
 
-    // Active state
+    // Active state: a tinted fill plus the check icon, so it reads
+    // differently from a plain (untinted) hover/focus row.
     &.active {
-      background: var(--surface-hover) !important;
+      background: color-mix(in srgb, var(--accent-primary) 12%, transparent) !important;
 
       .theme-label {
-        color: var(--accent-primary);
+        color: var(--accent-primary-text);
         font-weight: 600;
       }
 
       mat-icon:first-child {
-        color: var(--accent-primary);
+        color: var(--accent-primary-text);
+      }
+
+      &:hover {
+        background: color-mix(in srgb, var(--accent-primary) 18%, transparent) !important;
       }
     }
 

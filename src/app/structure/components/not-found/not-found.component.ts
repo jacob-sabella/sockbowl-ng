@@ -1,5 +1,5 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 
 /**
@@ -16,4 +16,9 @@ import { MatButtonModule } from '@angular/material/button';
   imports: [RouterLink, MatButtonModule]
 })
 export class NotFoundComponent {
+  private router = inject(Router);
+
+  /** The URL that didn't match a route, echoed back so the visitor can see
+   * exactly what wasn't found (S6-14). */
+  readonly attemptedPath: string = this.router.url;
 }

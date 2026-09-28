@@ -1,5 +1,6 @@
 <main class="not-found">
-  <h1>Page not found</h1>
+  <h1 class="not-found__headline">Page not found</h1>
   <p>There's no page at this address.</p>
-  <a routerLink="/" mat-flat-button color="primary">Back to Sockbowl</a>
+  <p class="not-found__path"><code>{{ attemptedPath }}</code></p>
+  <a routerLink="/" mat-flat-button class="not-found__home">Back to Sockbowl</a>
 </main>

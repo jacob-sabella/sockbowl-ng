@@ -85,7 +85,7 @@
       <!-- Game History -->
       <mat-card class="history-card" aria-labelledby="history-heading">
         <mat-card-header>
-          <mat-card-title id="history-heading">
+          <mat-card-title id="history-heading" class="section-heading">
             <mat-icon aria-hidden="true">history</mat-icon>
             Game History
           </mat-card-title>
@@ -99,31 +99,26 @@
             </div>
           }
           @if (gameHistory.length > 0) {
-            <div class="history-list">
-              <mat-list>
+            <div>
+              <ul class="history-list">
                 @for (game of gameHistory; track game) {
-                  <mat-list-item class="history-item">
-                    <mat-icon matListItemIcon aria-hidden="true">sports_esports</mat-icon>
-                    <div matListItemTitle class="game-info">
-                      <span class="team-name">{{ game.teamName || 'No Team' }}</span>
-                      <span class="game-date">{{ formatDate(game.joinedAt) }}</span>
-                    </div>
-                    <div matListItemLine class="game-details">
-                      <span class="game-id">Game: {{ game.gameSessionId.substring(0, 8) }}...</span>
+                  <li class="history-row">
+                    <div class="history-row__primary">
+                      <span class="history-row__team">{{ game.teamName || 'No Team' }}</span>
                       @if (game.finalScore !== null) {
-                        <span class="score">
-                          Score: {{ game.finalScore }}
-                        </span>
+                        <span class="history-row__score">{{ game.finalScore }} pts</span>
                       }
                       @if (game.finalScore === null) {
-                        <span class="score-pending">
-                          In Progress
-                        </span>
+                        <span class="history-row__score history-row__score--pending">In Progress</span>
                       }
                     </div>
-                  </mat-list-item>
+                    <div class="history-row__secondary">
+                      <span class="history-row__date">{{ formatDate(game.joinedAt) }}</span>
+                      <span class="history-row__status">{{ game.finalScore !== null ? 'Completed' : 'In Progress' }}</span>
+                    </div>
+                  </li>
                 }
-              </mat-list>
+              </ul>
               <!-- Pagination -->
               @if (totalPages > 1) {
                 <nav class="pagination" aria-label="Game history pages">

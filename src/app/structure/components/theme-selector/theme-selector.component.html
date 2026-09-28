@@ -10,8 +10,11 @@
       <button mat-menu-item
         (click)="setTheme(themeOption.value)"
         [class.active]="isActive(themeOption.value, currentTheme)">
-        <mat-icon>{{ themeOption.icon }}</mat-icon>
+        <mat-icon aria-hidden="true">{{ themeOption.icon }}</mat-icon>
         <span class="theme-label">{{ themeOption.label }}</span>
+        @if (isActive(themeOption.value, currentTheme)) {
+          <mat-icon class="check-icon" aria-hidden="true">check</mat-icon>
+        }
       </button>
     }
   </mat-menu>

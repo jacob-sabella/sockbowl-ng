@@ -58,7 +58,7 @@ export class ThemeSelectorComponent {
     {
       value: 'catppuccin',
       label: 'Catppuccin',
-      icon: 'pets'
+      icon: 'local_cafe'
     },
     {
       value: 'dracula',
@@ -68,7 +68,7 @@ export class ThemeSelectorComponent {
     {
       value: 'solarized-dark',
       label: 'Solarized Dark',
-      icon: 'wb_sunny'
+      icon: 'bedtime'
     },
     {
       value: 'solarized-light',

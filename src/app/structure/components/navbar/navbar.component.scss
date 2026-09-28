@@ -76,7 +76,7 @@
   font-size: clamp(1.4rem, 4vw, 2rem);
   width: clamp(1.4rem, 4vw, 2rem);
   height: clamp(1.4rem, 4vw, 2rem);
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
@@ -86,7 +86,7 @@
   font-size: clamp(1.05rem, 3.5vw, 1.8rem);
   font-weight: 800;
   letter-spacing: 0.05em;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -114,7 +114,7 @@
     transition: color 0.2s ease, background-color 0.2s ease;
 
     &:hover {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
     }
 
@@ -161,19 +161,19 @@
     }
   }
 
-  /* The Sign In button is the continuity anchor: it mirrors the primary button
-     on the branded Keycloak page (indigo gradient, glow-on-hover, display font),
-     so the redirect to sign in reads as one continuous surface. */
-  button {
+  /* The Sign In button is the continuity anchor to the branded sign-in page:
+     a flat accent fill, no gradient or glow, matching the button system used
+     everywhere else (S6-07). */
+  .navbar__signin {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
-    border-radius: var(--radius-full);
-    background: linear-gradient(180deg, var(--accent-primary), #4f46e5) !important;
-    color: #fff !important;
-    box-shadow: 0 6px 18px var(--glow-primary);
-    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    --mat-button-filled-container-shape: var(--radius-md);
+    --mat-button-filled-container-color: var(--accent-primary);
+    --mat-button-filled-label-text-color: var(--on-accent-primary);
+    box-shadow: none;
+    transition: background-color 0.15s ease;
 
     .navbar__btn-label {
       font-family: var(--font-display);
@@ -181,14 +181,9 @@
       letter-spacing: 0.01em;
     }
 
-    &:hover {
-      background: linear-gradient(180deg, var(--accent-primary-hover), var(--accent-primary)) !important;
-      box-shadow: 0 10px 26px var(--glow-primary);
-      transform: translateY(-1px);
-    }
-
-    &:active {
-      transform: translateY(0);
+    &:hover,
+    &:focus-visible {
+      --mat-button-filled-container-color: var(--accent-primary-hover);
     }
   }
 }
@@ -200,28 +195,6 @@
 
   @media (min-width: 641px) {
     gap: 0.5rem;
-  }
-
-  .navbar__user-name {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.85rem;
-    background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
-    border-radius: 20px;
-    color: var(--text-primary);
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-
-    mat-icon {
-      font-size: 1.5rem;
-      width: 1.5rem;
-      height: 1.5rem;
-      flex-shrink: 0;
-    }
   }
 
   button {
@@ -239,9 +212,27 @@
       flex-shrink: 0;
     }
 
+    .navbar__caret {
+      font-size: 1.1rem;
+      width: 1.1rem;
+      height: 1.1rem;
+      margin-left: -0.25rem;
+      opacity: 0.7;
+    }
+
     &:hover {
       color: var(--text-primary);
       background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
+    }
+  }
+
+  .navbar__account-trigger {
+    font-weight: 600;
+
+    .navbar__btn-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 12rem;
     }
   }
 }
@@ -251,15 +242,6 @@
 /* Tablets / small screens: hide button text labels, keep icons */
 @media (max-width: 768px) {
   .navbar__auth-user {
-    .navbar__user-name {
-      padding: 0.4rem;
-      max-width: 150px;
-
-      .navbar__btn-label {
-        display: none;
-      }
-    }
-
     button {
       padding: 0 0.5rem;
 
