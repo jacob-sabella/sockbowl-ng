@@ -1,10 +1,29 @@
 <div class="game-proctor-container">
+  <!-- M5 S2-05: announces every judgment/timeout/advance keyed or clicked,
+       so a screen-reader proctor hears the outcome without hunting for it. -->
+  <div class="visually-hidden" role="status" aria-live="assertive" aria-atomic="true">{{ liveAnnouncement() }}</div>
   @if (gameSessionObs | async; as gameSession) {
     <mat-card class="game-proctor">
       <!-- Auto-timer setting moved to game configuration -->
 
-      <!-- Cast Controls: a single control, always present (M5 S2-07). -->
-      <div class="cast-controls">
+      <!-- Top-right toolbar: the shortcuts legend (M5 S2-27) beside the cast
+           control (M5 S2-07), sharing its row so neither costs extra
+           first-viewport height. `.cast-controls` stays scoped to the cast
+           control alone, since existing specs query it directly. -->
+      <div class="proctor-toolbar">
+        <!-- Compact shortcuts legend: a tooltip on an icon already in this
+             row costs no first-viewport height. -->
+        <button
+          mat-icon-button
+          type="button"
+          class="cast-button shortcuts-help"
+          matTooltip="Keyboard shortcuts: Space or Enter for the highlighted action, R for right, W for wrong, T for timeout"
+          matTooltipPosition="left"
+          aria-label="Keyboard shortcuts: Space or Enter for the highlighted action, R for right, W for wrong, T for timeout">
+          <mat-icon aria-hidden="true">keyboard</mat-icon>
+        </button>
+        <!-- Cast Controls: a single control, always present (M5 S2-07). -->
+        <div class="cast-controls">
         @switch (castConnectionState$ | async) {
           @case (PresentationConnectionState.CONNECTING) {
             <div class="cast-status cast-status--connecting" role="status" aria-live="polite">
@@ -46,6 +65,7 @@
             </button>
           }
         }
+        </div>
       </div>
 
       <mat-card-title>
@@ -101,7 +121,18 @@
         @if (isBonusPhase(gameSession.currentMatch.currentRound.roundState)) {
           <div class="info-section tossup-summary-section">
             <div class="info-label">Tossup</div>
-            <div class="info-value">Tossup answered &mdash; now judging the bonus</div>
+            <div class="info-value">Tossup answered</div>
+            <!-- M5 S2-25: the tossup answer stays reachable for a protest
+                 check during the bonus, behind a disclosure so it doesn't
+                 push the pinned decision row down. -->
+            <details class="tossup-recap">
+              <summary>Show tossup question and answer</summary>
+              <div class="tossup-recap__question" [innerHTML]="gameSession.currentMatch.currentRound.question"></div>
+              <div class="tossup-recap__answer">
+                <strong>Answer:</strong>
+                <span [innerHTML]="gameSession.currentMatch.currentRound.answer"></span>
+              </div>
+            </details>
           </div>
         } @else {
           <div class="info-section question-section">
@@ -131,18 +162,26 @@
               mat-raised-button
               id="finished-reading-btn"
               aria-label="Finished reading the tossup"
-              (click)="gameStateService.sendFinishedReading()">
+              aria-keyshortcuts="Space Enter"
+              (click)="finishedReading()">
               Finished Reading
+              <span class="key-hint" aria-hidden="true">Space</span>
             </button>
           }
-          <!-- Timeout Button -->
+          <!-- Timeout Button: exactly one, whether the auto-timer is on or
+               off (M5 S2-20 - both used to render together and overlap in
+               the pinned decision row). "Manual" survives only as a label
+               hint when there's no running timer to explain the wait. -->
           @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
             <button
               mat-raised-button
               id="timeout-btn"
-              aria-label="Time out the tossup with no buzz"
-              (click)="gameStateService.sendTimeoutRound()">
-              Timeout
+              [class.manual-timeout-btn]="!isAutoTimerEnabled()"
+              [attr.aria-label]="isAutoTimerEnabled() ? 'Time out the tossup with no buzz' : 'Manually time out the tossup with no buzz'"
+              aria-keyshortcuts="t"
+              (click)="timeoutTossup()">
+              {{ isAutoTimerEnabled() ? 'Timeout' : 'Manual Timeout' }}
+              <span class="key-hint" aria-hidden="true">T</span>
             </button>
           }
           <!-- Advance Round Button -->
@@ -151,8 +190,10 @@
               mat-raised-button
               id="advance-round-btn"
               aria-label="Advance to the next round"
-              (click)="gameStateService.sendAdvanceRound()">
+              aria-keyshortcuts="Space Enter"
+              (click)="advanceRound()">
               Advance Round
+              <span class="key-hint" aria-hidden="true">Space</span>
             </button>
           }
           <!-- Right/Wrong Buttons -->
@@ -162,17 +203,21 @@
                 mat-raised-button
                 id="right-btn"
                 [attr.aria-label]="'Mark ' + gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz?.playerId ?? '') + ' correct'"
-                (click)="gameStateService.sendAnswerCorrect()">
+                aria-keyshortcuts="r"
+                (click)="judgeTossup(true)">
                 <mat-icon aria-hidden="true">check_circle</mat-icon>
                 Right
+                <span class="key-hint" aria-hidden="true">R</span>
               </button>
               <button
                 mat-raised-button
                 id="wrong-btn"
                 [attr.aria-label]="'Mark ' + gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz?.playerId ?? '') + ' incorrect'"
-                (click)="gameStateService.sendAnswerIncorrect()">
+                aria-keyshortcuts="w"
+                (click)="judgeTossup(false)">
                 <mat-icon aria-hidden="true">cancel</mat-icon>
                 Wrong
+                <span class="key-hint" aria-hidden="true">W</span>
               </button>
             </div>
           }
@@ -202,8 +247,10 @@
                     color="primary"
                     id="finished-reading-preamble-btn"
                     aria-label="Finished reading the bonus preamble"
-                    (click)="gameStateService.sendFinishedReadingBonusPreamble()">
+                    aria-keyshortcuts="Space Enter"
+                    (click)="finishedReadingBonusPreamble()">
                     Finished Reading Preamble
+                    <span class="key-hint" aria-hidden="true">Space</span>
                   </button>
                 </div>
               }
@@ -217,30 +264,31 @@
                     <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
                     </div>
                   </div>
-                  <!-- Show previously answered parts -->
+                  <!-- Show previously answered parts. M5 S2-27: @if goes
+                       directly inside @for with no wrapping <div>, so a
+                       part not yet reached renders nothing at all instead
+                       of an empty element. -->
                   @for (part of gameSession.currentMatch.currentRound.currentBonus?.bonusParts; track part; let i = $index) {
-                    <div>
-                      @if (i < gameSession.currentMatch.currentRound.currentBonusPartIndex) {
-                        <div
-                          class="bonus-part completed">
-                          <div class="part-header">
-                            <span class="part-label">Part {{ i + 1 }}</span>
-                            <span class="part-result"
-                              [class.correct]="gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct">
-                              {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct ? ('Right (' + getBonusPartPointValue() + ' pts)') : 'Wrong (0 pts)' }}
-                            </span>
+                    @if (i < gameSession.currentMatch.currentRound.currentBonusPartIndex) {
+                      <div
+                        class="bonus-part completed">
+                        <div class="part-header">
+                          <span class="part-label">Part {{ i + 1 }}</span>
+                          <span class="part-result"
+                            [class.correct]="gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct">
+                            {{ gameSession.currentMatch.currentRound.bonusPartAnswers[i]?.correct ? ('Right (' + getBonusPartPointValue() + ' pts)') : 'Wrong (0 pts)' }}
+                          </span>
+                        </div>
+                        <div class="part-content">
+                          <div class="part-question">
+                            <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || $any(part)?.question"></span>
                           </div>
-                          <div class="part-content">
-                            <div class="part-question">
-                              <strong>Q:</strong> <span [innerHTML]="$any(part)?.bonusPart?.question || $any(part)?.question"></span>
-                            </div>
-                            <div class="part-answer">
-                              <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || $any(part)?.answer"></span>
-                            </div>
+                          <div class="part-answer">
+                            <strong>A:</strong> <span [innerHTML]="$any(part)?.bonusPart?.answer || $any(part)?.answer"></span>
                           </div>
                         </div>
-                      }
-                    </div>
+                      </div>
+                    }
                   }
                   <!-- Show current part -->
                   <div class="bonus-part current">
@@ -263,8 +311,10 @@
                           color="primary"
                           id="finished-reading-part-btn"
                           [attr.aria-label]="'Finished reading bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1)"
-                          (click)="gameStateService.sendFinishedReadingBonusPart()">
+                          aria-keyshortcuts="Space Enter"
+                          (click)="finishedReadingBonusPart()">
                           Finished Reading Part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }}
+                          <span class="key-hint" aria-hidden="true">Space</span>
                         </button>
                       </div>
                     }
@@ -275,22 +325,28 @@
                         <button mat-raised-button
                           class="bonus-right-btn"
                           [attr.aria-label]="'Mark bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1) + ' correct, ' + getBonusPartPointValue() + ' points'"
-                          (click)="sendBonusPartOutcome(gameSession.currentMatch.currentRound.currentBonusPartIndex, true)">
+                          aria-keyshortcuts="r"
+                          (click)="judgeBonusPart(true)">
                           <mat-icon aria-hidden="true">check_circle</mat-icon>
                           Right ({{ getBonusPartPointValue() }} pts)
+                          <span class="key-hint" aria-hidden="true">R</span>
                         </button>
                         <button mat-raised-button
                           class="bonus-wrong-btn"
                           [attr.aria-label]="'Mark bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1) + ' incorrect, 0 points'"
-                          (click)="sendBonusPartOutcome(gameSession.currentMatch.currentRound.currentBonusPartIndex, false)">
+                          aria-keyshortcuts="w"
+                          (click)="judgeBonusPart(false)">
                           <mat-icon aria-hidden="true">cancel</mat-icon>
                           Wrong (0 pts)
+                          <span class="key-hint" aria-hidden="true">W</span>
                         </button>
                         <button mat-raised-button
                           id="timeout-bonus-btn"
                           [attr.aria-label]="'Time out bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1)"
-                          (click)="gameStateService.sendTimeoutBonusPart()">
+                          aria-keyshortcuts="t"
+                          (click)="timeoutBonusPart()">
                           Timeout
+                          <span class="key-hint" aria-hidden="true">T</span>
                         </button>
                       </div>
                     }
@@ -343,16 +399,6 @@
               class="timer-display" role="timer" aria-live="off">
               <p>Time remaining: {{ getTossupTimerDisplay() }}s</p>
             </div>
-          }
-          <!-- Manual timeout button when auto-timer disabled -->
-          @if (!isAutoTimerEnabled() && gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ) {
-            <button
-              mat-raised-button
-              class="manual-timeout-btn"
-              aria-label="Manually time out the tossup"
-              (click)="gameStateService.sendTimeoutRound()">
-              Manual Timeout
-            </button>
           }
         </div>
         <app-team-list [teams]="gameSession.teamList"

@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, OnInit, ChangeDetectionStrategy} from '@angular/core';
+import {Component, DestroyRef, HostListener, inject, OnInit, ChangeDetectionStrategy, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Observable} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
@@ -22,6 +22,14 @@ export class GameProctorComponent implements OnInit {
 
   gameSessionObs!: Observable<GameSession>;
   gameSession!: GameSession;
+
+  /**
+   * M5 S2-05: a visually-hidden `aria-live="assertive"` region announces
+   * every judgment/timeout/advance, whether triggered by a judge key or a
+   * click, so a screen-reader proctor hears the outcome without having to
+   * find it on screen.
+   */
+  readonly liveAnnouncement = signal('');
 
   // Cast-related observables
   castAvailable$: Observable<boolean>;
@@ -150,6 +158,156 @@ export class GameProctorComponent implements OnInit {
    */
   stopCasting(): void {
     this.presentationConnectionService.stopPresentation();
+  }
+
+  /* --------------------------- judge keyboard shortcuts (M5 S2-05) ---------------------------- *
+   * Space/Enter = the one primary action due right now, R/W = tossup or
+   * bonus-part judgment, T = timeout. Each key only acts on the action
+   * that's actually valid for the current RoundState, so a stray press
+   * elsewhere in the app can never fire a judgment. */
+
+  @HostListener('document:keydown.space', ['$event'])
+  @HostListener('document:keydown.enter', ['$event'])
+  onPrimaryKey(event: Event): void {
+    if (this.shouldIgnoreKeyboardShortcut(event)) {
+      return;
+    }
+    switch (this.gameSession?.currentMatch?.currentRound?.roundState) {
+      case RoundState.PROCTOR_READING:
+        event.preventDefault();
+        this.finishedReading();
+        break;
+      case RoundState.COMPLETED:
+        event.preventDefault();
+        this.advanceRound();
+        break;
+      case RoundState.BONUS_READING_PREAMBLE:
+        event.preventDefault();
+        this.finishedReadingBonusPreamble();
+        break;
+      case RoundState.BONUS_READING_PART:
+        event.preventDefault();
+        this.finishedReadingBonusPart();
+        break;
+      default:
+        break;
+    }
+  }
+
+  @HostListener('document:keydown.r', ['$event'])
+  onRightKey(event: Event): void {
+    if (this.shouldIgnoreKeyboardShortcut(event)) {
+      return;
+    }
+    const roundState = this.gameSession?.currentMatch?.currentRound?.roundState;
+    if (roundState === RoundState.AWAITING_ANSWER) {
+      event.preventDefault();
+      this.judgeTossup(true);
+    } else if (roundState === RoundState.BONUS_AWAITING_ANSWER) {
+      event.preventDefault();
+      this.judgeBonusPart(true);
+    }
+  }
+
+  @HostListener('document:keydown.w', ['$event'])
+  onWrongKey(event: Event): void {
+    if (this.shouldIgnoreKeyboardShortcut(event)) {
+      return;
+    }
+    const roundState = this.gameSession?.currentMatch?.currentRound?.roundState;
+    if (roundState === RoundState.AWAITING_ANSWER) {
+      event.preventDefault();
+      this.judgeTossup(false);
+    } else if (roundState === RoundState.BONUS_AWAITING_ANSWER) {
+      event.preventDefault();
+      this.judgeBonusPart(false);
+    }
+  }
+
+  @HostListener('document:keydown.t', ['$event'])
+  onTimeoutKey(event: Event): void {
+    if (this.shouldIgnoreKeyboardShortcut(event)) {
+      return;
+    }
+    const roundState = this.gameSession?.currentMatch?.currentRound?.roundState;
+    if (roundState === RoundState.AWAITING_BUZZ) {
+      event.preventDefault();
+      this.timeoutTossup();
+    } else if (roundState === RoundState.BONUS_AWAITING_ANSWER) {
+      event.preventDefault();
+      this.timeoutBonusPart();
+    }
+  }
+
+  /**
+   * True while a judge key must not act: typing in a field, a repeated
+   * (held-down) keydown, or a dialog open anywhere in the app (a proctor
+   * confirming something in a dialog must not also fire a judgment behind
+   * it).
+   */
+  private shouldIgnoreKeyboardShortcut(event: Event): boolean {
+    if ((event as KeyboardEvent).repeat) {
+      return true;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' || target.isContentEditable)) {
+      return true;
+    }
+    return document.querySelector('mat-dialog-container') !== null;
+  }
+
+  /* ------------------------- shared action + announce methods ------------------------- *
+   * Both the judge keys above and the template's (click) handlers call
+   * these, so a judgment is announced through aria-live the same way no
+   * matter how the proctor triggered it. */
+
+  finishedReading(): void {
+    this.gameStateService.sendFinishedReading();
+  }
+
+  advanceRound(): void {
+    this.gameStateService.sendAdvanceRound();
+  }
+
+  finishedReadingBonusPreamble(): void {
+    this.gameStateService.sendFinishedReadingBonusPreamble();
+  }
+
+  finishedReadingBonusPart(): void {
+    this.gameStateService.sendFinishedReadingBonusPart();
+  }
+
+  timeoutTossup(): void {
+    this.gameStateService.sendTimeoutRound();
+    this.announce('Tossup timed out with no buzz.');
+  }
+
+  timeoutBonusPart(): void {
+    const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex ?? 0;
+    this.gameStateService.sendTimeoutBonusPart();
+    this.announce(`Bonus part ${partIndex + 1} timed out.`);
+  }
+
+  judgeTossup(correct: boolean): void {
+    const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;
+    const playerName = buzz ? this.gameStateService.getPlayerNameById(buzz.playerId) : '';
+    if (correct) {
+      this.gameStateService.sendAnswerCorrect();
+    } else {
+      this.gameStateService.sendAnswerIncorrect();
+    }
+    this.announce(`${playerName || 'Player'} marked ${correct ? 'correct' : 'incorrect'}.`);
+  }
+
+  judgeBonusPart(correct: boolean): void {
+    const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex ?? 0;
+    this.sendBonusPartOutcome(partIndex, correct);
+    this.announce(`Bonus part ${partIndex + 1} marked ${correct ? 'correct' : 'incorrect'}.`);
+  }
+
+  private announce(message: string): void {
+    this.liveAnnouncement.set(message);
   }
 
   protected readonly RoundState = RoundState;

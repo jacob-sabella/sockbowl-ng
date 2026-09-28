@@ -128,21 +128,27 @@ body {
   font-size: 2rem;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  animation: fadeInBounce 0.4s ease-out;
   border: 3px solid transparent;
 }
 
-@keyframes fadeInBounce {
+/* Entrance is a plain fade + settle, no overshoot (M5 S2-15: no bounce
+   easing), and it only plays when the viewer hasn't asked for less motion.
+   Reduced motion still gets the state change: the indicator just appears
+   at its resting opacity/position with no animation applied. */
+@media (prefers-reduced-motion: no-preference) {
+  .buzz-indicator {
+    animation: fadeIn 0.3s ease-out;
+  }
+}
+
+@keyframes fadeIn {
   0% {
     opacity: 0;
-    transform: scale(0.8) translateY(-20px);
-  }
-  60% {
-    transform: scale(1.05) translateY(0);
+    transform: translateY(-8px);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
 }
 
@@ -170,7 +176,15 @@ body {
   height: 16px;
   border-radius: 50%;
   background: currentColor;
-  animation: pulse 2s ease-in-out infinite;
+}
+
+/* M5 S2-15: the pulsing dot is decorative (the indicator's colour and text
+   already carry the state), so it loops only without a reduced-motion
+   preference. */
+@media (prefers-reduced-motion: no-preference) {
+  .buzz-indicator::before {
+    animation: pulse 2s ease-in-out infinite;
+  }
 }
 
 @keyframes pulse {
@@ -431,7 +445,14 @@ body {
   font-weight: 500;
   color: var(--text-muted);
   text-align: center;
-  animation: pulse-opacity 2s ease-in-out infinite;
+}
+
+/* M5 S2-15: without the loop, the message just renders at full opacity -
+   still legible, so reduced motion loses nothing but the pulse. */
+@media (prefers-reduced-motion: no-preference) {
+  .waiting-message {
+    animation: pulse-opacity 2s ease-in-out infinite;
+  }
 }
 
 @keyframes pulse-opacity {

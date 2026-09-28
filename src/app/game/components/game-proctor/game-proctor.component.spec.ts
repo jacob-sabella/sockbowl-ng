@@ -349,6 +349,80 @@ describe('GameProctorComponent tossup summary and empty metadata (M5 S2-06)', ()
       expect(root().querySelector('.tossup-summary-section')).not.toBeNull();
     }
   });
+
+  it('keeps the tossup question and answer reachable for a protest check during the bonus (M5 S2-25)', () => {
+    session$.next(sessionWith(RoundState.BONUS_READING_PREAMBLE, 'Science', 'Biology'));
+    fixture.detectChanges();
+    const recap = root().querySelector('.tossup-recap');
+    expect(recap).not.toBeNull();
+    expect(recap!.querySelector('.tossup-recap__question')!.innerHTML).toContain('capital of France');
+    expect(recap!.querySelector('.tossup-recap__answer')!.textContent).toContain('Paris');
+  });
+});
+
+/**
+ * M5 S2-20: with the auto-timer off, #timeout-btn and .manual-timeout-btn
+ * used to render as two separate, both-pinned buttons on top of each other
+ * in AWAITING_BUZZ. There must be exactly one tossup timeout control,
+ * whether the auto-timer is on or off.
+ */
+describe('GameProctorComponent tossup timeout control (M5 S2-20)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+  let session$: BehaviorSubject<GameSession>;
+
+  function sessionWith(autoTimerEnabled: boolean): GameSession {
+    return {
+      gameSettings: { timerSettings: { autoTimerEnabled } },
+      currentMatch: {
+        currentRound: {
+          roundState: RoundState.AWAITING_BUZZ,
+          roundNumber: 1,
+        },
+      },
+    } as unknown as GameSession;
+  }
+
+  function timeoutButtons(): NodeListOf<HTMLButtonElement> {
+    return (fixture.nativeElement as HTMLElement).querySelectorAll('#timeout-btn, .manual-timeout-btn');
+  }
+
+  beforeEach(() => {
+    session$ = new BehaviorSubject<GameSession>(sessionWith(true));
+    const gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getTeamNameById', 'getPlayerNameById'],
+      { gameSession$: session$.asObservable() },
+    );
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: PresentationConnectionService,
+          useValue: { isAvailable$: of(false), connectionState$: of(PresentationConnectionState.DISCONNECTED) },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders exactly one timeout button with the auto-timer on', () => {
+    expect(timeoutButtons().length).toBe(1);
+    expect(timeoutButtons()[0].textContent).toContain('Timeout');
+  });
+
+  it('renders exactly one timeout button with the auto-timer off', () => {
+    session$.next(sessionWith(false));
+    fixture.detectChanges();
+    expect(timeoutButtons().length).toBe(1);
+    expect(timeoutButtons()[0].textContent).toContain('Manual Timeout');
+    expect(timeoutButtons()[0].classList).toContain('manual-timeout-btn');
+  });
 });
 
 /**
@@ -450,5 +524,191 @@ describe('GameProctorComponent cast control states (M5 S2-07)', () => {
     expect(btn.getAttribute('aria-label')).toContain('Cast again');
     btn.click();
     expect(presentationConnectionService.startPresentation).toHaveBeenCalled();
+  });
+});
+
+/**
+ * M5 S2-05: judge keyboard shortcuts. Space/Enter is the one primary action
+ * due right now, R/W judge, T times out — each only for the RoundState it's
+ * actually valid in — and every key is ignored while typing, on a held
+ * repeat, or while a dialog is open.
+ */
+describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+  let session$: BehaviorSubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let dialogEl: HTMLElement | null = null;
+
+  function sessionWith(partial: Record<string, unknown>): GameSession {
+    return {
+      currentMatch: {
+        currentRound: {
+          roundNumber: 1,
+          currentBonus: { preamble: 'p', bonusParts: [{}, {}] },
+          currentBonusPartIndex: 0,
+          bonusPartAnswers: [],
+          bonusEligibleTeamId: 't1',
+          ...partial,
+        },
+      },
+    } as unknown as GameSession;
+  }
+
+  function dispatchKey(key: string, opts: Partial<KeyboardEventInit> = {}, target: EventTarget = document.body): void {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...opts });
+    Object.defineProperty(event, 'target', { value: target, configurable: true });
+    document.dispatchEvent(event);
+  }
+
+  function liveAnnouncement(): string {
+    return (fixture.nativeElement as HTMLElement).querySelector('[aria-live="assertive"]')!.textContent!.trim();
+  }
+
+  beforeEach(() => {
+    session$ = new BehaviorSubject<GameSession>(sessionWith({ roundState: RoundState.PROCTOR_READING }));
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      [
+        'getTeamNameById', 'getPlayerNameById', 'getCurrentRoundBonusPoints', 'getCurrentRoundMaxBonusPoints',
+        'sendFinishedReading', 'sendTimeoutRound', 'sendAdvanceRound', 'sendAnswerCorrect', 'sendAnswerIncorrect',
+        'sendFinishedReadingBonusPreamble', 'sendFinishedReadingBonusPart', 'sendTimeoutBonusPart', 'sendBonusPartOutcome',
+      ],
+      { gameSession$: session$.asObservable() },
+    );
+    gameStateService.getPlayerNameById.and.returnValue('Ada');
+    gameStateService.getCurrentRoundMaxBonusPoints.and.returnValue(20);
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: PresentationConnectionService,
+          useValue: { isAvailable$: of(false), connectionState$: of(PresentationConnectionState.DISCONNECTED) },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    dialogEl?.remove();
+    dialogEl = null;
+  });
+
+  it('Space fires the primary action while reading', () => {
+    dispatchKey(' ');
+    expect(gameStateService.sendFinishedReading).toHaveBeenCalled();
+  });
+
+  it('Enter fires the same primary action as Space', () => {
+    dispatchKey('Enter');
+    expect(gameStateService.sendFinishedReading).toHaveBeenCalled();
+  });
+
+  it('Space advances the round once it is complete', () => {
+    session$.next(sessionWith({ roundState: RoundState.COMPLETED }));
+    fixture.detectChanges();
+    dispatchKey(' ');
+    expect(gameStateService.sendAdvanceRound).toHaveBeenCalled();
+  });
+
+  it('Space finishes reading the bonus preamble', () => {
+    session$.next(sessionWith({ roundState: RoundState.BONUS_READING_PREAMBLE }));
+    fixture.detectChanges();
+    dispatchKey(' ');
+    expect(gameStateService.sendFinishedReadingBonusPreamble).toHaveBeenCalled();
+  });
+
+  it('Space finishes reading the current bonus part', () => {
+    session$.next(sessionWith({ roundState: RoundState.BONUS_READING_PART }));
+    fixture.detectChanges();
+    dispatchKey(' ');
+    expect(gameStateService.sendFinishedReadingBonusPart).toHaveBeenCalled();
+  });
+
+  it('Space does nothing while awaiting a buzz (no primary action defined)', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_BUZZ }));
+    fixture.detectChanges();
+    dispatchKey(' ');
+    expect(gameStateService.sendFinishedReading).not.toHaveBeenCalled();
+    expect(gameStateService.sendAdvanceRound).not.toHaveBeenCalled();
+  });
+
+  it('R marks the tossup correct while judging, and announces it', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    dispatchKey('r');
+    expect(gameStateService.sendAnswerCorrect).toHaveBeenCalled();
+    fixture.detectChanges();
+    expect(liveAnnouncement()).toContain('correct');
+  });
+
+  it('W marks the tossup incorrect while judging', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    dispatchKey('W');
+    expect(gameStateService.sendAnswerIncorrect).toHaveBeenCalled();
+  });
+
+  it('R/W are ignored outside AWAITING_ANSWER/BONUS_AWAITING_ANSWER', () => {
+    session$.next(sessionWith({ roundState: RoundState.PROCTOR_READING }));
+    fixture.detectChanges();
+    dispatchKey('r');
+    dispatchKey('w');
+    expect(gameStateService.sendAnswerCorrect).not.toHaveBeenCalled();
+    expect(gameStateService.sendAnswerIncorrect).not.toHaveBeenCalled();
+  });
+
+  it('R marks the current bonus part correct while judging it', () => {
+    session$.next(sessionWith({ roundState: RoundState.BONUS_AWAITING_ANSWER, currentBonusPartIndex: 1 }));
+    fixture.detectChanges();
+    dispatchKey('r');
+    expect(gameStateService.sendBonusPartOutcome).toHaveBeenCalledWith(1, true);
+  });
+
+  it('T times out the tossup while awaiting a buzz', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_BUZZ }));
+    fixture.detectChanges();
+    dispatchKey('t');
+    expect(gameStateService.sendTimeoutRound).toHaveBeenCalled();
+  });
+
+  it('T times out the current bonus part while judging it', () => {
+    session$.next(sessionWith({ roundState: RoundState.BONUS_AWAITING_ANSWER, currentBonusPartIndex: 0 }));
+    fixture.detectChanges();
+    dispatchKey('t');
+    expect(gameStateService.sendTimeoutBonusPart).toHaveBeenCalled();
+  });
+
+  it('ignores every judge key while typing in a field', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    try {
+      dispatchKey('r', {}, input);
+      expect(gameStateService.sendAnswerCorrect).not.toHaveBeenCalled();
+    } finally {
+      input.remove();
+    }
+  });
+
+  it('ignores a held-down (repeat) key', () => {
+    dispatchKey(' ', { repeat: true });
+    expect(gameStateService.sendFinishedReading).not.toHaveBeenCalled();
+  });
+
+  it('ignores every judge key while a dialog is open', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    dialogEl = document.createElement('mat-dialog-container');
+    document.body.appendChild(dialogEl);
+    dispatchKey('r');
+    expect(gameStateService.sendAnswerCorrect).not.toHaveBeenCalled();
   });
 });

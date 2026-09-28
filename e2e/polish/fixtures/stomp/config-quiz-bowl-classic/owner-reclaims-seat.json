@@ -1,0 +1,208 @@
+{
+  "_meta": {
+    "source": "M5 S2-16 (hand-authored, not record-stomp.ts)",
+    "synthesized": true,
+    "gameMode": "QUIZ_BOWL_CLASSIC",
+    "seat": "owner-not-proctor",
+    "recordedAt": null,
+    "derivedFrom": [
+      "e2e/polish/fixtures/stomp/config-quiz-bowl-classic/proctor.json frame 0 (itself derived from a real IN_GAME frame; see that file's own _meta)."
+    ],
+    "note": "D18/game-config.component.ts canBecomeProctor(): the owner sees 'Become Proctor' whenever they are not already the seated proctor, even if someone else has already claimed it (a game owner reclaiming the seat). The only field changed from the derived frame is which playerList/teamList entry carries gameOwner: true -- moved from the 'Proctor' player (id 2efb828e-198a-42dc-bf36-4a62f3ec11b0) to 'Ada' (id 3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49), who is replayed as the viewing seat via playerSessionId below. Nothing else (packet, teamList shape, gameSettings) was changed."
+  },
+  "gameSessionId": "01M3MV2203452HWQ345XNGCVY7",
+  "playerSessionId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+  "frames": [
+    {
+      "target": "self",
+      "kind": "message",
+      "delayMs": 1,
+      "synthesized": true,
+      "body": {
+        "messageContentType": "GameSessionUpdate",
+        "messageType": "PROGRESSION",
+        "gameSession": {
+          "id": "01M3MV2203452HWQ345XNGCVY7",
+          "joinCode": "YS63SY",
+          "gameSettings": {
+            "proctorType": "ONLINE_PROCTOR",
+            "gameMode": "QUIZ_BOWL_CLASSIC",
+            "bonusesEnabled": true,
+            "timerSettings": {
+              "tossupTimerSeconds": 5,
+              "bonusTimerSeconds": 5,
+              "autoTimerEnabled": true,
+              "readingWordsPerSecond": 4
+            },
+            "autoJudgedMultiplayer": false,
+            "proctorless": false
+          },
+          "gameOwnerId": null,
+          "playerList": [
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Proctor",
+              "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+              "playerMode": "PROCTOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": true,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Ada",
+              "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Blaise",
+              "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Cleo",
+              "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Dov",
+              "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Sam Spectator",
+              "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
+              "playerMode": "SPECTATOR",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            }
+          ],
+          "teamList": [
+            {
+              "teamId": "f72a2ccb-e955-493e-b534-b0c005eab3cc",
+              "teamName": "Team 1",
+              "teamPlayers": [
+                {
+                  "gameOwner": true,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Ada",
+                  "playerId": "3dd60c9d-b004-4740-9b9e-a9e8f8a5cf49",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Cleo",
+                  "playerId": "a41108be-ed4f-4f08-92b3-167d2e73181d",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "159dd1af-b868-4501-965c-e71652741b08",
+              "teamName": "Team 2",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Blaise",
+                  "playerId": "270c51b9-ca21-44a4-bc5c-3904f6b98627",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Dov",
+                  "playerId": "9fc8ad85-e2c1-42aa-b396-cf7d547d513b",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            }
+          ],
+          "currentMatch": {
+            "currentRound": null,
+            "matchState": "CONFIG",
+            "packet": {
+              "id": null,
+              "name": null,
+              "ownerId": null,
+              "ownerDisplayName": null,
+              "visibility": null,
+              "answersRedacted": null,
+              "source": null,
+              "aiModel": null,
+              "createdBy": null,
+              "createdAt": null,
+              "lastModifiedBy": null,
+              "lastModifiedAt": null,
+              "difficulty": null,
+              "tossups": null,
+              "bonuses": null
+            },
+            "previousRounds": []
+          },
+          "previousMatches": [],
+          "proctorsByPacketId": null,
+          "activePlayerCount": 4,
+          "currentRound": null,
+          "proctor": {
+            "gameOwner": false,
+            "guest": true,
+            "keycloakId": null,
+            "name": "Proctor",
+            "playerId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
+            "playerMode": "PROCTOR",
+            "playerSecret": "",
+            "playerStatus": "DISCONNECTED",
+            "userId": null
+          }
+        }
+      }
+    }
+  ]
+}

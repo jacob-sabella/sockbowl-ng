@@ -1,3 +1,18 @@
+/* M5 S2-05: screen-reader-only text for the judgment/timeout/advance live
+   region. A local rule rather than a global utility, since styles/** is
+   frozen (see theme-selector.component.scss for the same pattern). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .game-proctor-container {
   min-height: 100dvh;
   max-height: 100dvh;
@@ -36,7 +51,7 @@
     color: var(--text-secondary) !important;
     margin-bottom: var(--spacing-sm) !important;
     padding-bottom: 0.6rem !important;
-    padding-right: 3rem !important; // keep clear of cast button on mobile
+    padding-right: 3rem !important; // keep clear of the cast button on mobile
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
@@ -44,6 +59,9 @@
 
     @media (min-width: 768px) {
       font-size: 1.2rem !important;
+      // The shortcuts-help icon (M5 S2-27) sits beside the cast button here,
+      // desktop-only (see .shortcuts-help below).
+      padding-right: 5.5rem !important;
     }
 
     &::before {
@@ -57,7 +75,8 @@
 
     .last-tossup-chip {
       font-family: var(--font-display);
-      font-size: 0.65rem;
+      // M5 S2-24: 0.65rem (10.4px) was under the 12px floor for UI text.
+      font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -141,12 +160,43 @@
     // nothing left here to read aloud.
     .tossup-summary-section {
       .info-label { color: var(--text-secondary); }
+
+      // M5 S2-25: the tossup answer stays reachable for a protest check
+      // during the bonus, behind a native <details> disclosure that costs
+      // no height until opened.
+      .tossup-recap {
+        margin-top: 0.5rem;
+
+        summary {
+          cursor: pointer;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--accent-primary-text);
+
+          &:focus-visible {
+            outline: 3px solid var(--accent-primary);
+            outline-offset: 2px;
+          }
+        }
+
+        &__question,
+        &__answer {
+          margin-top: 0.5rem;
+          font-family: var(--font-serif);
+          font-size: 1rem;
+          line-height: 1.5;
+          color: var(--text-primary);
+        }
+      }
     }
 
     // The answer is the single most important thing the proctor reads.
+    // (M5 S2 AY: the tint was 14% - axe measured .info-label at 4.34:1 in
+    // the light theme, short of the 4.5:1 AA floor; 8% clears it with room
+    // in every captured theme.)
     .answer-section {
       border-left: 4px solid var(--success);
-      background: color-mix(in srgb, var(--success) 14%, transparent);
+      background: color-mix(in srgb, var(--success) 8%, transparent);
       .info-label { color: var(--success-text); }
       .info-value {
         font-size: 1.1rem;
@@ -197,8 +247,8 @@
   .status-dot--done  { background: var(--success); }
 }
 
-/* Cast Controls */
-.cast-controls {
+/* Top-right toolbar: shortcuts legend + cast control (M5 S2-27) */
+.proctor-toolbar {
   position: absolute;
   top: var(--spacing-md);
   right: var(--spacing-md);
@@ -206,6 +256,12 @@
   gap: 0.5rem;
   align-items: center;
   z-index: 1;
+}
+
+.cast-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .cast-status {
@@ -220,6 +276,17 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   white-space: nowrap;
+}
+
+// The shortcuts legend (M5 S2-27) is desktop-only: a proctor on a touch
+// device has no physical keyboard to hint at, and hiding it here keeps the
+// mobile title's clearance unchanged.
+.shortcuts-help {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: inline-flex;
+  }
 }
 
 .cast-button {
@@ -277,7 +344,9 @@
   font-weight: 600;
   margin: var(--spacing-md) 0;
   padding: 0.85rem 1rem;
-  background: color-mix(in srgb, var(--error) 16%, var(--surface));
+  // M5 S2 AY: 16% tint measured 4.14-4.29:1 for the `strong` child in both
+  // captured themes, short of 4.5:1; 8% clears both with margin.
+  background: color-mix(in srgb, var(--error) 8%, var(--surface));
   border: 2px solid color-mix(in srgb, var(--error) 55%, transparent);
   border-radius: var(--radius-md);
 
@@ -304,6 +373,27 @@
   }
 }
 
+/* Judge-key hint (M5 S2-05): a small outlined chip naming the key that
+   fires this button. `currentColor` ties it to the button's own on-colour
+   text, so it never needs a token of its own and always clears contrast -
+   provided nothing dims it: M5 S2 AY found the `opacity: 0.85` this rule
+   used to carry dropped the accent-primary button's on-colour text to
+   3.81:1, short of 4.5:1, so the chip is full-strength `currentColor` and
+   reads as "quieter" from its smaller size and border alone. */
+.key-hint {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.4rem;
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
 // The decision row (M5 S2-06): whichever action is due right now stays
 // pinned to the bottom of the scrolling container instead of falling below
 // the fold at 1366x768. Sticky is relative to .game-proctor-container, the
@@ -325,14 +415,13 @@
   gap: 0.75rem;
   margin: var(--spacing-md) 0;
 
-  // Each of these is the sole action row for its RoundState (only one
-  // renders at a time, aside from the pre-existing manual-timeout pairing),
-  // so pinning them individually keeps just the controls fixed rather than
-  // the reading content that precedes them.
+  // Each of these is the sole action row for its RoundState - exactly one
+  // renders at a time (M5 S2-20 removed the old #timeout-btn +
+  // .manual-timeout-btn pairing) - so pinning them individually keeps just
+  // the controls fixed rather than the reading content that precedes them.
   > #finished-reading-btn,
   > #timeout-btn,
   > #advance-round-btn,
-  > .manual-timeout-btn,
   > .right-wrong-buttons {
     @include pinned-decision-row;
   }
@@ -356,11 +445,18 @@
     &:active:not(:disabled) { filter: brightness(0.96); }
   }
 
+  // M5 S2-27: "Finished Reading" advances the proctor's own flow, it isn't
+  // a judgment - success green means "Right" only, so this uses the accent
+  // fill like Advance Round and the bonus "Finished Reading" buttons below.
   #finished-reading-btn {
-    background: var(--success) !important;
-    color: var(--on-success) !important;
+    background: var(--accent-primary) !important;
+    color: var(--on-accent-primary) !important;
   }
 
+  // M5 S2-20: one tossup timeout control, whether the auto-timer is on or
+  // off. `.manual-timeout-btn` is now only ever a modifier on this same
+  // button (added when the auto-timer is off), never a second element, so
+  // it needs no styling of its own.
   #timeout-btn {
     background: var(--warning) !important;
     color: var(--on-warning) !important;
@@ -369,11 +465,6 @@
   #advance-round-btn {
     background: var(--accent-primary) !important;
     color: var(--on-accent-primary) !important;
-  }
-
-  .manual-timeout-btn {
-    background: var(--warning) !important;
-    color: var(--on-warning) !important;
   }
 
   /* Right / Wrong tossup judging: separated + icon-labelled to cut mis-clicks */
@@ -490,7 +581,11 @@
       margin: 0 0 0.5rem 0;
     }
 
-    &.completed h4 { opacity: 0.7; }
+    // M5 S2 AY: dimming this heading to 0.7 opacity dropped it to 2.95:1
+    // (dark) / 3.28:1 (light), far under 4.5:1 - `--accent-secondary-text`
+    // on `--surface` clears AA only narrowly at full strength (4.55:1 in
+    // dark), leaving no room to fade it. The template's own "(read)" suffix
+    // already carries the completed state, so the heading stays full-colour.
   }
 
   .bonus-preamble {
@@ -499,7 +594,10 @@
     background: var(--bg-secondary);
     border-left: 3px solid var(--accent-secondary);
     border-radius: var(--radius-sm);
-    font-size: 0.95rem;
+    // M5 S2-22: matches the tossup reading size below (this selector is more
+    // specific than the shared reading-role rule at the bottom of the file,
+    // so it has to carry the same value rather than rely on that rule).
+    font-size: 1.18rem;
     line-height: 1.6;
     color: var(--text-primary);
   }
@@ -511,9 +609,12 @@
 
     &:first-of-type { border-top: none; }
 
+    // M5 S2 AY: this used to dim the whole row to 0.85 opacity, which would
+    // carry the same accent-secondary-text/error-text/success-text margins
+    // below 4.5:1 as the preamble heading above once a completed part's
+    // header is on screen; `.part-content { display: none; }` alone already
+    // conveys "answered", so the header stays full-strength.
     &.completed {
-      opacity: 0.85;
-
       .part-content { display: none; }
 
       .part-header {
@@ -546,13 +647,16 @@
         font-weight: 600;
         padding: 0.35rem 0.75rem;
         border-radius: var(--radius-sm);
+        // M5 S2 AY: matches the active-buzz-info fix above - 16% is the same
+        // tint that measured under 4.5:1 for error-text there, and success-text
+        // has even less margin, so both sides of this chip use 8%.
         color: var(--error-text);
-        background: color-mix(in srgb, var(--error) 16%, transparent);
+        background: color-mix(in srgb, var(--error) 8%, transparent);
         border: 2px solid color-mix(in srgb, var(--error) 40%, transparent);
 
         &.correct {
           color: var(--success-text);
-          background: color-mix(in srgb, var(--success) 16%, transparent);
+          background: color-mix(in srgb, var(--success) 8%, transparent);
           border-color: color-mix(in srgb, var(--success) 40%, transparent);
         }
       }
@@ -562,14 +666,16 @@
       margin-bottom: 0.75rem;
 
       // The bonus part text is packet copy being read aloud, same as the
-      // top-level question/answer -> serif (M5 S2-10).
+      // top-level question/answer -> serif (M5 S2-10), at the same reading
+      // size (M5 S2-22 - it was 0.95rem here vs 1.18rem for the tossup, so
+      // the read-aloud text didn't read as one consistent voice).
       .part-question,
       .part-answer {
         padding: 0.75rem 0.9rem;
         margin: 0.5rem 0;
         border-radius: var(--radius-sm);
         line-height: 1.6;
-        font-size: 0.95rem;
+        font-size: 1.18rem;
         font-family: var(--font-serif);
 
         strong {
@@ -586,9 +692,13 @@
       }
 
       .part-answer {
-        background: color-mix(in srgb, var(--success) 12%, transparent);
+        // M5 S2 AY: 12% measured 4.44:1 for `strong` in the light theme,
+        // short of 4.5:1; 8% matches the answer-section fix above.
+        background: color-mix(in srgb, var(--success) 8%, transparent);
         border-left: 4px solid var(--success);
-        font-weight: 600;
+        // M5 S2-22: matches the tossup answer's weight (.answer-section
+        // .info-value is 700).
+        font-weight: 700;
         strong { color: var(--success-text); }
       }
     }
