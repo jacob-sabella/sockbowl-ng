@@ -123,7 +123,18 @@ test.describe('M4 rate limiting (live)', () => {
     // and never touches the already-exhausted guest quota (or, under
     // `network_mode: host`, the guest session-create rate bucket the prior
     // test also just spent).
-    const proctorToken = await getDemoAccessToken('player3');
+    //
+    // The account must be one nothing else in this run (M4's own specs, or
+    // the M2 `e2e:auth` regression run afterward) ever hosts a game as --
+    // `player3` looked unused at first read (it's only a *ban target* in
+    // `auth-ban.spec.ts`) but that spec's own target flow hosts a game
+    // *before* being banned, and `player2` hosts solo games in several
+    // `tests-auth` specs and in this repo's own `admin-usage.spec.ts`. The
+    // moderator demo account never hosts anywhere in either suite, so it's
+    // the one genuinely free subject-keyed bucket -- and its tier default
+    // (5, `sockbowl.quota.tiers.moderator.hosted-sessions`) has headroom
+    // this test's two runs (one session each) never gets close to.
+    const proctorToken = await getDemoAccessToken(process.env.E2E_MODERATOR || 'moderator');
     const game = await createGame('QUIZ_BOWL_CLASSIC', 'ONLINE_PROCTOR', false, proctorToken);
     // `import-random` draws from a separate :BankTossup/:BankBonus bank this
     // compose stack doesn't seed (see `harness/rest.ts` and
