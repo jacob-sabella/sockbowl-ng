@@ -11,23 +11,29 @@ import {unsavedChangesGuard} from "./core/guards/unsaved-changes.guard";
 import {PacketListComponent} from "./packets/components/packet-list/packet-list.component";
 import {PacketBuilderComponent} from "./packets/components/packet-builder/packet-builder.component";
 import {AdminTaxonomyComponent} from "./structure/components/admin-taxonomy/admin-taxonomy.component";
+import {NotFoundComponent} from "./structure/components/not-found/not-found.component";
 
 const routes: Routes = [
   { path: '', redirectTo: '/game-session', pathMatch: 'full' },
-  { path: 'game-session', component: GameSessionComponent },
-  { path: 'game', component: GameCanvasComponent},
-  { path: 'profile', component: ProfileComponent, canActivate: [authenticatedGuard] },
-  { path: 'admin', component: AdminHomeComponent, canActivate: [permissionGuard('admin:access')] },
-  { path: 'admin/usage', component: AdminUsageComponent, canActivate: [permissionGuard('admin:access')] },
-  { path: 'admin/bans', component: AdminBansComponent, canActivate: [permissionGuard('user:ban')] },
-  { path: 'admin/taxonomy', component: AdminTaxonomyComponent, canActivate: [permissionGuard('taxonomy:manage')] },
-  { path: 'packets', component: PacketListComponent, canActivate: [permissionGuard('packet:create')] },
+  { path: 'game-session', component: GameSessionComponent, title: 'Join · Sockbowl' },
+  { path: 'game', component: GameCanvasComponent, title: 'Play · Sockbowl' },
+  { path: 'profile', component: ProfileComponent, canActivate: [authenticatedGuard], title: 'Profile · Sockbowl' },
+  { path: 'admin', component: AdminHomeComponent, canActivate: [permissionGuard('admin:access')], title: 'Admin · Sockbowl' },
+  { path: 'admin/usage', component: AdminUsageComponent, canActivate: [permissionGuard('admin:access')], title: 'Admin · Usage · Sockbowl' },
+  { path: 'admin/bans', component: AdminBansComponent, canActivate: [permissionGuard('user:ban')], title: 'Admin · Bans · Sockbowl' },
+  { path: 'admin/taxonomy', component: AdminTaxonomyComponent, canActivate: [permissionGuard('taxonomy:manage')], title: 'Admin · Taxonomy · Sockbowl' },
+  { path: 'packets', component: PacketListComponent, canActivate: [permissionGuard('packet:create')], title: 'Packets · Sockbowl' },
   {
     path: 'packets/:id/edit',
     component: PacketBuilderComponent,
     canActivate: [permissionGuard('packet:update')],
-    canDeactivate: [unsavedChangesGuard]
-  }
+    canDeactivate: [unsavedChangesGuard],
+    title: 'Edit Packet · Sockbowl'
+  },
+  // M5 F1-10: the `**` wildcard route. NotFoundComponent is a pre-created
+  // stub; S6 owns its final copy, styling and any navigation-history-aware
+  // behaviour (see plan §2/§4).
+  { path: '**', component: NotFoundComponent, title: 'Not Found · Sockbowl' }
 
 ];
 

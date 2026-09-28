@@ -19,7 +19,9 @@ body.theme-light {
   /* Text colors */
   --text-primary: #111827;
   --text-secondary: #4b5563;
-  --text-muted: #6b7280;
+  /* M5 F1-05: text-muted tuned toward black (4.39:1 -> 4.62:1 against the
+     hardest case, --surface-hover); see audit/m5/g0/contrast.mjs. */
+  --text-muted: #686f7c;
 
   /* Accent colors - slightly darker for better contrast on light bg */
   --accent-primary: #4f46e5;
@@ -37,6 +39,30 @@ body.theme-light {
   --border-subtle: rgba(229, 231, 235, 0.8);
   --border-medium: rgba(209, 213, 219, 1);
   --border-strong: rgba(156, 163, 175, 1);
+
+  /* Text-safe accent/status variants (M5 F1-05): >=4.5:1 as text on
+     bg-primary and surface, AND on that status colour's own ~10% tint over
+     surface (the "status-on-tint" case: text inside its matching tinted
+     badge/banner) — see audit/m5/g0/contrast.mjs. Widened past the initial
+     token-suggestions.json values where the tint case needed more room. */
+  --accent-primary-text: var(--accent-primary);
+  --accent-secondary-text: var(--accent-secondary);
+  --accent-tertiary-text: #077d99;
+  --success-text: #047d57;
+  --warning-text: #a55a05;
+  --error-text: #cf2424;
+  --info-text: #2562e9;
+
+  /* On-colour tokens (M5 F1-03): text/icon colour placed on top of the
+     matching solid fill, >=4.5:1 in every theme. */
+  --on-accent-primary: #ffffff;
+  --on-success: #111827;
+  --on-warning: #111827;
+  --on-error: #ffffff;
+  --on-info: #ffffff;
+
+  /* Control boundary (M5 F1-07): >=3:1 against surface. */
+  --border-control: #8b919c;
 
   /* Glow effects - lighter opacity for light theme */
   --glow-primary: rgba(79, 70, 229, 0.2);

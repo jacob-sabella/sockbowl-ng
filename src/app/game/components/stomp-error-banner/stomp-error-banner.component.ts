@@ -19,8 +19,11 @@ export const NON_FATAL_BANNER_MS = 5000;
 /**
  * A dismissible banner for game-socket errors (M2 plan WP-N3). Fatal errors
  * (the server closed the socket) stay until dismissed; non-fatal ones from
- * `/user/queue/errors` disappear after 5s. M4 reuses this component for
- * RATE_LIMITED and QUOTA_EXCEEDED, including `retryAfterSeconds`.
+ * `/user/queue/errors` disappear after 5s, unless the pointer or keyboard
+ * focus is on the banner, in which case the countdown pauses (M5 F1
+ * accessibility fix) and resumes with whatever time was left. M4 reuses
+ * this component for RATE_LIMITED and QUOTA_EXCEEDED, including
+ * `retryAfterSeconds`.
  */
 @Component({
   selector: 'app-stomp-error-banner',
@@ -39,6 +42,10 @@ export class StompErrorBannerComponent implements OnChanges {
   readonly retryAfterSeconds = signal<number | null>(null);
 
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private hideStartedAt: number | null = null;
+  private remainingMs: number | null = null;
+  private hovered = false;
+  private focused = false;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.clearTimer());
@@ -49,6 +56,9 @@ export class StompErrorBannerComponent implements OnChanges {
       return;
     }
     this.clearTimer();
+    this.remainingMs = null;
+    this.hovered = false;
+    this.focused = false;
     const error = this.error;
     if (!error) {
       this.visible.set(false);
@@ -59,13 +69,60 @@ export class StompErrorBannerComponent implements OnChanges {
     this.retryAfterSeconds.set(error.retryAfterSeconds ?? null);
     this.visible.set(true);
     if (!error.fatal) {
-      this.hideTimer = setTimeout(() => this.visible.set(false), NON_FATAL_BANNER_MS);
+      this.scheduleHide(NON_FATAL_BANNER_MS);
     }
   }
 
   dismiss(): void {
     this.clearTimer();
     this.visible.set(false);
+  }
+
+  /** Pause the auto-hide countdown while the pointer is over the banner. */
+  onMouseEnter(): void {
+    this.hovered = true;
+    this.pause();
+  }
+
+  onMouseLeave(): void {
+    this.hovered = false;
+    this.maybeResume();
+  }
+
+  /** Pause the auto-hide countdown while the banner (or its dismiss button) has focus. */
+  onFocusIn(): void {
+    this.focused = true;
+    this.pause();
+  }
+
+  onFocusOut(): void {
+    this.focused = false;
+    this.maybeResume();
+  }
+
+  private scheduleHide(ms: number): void {
+    this.hideStartedAt = Date.now();
+    this.remainingMs = ms;
+    this.hideTimer = setTimeout(() => this.visible.set(false), ms);
+  }
+
+  private pause(): void {
+    if (this.fatal() || !this.hideTimer) {
+      return;
+    }
+    const elapsed = Date.now() - (this.hideStartedAt ?? Date.now());
+    this.remainingMs = Math.max(0, (this.remainingMs ?? NON_FATAL_BANNER_MS) - elapsed);
+    this.clearTimer();
+  }
+
+  private maybeResume(): void {
+    if (this.hovered || this.focused) {
+      return;
+    }
+    if (this.fatal() || this.hideTimer || this.remainingMs == null) {
+      return;
+    }
+    this.scheduleHide(this.remainingMs);
   }
 
   private clearTimer(): void {

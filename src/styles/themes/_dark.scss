@@ -19,10 +19,15 @@ body.theme-dark {
   /* Text colors */
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;
-  --text-muted: #9ca3af;
+  /* M5 F1-05: text-muted tuned toward white (4.06:1 -> 4.57:1 against the
+     hardest case, --surface-hover); see audit/m5/g0/contrast.mjs. */
+  --text-muted: #a7adb8;
 
   /* Accent colors - vibrant but not harsh */
-  --accent-primary: #6366f1;
+  /* M5 G0/F1-03: darkened 2% from #6366f1 so white-on-fill (buzz button,
+     active speed preset, focus ring) clears 4.5:1 (was 4.47). The pre-shift
+     value moves to --accent-primary-text below for use as text. */
+  --accent-primary: #6164ec;
   --accent-primary-hover: #818cf8;
   --accent-secondary: #8b5cf6;
   --accent-tertiary: #06b6d4;
@@ -37,6 +42,33 @@ body.theme-dark {
   --border-subtle: rgba(75, 85, 99, 0.3);
   --border-medium: rgba(107, 114, 128, 0.5);
   --border-strong: rgba(156, 163, 175, 0.6);
+
+  /* Text-safe accent/status variants (M5 F1-05): >=4.5:1 as text on
+     bg-primary and surface, AND on that status colour's own ~10% tint over
+     surface (the "status-on-tint" case: text inside its matching tinted
+     badge/banner) — see audit/m5/g0/contrast.mjs. Widened past the initial
+     token-suggestions.json values where the tint case needed more room.
+     Unlisted here means the base fill already passes as text. */
+  --accent-primary-text: #8c8ef1;
+  --accent-secondary-text: #9f78f8;
+  --accent-tertiary-text: var(--accent-tertiary);
+  --success-text: var(--success);
+  --warning-text: var(--warning);
+  --error-text: #f26b6b;
+  --info-text: #609af8;
+
+  /* On-colour tokens (M5 F1-03): text/icon colour placed on top of the
+     matching solid fill, >=4.5:1 in every theme. */
+  --on-accent-primary: #ffffff;
+  --on-success: var(--bg-primary);
+  --on-warning: var(--bg-primary);
+  --on-error: var(--bg-primary);
+  --on-info: var(--bg-primary);
+
+  /* Control boundary (M5 F1-07): >=3:1 against surface, for inputs,
+     outlined buttons and segmented controls. border-medium/-strong stay
+     decorative-only. */
+  --border-control: #6a727f;
 
   /* Glow effects */
   --glow-primary: rgba(99, 102, 241, 0.4);

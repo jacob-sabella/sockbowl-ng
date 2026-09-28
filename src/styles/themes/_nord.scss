@@ -29,15 +29,42 @@ body.theme-nord {
   --accent-tertiary: #5E81AC;
 
   /* Status colors - Aurora */
+  /* M5 G0 default: error and info lightened slightly (2-3% toward white) so
+     the darkest on-colour (#111827) clears 4.5:1 on the fill; unchanged
+     otherwise (see PROGRESS.md Needs input, M5 G0 theme defaults). */
   --success: #A3BE8C;
   --warning: #EBCB8B;
-  --error: #BF616A;
-  --info: #5E81AC;
+  --error: #C1666E;
+  --info: #6184AE;
 
   /* Border colors */
   --border-subtle: rgba(76, 86, 106, 0.3);
   --border-medium: rgba(76, 86, 106, 0.5);
   --border-strong: rgba(76, 86, 106, 0.7);
+
+  /* Text-safe accent/status variants (M5 F1-05): >=4.5:1 as text on
+     bg-primary and surface, AND on that status colour's own ~10% tint over
+     surface (the "status-on-tint" case: text inside its matching tinted
+     badge/banner) — see audit/m5/g0/contrast.mjs. Widened past the initial
+     token-suggestions.json values where the tint case needed more room. */
+  --accent-primary-text: #96c8d6;
+  --accent-secondary-text: #96b1cc;
+  --accent-tertiary-text: #9ab0cb;
+  --success-text: #afc69b;
+  --warning-text: var(--warning);
+  --error-text: #dca9ae;
+  --info-text: #a7bad2;
+
+  /* On-colour tokens (M5 F1-03): text/icon colour placed on top of the
+     matching solid fill, >=4.5:1 in every theme. */
+  --on-accent-primary: #111827;
+  --on-success: #111827;
+  --on-warning: #111827;
+  --on-error: #111827;
+  --on-info: #111827;
+
+  /* Control boundary (M5 F1-07): >=3:1 against surface. */
+  --border-control: #878d99;
 
   /* Glow effects */
   --glow-primary: rgba(136, 192, 208, 0.3);

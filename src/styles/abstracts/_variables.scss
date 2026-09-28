@@ -35,6 +35,11 @@
   --shadow-xl: 0 15px 50px;
   --shadow-2xl: 0 20px 60px;
 
+  /* M5 F1: the CDK overlay backdrop behind dialogs/menus/autocomplete
+     panels. Kept theme-independent (a dark scrim reads correctly over both
+     light and dark surfaces) rather than adding it to all 8 theme files. */
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+
   // ====================
   // Typography
   // ====================
@@ -89,7 +94,33 @@
   // ====================
   // Breakpoints (for reference - use mixins for actual media queries)
   // ====================
+  // Matches abstracts/_breakpoints.scss's $breakpoints map (M5 F1-19).
   --breakpoint-mobile: 768px;
   --breakpoint-tablet: 1024px;
   --breakpoint-desktop: 1280px;
+
+  // ====================
+  // Cross-theme semantic aliases (M5 F1-03/F1-07/F1-08/F1-14)
+  // ====================
+  // Formula tokens, not per-theme literals: each is a function of tokens
+  // every theme already defines, so it resolves correctly under any
+  // body.theme-* class without needing 8 separate declarations.
+
+  // Keyboard focus ring. Aliases the text-safe accent variant so it's
+  // always >=3:1 against both bg-primary and surface (F1-08).
+  --focus-ring: var(--accent-primary-text);
+
+  // A light destructive wash for danger zones/banners (F1-14), e.g. the
+  // packet builder's over-budget/conflict warnings.
+  --danger-surface: color-mix(in srgb, var(--error) 12%, var(--surface));
+
+  // Alias for a component that asked for a raised surface a step above
+  // --surface (F1-14).
+  --surface-raised: var(--bg-tertiary);
+
+  // Legacy alias: some component SCSS references --warn-color, which was
+  // never defined anywhere and silently fell back to a hardcoded #b00020 in
+  // every theme (M5 audit T3). Defining it here makes it theme-correct
+  // without touching the surface-owned files that use it (F1-14).
+  --warn-color: var(--error);
 }

@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>SockbowlNg</title>
+  <!-- M5 F1-10: every page was titled "SockbowlNg" regardless of route; the
+       router now sets a per-route title (app-routing.module.ts), this is
+       just the boot-time default before the first NavigationEnd. -->
+  <title>Sockbowl</title>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- M5 F1-13: viewport-fit=cover lets env(safe-area-inset-*) (styles.scss)
+       reach under the iOS standalone status bar (black-translucent below). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <!-- Installable PWA: web app manifest + platform install hints -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -14,14 +19,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Sockbowl">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <!-- M5 F1-17: Roboto dropped. It was only ever loaded for Material's old
+       prebuilt theme (never actually used as the app's typography - see
+       F1-02) and cost a whole extra render-blocking request; Material now
+       gets Inter from styles/material-theme.scss's typography config. One
+       stylesheet request remains for the app's own type system, plus icons. -->
   <!-- Sockbowl type system: Inter (UI) · Space Grotesk (display/chrome) · Newsreader (question reading surface) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <!-- Load runtime configuration before Angular boots -->
   <script src="assets/config.js"></script>
 </head>
-<body class="mat-typography theme-dark">
+<!-- M5 F1-02: mat-typography dropped. It forced Roboto 400 14px/20px onto
+     body and h1-h4 (audit I1), overriding the token type system below it in
+     the cascade; Inter/Space Grotesk now render as designed. -->
+<body class="theme-dark">
   <app-root></app-root>
 </body>
 </html>

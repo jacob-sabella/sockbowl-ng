@@ -75,7 +75,7 @@ export class ThemeService {
    */
   setTheme(theme: Theme): void {
     this.themeSubject.next(theme);
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    this.trySetStoredTheme(theme);
 
     const resolved = this.resolveTheme(theme);
     this.applyResolvedTheme(resolved);
@@ -105,12 +105,34 @@ export class ThemeService {
    * @returns Initial theme
    */
   private getInitialTheme(): Theme {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    const stored = this.tryGetStoredTheme();
     if (this.isValidTheme(stored)) {
       return stored;
     }
     // Default to dark theme for now (will be 'auto' after full implementation)
     return 'dark';
+  }
+
+  /**
+   * M5 F1-21: localStorage can throw (private browsing in some engines,
+   * storage disabled/full by policy). A throw here must not stop the app
+   * from booting, so reads and writes are best-effort.
+   */
+  private tryGetStoredTheme(): string | null {
+    try {
+      return localStorage.getItem(THEME_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  private trySetStoredTheme(theme: Theme): void {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Persisting the preference is a nice-to-have; the in-memory theme
+      // still applies for the rest of this session.
+    }
   }
 
   /**
@@ -171,5 +193,28 @@ export class ThemeService {
 
     // Add the current theme class
     body.classList.add(`theme-${resolved}`);
+
+    this.updateThemeColorMeta(body);
+  }
+
+  /**
+   * M5 F1-15: keep the PWA/browser-chrome `theme-color` meta tag in sync
+   * with the active theme's `--bg-primary`, instead of a `#0a0e1a` value
+   * hardcoded for the dark theme alone (index.html previously never
+   * changed it, so light/Nord/Solarized-light etc. all kept a near-black
+   * chrome color).
+   */
+  private updateThemeColorMeta(body: HTMLElement): void {
+    const meta = this.document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      return;
+    }
+    const bgPrimary = this.document.defaultView
+      ?.getComputedStyle(body)
+      .getPropertyValue('--bg-primary')
+      .trim();
+    if (bgPrimary) {
+      meta.setAttribute('content', bgPrimary);
+    }
   }
 }

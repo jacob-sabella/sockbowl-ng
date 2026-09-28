@@ -1,5 +1,14 @@
 @if (visible()) {
-  <div class="stomp-error-banner" [class.fatal]="fatal()" role="alert" data-testid="stomp-error-banner">
+  <div
+    class="stomp-error-banner"
+    [class.fatal]="fatal()"
+    [attr.role]="fatal() ? 'alert' : 'status'"
+    data-testid="stomp-error-banner"
+    (mouseenter)="onMouseEnter()"
+    (mouseleave)="onMouseLeave()"
+    (focusin)="onFocusIn()"
+    (focusout)="onFocusOut()"
+  >
     <mat-icon aria-hidden="true">{{ fatal() ? 'error' : 'warning' }}</mat-icon>
     <span class="text">
       {{ text() }}

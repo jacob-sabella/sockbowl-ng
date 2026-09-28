@@ -54,7 +54,8 @@ p {
 
 // Links
 a {
-  color: var(--accent-primary);
+  /* M5 F1-05: the text-safe variant, not the raw accent fill. */
+  color: var(--accent-primary-text);
   text-decoration: none;
   transition: color var(--transition-fast);
 
@@ -63,7 +64,7 @@ a {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--accent-primary);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -79,7 +80,7 @@ code {
   padding: 0.125rem 0.25rem;
   background: var(--surface);
   border-radius: 4px;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
 }
 
 pre {

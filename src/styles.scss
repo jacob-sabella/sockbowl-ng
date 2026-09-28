@@ -8,7 +8,16 @@
 /* ===== ABSTRACTS (Variables, Mixins, Functions) ===== */
 @use 'styles/abstracts/variables' as *;
 @use 'styles/abstracts/breakpoints' as *;
-@use 'styles/abstracts/mixins' as *;
+
+/* ===== MATERIAL THEME (M5 F1-01) =====
+ * The single source of Material's colour/typography/density. Replaces the
+ * old `@angular/material/prebuilt-themes/*.css` (a static M2 indigo-pink
+ * palette that never followed the app's 8 themes - see angular.json). This
+ * file's own `color-scheme` mapping is what makes Material follow each
+ * body.theme-* class (light for theme-light/theme-solarized-light, dark for
+ * the other 6). It must be @use'd exactly once, before anything that
+ * renders Material components. */
+@use 'styles/material-theme';
 
 /* ===== BASE (Reset, Typography, etc.) ===== */
 @use 'styles/base/typography' as *;
@@ -26,7 +35,6 @@
 @use 'styles/themes/solarized-light' as *;
 
 /* ===== UTILITIES ===== */
-@use 'styles/utilities/animations' as *;
 @use 'styles/utilities/helpers' as *;
 @use 'styles/utilities/shadows' as *;
 @use 'styles/utilities/print' as *;
@@ -60,16 +68,12 @@ h1, h2, h3, h4,
   letter-spacing: -0.01em;
 }
 
-/* Comfortable touch targets: Material buttons default to 36px, below the 40px
-   recommended tap floor. Bump them on mobile so nothing is a tight tap. */
-@media (max-width: 760px) {
-  .mat-mdc-raised-button,
-  .mat-mdc-unelevated-button,
-  .mat-mdc-outlined-button,
-  .mat-mdc-button {
-    min-height: 40px;
-  }
-}
+/* M5 F1-12: the 44px comfortable-tap floor for Material buttons/icon-buttons
+ * now applies at every width (styles/material-theme.scss, wired in by
+ * F1-01) rather than only bumping to 40px under 760px. The old mobile-only
+ * override here used to win over material-theme.scss's rule at mobile
+ * widths (same specificity, later in source order) and is removed rather
+ * than left to fight it. */
 
 /* Packet preview: theme the dialog surface itself so the default (light) Material
    surface never shows around the edges of the themed content. */
@@ -79,4 +83,40 @@ h1, h2, h3, h4,
   border: 1px solid var(--border-subtle);
   border-radius: 18px;
   overflow: hidden;
+}
+
+/* ===== FOCUS (M5 F1-08) =====
+ * One global keyboard-focus ring, themed and >=3:1 in every theme. Material
+ * components draw their own state-layer focus feedback too; the outline
+ * adds a crisp, theme-correct edge on top rather than replacing it. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ===== MOTION (M5 F1-09) =====
+ * Deliberately not a blanket 0.01ms duration kill (that still animates, and
+ * flattens meaningful opacity/colour transitions along with decorative
+ * ones). Instead: infinite loops become one-shot, so a pulsing/blinking
+ * element settles instead of running forever, while colour and opacity
+ * state changes (the snackbar, hover, disabled) keep their normal timing.
+ * Components with their own bounded motion (qb-blink, qb-pulse in
+ * _qb-play-card.scss) already guard themselves with `animation: none` and
+ * are unaffected either way. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== SAFE AREA (M5 F1-13) =====
+ * iOS standalone PWA status bar is black-translucent (index.html), so
+ * content can sit under it without this. Untested on a real iOS device;
+ * verified only in an emulated standalone viewport with insets (Chromium). */
+body {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }

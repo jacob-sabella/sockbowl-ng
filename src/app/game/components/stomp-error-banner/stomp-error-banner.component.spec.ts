@@ -47,4 +47,78 @@ describe('StompErrorBannerComponent', () => {
     show(null);
     expect(banner()).toBeNull();
   });
+
+  it('uses role="alert" for a fatal error and role="status" for a non-fatal one', () => {
+    show({ code: 'BANNED', fatal: true });
+    expect(banner()!.getAttribute('role')).toBe('alert');
+
+    show({ code: 'RATE_LIMITED', message: 'Slow down.', fatal: false });
+    expect(banner()!.getAttribute('role')).toBe('status');
+  });
+
+  it('pauses the auto-hide countdown while hovered and resumes with the remaining time', fakeAsync(() => {
+    show({ code: 'RATE_LIMITED', message: 'Slow down.', fatal: false });
+
+    tick(NON_FATAL_BANNER_MS - 1000);
+    banner()!.dispatchEvent(new Event('mouseenter'));
+    fixture.detectChanges();
+
+    // Countdown is paused: waiting well past the original deadline should not hide it.
+    tick(NON_FATAL_BANNER_MS * 3);
+    fixture.detectChanges();
+    expect(banner()).not.toBeNull();
+
+    banner()!.dispatchEvent(new Event('mouseleave'));
+    fixture.detectChanges();
+
+    // Only ~1s of the original countdown remained when the pointer entered.
+    tick(999);
+    fixture.detectChanges();
+    expect(banner()).not.toBeNull();
+
+    tick(1);
+    fixture.detectChanges();
+    expect(banner()).toBeNull();
+  }));
+
+  it('pauses the auto-hide countdown while focused and resumes on blur', fakeAsync(() => {
+    show({ code: 'RATE_LIMITED', message: 'Slow down.', fatal: false });
+
+    tick(NON_FATAL_BANNER_MS - 1000);
+    banner()!.dispatchEvent(new Event('focusin'));
+    fixture.detectChanges();
+
+    tick(NON_FATAL_BANNER_MS * 3);
+    fixture.detectChanges();
+    expect(banner()).not.toBeNull();
+
+    banner()!.dispatchEvent(new Event('focusout'));
+    fixture.detectChanges();
+
+    tick(1000);
+    fixture.detectChanges();
+    expect(banner()).toBeNull();
+  }));
+
+  it('does not resume the countdown until both hover and focus have left', fakeAsync(() => {
+    show({ code: 'RATE_LIMITED', message: 'Slow down.', fatal: false });
+
+    banner()!.dispatchEvent(new Event('mouseenter'));
+    banner()!.dispatchEvent(new Event('focusin'));
+    fixture.detectChanges();
+
+    banner()!.dispatchEvent(new Event('mouseleave'));
+    fixture.detectChanges();
+
+    tick(NON_FATAL_BANNER_MS * 3);
+    fixture.detectChanges();
+    expect(banner()).not.toBeNull();
+
+    banner()!.dispatchEvent(new Event('focusout'));
+    fixture.detectChanges();
+
+    tick(NON_FATAL_BANNER_MS);
+    fixture.detectChanges();
+    expect(banner()).toBeNull();
+  }));
 });
