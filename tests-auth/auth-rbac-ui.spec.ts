@@ -90,6 +90,8 @@ test.describe('RBAC-gated navigation and routes', () => {
 
     await page.goto('/admin/bans');
     await expect(page).toHaveURL(/\/admin\/bans/);
+    // Content, not just the URL: the URL can match before the guard redirects (NG-R3-02).
+    await expect(page.locator('.admin-bans')).toBeVisible();
 
     await page.goto('/packets');
     await expect(page).toHaveURL(/\/packets$/);
