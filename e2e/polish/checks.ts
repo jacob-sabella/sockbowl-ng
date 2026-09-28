@@ -17,6 +17,52 @@
  */
 import type { Page, Locator } from '@playwright/test';
 
+/**
+ * F2/H0: a generic, per-row version of {@link checkControl} for
+ * `capture.spec.ts`'s main loop (M5 plan §4 H0 done-when / S6 handoff
+ * "wire the usability helpers into each capture row"). Unlike
+ * `checkControl`, which needs one hand-picked locator + label per call
+ * (fine for a surface's own curated check list, e.g.
+ * `admin-responsive.spec.ts`), this sweeps every visible interactive
+ * element on the page so it needs no per-state selector list and can run
+ * unconditionally for any surface/state. Capped at `maxChecked` elements
+ * and `maxReported` messages so one bad page can't blow up a capture run. */
+export async function checkAllControls(
+  page: Page,
+  mobile: boolean,
+  opts: { maxChecked?: number; maxReported?: number } = {},
+): Promise<string[]> {
+  const maxChecked = opts.maxChecked ?? 60;
+  const maxReported = opts.maxReported ?? 8;
+  const handles = await page
+    .locator('button, a[href], input:not([type="hidden"]), select, [role="button"], [role="link"]')
+    .all();
+  const errs: string[] = [];
+  for (const el of handles.slice(0, maxChecked)) {
+    if (errs.length >= maxReported) break;
+    if (!(await el.isVisible().catch(() => false))) continue;
+    const box = await el.boundingBox().catch(() => null);
+    if (!box || (box.width === 0 && box.height === 0)) continue;
+    const meta = await el
+      .evaluate((n) => ({
+        tag: (n as Element).tagName,
+        pe: getComputedStyle(n as Element).pointerEvents,
+        label: ((n as HTMLElement).getAttribute('aria-label')
+          || (n as HTMLElement).innerText
+          || (n as Element).tagName).toString().trim().slice(0, 40),
+      }))
+      .catch(() => null);
+    if (!meta) continue;
+    if (meta.pe === 'none') continue; // decorative/disabled-via-CSS, not a real control
+    const eps = 0.5;
+    const min = meta.tag === 'INPUT' ? 14 : mobile ? 40 : 24;
+    const label = meta.label || meta.tag;
+    if (box.height < min - eps) errs.push(`${label}: short ${Math.round(box.height)}px`);
+    else if (box.width < min - eps) errs.push(`${label}: narrow ${Math.round(box.width)}px`);
+  }
+  return errs.slice(0, maxReported);
+}
+
 /** Rule 1: no horizontal overflow. */
 export async function checkOverflow(page: Page): Promise<string[]> {
   const o = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

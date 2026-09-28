@@ -1,0 +1,36 @@
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-2xl) var(--spacing-lg);
+  text-align: center;
+  color: var(--text-secondary);
+
+  &__icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: var(--error);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+  }
+
+  &__message {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    max-width: 40ch;
+  }
+
+  &__action {
+    margin-top: var(--spacing-sm);
+  }
+}

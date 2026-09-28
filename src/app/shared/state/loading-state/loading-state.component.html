@@ -1,0 +1,7 @@
+<div class="loading-state" role="status" aria-live="polite">
+  <mat-spinner class="loading-state__spinner" [diameter]="diameter"></mat-spinner>
+  <p class="loading-state__title">{{ title }}</p>
+  @if (message) {
+    <p class="loading-state__message">{{ message }}</p>
+  }
+</div>

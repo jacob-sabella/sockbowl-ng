@@ -60,6 +60,9 @@ import { PacketReadingViewComponent } from './shared/packet-reading-view/packet-
 import { AiKeyPickerComponent } from './shared/ai-key/ai-key-picker.component';
 import { PacketImportDialogComponent } from './packets/components/packet-import-dialog/packet-import-dialog.component';
 import { AdminTaxonomyComponent } from './structure/components/admin-taxonomy/admin-taxonomy.component';
+import { LoadingStateComponent } from './shared/state/loading-state/loading-state.component';
+import { EmptyStateComponent } from './shared/state/empty-state/empty-state.component';
+import { ErrorStateComponent } from './shared/state/error-state/error-state.component';
 
 @NgModule({ declarations: [
         AppComponent,
@@ -118,6 +121,9 @@ import { AdminTaxonomyComponent } from './structure/components/admin-taxonomy/ad
         MatPaginatorModule,
         DragDropModule,
         StompErrorBannerComponent,
+        LoadingStateComponent,
+        EmptyStateComponent,
+        ErrorStateComponent,
         // OAuth2/OIDC Module
         OAuthModule.forRoot(),
         // PWA service worker — enabled only in production builds. Registers

@@ -234,46 +234,29 @@
     overflow-wrap: anywhere;
   }
 
-  /* M5 finish review FF2 fix 3 (was FF1 fix 3, still neutral after it):
-     `--mat-chip-elevated-container-color`/`--mat-chip-label-text-color`
-     ARE the right custom properties (confirmed against this Material
-     version's compiled structural CSS: `.mat-mdc-standard-chip
-     background-color: var(--mat-chip-elevated-container-color, transparent)`
-     and `...__text-label { color: var(--mat-chip-label-text-color, ...) }`),
-     and they were reaching those rules. What was winning over them is the
-     frozen `.mat-mdc-chip { background-color: ... !important; color: ...
-     !important; .mat-mdc-chip-action-label { color: ... !important; } }`
-     blanket in `vendors/_material-overrides.scss` (F1; themes every
-     unthemed chip, with no `.mat-primary`/`.mat-accent`/`.mat-warn` escape
-     the way its own button rule has). A frozen `!important` can only be
-     out-ranked, not out-read, so this bridges locally with matching
-     `!important` at higher specificity: the container
-     (`.admin-usage__banned-chip[_ngcontent]` at 0,2,0 beats `.mat-mdc-chip`
-     at 0,1,0), and the label — a Material element inside this component's
-     own host, the sanctioned `::ng-deep` case (M5 plan §5 rule 4) — one
-     level deeper (0,3,0 beats the vendor's `.mat-mdc-chip
-     .mat-mdc-chip-action-label` at 0,2,0).
-
-     A second, separate frozen-file bug sits under that one: `--danger-
-     surface` (`abstracts/_variables.scss`) is itself guaranteed-invalid
-     everywhere in the app. It's declared once, at `:root`, as `color-mix(in
-     srgb, var(--error) 12%, var(--surface))`, but `--error`/`--surface`
-     are only ever set on `body.theme-*` — a *descendant* of `:root`, whose
-     values `:root` can't see. The resulting invalid value is what every
-     element then inherits (confirmed live: `getComputedStyle(document.body)
-     .getPropertyValue('--danger-surface')` is `""`, same for the sibling
-     aliases `--focus-ring`/`--warn-color`/`--surface-raised`). Filed as
-     handoff H-09 for F2 (both bugs). Meanwhile this recomputes the same
-     12%-tint formula locally from `--error`/`--surface`, which *do*
-     resolve correctly this far down the tree, instead of the broken alias. */
+  /* M5 finish review FF2 fix 3 (was FF1 fix 3): `--mat-chip-elevated-
+     container-color`/`--mat-chip-label-text-color` are the right custom
+     properties (confirmed against this Material version's compiled
+     structural CSS: `.mat-mdc-standard-chip { background-color: var(
+     --mat-chip-elevated-container-color, transparent) }` and the label's
+     `color: var(--mat-chip-label-text-color, ...)`).
+     F2/H-09 fixed both frozen-file bugs that used to defeat this:
+     (1) `vendors/_material-overrides.scss`'s `.mat-mdc-chip` rule now sets
+     these same two tokens instead of forcing the literal `background-color`/
+     `color` with `!important`, so a plain, non-`!important` declaration
+     here wins on specificity alone; the label's colour needs no
+     `::ng-deep` either, since a custom property inherits into
+     `.mat-mdc-chip-action-label` regardless of Angular's emulated
+     encapsulation. (2) `--danger-surface` (`abstracts/_variables.scss`)
+     used to be declared on `:root`, a level above where `--error`/
+     `--surface` are actually defined (`body.theme-*`), so it always
+     computed invalid; F2 moved it (and its sibling aliases) onto `body`,
+     where it now resolves. This can use the shared `--danger-surface`
+     alias directly instead of recomputing the same 12%-tint formula
+     locally. */
   &__banned-chip {
-    --mat-chip-elevated-container-color: color-mix(in srgb, var(--error) 12%, var(--surface));
+    --mat-chip-elevated-container-color: var(--danger-surface);
     --mat-chip-label-text-color: var(--error);
-    background-color: color-mix(in srgb, var(--error) 12%, var(--surface)) !important;
-
-    ::ng-deep .mat-mdc-chip-action-label {
-      color: var(--error) !important;
-    }
   }
 
   &__override-chip {

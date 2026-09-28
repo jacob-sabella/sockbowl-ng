@@ -36,6 +36,13 @@ export interface ManifestRow {
   fontsLoaded: boolean | null;
   axeSerious: number | null;
   axeCritical: number | null;
+  /**
+   * F2/H0: generic per-row usability findings (document overflow, plus any
+   * visible control under the comfortable-size floor), from
+   * `checks.ts`'s `checkOverflow`/`checkAllControls`. `null` for a skipped
+   * row; `[]` means the sweep ran and found nothing.
+   */
+  usabilityViolations: string[] | null;
   skipped?: string;
   recordedAt: string;
 }
