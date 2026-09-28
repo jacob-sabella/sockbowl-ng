@@ -16,7 +16,10 @@
           <mat-spinner diameter="32"></mat-spinner>
         </div>
       } @else if (error) {
-        <p class="admin-bans__error">{{ error }}</p>
+        <div class="admin-bans__error-row">
+          <p class="admin-bans__error">{{ error }}</p>
+          <button mat-button type="button" (click)="loadBans()">Retry</button>
+        </div>
       } @else if (bans.length === 0) {
         <p class="admin-bans__empty">No active bans.</p>
       } @else {
@@ -29,7 +32,7 @@
                 <span class="admin-bans__item-meta" [title]="'Expires: ' + formatDate(ban.expiresAt)">Expires: {{ formatRelativeExpiry(ban.expiresAt) }}</span>
               </div>
               @if (auth.hasPermission('user:ban')) {
-                <button mat-icon-button class="admin-bans__danger-icon-btn" aria-label="Remove ban" (click)="removeBan(ban)">
+                <button mat-icon-button class="admin-bans__danger-icon-btn" [attr.aria-label]="'Remove ban on ' + ban.bannedKeycloakId" (click)="removeBan(ban)">
                   <mat-icon>delete</mat-icon>
                 </button>
               }
@@ -90,7 +93,10 @@
           <mat-spinner diameter="32"></mat-spinner>
         </div>
       } @else if (ipBansError) {
-        <p class="admin-bans__error">{{ ipBansError }}</p>
+        <div class="admin-bans__error-row">
+          <p class="admin-bans__error">{{ ipBansError }}</p>
+          <button mat-button type="button" (click)="loadIpBans()">Retry</button>
+        </div>
       } @else if (ipBans.length === 0) {
         <p class="admin-bans__empty">No active IP bans.</p>
       } @else {
@@ -103,7 +109,7 @@
                 <span class="admin-bans__item-meta" [title]="'Expires: ' + formatDate(ban.expiresAt)">Expires: {{ formatRelativeExpiry(ban.expiresAt) }}</span>
               </div>
               @if (auth.hasPermission('user:ban')) {
-                <button mat-icon-button class="admin-bans__danger-icon-btn" aria-label="Remove IP ban" (click)="removeIpBan(ban)">
+                <button mat-icon-button class="admin-bans__danger-icon-btn" [attr.aria-label]="'Remove IP ban on ' + ban.cidr" (click)="removeIpBan(ban)">
                   <mat-icon>delete</mat-icon>
                 </button>
               }
@@ -123,7 +129,16 @@
         <form class="admin-bans__form" (ngSubmit)="addIpBan()">
           <mat-form-field appearance="outline" class="admin-bans__field">
             <mat-label>CIDR or IP address</mat-label>
-            <input matInput name="ipCidr" placeholder="203.0.113.5 or 203.0.113.0/24" [(ngModel)]="newIpBan.cidr" required />
+            <input
+              matInput
+              name="ipCidr"
+              placeholder="203.0.113.5 or 203.0.113.0/24"
+              [(ngModel)]="newIpBan.cidr"
+              (ngModelChange)="onIpCidrChange()"
+              (blur)="onIpCidrBlur()"
+              [errorStateMatcher]="ipCidrErrorStateMatcher"
+              required
+            />
             @if (ipCidrError) {
               <mat-error>{{ ipCidrError }}</mat-error>
             }

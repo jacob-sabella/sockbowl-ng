@@ -67,6 +67,15 @@
 
   &__error {
     color: var(--mat-sys-error, var(--error));
+    margin: 0;
+  }
+
+  &__error-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   &__list {
