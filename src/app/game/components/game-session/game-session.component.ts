@@ -12,6 +12,7 @@ import {AuthService} from "../../../core/auth/auth.service";
 import {environment} from "../../../../environments/environment";
 import {saveGameJoin} from "../../services/game-join-storage";
 import {PendingPacketService} from "../../services/pending-packet.service";
+import {MatSnackBar} from "@angular/material/snack-bar";
 
 
 @Component({
@@ -26,6 +27,7 @@ export class GameSessionComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private pendingPacketService = inject(PendingPacketService);
+  private snack = inject(MatSnackBar);
   authService = inject(AuthService);
 
   showCreateForm = false;
@@ -50,6 +52,10 @@ export class GameSessionComponent implements OnInit {
   }
 
   onNewGame(): void {
+    // NG-V1-05: an explicit "New game" discards any packet staged by a
+    // cancelled or abandoned "Play test" navigation, so it never silently
+    // attaches to this unrelated game.
+    this.pendingPacketService.clear();
     this.showModeSelect = true;
     this.showJoinForm = false;
   }
@@ -89,6 +95,10 @@ export class GameSessionComponent implements OnInit {
   }
 
   onJoinGame(): void {
+    // NG-V1-05: joining an existing game by code carries no packetId, so any
+    // packet staged for a different (cancelled or abandoned) game must not
+    // silently attach itself to the one being joined here.
+    this.pendingPacketService.clear();
     this.showJoinForm = true;
     this.showCreateForm = false;
   }
@@ -140,18 +150,27 @@ export class GameSessionComponent implements OnInit {
   }
 
   submitCreateGame(): void {
-    this.gameSessionService.createNewGame(this.createGameRequest).subscribe(response => {
-      // Populate the join code from the create game response
-      this.joinGameRequest.joinCode = response.joinCode;
+    this.gameSessionService.createNewGame(this.createGameRequest).subscribe({
+      next: response => {
+        // Populate the join code from the create game response
+        this.joinGameRequest.joinCode = response.joinCode;
 
-      // The backend requires a non-blank player name to join. The create form
-      // doesn't collect one, so default it from the signed-in profile (or 'Host').
-      if (!this.joinGameRequest.name) {
-        this.joinGameRequest.name = this.authService.getUserProfile()?.name || 'Host';
-      }
+        // The backend requires a non-blank player name to join. The create form
+        // doesn't collect one, so default it from the signed-in profile (or 'Host').
+        if (!this.joinGameRequest.name) {
+          this.joinGameRequest.name = this.authService.getUserProfile()?.name || 'Host';
+        }
 
-      // Join game with new join game request
-      this.submitJoinGame()
+        // Join game with new join game request
+        this.submitJoinGame()
+      },
+      // NG-V1-05: this game never reaches CONFIG, so a packet staged for it
+      // (e.g. by "Play test") must not linger to attach itself to a later,
+      // unrelated game.
+      error: () => {
+        this.pendingPacketService.clear();
+        this.snack.open('Could not create the game. Please try again.', 'Dismiss', { duration: 4000 });
+      },
     });
   }
 
@@ -169,15 +188,27 @@ export class GameSessionComponent implements OnInit {
       ? this.gameSessionService.joinGameAuthenticated(this.joinGameRequest)
       : this.gameSessionService.joinGame(this.joinGameRequest);
 
-    join$.subscribe(response => {
-      saveGameJoin(response.gameSessionId, authenticated
-        ? {playerSessionId: response.playerSessionId, authenticated: true}
-        : {playerSessionId: response.playerSessionId, playerSecret: response.playerSecret, authenticated: false});
+    join$.subscribe({
+      next: response => {
+        saveGameJoin(response.gameSessionId, authenticated
+          ? {playerSessionId: response.playerSessionId, authenticated: true}
+          : {playerSessionId: response.playerSessionId, playerSecret: response.playerSecret, authenticated: false});
 
-      this.router.navigate(["/game", {
-        "gameSessionId": response.gameSessionId,
-        "playerSessionId": response.playerSessionId
-      }]);
+        this.router.navigate(["/game", {
+          "gameSessionId": response.gameSessionId,
+          "playerSessionId": response.playerSessionId
+        }]);
+      },
+      // NG-V1-05: this can follow a just-succeeded submitCreateGame (the
+      // solo-game create→join flow), which never got its own error handling
+      // -- a game whose join step fails never reaches CONFIG either, so a
+      // packet staged for it (e.g. by "Play test") must not linger to attach
+      // itself to a later, unrelated game. Previously unhandled entirely,
+      // this rethrew as an uncaught error out of the subscription.
+      error: () => {
+        this.pendingPacketService.clear();
+        this.snack.open('Could not join the game. Please try again.', 'Dismiss', { duration: 4000 });
+      },
     });
   }
 }

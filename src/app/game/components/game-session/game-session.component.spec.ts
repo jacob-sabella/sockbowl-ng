@@ -1,7 +1,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { GameSessionComponent } from './game-session.component';
 import { GameSessionService } from '../../services/game-session.service';
@@ -192,5 +192,80 @@ describe('GameSessionComponent play-test query params (PB-15)', () => {
 
     expect(pendingPacketService.get()).toBeNull();
     expect(gameSessionService.createNewGame).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * NG-V1-05: a stale pending packet (left over from a cancelled navigation, or
+ * a solo game that never made it to CONFIG) must not silently attach itself
+ * to a later, unrelated game. GameSessionComponent is the only place that
+ * ever *writes* the pending id (from the packetId query param), so it's also
+ * responsible for clearing it once that intent no longer applies.
+ */
+describe('GameSessionComponent clears a stale pending packet (NG-V1-05)', () => {
+  let gameSessionService: jasmine.SpyObj<GameSessionService>;
+  let router: jasmine.SpyObj<Router>;
+  let pendingPacketService: PendingPacketService;
+  let component: GameSessionComponent;
+
+  function configure(): void {
+    gameSessionService = jasmine.createSpyObj<GameSessionService>('GameSessionService',
+      ['createNewGame', 'joinGame', 'joinGameAuthenticated']);
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+
+    TestBed.configureTestingModule({
+      declarations: [GameSessionComponent],
+      providers: [
+        { provide: GameSessionService, useValue: gameSessionService },
+        { provide: Router, useValue: router },
+        { provide: AuthService, useValue: { isAuthenticated: () => false, getUserProfile: () => null } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    component = TestBed.createComponent(GameSessionComponent).componentInstance;
+    pendingPacketService = TestBed.inject(PendingPacketService);
+    pendingPacketService.set('stale-packet');
+  }
+
+  afterEach(() => {
+    pendingPacketService?.clear();
+  });
+
+  it('clears the pending packet on an explicit "New game"', () => {
+    configure();
+
+    component.onNewGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+  });
+
+  it('clears the pending packet on an explicit "Join" (by code, without a packetId)', () => {
+    configure();
+
+    component.onJoinGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+  });
+
+  it('clears the pending packet when solo-game creation fails', () => {
+    configure();
+    gameSessionService.createNewGame.and.returnValue(throwError(() => new Error('boom')));
+
+    component.startSoloGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+    expect(gameSessionService.joinGame).not.toHaveBeenCalled();
+  });
+
+  it('clears the pending packet when the join step of solo-game creation fails', () => {
+    configure();
+    gameSessionService.createNewGame.and.returnValue(of({ id: 'game-1', joinCode: 'ABCD' } as any));
+    gameSessionService.joinGame.and.returnValue(throwError(() => new Error('boom')));
+
+    component.startSoloGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });
