@@ -19,6 +19,12 @@ const SESSION_ENDING_EVENTS: ReadonlySet<string> = new Set([
 /** A token with fewer than this many ms left is refreshed before use. */
 const MIN_TOKEN_VALIDITY_MS = 30_000;
 
+/**
+ * Longest the route guards wait for {@link AuthService.whenInitialized}
+ * before deciding anyway (an unreachable Keycloak must not hang navigation).
+ */
+const INIT_TIMEOUT_MS = 10_000;
+
 /** Message shown when the session ends underneath the user (AUTH-13). */
 export const SESSION_ENDED_MESSAGE = 'Your session ended. Sign in again.';
 
@@ -68,9 +74,47 @@ export class AuthService {
   /** Set once the "session ended" prompt is shown; cleared by a new token. */
   private sessionEndNotified = false;
 
+  private initializedFlag = false;
+  private resolveInitialized!: () => void;
+  private readonly initializedPromise = new Promise<void>(resolve => { this.resolveInitialized = resolve; });
+  private initTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     if (environment.authEnabled) {
+      this.initTimer = setTimeout(() => this.markInitialized(), INIT_TIMEOUT_MS);
       this.configure();
+    } else {
+      this.markInitialized();
+    }
+  }
+
+  /**
+   * Whether start-up has finished: discovery, the login callback and the
+   * refresh-on-reload of an expired access token (NG-R3-05). Always true
+   * when auth is off.
+   */
+  public isInitialized(): boolean {
+    return this.initializedFlag;
+  }
+
+  /**
+   * Resolves once start-up has finished (see {@link isInitialized}), or after
+   * a timeout if Keycloak can't be reached. Route guards wait on this so a
+   * reload with an expired access token but a live refresh token refreshes
+   * instead of bouncing through a full Keycloak login redirect.
+   */
+  public whenInitialized(): Promise<void> {
+    return this.initializedPromise;
+  }
+
+  private markInitialized(): void {
+    if (this.initTimer) {
+      clearTimeout(this.initTimer);
+      this.initTimer = null;
+    }
+    if (!this.initializedFlag) {
+      this.initializedFlag = true;
+      this.resolveInitialized();
     }
   }
 
@@ -111,7 +155,7 @@ export class AuthService {
       }
     }).catch(error => {
       console.error('[AuthService] Authentication error:', error);
-    });
+    }).finally(() => this.markInitialized());
   }
 
   private onOAuthEvent(e: OAuthEvent): void {
