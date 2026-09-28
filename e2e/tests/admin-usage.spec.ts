@@ -37,6 +37,17 @@ test.describe('M4 admin usage view (live)', () => {
     await loginAs(playerPage, 'player2');
     await loginAs(adminPage, 'player1');
 
+    // Nothing provisions player2's Postgres `User` row on mere Keycloak
+    // login -- `AdminUsageService.listUsers` (plan §2.8) pages the `users`
+    // table directly, and the only writer is `UserService.findOrCreateUser`,
+    // called from an authenticated session join or one of the
+    // `/api/v1/user/*` endpoints. On a fresh stack the very first admin
+    // search below would otherwise run before player2 has ever made such a
+    // call. Visiting their own profile page provisions the row without
+    // touching the session-create rate limit or hosted-sessions quota this
+    // spec is busy exercising.
+    await provisionUser(playerPage);
+
     // ---- clean baseline ----
     await openPlayer2Detail(adminPage);
     await clickAction(adminPage, 'Reset all daily');
@@ -115,6 +126,12 @@ test.describe('M4 admin usage view (live)', () => {
 });
 
 // ---- helpers ----
+
+/** Visits the signed-in user's own profile page, which lazily provisions their Postgres `User` row. */
+async function provisionUser(page: Page) {
+  await page.goto('/profile');
+  await expect(page.locator('.profile-card')).toBeVisible({ timeout: 10_000 });
+}
 
 /**
  * Navigates fresh to /admin/usage, searches for player2 and expands their
