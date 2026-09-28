@@ -36,7 +36,8 @@
 
   &__name {
     margin: 0;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
     color: var(--text-primary);
     overflow-wrap: anywhere;
   }
@@ -61,9 +62,11 @@
   }
 
   &__index {
+    font-family: var(--font-display);
     font-weight: 600;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     margin-right: 10px;
+    flex: 0 0 auto;
   }
 
   /*
@@ -77,20 +80,49 @@
     display: none;
   }
 
+  /*
+   * S4-09: the header's title area wraps onto a second line instead of
+   * clipping. `.mat-expansion-panel-header` is `height: auto` globally
+   * (F1), so a taller wrapped header is expected to grow the row.
+   */
+  &__panel-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__panel-title-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+
+  &__panel-title-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
   &__preview {
     color: var(--text-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-right: 10px;
+    max-width: 100%;
   }
 
   &__chip {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
   }
@@ -126,13 +158,24 @@
     flex: 1 1 auto;
   }
 
+  /*
+   * S4-04: reserved for the one filled-accent action on screen at a time
+   * (Play test in the header, "Save all" in the sticky bar, and the
+   * short-lived "Add X"/"Generate"/"Create" form submits). Per-card Saves
+   * use &__card-save-btn (a plain stroked button) instead, so an editable
+   * card never competes with Play test for the single filled accent.
+   */
   &__save-btn {
     background: var(--accent-primary) !important;
-    color: #fff !important;
+    color: var(--on-accent-primary) !important;
 
     &:hover:not(:disabled) {
       filter: brightness(1.06);
     }
+  }
+
+  &__card-save-btn {
+    font-weight: var(--font-semibold);
   }
 
   &__section-actions {
@@ -148,7 +191,7 @@
     gap: 10px;
     margin-top: 12px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--border-subtle);
     background: var(--surface-hover);
   }
@@ -161,7 +204,7 @@
 
   &__parts-title {
     margin: 0 0 8px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -179,7 +222,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--surface-hover);
     border: 1px solid var(--border-subtle);
   }
@@ -191,8 +234,8 @@
     align-items: flex-start;
     justify-content: center;
     padding: 48px 16px;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    background: var(--overlay-scrim);
+    z-index: var(--z-modal);
     overflow-y: auto;
   }
 
@@ -205,31 +248,52 @@
 
   &__taxonomy-hint {
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     margin: 0 0 8px;
   }
 
+  /* S4-02: a local tint/text pair instead of the frozen --danger-surface
+   * alias (H-01: it's declared on :root but references body.theme-*-only
+   * variables, so it silently falls back per theme). Left-stripe info block
+   * per DESIGN.md's status pattern (S4-08 contract). */
   &__conflict-banner {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--warn-color, #b00020) 12%, transparent);
-    border: 1px solid var(--warn-color, #b00020);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--error);
+    background: color-mix(in srgb, var(--error) 12%, var(--surface));
     color: var(--text-primary);
+
+    mat-icon {
+      color: var(--error-text);
+    }
   }
 
-  &__unsaved-bar {
+  /*
+   * S4-07: pinned while scrolling (top on desktop; bottom, safe-area aware,
+   * on mobile below). Kept visible in both the dirty and clean state, same
+   * as before the sticky move, so e2e's "All changes saved" assertion still
+   * finds it.
+   */
+  &__save-bar {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm, 0 2px 8px) var(--shadow-color, rgba(0, 0, 0, 0.3));
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
   }
 
   &__unsaved-count {
     font-weight: 600;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
 
     &--clean {
       font-weight: 400;
@@ -237,83 +301,144 @@
     }
   }
 
+  /* S4-08: the validation summary as a left-stripe info block instead of a
+   * loose row of chips (DESIGN.md status pattern). */
   &__validation {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--success);
+    background: color-mix(in srgb, var(--success) 10%, transparent);
+
+    &--unplayable {
+      border-left-color: var(--error);
+      background: color-mix(in srgb, var(--error) 10%, transparent);
+    }
+  }
+
+  &__validation-head {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin-top: 12px;
   }
 
   &__validation-badge {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     padding: 2px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
 
     &--playable {
-      background: color-mix(in srgb, #2e7d32 18%, transparent);
-      color: #2e7d32;
+      background: color-mix(in srgb, var(--success) 18%, transparent);
+      color: var(--success-text);
     }
 
     &--unplayable {
-      background: color-mix(in srgb, var(--warn-color, #b00020) 18%, transparent);
-      color: var(--warn-color, #b00020);
+      background: color-mix(in srgb, var(--error) 18%, transparent);
+      color: var(--error-text);
     }
   }
 
   &__validation-counts {
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
   }
 
   &__issue-list {
-    flex-basis: 100%;
-    margin: 4px 0 0;
-    padding-left: 18px;
-    font-size: 0.85rem;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px 0 0;
+    padding: 0;
+    font-size: var(--text-sm);
+  }
+
+  &__issue-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration-thickness: 2px;
+    }
+
+    &:focus-visible {
+      /* H-01: --focus-ring is broken at :root (references a body.theme-*-only
+       * var), so this bridges locally with the same underlying token instead
+       * of consuming the alias. */
+      outline: 2px solid var(--accent-primary-text);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+
+  &__validation-hint {
+    margin: 8px 0 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
   }
 
   &__issue--error {
-    color: var(--warn-color, #b00020);
+    color: var(--error-text);
   }
 
   &__issue--warning {
-    color: #b26a00;
+    color: var(--warning-text);
+  }
+
+  /* S4-07: a visible "Unsaved" text chip; the dot is now only its leading glyph. */
+  &__dirty-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    color: var(--accent-primary-text);
+    background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+    white-space: nowrap;
   }
 
   &__dirty-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--accent-primary);
-    margin-right: 8px;
+    background: currentColor;
     flex: 0 0 auto;
   }
 
   &__warning-chip {
     font-size: 0.72rem;
     padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, #b26a00 16%, transparent);
-    color: #b26a00;
-    border: 1px solid color-mix(in srgb, #b26a00 40%, transparent);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--warning) 16%, transparent);
+    color: var(--warning-text);
+    border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
     white-space: nowrap;
     margin-right: 6px;
   }
 
   &__stale-hint {
     margin: 0 0 8px;
-    font-size: 0.85rem;
-    color: #b26a00;
+    font-size: var(--text-sm);
+    color: var(--warning-text);
   }
 
   /* NG-V1-03: the D7 "empty preamble" note is advisory, not a validation
    * failure (an empty preamble is allowed), so it renders as a warning-toned
    * mat-hint rather than a mat-error. */
   &__field-warning-hint {
-    color: #b26a00;
+    color: var(--warning-text);
   }
 
   &__actions-row {
@@ -324,18 +449,31 @@
     margin-top: 12px;
   }
 
+  /* S4-08: the Play test block reason, next to the button instead of a tooltip. */
+  &__play-test-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__play-test-hint {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
   &__visibility-chip {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     padding: 2px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     background: var(--surface-hover);
     color: var(--text-secondary);
     border: 1px solid var(--border-subtle);
 
     &--published {
-      background: color-mix(in srgb, #2e7d32 18%, transparent);
-      color: #2e7d32;
+      background: color-mix(in srgb, var(--success) 18%, transparent);
+      color: var(--success-text);
       border-color: transparent;
     }
   }
@@ -352,27 +490,52 @@
   }
 }
 
-/* Drag-and-drop feedback (PB-20): the CDK clones the dragged node into an
-   overlay outside this component's view, but `::ng-deep` keeps this
-   component's emulated-encapsulation attribute on the clone, so these rules
-   still reach it. */
-::ng-deep {
-  .cdk-drag-preview {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
-    border-radius: 8px;
-  }
+/*
+ * Drag-and-drop feedback (PB-20). `.cdk-drag-preview` is cloned into the CDK
+ * overlay, outside this component's view, so it needs `::ng-deep`; S4-12
+ * scopes it to our own `cdkDragPreviewClass` under `:host` instead of the
+ * bare global class, so it can't reach another component's drag preview.
+ * `.cdk-drag-placeholder` and the dragging transition below target elements
+ * that stay inside this component's own view (the source list), so they're
+ * already scoped by Angular's emulated encapsulation without `::ng-deep`.
+ */
+:host ::ng-deep .packet-builder__drag-preview {
+  box-shadow: var(--shadow-md, 0 4px 20px) var(--shadow-color, rgba(0, 0, 0, 0.28));
+  border-radius: var(--radius-lg);
+}
 
-  .cdk-drag-placeholder {
-    opacity: 0.3;
-  }
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
 
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
   .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
-    transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+    transition: none;
   }
 }
 
 @media (max-width: 600px) {
   .packet-builder {
     padding: 8px;
+
+    &--with-save-bar {
+      padding-bottom: 72px;
+    }
+  }
+
+  .packet-builder__save-bar {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-fixed);
+    border-radius: 0;
+    border-width: 1px 0 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
   }
 }

@@ -55,9 +55,9 @@ async function newPacketInBuilder(page: Page, name: string): Promise<string> {
   return m[1];
 }
 
-/** Adds a tossup through the builder's "Add Tossup" form (commits immediately, no draft). */
+/** Adds a tossup through the builder's "Add tossup" form (commits immediately, no draft). */
 async function addTossup(page: Page, question: string, answer: string): Promise<void> {
-  await page.getByRole('button', { name: 'Add Tossup', exact: true }).click();
+  await page.getByRole('button', { name: 'Add tossup', exact: true }).click();
   const form = page.locator('mat-expansion-panel', { hasText: 'New tossup' });
   await form.getByLabel('Question').fill(question);
   await form.getByLabel('Answer').fill(answer);

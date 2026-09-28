@@ -18,7 +18,8 @@ import {
   Difficulty,
   PacketValidation,
   PacketVisibility,
-  Subcategory
+  Subcategory,
+  ValidationIssue
 } from '../../models/packet-authoring.models';
 import { PACKET_LIMITS } from '../../models/packet-limits';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -137,6 +138,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   newPartOpen: Record<string, boolean> = {};
   newPartDrafts: Record<string, NewBonusPartDraft> = {};
 
+  /**
+   * S4-08: which tossup/bonus panel a validation issue link opened. Synced
+   * from the panel's own (opened)/(closed) events so a manual click on a
+   * different panel (and the accordion's own close-others behavior) always
+   * wins over this state, never fights it.
+   */
+  expandedTossupId: string | null = null;
+  expandedBonusId: string | null = null;
+  /** Set by {@link focusIssue}; consumed once by the matching panel's (afterExpand) to scroll/focus it, then cleared. */
+  private pendingFocusEntityId: string | null = null;
+
   // AI-assist form. apiKey/model are owned by the embedded AiKeyPickerComponent
   // (PB-08, N5's shared/ai-key), which seeds them from AiKeyService on init.
   genOpen = false;
@@ -189,6 +201,17 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     if (this.hasUnsavedChanges()) {
       event.preventDefault();
       event.returnValue = true;
+    }
+  }
+
+  /** S4-21: Ctrl/Cmd+S saves every dirty card, same as pressing "Save all". Only claims the shortcut when there's something to save. */
+  @HostListener('window:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (this.canManagePacket && this.dirtyCount > 0 && !this.savingAll) {
+        event.preventDefault();
+        this.saveAll();
+      }
     }
   }
 
@@ -351,6 +374,68 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
 
   isStale(id: string): boolean {
     return this.staleDraftIds.has(id);
+  }
+
+  /* --------------------------- validation issue links ------------------------ */
+
+  /**
+   * S4-08: a validation issue naming a tossup or bonus opens that card,
+   * scrolls it into view, and focuses its first field. Issues with no
+   * target (a packet-wide rule) render as plain text in the template
+   * instead of calling this.
+   */
+  focusIssue(issue: ValidationIssue): void {
+    if (issue.tossupId) {
+      this.pendingFocusEntityId = issue.tossupId;
+      this.expandedTossupId = issue.tossupId;
+    } else if (issue.bonusId) {
+      this.pendingFocusEntityId = issue.bonusId;
+      this.expandedBonusId = issue.bonusId;
+    }
+  }
+
+  onTossupPanelClosed(id: string): void {
+    if (this.expandedTossupId === id) {
+      this.expandedTossupId = null;
+    }
+  }
+
+  onTossupPanelExpanded(id: string): void {
+    if (this.pendingFocusEntityId === id) {
+      this.pendingFocusEntityId = null;
+      this.scrollAndFocusEntity(id);
+    }
+  }
+
+  onBonusPanelClosed(id: string): void {
+    if (this.expandedBonusId === id) {
+      this.expandedBonusId = null;
+    }
+  }
+
+  onBonusPanelExpanded(id: string): void {
+    if (this.pendingFocusEntityId === id) {
+      this.pendingFocusEntityId = null;
+      this.scrollAndFocusEntity(id);
+    }
+  }
+
+  /** Scrolls the card carrying `data-entity-id="id"` into view and focuses its first field (S4-08). */
+  private scrollAndFocusEntity(id: string): void {
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-entity-id="${id}"]`);
+      if (!el) {
+        return;
+      }
+      let reduceMotion = false;
+      try {
+        reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      } catch {
+        // matchMedia can be unavailable in some test environments; default to smooth.
+      }
+      el.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+      el.querySelector<HTMLElement>('textarea, input')?.focus();
+    });
   }
 
   startEditName(): void {

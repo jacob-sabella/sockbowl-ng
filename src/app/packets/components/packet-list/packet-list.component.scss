@@ -18,12 +18,13 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
     margin: 0;
     color: var(--text-primary);
 
     mat-icon {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
     }
   }
 
@@ -118,7 +119,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--surface-hover);
     border: 1px solid var(--border-subtle);
   }
@@ -139,11 +140,11 @@
   }
 
   &__item-chip {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
   }
@@ -156,27 +157,27 @@
 
   &__item-chip--draft {
     background: color-mix(in srgb, var(--warning) 18%, transparent);
-    color: var(--warning);
+    color: var(--warning-text);
   }
 
   &__item-chip--playable {
     background: color-mix(in srgb, var(--success) 16%, transparent);
-    color: var(--success);
+    color: var(--success-text);
   }
 
   &__item-chip--unplayable {
     background: color-mix(in srgb, var(--error) 16%, transparent);
-    color: var(--error);
+    color: var(--error-text);
   }
 
   &__item-counts {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
     white-space: nowrap;
   }
 
   &__item-owner {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
     white-space: nowrap;
   }
@@ -189,7 +190,8 @@
   }
 }
 
-::ng-deep .packet-list mat-paginator {
+/* S4-12: scoped under :host so this can't reach a paginator in another component's view. */
+:host ::ng-deep mat-paginator {
   background: transparent;
   color: var(--text-primary);
 }

@@ -1,4 +1,4 @@
-<div class="packet-builder">
+<div class="packet-builder" [class.packet-builder--with-save-bar]="canManagePacket">
   @if (loading) {
     <div class="packet-builder__status">
       <mat-spinner diameter="32"></mat-spinner>
@@ -13,6 +13,26 @@
         <span>This packet changed elsewhere.</span>
         <span class="packet-builder__spacer"></span>
         <button mat-stroked-button (click)="reloadAfterConflict()">Reload</button>
+      </div>
+    }
+
+    <!--
+      Sticky save bar (S4-07): pinned at the top of the content column while
+      scrolling on desktop, and at the bottom (safe-area aware) on mobile via
+      packet-builder.component.scss. Moved out of the header card so it stays
+      visible independently of the header's own scroll position.
+    -->
+    @if (canManagePacket) {
+      <div class="packet-builder__save-bar" role="status">
+        @if (dirtyCount > 0) {
+          <span class="packet-builder__unsaved-count">{{ dirtyCount }} unsaved change{{ dirtyCount === 1 ? '' : 's' }}</span>
+          <button mat-raised-button class="packet-builder__save-btn" [disabled]="savingAll" (click)="saveAll()">
+            <mat-icon aria-hidden="true">save</mat-icon>
+            Save all
+          </button>
+        } @else {
+          <span class="packet-builder__unsaved-count packet-builder__unsaved-count--clean">All changes saved</span>
+        }
       </div>
     }
 
@@ -61,49 +81,43 @@
         }
 
         <!--
-          Unsaved changes + Save all (D6/PB-03). NG-V1-07: a non-manager's
-          fields are readonly below, so there is nothing here for them to
-          save -- the bar is hidden rather than shown stuck on "All changes
-          saved" for a screen with no editing controls at all.
+          Validation summary (PB-11/PB-12, redesigned S4-08 as a left-stripe
+          info block per DESIGN.md's status-block pattern). NG-V1-07: a
+          non-manager's fields are readonly, but the readiness line is still
+          useful to them, so it isn't gated on canManagePacket.
         -->
-        @if (canManagePacket) {
-          <div class="packet-builder__unsaved-bar">
-            @if (dirtyCount > 0) {
-              <span class="packet-builder__unsaved-count">{{ dirtyCount }} unsaved change{{ dirtyCount === 1 ? '' : 's' }}</span>
-              <button mat-raised-button class="packet-builder__save-btn" [disabled]="savingAll" (click)="saveAll()">
-                <mat-icon aria-hidden="true">save</mat-icon>
-                Save all
-              </button>
-            } @else {
-              <span class="packet-builder__unsaved-count packet-builder__unsaved-count--clean">All changes saved</span>
-            }
-          </div>
-        }
-
-        <!-- Validation summary (PB-11/PB-12) -->
         @if (validation) {
-          <div class="packet-builder__validation">
-            <span class="packet-builder__validation-badge"
-                  [class.packet-builder__validation-badge--playable]="validation.playable"
-                  [class.packet-builder__validation-badge--unplayable]="!validation.playable">
-              {{ validation.playable ? 'Playable' : 'Not playable' }}
-            </span>
-            <span class="packet-builder__validation-counts">
-              {{ validation.tossupCount }} tossup{{ validation.tossupCount === 1 ? '' : 's' }},
-              {{ validation.bonusCount }} bonus{{ validation.bonusCount === 1 ? '' : 'es' }}
-            </span>
-            @for (chip of categoryDistribution; track chip.name) {
-              <span class="packet-builder__chip">{{ chip.name }} ({{ chip.count }})</span>
-            }
+          <div class="packet-builder__validation" [class.packet-builder__validation--unplayable]="!validation.playable">
+            <div class="packet-builder__validation-head">
+              <span class="packet-builder__validation-badge"
+                    [class.packet-builder__validation-badge--playable]="validation.playable"
+                    [class.packet-builder__validation-badge--unplayable]="!validation.playable">
+                {{ validation.playable ? 'Playable' : 'Not playable' }}
+              </span>
+              <span class="packet-builder__validation-counts">
+                {{ validation.tossupCount }} tossup{{ validation.tossupCount === 1 ? '' : 's' }},
+                {{ validation.bonusCount }} bonus{{ validation.bonusCount === 1 ? '' : 'es' }}
+              </span>
+              @for (chip of categoryDistribution; track chip.name) {
+                <span class="packet-builder__chip">{{ chip.name }} ({{ chip.count }})</span>
+              }
+            </div>
             @if (validation.issues.length) {
               <ul class="packet-builder__issue-list">
                 @for (issue of validation.issues; track issue.code + (issue.tossupId ?? '') + (issue.bonusId ?? '')) {
                   <li class="packet-builder__issue" [class.packet-builder__issue--error]="issue.severity === 'ERROR'"
                       [class.packet-builder__issue--warning]="issue.severity === 'WARNING'">
-                    {{ issue.message }}
+                    @if (issue.tossupId || issue.bonusId) {
+                      <button type="button" class="packet-builder__issue-link" (click)="focusIssue(issue)">{{ issue.message }}</button>
+                    } @else {
+                      <span>{{ issue.message }}</span>
+                    }
                   </li>
                 }
               </ul>
+            } @else if (validation.tossupCount === 0) {
+              <!-- S4-08/H-06: the server emits no issue for a zero-tossup packet, so "Not playable" would otherwise have no visible reason. -->
+              <p class="packet-builder__validation-hint">Add at least one tossup to make this packet playable.</p>
             }
           </div>
         }
@@ -147,12 +161,16 @@
 
           <span class="packet-builder__spacer"></span>
 
-          <button mat-raised-button class="packet-builder__save-btn" [disabled]="!validation?.playable"
-                  [matTooltip]="validation?.playable ? '' : 'Fix the playability errors above first'"
-                  (click)="playTest()">
-            <mat-icon aria-hidden="true">play_arrow</mat-icon>
-            Play test
-          </button>
+          <!-- S4-08: the block reason is visible text next to the button, not a tooltip on a disabled control. -->
+          <div class="packet-builder__play-test-wrap">
+            <button mat-raised-button class="packet-builder__save-btn" [disabled]="!validation?.playable" (click)="playTest()">
+              <mat-icon aria-hidden="true">play_arrow</mat-icon>
+              Play test
+            </button>
+            @if (validation && !validation.playable) {
+              <span class="packet-builder__play-test-hint">Fix the playability errors above first</span>
+            }
+          </div>
         </div>
       </mat-card-content>
     </mat-card>
@@ -186,18 +204,26 @@
         <!-- NG-V1-07: a non-manager gets a read-only view (a FORBIDDEN mutation otherwise). -->
         <mat-accordion cdkDropList [cdkDropListDisabled]="!canManagePacket" (cdkDropListDropped)="dropTossup($event)">
           @for (te of sortedTossups; track te.tossup.id; let first = $first; let last = $last) {
-            <mat-expansion-panel cdkDrag>
+            <mat-expansion-panel cdkDrag cdkDragPreviewClass="packet-builder__drag-preview" [attr.data-entity-id]="te.tossup.id"
+                                  [expanded]="expandedTossupId === te.tossup.id"
+                                  (opened)="expandedTossupId = te.tossup.id"
+                                  (closed)="onTossupPanelClosed(te.tossup.id)"
+                                  (afterExpand)="onTossupPanelExpanded(te.tossup.id)">
               <mat-expansion-panel-header>
-                <mat-panel-title>
+                <mat-panel-title class="packet-builder__panel-title">
                   <mat-icon cdkDragHandle class="packet-builder__drag-handle" aria-label="Reorder tossup" title="Drag to reorder">drag_indicator</mat-icon>
                   <span class="packet-builder__index">#{{ te.order + 1 }}</span>
-                  @if (tossupDraftStore.isDirty(te.tossup.id)) {
-                    <span class="packet-builder__dirty-dot" aria-label="Unsaved changes" title="Unsaved changes"></span>
-                  }
-                  <span class="packet-builder__preview">{{ truncate(te.tossup.question) }}</span>
-                  @if (te.tossup.subcategory?.name) {
-                    <span class="packet-builder__chip">{{ te.tossup.subcategory.name }}</span>
-                  }
+                  <span class="packet-builder__panel-title-main">
+                    <span class="packet-builder__preview">{{ truncate(te.tossup.question) }}</span>
+                    <span class="packet-builder__panel-title-meta">
+                      @if (tossupDraftStore.isDirty(te.tossup.id)) {
+                        <span class="packet-builder__dirty-chip"><span class="packet-builder__dirty-dot" aria-hidden="true"></span>Unsaved</span>
+                      }
+                      @if (te.tossup.subcategory?.name) {
+                        <span class="packet-builder__chip">{{ te.tossup.subcategory.name }}</span>
+                      }
+                    </span>
+                  </span>
                 </mat-panel-title>
               </mat-expansion-panel-header>
 
@@ -269,7 +295,7 @@
                     @if (tossupDraftStore.isDirty(te.tossup.id)) {
                       <button mat-button (click)="revertTossup(te)">Revert</button>
                     }
-                    <button mat-raised-button class="packet-builder__save-btn" (click)="saveTossup(te)">
+                    <button mat-stroked-button class="packet-builder__card-save-btn" (click)="saveTossup(te)">
                       <mat-icon aria-hidden="true">save</mat-icon>
                       Save
                     </button>
@@ -325,7 +351,7 @@
           @if (!newTossupOpen && canManagePacket) {
             <button mat-stroked-button (click)="openNewTossup()">
               <mat-icon aria-hidden="true">add</mat-icon>
-              Add Tossup
+              Add tossup
             </button>
           }
           @if (auth.hasPermission('question:generate') && canManagePacket) {
@@ -394,21 +420,29 @@
         <!-- NG-V1-07: a non-manager gets a read-only view (a FORBIDDEN mutation otherwise). -->
         <mat-accordion cdkDropList [cdkDropListDisabled]="!canManagePacket" (cdkDropListDropped)="dropBonus($event)">
           @for (be of sortedBonuses; track be.bonus.id; let first = $first; let last = $last) {
-            <mat-expansion-panel cdkDrag [expanded]="isJustAdded(be)">
+            <mat-expansion-panel cdkDrag cdkDragPreviewClass="packet-builder__drag-preview" [attr.data-entity-id]="be.bonus.id"
+                                  [expanded]="isJustAdded(be) || expandedBonusId === be.bonus.id"
+                                  (opened)="expandedBonusId = be.bonus.id"
+                                  (closed)="onBonusPanelClosed(be.bonus.id)"
+                                  (afterExpand)="onBonusPanelExpanded(be.bonus.id)">
               <mat-expansion-panel-header>
-                <mat-panel-title>
+                <mat-panel-title class="packet-builder__panel-title">
                   <mat-icon cdkDragHandle class="packet-builder__drag-handle" aria-label="Reorder bonus" title="Drag to reorder">drag_indicator</mat-icon>
                   <span class="packet-builder__index">#{{ be.order + 1 }}</span>
-                  @if (bonusDraftStore.isDirty(be.bonus.id)) {
-                    <span class="packet-builder__dirty-dot" aria-label="Unsaved changes" title="Unsaved changes"></span>
-                  }
-                  <span class="packet-builder__preview">{{ truncate(be.bonus.preamble || '(no preamble)') }}</span>
-                  @if (be.bonus.subcategory?.name) {
-                    <span class="packet-builder__chip">{{ be.bonus.subcategory.name }}</span>
-                  }
-                  @for (warning of bonusWarnings(be); track warning) {
-                    <span class="packet-builder__warning-chip">{{ warning }}</span>
-                  }
+                  <span class="packet-builder__panel-title-main">
+                    <span class="packet-builder__preview">{{ truncate(be.bonus.preamble || '(no preamble)') }}</span>
+                    <span class="packet-builder__panel-title-meta">
+                      @if (bonusDraftStore.isDirty(be.bonus.id)) {
+                        <span class="packet-builder__dirty-chip"><span class="packet-builder__dirty-dot" aria-hidden="true"></span>Unsaved</span>
+                      }
+                      @if (be.bonus.subcategory?.name) {
+                        <span class="packet-builder__chip">{{ be.bonus.subcategory.name }}</span>
+                      }
+                      @for (warning of bonusWarnings(be); track warning) {
+                        <span class="packet-builder__warning-chip">{{ warning }}</span>
+                      }
+                    </span>
+                  </span>
                 </mat-panel-title>
               </mat-expansion-panel-header>
 
@@ -426,7 +460,7 @@
                     <!-- A warning, not a mat-error (NG-V1-03): an empty preamble is
                          allowed (D7), so this must never look like a validation
                          failure or gate Save. -->
-                    <mat-hint class="packet-builder__field-warning-hint">An empty preamble is allowed, but not recommended (D7)</mat-hint>
+                    <mat-hint class="packet-builder__field-warning-hint">An empty preamble is allowed, but not recommended</mat-hint>
                   }
                 </mat-form-field>
 
@@ -472,7 +506,7 @@
                     @if (bonusDraftStore.isDirty(be.bonus.id)) {
                       <button mat-button (click)="revertBonus(be)">Revert</button>
                     }
-                    <button mat-raised-button class="packet-builder__save-btn" (click)="saveBonus(be)">
+                    <button mat-stroked-button class="packet-builder__card-save-btn" (click)="saveBonus(be)">
                       <mat-icon aria-hidden="true">save</mat-icon>
                       Save
                     </button>
@@ -485,10 +519,10 @@
                   <!-- NG-V1-07: a non-manager gets a read-only view (a FORBIDDEN mutation otherwise). -->
                   <div class="packet-builder__parts-list" cdkDropList [cdkDropListDisabled]="!canManagePacket" (cdkDropListDropped)="dropPart(be, $event)">
                     @for (pe of sortedParts(be); track pe.bonusPart.id; let partFirst = $first; let partLast = $last) {
-                      <div class="packet-builder__part" cdkDrag>
+                      <div class="packet-builder__part" cdkDrag cdkDragPreviewClass="packet-builder__drag-preview">
                         <mat-icon cdkDragHandle class="packet-builder__drag-handle" aria-label="Reorder part" title="Drag to reorder">drag_indicator</mat-icon>
                         @if (bonusPartDraftStore.isDirty(pe.bonusPart.id)) {
-                          <span class="packet-builder__dirty-dot" aria-label="Unsaved changes" title="Unsaved changes"></span>
+                          <span class="packet-builder__dirty-chip"><span class="packet-builder__dirty-dot" aria-hidden="true"></span>Unsaved</span>
                         }
                         <mat-form-field appearance="outline" class="packet-builder__field">
                           <mat-label>Question</mat-label>
@@ -525,7 +559,7 @@
                             @if (bonusPartDraftStore.isDirty(pe.bonusPart.id)) {
                               <button mat-button (click)="revertPart(pe)">Revert</button>
                             }
-                            <button mat-raised-button class="packet-builder__save-btn" (click)="savePart(be, pe)">
+                            <button mat-stroked-button class="packet-builder__card-save-btn" (click)="savePart(be, pe)">
                               <mat-icon aria-hidden="true">save</mat-icon>
                               Save
                             </button>
@@ -559,7 +593,7 @@
                   @if (!newPartOpen[be.bonus.id] && canManagePacket) {
                     <button mat-stroked-button (click)="openNewPart(be)">
                       <mat-icon aria-hidden="true">add</mat-icon>
-                      Add Part
+                      Add part
                     </button>
                   }
                 </div>

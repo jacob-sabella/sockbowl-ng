@@ -728,7 +728,7 @@ describe('PacketBuilderComponent', () => {
       configure(packet);
 
       const html: string = fixture.nativeElement.innerHTML;
-      expect(html).toContain('An empty preamble is allowed, but not recommended (D7)');
+      expect(html).toContain('An empty preamble is allowed, but not recommended');
       // Structurally a hint, not an error: an empty preamble is valid by
       // design (D7), so it must never gate Save or look like a failure.
       const warningHint = fixture.nativeElement.querySelector('.packet-builder__field-warning-hint');
@@ -767,7 +767,7 @@ describe('PacketBuilderComponent', () => {
 
     it('hides the unsaved-changes / Save all bar entirely', () => {
       configureAsNonManager();
-      expect(fixture.nativeElement.querySelector('.packet-builder__unsaved-bar')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).toBeNull();
     });
 
     it('shows editable textareas and the unsaved bar for a manager (control)', () => {
@@ -776,7 +776,7 @@ describe('PacketBuilderComponent', () => {
       const areas: HTMLTextAreaElement[] = Array.from(fixture.nativeElement.querySelectorAll('textarea'));
       expect(areas.length).toBeGreaterThan(0);
       areas.forEach((ta) => expect(ta.readOnly).toBeFalse());
-      expect(fixture.nativeElement.querySelector('.packet-builder__unsaved-bar')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).not.toBeNull();
     });
   });
 });

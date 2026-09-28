@@ -7,7 +7,7 @@
   overflow-y: auto;
 
   &::-webkit-scrollbar { width: 8px; }
-  &::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 4px; }
+  &::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: var(--radius-sm); }
 }
 
 /* Linear/print layout (NG-V1-01): stacked sections, no scroll clipping. */
@@ -37,14 +37,14 @@
   gap: 1rem;
   padding: 1rem 1.25rem;
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: var(--bg-secondary);
 
   .q__num {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.05rem;
-    color: var(--accent-primary);
+    font-size: var(--text-lg);
+    color: var(--accent-primary-text);
     min-width: 1.75rem;
   }
   .q__body { flex: 1; min-width: 0; }
@@ -52,7 +52,7 @@
   /* The reading surface: questions/answers in the packet serif */
   .q__question {
     font-family: var(--font-serif);
-    font-size: 1.05rem;
+    font-size: var(--text-lg);
     line-height: 1.6;
   }
   .q__answer {
@@ -67,7 +67,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     margin-right: 0.4rem;
     vertical-align: 0.05em;
   }
