@@ -81,6 +81,9 @@
       <mat-card-content>
         <!-- Current state banner: tells the proctor what to do right now -->
         <div class="proctor-status" role="status" aria-live="polite">
+          @if (pendingVerdictMessage(); as verdict) {
+            <span class="status-dot status-dot--done"></span> {{ verdict }}
+          } @else {
           @switch (gameSession.currentMatch.currentRound.roundState) {
             @case (RoundState.PROCTOR_READING) { <span class="status-dot status-dot--read"></span> Read the tossup aloud }
             @case (RoundState.AWAITING_BUZZ) { <span class="status-dot status-dot--wait"></span> Waiting for a buzz }
@@ -91,6 +94,7 @@
             @case (RoundState.BONUS_READING_PART) { <span class="status-dot status-dot--read"></span> Read the bonus part }
             @case (RoundState.BONUS_AWAITING_ANSWER) { <span class="status-dot status-dot--judge"></span> Judge the bonus part }
             @case (RoundState.BONUS_COMPLETED) { <span class="status-dot status-dot--done"></span> Bonus complete }
+          }
           }
         </div>
 
@@ -202,6 +206,7 @@
               <button
                 mat-raised-button
                 id="right-btn"
+                [disabled]="judgmentPending()"
                 [attr.aria-label]="'Mark ' + gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz?.playerId ?? '') + ' correct'"
                 aria-keyshortcuts="r"
                 (click)="judgeTossup(true)">
@@ -212,6 +217,7 @@
               <button
                 mat-raised-button
                 id="wrong-btn"
+                [disabled]="judgmentPending()"
                 [attr.aria-label]="'Mark ' + gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz?.playerId ?? '') + ' incorrect'"
                 aria-keyshortcuts="w"
                 (click)="judgeTossup(false)">
@@ -324,6 +330,7 @@
                         class="part-actions">
                         <button mat-raised-button
                           class="bonus-right-btn"
+                          [disabled]="judgmentPending()"
                           [attr.aria-label]="'Mark bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1) + ' correct, ' + getBonusPartPointValue() + ' points'"
                           aria-keyshortcuts="r"
                           (click)="judgeBonusPart(true)">
@@ -333,6 +340,7 @@
                         </button>
                         <button mat-raised-button
                           class="bonus-wrong-btn"
+                          [disabled]="judgmentPending()"
                           [attr.aria-label]="'Mark bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1) + ' incorrect, 0 points'"
                           aria-keyshortcuts="w"
                           (click)="judgeBonusPart(false)">
@@ -342,6 +350,7 @@
                         </button>
                         <button mat-raised-button
                           id="timeout-bonus-btn"
+                          [disabled]="judgmentPending()"
                           [attr.aria-label]="'Time out bonus part ' + (gameSession.currentMatch.currentRound.currentBonusPartIndex + 1)"
                           aria-keyshortcuts="t"
                           (click)="timeoutBonusPart()">

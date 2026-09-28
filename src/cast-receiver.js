@@ -18,6 +18,14 @@
     FREE_FOR_ALL: 'Free for all',
   };
 
+  // M5 S2-28: how long the board shows "Question loading…" before admitting
+  // the question never arrived and switching to a neutral waiting state,
+  // rather than reading "loading" forever.
+  const QUESTION_WAIT_TIMEOUT_MS = 8000;
+  let questionWaitTimer = null;
+  let questionWaitRoundNumber = null;
+  let questionNeverArrived = false;
+
   // Cache DOM elements
   const elements = {
     app: document.getElementById('app'),
@@ -146,6 +154,7 @@
     // Hide match view, show config view
     elements.matchView.classList.add('hidden');
     elements.configView.classList.remove('hidden');
+    clearQuestionWaitTimer();
 
     // Update join code
     elements.configJoinCode.textContent = state.joinCode || '----';
@@ -184,12 +193,27 @@
       elements.categoryInfo.textContent = 'Quiz Bowl';
     }
 
-    // Show/hide question
+    // Show/hide question. M5 S2-28: a missing questionText no longer reads
+    // "Question loading…" forever — a bounded wait, restarted whenever the
+    // round changes, admits the question never arrived.
     if (state.questionVisible) {
       elements.questionContainer.classList.remove('hidden');
-      elements.questionText.innerHTML = state.questionText || 'Question loading…';
+      if (state.questionText) {
+        clearQuestionWaitTimer();
+        elements.questionText.innerHTML = state.questionText;
+      } else {
+        if (questionWaitRoundNumber !== state.roundNumber) {
+          clearQuestionWaitTimer();
+          questionWaitRoundNumber = state.roundNumber;
+        }
+        elements.questionText.textContent = questionNeverArrived
+          ? 'Waiting for the proctor…'
+          : 'Question loading…';
+        scheduleQuestionWaitTimeout();
+      }
     } else {
       elements.questionContainer.classList.add('hidden');
+      clearQuestionWaitTimer();
     }
 
     // Update buzz status
@@ -340,6 +364,35 @@
    */
   function showError(message) {
     setStatus('error', '❌', message);
+  }
+
+  /**
+   * Starts the bounded wait for a question that never arrives (M5 S2-28),
+   * if one isn't already running. Idempotent per round: repeated renders of
+   * the same still-missing question don't restart the clock.
+   */
+  function scheduleQuestionWaitTimeout() {
+    if (questionWaitTimer || questionNeverArrived) {
+      return;
+    }
+    questionWaitTimer = setTimeout(() => {
+      questionNeverArrived = true;
+      questionWaitTimer = null;
+      elements.questionText.textContent = 'Waiting for the proctor…';
+    }, QUESTION_WAIT_TIMEOUT_MS);
+  }
+
+  /**
+   * Clears the S2-28 bounded-wait state: called once real question text
+   * arrives, the question is hidden, or the round moves on.
+   */
+  function clearQuestionWaitTimer() {
+    if (questionWaitTimer) {
+      clearTimeout(questionWaitTimer);
+      questionWaitTimer = null;
+    }
+    questionNeverArrived = false;
+    questionWaitRoundNumber = null;
   }
 
   /**

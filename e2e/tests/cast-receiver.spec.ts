@@ -149,3 +149,36 @@ test('cast receiver mirrors the selected skin', async ({ browser }) => {
   }
   await ctx.close();
 });
+
+// M5 S2-28: a question that never arrives must not read "Question loading…"
+// forever — after a bounded wait the board admits it's still waiting on the
+// proctor. Uses Playwright's virtual clock so the test doesn't sit on a real
+// multi-second timeout.
+test('cast receiver admits a question that never arrives after a bounded wait', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  await page.clock.install();
+  await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
+
+  await page.evaluate((s) => (window as any).__castRender(s), {
+    ...INGAME_STATE,
+    questionText: '',
+  });
+  await expect(page.locator('#question-text')).toHaveText('Question loading…');
+
+  // Still short of the bounded wait: still reads as loading.
+  await page.clock.fastForward(7000);
+  await expect(page.locator('#question-text')).toHaveText('Question loading…');
+
+  // Past the bounded wait: admits the question never arrived.
+  await page.clock.fastForward(2000);
+  await expect(page.locator('#question-text')).toHaveText('Waiting for the proctor…');
+  await page.screenshot({ path: `${ART}/cast-05-question-never-arrived.png` });
+
+  // A real question landing (e.g. the next round) clears the waiting copy.
+  await page.evaluate((s) => (window as any).__castRender(s), INGAME_STATE);
+  await expect(page.locator('#question-text')).toContainText('Anxiety');
+
+  await ctx.close();
+});

@@ -711,4 +711,64 @@ describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
     dispatchKey('r');
     expect(gameStateService.sendAnswerCorrect).not.toHaveBeenCalled();
   });
+
+  // M5 S2-21: once a judgment is sent, the row goes pending until the
+  // RoundState (or the buzz) actually changes, so a second click or key
+  // press racing the server frame can't send the same judgment twice.
+  it('a second R press does not send the same tossup judgment twice', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    dispatchKey('r');
+    dispatchKey('r');
+    expect(gameStateService.sendAnswerCorrect).toHaveBeenCalledTimes(1);
+  });
+
+  it('a second W press does not send the same bonus part judgment twice', () => {
+    session$.next(sessionWith({ roundState: RoundState.BONUS_AWAITING_ANSWER, currentBonusPartIndex: 0 }));
+    fixture.detectChanges();
+    dispatchKey('w');
+    dispatchKey('w');
+    expect(gameStateService.sendBonusPartOutcome).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables Right/Wrong once a tossup judgment is pending, and shows the verdict in the banner', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    dispatchKey('r');
+    fixture.detectChanges();
+    const rightBtn = (fixture.nativeElement as HTMLElement).querySelector('#right-btn') as HTMLButtonElement;
+    const wrongBtn = (fixture.nativeElement as HTMLElement).querySelector('#wrong-btn') as HTMLButtonElement;
+    expect(rightBtn.disabled).toBe(true);
+    expect(wrongBtn.disabled).toBe(true);
+    const banner = (fixture.nativeElement as HTMLElement).querySelector('.proctor-status')!.textContent!;
+    expect(banner).toContain('marked correct');
+  });
+
+  it('clears the pending judgment once the RoundState changes, allowing the next judgment', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    dispatchKey('r');
+    fixture.detectChanges();
+
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_BUZZ }));
+    fixture.detectChanges();
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p2', teamId: 't1' } }));
+    fixture.detectChanges();
+
+    dispatchKey('w');
+    expect(gameStateService.sendAnswerIncorrect).toHaveBeenCalled();
+  });
+
+  it('clears the pending judgment once a new buzz arrives in the same RoundState', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
+    fixture.detectChanges();
+    dispatchKey('r');
+    fixture.detectChanges();
+
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p2', teamId: 't1' } }));
+    fixture.detectChanges();
+
+    dispatchKey('w');
+    expect(gameStateService.sendAnswerIncorrect).toHaveBeenCalled();
+  });
 });

@@ -31,6 +31,24 @@ export class GameProctorComponent implements OnInit {
    */
   readonly liveAnnouncement = signal('');
 
+  /**
+   * M5 S2-21: set the instant a judgment (tossup or bonus part) is sent,
+   * and cleared only when the RoundState or the current buzz actually
+   * changes underneath it. While true, the decision row's judging buttons
+   * are disabled and the judge keys no-op, so a second click or key press
+   * (or a click racing a key) can't send the same judgment twice before the
+   * next server frame arrives.
+   */
+  readonly judgmentPending = signal(false);
+
+  /**
+   * The verdict just sent, shown in the status banner in place of the
+   * "Judge the..." prompt for as long as judgmentPending is true, so the
+   * proctor sees visible confirmation instead of the buttons just going
+   * quiet (M5 S2-21).
+   */
+  readonly pendingVerdictMessage = signal<string | null>(null);
+
   // Cast-related observables
   castAvailable$: Observable<boolean>;
   castConnectionState$: Observable<PresentationConnectionState>;
@@ -45,7 +63,17 @@ export class GameProctorComponent implements OnInit {
 
   ngOnInit(): void {
     this.gameSessionObs.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(gameSession => {
+      const previousRoundState = this.gameSession?.currentMatch?.currentRound?.roundState;
+      const previousBuzzId = this.gameSession?.currentMatch?.currentRound?.currentBuzz?.playerId;
       this.gameSession = gameSession;
+      if (this.judgmentPending()) {
+        const nextRoundState = gameSession?.currentMatch?.currentRound?.roundState;
+        const nextBuzzId = gameSession?.currentMatch?.currentRound?.currentBuzz?.playerId;
+        if (nextRoundState !== previousRoundState || nextBuzzId !== previousBuzzId) {
+          this.judgmentPending.set(false);
+          this.pendingVerdictMessage.set(null);
+        }
+      }
     });
   }
 
@@ -284,26 +312,44 @@ export class GameProctorComponent implements OnInit {
   }
 
   timeoutBonusPart(): void {
+    if (this.judgmentPending()) {
+      return;
+    }
     const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex ?? 0;
     this.gameStateService.sendTimeoutBonusPart();
     this.announce(`Bonus part ${partIndex + 1} timed out.`);
   }
 
+  /** M5 S2-21: guards both judging methods against a second send (a race
+   * between a click and a key, or two rapid key presses) before the next
+   * gameSession$ frame moves the RoundState or clears the buzz. */
   judgeTossup(correct: boolean): void {
+    if (this.judgmentPending()) {
+      return;
+    }
     const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;
     const playerName = buzz ? this.gameStateService.getPlayerNameById(buzz.playerId) : '';
+    this.judgmentPending.set(true);
     if (correct) {
       this.gameStateService.sendAnswerCorrect();
     } else {
       this.gameStateService.sendAnswerIncorrect();
     }
-    this.announce(`${playerName || 'Player'} marked ${correct ? 'correct' : 'incorrect'}.`);
+    const verdict = `${playerName || 'Player'} marked ${correct ? 'correct' : 'incorrect'}.`;
+    this.pendingVerdictMessage.set(verdict);
+    this.announce(verdict);
   }
 
   judgeBonusPart(correct: boolean): void {
+    if (this.judgmentPending()) {
+      return;
+    }
     const partIndex = this.gameSession?.currentMatch?.currentRound?.currentBonusPartIndex ?? 0;
+    this.judgmentPending.set(true);
     this.sendBonusPartOutcome(partIndex, correct);
-    this.announce(`Bonus part ${partIndex + 1} marked ${correct ? 'correct' : 'incorrect'}.`);
+    const verdict = `Bonus part ${partIndex + 1} marked ${correct ? 'correct' : 'incorrect'}.`;
+    this.pendingVerdictMessage.set(verdict);
+    this.announce(verdict);
   }
 
   private announce(message: string): void {
