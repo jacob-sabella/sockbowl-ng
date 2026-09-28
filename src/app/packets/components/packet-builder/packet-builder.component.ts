@@ -25,7 +25,6 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { describeGraphqlError, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
-import { PendingPacketService } from '../../../game/services/pending-packet.service';
 import { DraftEntitySource, PacketDraftStore } from './packet-draft-store';
 
 interface TossupDraft {
@@ -90,7 +89,6 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   private packetAuthoring = inject(PacketAuthoringService);
   private snackBar = inject(MatSnackBar);
   private confirmDialog = inject(ConfirmDialogService);
-  private pendingPacket = inject(PendingPacketService);
   auth = inject(AuthService);
 
   limits = PACKET_LIMITS;
@@ -376,6 +374,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     this.savingName = true;
     this.packetAuthoring.renamePacket(this.packetId, name, this.packetVersion).subscribe({
       next: () => {
+        this.bumpLocalVersion();
         this.savingName = false;
         this.editingName = false;
         this.refetch();
@@ -391,6 +390,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   onDifficultyChange(difficultyId: string): void {
     this.packetAuthoring.setPacketDifficulty(this.packetId, difficultyId, this.packetVersion).subscribe({
       next: () => {
+        this.bumpLocalVersion();
         this.refetch();
         this.snackBar.open('Difficulty saved', 'Dismiss', { duration: 2500 });
       },
@@ -518,7 +518,11 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     if (!this.packet) {
       return;
     }
-    this.pendingPacket.set(this.packetId);
+    // NG-V1-05: don't pre-set the pending packet here. GameSessionComponent
+    // sets it from the `packetId` query param this navigation carries, so a
+    // second, earlier write is redundant and is exactly what goes stale if
+    // navigation is cancelled (e.g. the unsaved-changes guard) or the solo
+    // game fails to start.
     this.router.navigate(['/game-session'], { queryParams: { mode: 'single', packetId: this.packetId } });
   }
 
@@ -670,6 +674,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         }
         this.packetAuthoring.removeTossupFromPacket(this.packetId, te.tossup.id, this.packetVersion).subscribe({
           next: () => {
+            this.bumpLocalVersion();
             this.refetch();
             this.snackBar.open('Tossup removed', 'Dismiss', { duration: 2500 });
           },
@@ -684,7 +689,10 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       return;
     }
     this.packetAuthoring.reorderTossup(this.packetId, te.tossup.id, newOrder, this.packetVersion).subscribe({
-      next: () => this.refetch(),
+      next: () => {
+        this.bumpLocalVersion();
+        this.refetch();
+      },
       error: (err) => this.handleMutationError(err)
     });
   }
@@ -710,6 +718,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       subcategoryId: this.newTossupDraft.subcategoryId
     }, null, this.packetVersion).subscribe({
       next: () => {
+        this.bumpLocalVersion();
         this.addingTossup = false;
         this.newTossupOpen = false;
         this.refetch();
@@ -751,6 +760,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       model: this.genDraft.model || null
     }, null, this.packetVersion).subscribe({
       next: () => {
+        this.bumpLocalVersion();
         this.genSubmitting = false;
         this.genOpen = false;
         this.refetch();
@@ -813,6 +823,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         }
         this.packetAuthoring.removeBonusFromPacket(this.packetId, be.bonus.id, this.packetVersion).subscribe({
           next: () => {
+            this.bumpLocalVersion();
             this.refetch();
             this.snackBar.open('Bonus removed', 'Dismiss', { duration: 2500 });
           },
@@ -827,7 +838,10 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       return;
     }
     this.packetAuthoring.reorderBonus(this.packetId, be.bonus.id, newOrder, this.packetVersion).subscribe({
-      next: () => this.refetch(),
+      next: () => {
+        this.bumpLocalVersion();
+        this.refetch();
+      },
       error: (err) => this.handleMutationError(err)
     });
   }
@@ -875,6 +889,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       parts: parts.map(p => ({ question: p.question.trim(), answer: p.answer.trim() }))
     }, null, this.packetVersion).subscribe({
       next: () => {
+        this.bumpLocalVersion();
         this.addingBonus = false;
         this.newBonusOpen = false;
         this.refetch(() => {
@@ -941,6 +956,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         }
         this.packetAuthoring.removeBonusPart(be.bonus.id, pe.bonusPart.id, this.packetVersion).subscribe({
           next: () => {
+            this.bumpLocalVersion();
             this.refetch();
             this.snackBar.open('Bonus part removed', 'Dismiss', { duration: 2500 });
           },
@@ -956,7 +972,10 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       return;
     }
     this.packetAuthoring.reorderBonusPart(be.bonus.id, pe.bonusPart.id, newOrder, this.packetVersion).subscribe({
-      next: () => this.refetch(),
+      next: () => {
+        this.bumpLocalVersion();
+        this.refetch();
+      },
       error: (err) => this.handleMutationError(err)
     });
   }
@@ -981,6 +1000,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       answer: draft.answer.trim()
     }, null, this.packetVersion).subscribe({
       next: () => {
+        this.bumpLocalVersion();
         this.newPartOpen[be.bonus.id] = false;
         this.refetch();
         this.snackBar.open('Bonus part added', 'Dismiss', { duration: 2500 });

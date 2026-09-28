@@ -60,18 +60,25 @@
           <p class="packet-builder__difficulty-readonly">Difficulty: {{ packet.difficulty?.name ?? 'Unset' }}</p>
         }
 
-        <!-- Unsaved changes + Save all (D6/PB-03) -->
-        <div class="packet-builder__unsaved-bar">
-          @if (dirtyCount > 0) {
-            <span class="packet-builder__unsaved-count">{{ dirtyCount }} unsaved change{{ dirtyCount === 1 ? '' : 's' }}</span>
-            <button mat-raised-button class="packet-builder__save-btn" [disabled]="savingAll" (click)="saveAll()">
-              <mat-icon aria-hidden="true">save</mat-icon>
-              Save all
-            </button>
-          } @else {
-            <span class="packet-builder__unsaved-count packet-builder__unsaved-count--clean">All changes saved</span>
-          }
-        </div>
+        <!--
+          Unsaved changes + Save all (D6/PB-03). NG-V1-07: a non-manager's
+          fields are readonly below, so there is nothing here for them to
+          save -- the bar is hidden rather than shown stuck on "All changes
+          saved" for a screen with no editing controls at all.
+        -->
+        @if (canManagePacket) {
+          <div class="packet-builder__unsaved-bar">
+            @if (dirtyCount > 0) {
+              <span class="packet-builder__unsaved-count">{{ dirtyCount }} unsaved change{{ dirtyCount === 1 ? '' : 's' }}</span>
+              <button mat-raised-button class="packet-builder__save-btn" [disabled]="savingAll" (click)="saveAll()">
+                <mat-icon aria-hidden="true">save</mat-icon>
+                Save all
+              </button>
+            } @else {
+              <span class="packet-builder__unsaved-count packet-builder__unsaved-count--clean">All changes saved</span>
+            }
+          </div>
+        }
 
         <!-- Validation summary (PB-11/PB-12) -->
         @if (validation) {
@@ -155,7 +162,16 @@
       <mat-card class="packet-builder__preview-card">
         <mat-card-content>
           <div class="print-area">
-            <app-packet-reading-view [packet]="packet"></app-packet-reading-view>
+            <!-- On-screen: the interactive tabbed reading view. -->
+            <app-packet-reading-view class="packet-builder__preview-onscreen" [packet]="packet"></app-packet-reading-view>
+            <!--
+              Print-only (NG-V1-01): both Tossups and Bonuses stacked with no
+              tabs, so the printout always includes the bonuses regardless of
+              which tab was active on screen when Print was clicked. Hidden
+              on screen (packet-builder.component.scss) and shown only under
+              @media print (styles/utilities/_print.scss).
+            -->
+            <app-packet-reading-view class="packet-builder__preview-print-only" [packet]="packet" [linear]="true"></app-packet-reading-view>
           </div>
         </mat-card-content>
       </mat-card>
@@ -167,7 +183,8 @@
         <mat-card-title>Tossups</mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <mat-accordion cdkDropList (cdkDropListDropped)="dropTossup($event)">
+        <!-- NG-V1-07: a non-manager gets a read-only view (a FORBIDDEN mutation otherwise). -->
+        <mat-accordion cdkDropList [cdkDropListDisabled]="!canManagePacket" (cdkDropListDropped)="dropTossup($event)">
           @for (te of sortedTossups; track te.tossup.id; let first = $first; let last = $last) {
             <mat-expansion-panel cdkDrag>
               <mat-expansion-panel-header>
@@ -190,7 +207,7 @@
                 }
                 <mat-form-field appearance="outline" class="packet-builder__field">
                   <mat-label>Question</mat-label>
-                  <textarea matInput rows="3" [maxlength]="limits.questionMax"
+                  <textarea matInput rows="3" required [maxlength]="limits.questionMax" [readonly]="!canManagePacket"
                             [ngModel]="tossupDraftStore.get(te.tossup.id)!.question"
                             (ngModelChange)="tossupDraftStore.get(te.tossup.id)!.question = $event; tossupDraftStore.markDirty(te.tossup.id)"></textarea>
                   <mat-hint align="end">{{ tossupDraftStore.get(te.tossup.id)!.question.length }} / {{ limits.questionMax }}</mat-hint>
@@ -201,7 +218,7 @@
 
                 <mat-form-field appearance="outline" class="packet-builder__field">
                   <mat-label>Answer</mat-label>
-                  <textarea matInput rows="2" [maxlength]="limits.answerMax"
+                  <textarea matInput rows="2" required [maxlength]="limits.answerMax" [readonly]="!canManagePacket"
                             [ngModel]="tossupDraftStore.get(te.tossup.id)!.answer"
                             (ngModelChange)="tossupDraftStore.get(te.tossup.id)!.answer = $event; tossupDraftStore.markDirty(te.tossup.id)"></textarea>
                   <mat-hint align="end">{{ tossupDraftStore.get(te.tossup.id)!.answer.length }} / {{ limits.answerMax }}</mat-hint>
@@ -210,10 +227,12 @@
                   }
                 </mat-form-field>
 
+                <!-- NG-V1-07: a non-manager (viewing by URL) gets a disabled select, not an editable one that silently can't save. -->
                 <div class="packet-builder__subcategory-row">
                   <mat-form-field appearance="outline" class="packet-builder__field packet-builder__subcategory-field">
                     <mat-label>Subcategory</mat-label>
-                    <mat-select [ngModel]="tossupDraftStore.get(te.tossup.id)!.subcategoryId"
+                    <mat-select [disabled]="!canManagePacket"
+                                [ngModel]="tossupDraftStore.get(te.tossup.id)!.subcategoryId"
                                 (ngModelChange)="tossupDraftStore.get(te.tossup.id)!.subcategoryId = $event; tossupDraftStore.markDirty(te.tossup.id)">
                       <mat-option [value]="null">None</mat-option>
                       @for (group of subcategoryGroups; track group.category) {
@@ -372,7 +391,8 @@
         <mat-card-title>Bonuses</mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <mat-accordion cdkDropList (cdkDropListDropped)="dropBonus($event)">
+        <!-- NG-V1-07: a non-manager gets a read-only view (a FORBIDDEN mutation otherwise). -->
+        <mat-accordion cdkDropList [cdkDropListDisabled]="!canManagePacket" (cdkDropListDropped)="dropBonus($event)">
           @for (be of sortedBonuses; track be.bonus.id; let first = $first; let last = $last) {
             <mat-expansion-panel cdkDrag [expanded]="isJustAdded(be)">
               <mat-expansion-panel-header>
@@ -398,19 +418,24 @@
                 }
                 <mat-form-field appearance="outline" class="packet-builder__field">
                   <mat-label>Preamble</mat-label>
-                  <textarea matInput rows="2" [maxlength]="limits.preambleMax"
+                  <textarea matInput rows="2" [maxlength]="limits.preambleMax" [readonly]="!canManagePacket"
                             [ngModel]="bonusDraftStore.get(be.bonus.id)!.preamble"
                             (ngModelChange)="bonusDraftStore.get(be.bonus.id)!.preamble = $event; bonusDraftStore.markDirty(be.bonus.id)"></textarea>
                   <mat-hint align="end">{{ bonusDraftStore.get(be.bonus.id)!.preamble.length }} / {{ limits.preambleMax }}</mat-hint>
                   @if (!bonusDraftStore.get(be.bonus.id)!.preamble.trim()) {
-                    <mat-error>An empty preamble is allowed, but not recommended (D7)</mat-error>
+                    <!-- A warning, not a mat-error (NG-V1-03): an empty preamble is
+                         allowed (D7), so this must never look like a validation
+                         failure or gate Save. -->
+                    <mat-hint class="packet-builder__field-warning-hint">An empty preamble is allowed, but not recommended (D7)</mat-hint>
                   }
                 </mat-form-field>
 
+                <!-- NG-V1-07: a non-manager (viewing by URL) gets a disabled select, not an editable one that silently can't save. -->
                 <div class="packet-builder__subcategory-row">
                   <mat-form-field appearance="outline" class="packet-builder__field packet-builder__subcategory-field">
                     <mat-label>Subcategory</mat-label>
-                    <mat-select [ngModel]="bonusDraftStore.get(be.bonus.id)!.subcategoryId"
+                    <mat-select [disabled]="!canManagePacket"
+                                [ngModel]="bonusDraftStore.get(be.bonus.id)!.subcategoryId"
                                 (ngModelChange)="bonusDraftStore.get(be.bonus.id)!.subcategoryId = $event; bonusDraftStore.markDirty(be.bonus.id)">
                       <mat-option [value]="null">None</mat-option>
                       @for (group of subcategoryGroups; track group.category) {
@@ -457,7 +482,8 @@
                 <!-- Bonus parts -->
                 <div class="packet-builder__parts">
                   <h4 class="packet-builder__parts-title">Parts</h4>
-                  <div class="packet-builder__parts-list" cdkDropList (cdkDropListDropped)="dropPart(be, $event)">
+                  <!-- NG-V1-07: a non-manager gets a read-only view (a FORBIDDEN mutation otherwise). -->
+                  <div class="packet-builder__parts-list" cdkDropList [cdkDropListDisabled]="!canManagePacket" (cdkDropListDropped)="dropPart(be, $event)">
                     @for (pe of sortedParts(be); track pe.bonusPart.id; let partFirst = $first; let partLast = $last) {
                       <div class="packet-builder__part" cdkDrag>
                         <mat-icon cdkDragHandle class="packet-builder__drag-handle" aria-label="Reorder part" title="Drag to reorder">drag_indicator</mat-icon>
@@ -466,7 +492,7 @@
                         }
                         <mat-form-field appearance="outline" class="packet-builder__field">
                           <mat-label>Question</mat-label>
-                          <textarea matInput rows="2" [maxlength]="limits.questionMax"
+                          <textarea matInput rows="2" required [maxlength]="limits.questionMax" [readonly]="!canManagePacket"
                                     [ngModel]="bonusPartDraftStore.get(pe.bonusPart.id)!.question"
                                     (ngModelChange)="bonusPartDraftStore.get(pe.bonusPart.id)!.question = $event; bonusPartDraftStore.markDirty(pe.bonusPart.id)"></textarea>
                           @if (!bonusPartDraftStore.get(pe.bonusPart.id)!.question.trim()) {
@@ -475,7 +501,7 @@
                         </mat-form-field>
                         <mat-form-field appearance="outline" class="packet-builder__field">
                           <mat-label>Answer</mat-label>
-                          <textarea matInput rows="2" [maxlength]="limits.answerMax"
+                          <textarea matInput rows="2" required [maxlength]="limits.answerMax" [readonly]="!canManagePacket"
                                     [ngModel]="bonusPartDraftStore.get(pe.bonusPart.id)!.answer"
                                     (ngModelChange)="bonusPartDraftStore.get(pe.bonusPart.id)!.answer = $event; bonusPartDraftStore.markDirty(pe.bonusPart.id)"></textarea>
                           @if (!bonusPartDraftStore.get(pe.bonusPart.id)!.answer.trim()) {

@@ -66,6 +66,17 @@
     margin-right: 10px;
   }
 
+  /*
+   * NG-V1-01: the print-only linear reading view stays out of the way on
+   * screen; only the interactive tabbed one is shown there. `_print.scss`
+   * flips this under `@media print`, since only a global stylesheet can
+   * apply `@media print` rules that survive the emulated encapsulation
+   * boundary consistently with the rest of the print styling.
+   */
+  &__preview-print-only {
+    display: none;
+  }
+
   &__preview {
     color: var(--text-secondary);
     overflow: hidden;
@@ -295,6 +306,13 @@
   &__stale-hint {
     margin: 0 0 8px;
     font-size: 0.85rem;
+    color: #b26a00;
+  }
+
+  /* NG-V1-03: the D7 "empty preamble" note is advisory, not a validation
+   * failure (an empty preamble is allowed), so it renders as a warning-toned
+   * mat-hint rather than a mat-error. */
+  &__field-warning-hint {
     color: #b26a00;
   }
 

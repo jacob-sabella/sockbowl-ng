@@ -10,6 +10,28 @@
   &::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 4px; }
 }
 
+/* Linear/print layout (NG-V1-01): stacked sections, no scroll clipping. */
+.qset-linear {
+  .qset {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+.qset-linear__heading {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary, var(--text-primary));
+  margin: 1.25rem 0.4rem 0.4rem;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
 .q {
   display: flex;
   gap: 1rem;

@@ -18,6 +18,14 @@ import { Packet } from '../../game/models/sockbowl/packet-types.generated';
 export class PacketReadingViewComponent {
   @Input() packet: Packet | null = null;
 
+  /**
+   * Linear/print mode (NG-V1-01): renders the Tossups and Bonuses sections
+   * stacked, with no `mat-tab-group`, so both are always in the DOM. Used by
+   * `PacketBuilderComponent.printPacket()`'s print-only markup, so
+   * `window.print()` never depends on which tab happened to be active.
+   */
+  @Input() linear = false;
+
   private byOrder = (a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0);
 
   get tossups(): any[] {

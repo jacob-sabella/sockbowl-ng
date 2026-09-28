@@ -40,4 +40,21 @@
     max-height: none !important;
     overflow: visible !important;
   }
+
+  /*
+   * NG-V1-01: `.print-area` holds two `<app-packet-reading-view>` instances
+   * (packet-builder.component.html) — an on-screen, tabbed one for the
+   * interactive Preview, and a print-only linear one that always has both
+   * Tossups and Bonuses in the DOM (packet-builder.component.scss hides the
+   * linear one on screen with a plain, non-`!important` `display: none`).
+   * Swap which one is visible only for the print media, so the printout
+   * never depends on which tab happened to be active.
+   */
+  .packet-builder__preview-onscreen {
+    display: none !important;
+  }
+
+  .packet-builder__preview-print-only {
+    display: block !important;
+  }
 }
