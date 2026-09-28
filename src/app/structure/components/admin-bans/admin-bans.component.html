@@ -1,35 +1,9 @@
 <div class="admin-bans">
   <h1 class="admin-bans__title">
-    <mat-icon>gavel</mat-icon>
-    Ban Management
+    <mat-icon aria-hidden="true">gavel</mat-icon>
+    Bans
   </h1>
-
-  <!-- Add ban form -->
-  @if (auth.hasPermission('user:ban')) {
-    <mat-card class="admin-bans__card">
-      <mat-card-header>
-        <mat-card-title>Ban a user</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <form class="admin-bans__form" (ngSubmit)="addBan()">
-          <mat-form-field appearance="outline" class="admin-bans__field">
-            <mat-label>Keycloak user ID (sub)</mat-label>
-            <input matInput name="bannedKeycloakId" [(ngModel)]="newBan.bannedKeycloakId" required />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="admin-bans__field">
-            <mat-label>Reason</mat-label>
-            <input matInput name="reason" [(ngModel)]="newBan.reason" />
-          </mat-form-field>
-
-          <button mat-raised-button color="warn" type="submit" [disabled]="submitting">
-            <mat-icon>block</mat-icon>
-            Ban user
-          </button>
-        </form>
-      </mat-card-content>
-    </mat-card>
-  }
+  <p class="admin-bans__lede">View, add, and remove user and IP bans.</p>
 
   <!-- Ban list -->
   <mat-card class="admin-bans__card">
@@ -52,10 +26,10 @@
               <div class="admin-bans__item-info">
                 <span class="admin-bans__item-id">{{ ban.bannedKeycloakId }}</span>
                 <span class="admin-bans__item-reason">{{ ban.reason || 'No reason given' }}</span>
-                <span class="admin-bans__item-meta">Expires: {{ formatDate(ban.expiresAt) }}</span>
+                <span class="admin-bans__item-meta" [title]="'Expires: ' + formatDate(ban.expiresAt)">Expires: {{ formatRelativeExpiry(ban.expiresAt) }}</span>
               </div>
               @if (auth.hasPermission('user:ban')) {
-                <button mat-icon-button color="warn" aria-label="Remove ban" (click)="removeBan(ban)">
+                <button mat-icon-button class="admin-bans__danger-icon-btn" aria-label="Remove ban" (click)="removeBan(ban)">
                   <mat-icon>delete</mat-icon>
                 </button>
               }
@@ -66,8 +40,79 @@
     </mat-card-content>
   </mat-card>
 
+  <!-- Add ban form: below the active list so the list of consequence isn't outweighed by the form (S5-12) -->
+  @if (auth.hasPermission('user:ban')) {
+    <mat-card class="admin-bans__card">
+      <mat-card-header>
+        <mat-card-title>Ban a user</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="admin-bans__consequence">A banned account can no longer join or play games.</p>
+        <form class="admin-bans__form" (ngSubmit)="addBan()">
+          <mat-form-field appearance="outline" class="admin-bans__field">
+            <mat-label>Keycloak user ID (sub)</mat-label>
+            <input matInput name="bannedKeycloakId" [(ngModel)]="newBan.bannedKeycloakId" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="admin-bans__field">
+            <mat-label>Reason</mat-label>
+            <input matInput name="reason" [(ngModel)]="newBan.reason" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="admin-bans__field">
+            <mat-label>Expires</mat-label>
+            <mat-select name="banExpiry" [(ngModel)]="newBanExpirySeconds">
+              @for (opt of userBanExpiryOptions; track opt.label) {
+                <mat-option [value]="opt.seconds">{{ opt.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-raised-button class="admin-bans__danger-btn" type="submit" [disabled]="submitting">
+            <mat-icon>block</mat-icon>
+            Ban user
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
   <!-- IP bans (M4-AB-02) -->
   <h2 class="admin-bans__subtitle">IP bans</h2>
+
+  <mat-card class="admin-bans__card">
+    <mat-card-header>
+      <mat-card-title>Active IP bans</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (ipBansLoading) {
+        <div class="admin-bans__status">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+      } @else if (ipBansError) {
+        <p class="admin-bans__error">{{ ipBansError }}</p>
+      } @else if (ipBans.length === 0) {
+        <p class="admin-bans__empty">No active IP bans.</p>
+      } @else {
+        <div class="admin-bans__list">
+          @for (ban of ipBans; track ban.id) {
+            <div class="admin-bans__item">
+              <div class="admin-bans__item-info">
+                <span class="admin-bans__item-id">{{ ban.cidr }}</span>
+                <span class="admin-bans__item-reason">{{ ban.reason || 'No reason given' }}</span>
+                <span class="admin-bans__item-meta" [title]="'Expires: ' + formatDate(ban.expiresAt)">Expires: {{ formatRelativeExpiry(ban.expiresAt) }}</span>
+              </div>
+              @if (auth.hasPermission('user:ban')) {
+                <button mat-icon-button class="admin-bans__danger-icon-btn" aria-label="Remove IP ban" (click)="removeIpBan(ban)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
 
   @if (auth.hasPermission('user:ban')) {
     <mat-card class="admin-bans__card">
@@ -98,7 +143,7 @@
             </mat-select>
           </mat-form-field>
 
-          <button mat-raised-button color="warn" type="submit" [disabled]="ipBanSubmitting">
+          <button mat-raised-button class="admin-bans__danger-btn" type="submit" [disabled]="ipBanSubmitting">
             <mat-icon>block</mat-icon>
             Ban IP
           </button>
@@ -106,38 +151,4 @@
       </mat-card-content>
     </mat-card>
   }
-
-  <mat-card class="admin-bans__card">
-    <mat-card-header>
-      <mat-card-title>Active IP bans</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      @if (ipBansLoading) {
-        <div class="admin-bans__status">
-          <mat-spinner diameter="32"></mat-spinner>
-        </div>
-      } @else if (ipBansError) {
-        <p class="admin-bans__error">{{ ipBansError }}</p>
-      } @else if (ipBans.length === 0) {
-        <p class="admin-bans__empty">No active IP bans.</p>
-      } @else {
-        <div class="admin-bans__list">
-          @for (ban of ipBans; track ban.id) {
-            <div class="admin-bans__item">
-              <div class="admin-bans__item-info">
-                <span class="admin-bans__item-id">{{ ban.cidr }}</span>
-                <span class="admin-bans__item-reason">{{ ban.reason || 'No reason given' }}</span>
-                <span class="admin-bans__item-meta">Expires: {{ formatDate(ban.expiresAt) }}</span>
-              </div>
-              @if (auth.hasPermission('user:ban')) {
-                <button mat-icon-button color="warn" aria-label="Remove IP ban" (click)="removeIpBan(ban)">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              }
-            </div>
-          }
-        </div>
-      }
-    </mat-card-content>
-  </mat-card>
 </div>

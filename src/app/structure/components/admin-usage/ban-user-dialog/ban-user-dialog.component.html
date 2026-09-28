@@ -2,14 +2,24 @@
 
 <mat-dialog-content class="ban-user-dialog__content">
   <p class="ban-user-dialog__target">{{ data.displayName || data.keycloakId }}</p>
+  <p class="ban-user-dialog__consequence">A banned account can no longer join or play games.</p>
 
   <mat-form-field appearance="outline" class="ban-user-dialog__field">
     <mat-label>Reason</mat-label>
     <input matInput name="reason" [(ngModel)]="reason" />
   </mat-form-field>
+
+  <mat-form-field appearance="outline" class="ban-user-dialog__field">
+    <mat-label>Expires</mat-label>
+    <mat-select name="expiry" [(ngModel)]="expirySeconds">
+      @for (opt of expiryOptions; track opt.label) {
+        <mat-option [value]="opt.seconds">{{ opt.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-button cdkFocusInitial (click)="cancel()">Cancel</button>
   <button mat-raised-button color="warn" (click)="confirm()">Ban user</button>
 </mat-dialog-actions>

@@ -1,5 +1,5 @@
 .admin-bans {
-  max-width: 760px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 16px;
   display: flex;
@@ -10,13 +10,27 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-tight);
     margin: 0;
   }
 
+  &__lede {
+    color: var(--text-secondary);
+    margin: -8px 0 0;
+  }
+
   &__subtitle {
-    font-size: 1.1rem;
+    font-size: var(--text-lg);
     margin: 8px 0 0;
+  }
+
+  &__consequence {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin: 0 0 12px;
   }
 
   &__card {
@@ -31,6 +45,18 @@
 
   &__field {
     width: 100%;
+  }
+
+  /* Destructive actions name the --error role directly rather than Material's
+     own `warn` palette (OWN-WORLD: "Components must never hold a colour of
+     their own. They name a role.", S5-12). */
+  &__danger-btn {
+    background-color: var(--error) !important;
+    color: var(--on-error) !important;
+  }
+
+  &__danger-icon-btn {
+    color: var(--error) !important;
   }
 
   &__status {
@@ -55,7 +81,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--surface-hover);
   }
 
@@ -72,12 +98,12 @@
   }
 
   &__item-reason {
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     opacity: 0.85;
   }
 
   &__item-meta {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     opacity: 0.7;
   }
 }

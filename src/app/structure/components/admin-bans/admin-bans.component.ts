@@ -3,6 +3,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { BanService } from '../../../core/services/ban.service';
 import { Ban, CreateBanRequest, CreateIpBanRequest, IpBan } from '../../../core/models/ban-models';
 import { AuthService } from '../../../core/auth/auth.service';
+import { USER_BAN_EXPIRY_OPTIONS } from '../admin-usage/ban-user-dialog/ban-user-dialog.component';
 
 /** TTL choices for the "Ban IP" form, in seconds. Server max is 30 days (§2.4). */
 export const IP_BAN_TTL_OPTIONS: { label: string; seconds: number }[] = [
@@ -74,6 +75,7 @@ export class AdminBansComponent implements OnInit {
   auth = inject(AuthService);
 
   readonly ipBanTtlOptions = IP_BAN_TTL_OPTIONS;
+  readonly userBanExpiryOptions = USER_BAN_EXPIRY_OPTIONS;
 
   bans: Ban[] = [];
   loading = true;
@@ -85,6 +87,8 @@ export class AdminBansComponent implements OnInit {
     reason: '',
     expiresAt: null
   };
+  /** Seconds until the new ban expires, or `null` for Permanent (S5-03: not the default). */
+  newBanExpirySeconds: number | null = USER_BAN_EXPIRY_OPTIONS[2].seconds; // 7 days
 
   ipBans: IpBan[] = [];
   ipBansLoading = true;
@@ -126,16 +130,19 @@ export class AdminBansComponent implements OnInit {
     }
 
     this.submitting = true;
+    const expiresAt =
+      this.newBanExpirySeconds === null ? null : new Date(Date.now() + this.newBanExpirySeconds * 1000).toISOString();
     const payload: CreateBanRequest = {
       bannedKeycloakId: this.newBan.bannedKeycloakId.trim(),
       reason: this.newBan.reason?.trim() || undefined,
-      expiresAt: this.newBan.expiresAt || null
+      expiresAt
     };
 
     this.banService.createBan(payload).subscribe({
       next: () => {
         this.snackBar.open('User banned', 'Dismiss', { duration: 3000 });
         this.newBan = { bannedKeycloakId: '', reason: '', expiresAt: null };
+        this.newBanExpirySeconds = USER_BAN_EXPIRY_OPTIONS[2].seconds;
         this.submitting = false;
         this.loadBans();
       },
@@ -166,6 +173,44 @@ export class AdminBansComponent implements OnInit {
     }
     const date = new Date(value);
     return isNaN(date.getTime()) ? value : date.toLocaleString();
+  }
+
+  /**
+   * A relative expiry ("in 27 days"/"3 hours ago"), with `formatDate` kept
+   * as the absolute value for a title/tooltip (S5-18, only if cheap).
+   */
+  formatRelativeExpiry(value: string | null): string {
+    if (!value) {
+      return 'Never';
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return value;
+    }
+    const diffMs = date.getTime() - Date.now();
+    const absMs = Math.abs(diffMs);
+    const minute = 60_000;
+    const hour = 3_600_000;
+    const day = 86_400_000;
+
+    let amount: number;
+    let unit: string;
+    if (absMs < minute) {
+      return diffMs >= 0 ? 'in under a minute' : 'just now';
+    } else if (absMs < hour) {
+      amount = Math.round(absMs / minute);
+      unit = 'minute';
+    } else if (absMs < day) {
+      amount = Math.round(absMs / hour);
+      unit = 'hour';
+    } else {
+      amount = Math.round(absMs / day);
+      unit = 'day';
+    }
+    if (amount !== 1) {
+      unit += 's';
+    }
+    return diffMs >= 0 ? `in ${amount} ${unit}` : `${amount} ${unit} ago`;
   }
 
   loadIpBans(): void {

@@ -6,7 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AdminBansComponent, validateCidr } from './admin-bans.component';
 import { BanService } from '../../../core/services/ban.service';
 import { AuthService } from '../../../core/auth/auth.service';
-import { IpBan } from '../../../core/models/ban-models';
+import { Ban, IpBan } from '../../../core/models/ban-models';
 
 describe('validateCidr', () => {
   it('accepts a bare IPv4 address (treated as /32)', () => {
@@ -54,6 +54,15 @@ describe('AdminBansComponent', () => {
     expiresAt: '2026-01-02T00:00:00Z',
   };
 
+  const createdBan: Ban = {
+    id: 'ban-1',
+    bannedKeycloakId: 'user-9',
+    reason: null,
+    bannedBy: 'admin-1',
+    createdAt: '2026-01-01T00:00:00Z',
+    expiresAt: null,
+  };
+
   function configure(): void {
     banServiceSpy = jasmine.createSpyObj('BanService', [
       'listBans', 'createBan', 'removeBan',
@@ -61,6 +70,7 @@ describe('AdminBansComponent', () => {
     ]);
     banServiceSpy.listBans.and.returnValue(of([]));
     banServiceSpy.listIpBans.and.returnValue(of([ipBan]));
+    banServiceSpy.createBan.and.returnValue(of(createdBan));
     banServiceSpy.createIpBan.and.returnValue(of(ipBan));
     banServiceSpy.removeIpBan.and.returnValue(of(undefined));
 
@@ -132,5 +142,42 @@ describe('AdminBansComponent', () => {
 
     expect(banServiceSpy.removeIpBan).toHaveBeenCalledWith('ipban-1');
     expect(banServiceSpy.listIpBans).toHaveBeenCalled();
+  });
+
+  it('addBan defaults the expiry to 7 days, not Permanent (S5-03)', () => {
+    configure();
+    component.newBan.bannedKeycloakId = 'user-9';
+    banServiceSpy.listBans.calls.reset();
+
+    component.addBan();
+
+    expect(banServiceSpy.createBan).toHaveBeenCalledTimes(1);
+    const payload = banServiceSpy.createBan.calls.mostRecent().args[0];
+    expect(payload.bannedKeycloakId).toBe('user-9');
+    expect(payload.expiresAt).not.toBeNull();
+    const days = (new Date(payload.expiresAt as string).getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeCloseTo(7, 0);
+    expect(banServiceSpy.listBans).toHaveBeenCalled();
+  });
+
+  it('addBan sends expiresAt: null only when Permanent is explicitly chosen (S5-03)', () => {
+    configure();
+    component.newBan.bannedKeycloakId = 'user-9';
+    component.newBanExpirySeconds = null;
+
+    component.addBan();
+
+    expect(banServiceSpy.createBan).toHaveBeenCalledWith(jasmine.objectContaining({ expiresAt: null }));
+  });
+
+  it('formatRelativeExpiry shows "Never" for a null value and a relative phrase otherwise (S5-18)', () => {
+    configure();
+    expect(component.formatRelativeExpiry(null)).toBe('Never');
+
+    const inTwoDays = new Date(Date.now() + 2 * 86_400_000).toISOString();
+    expect(component.formatRelativeExpiry(inTwoDays)).toBe('in 2 days');
+
+    const oneHourAgo = new Date(Date.now() - 3_600_000).toISOString();
+    expect(component.formatRelativeExpiry(oneHourAgo)).toBe('1 hour ago');
   });
 });
