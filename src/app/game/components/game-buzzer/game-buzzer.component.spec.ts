@@ -157,10 +157,14 @@ describe('GameBuzzerComponent bonus display (NG-R2-06)', () => {
       [
         'getCurrentPlayer', 'getCurrentPlayerTeam', 'getPlayerNameById', 'getTeamNameById',
         'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz', 'getCurrentRoundBonusPoints',
+        'getCurrentRoundMaxBonusPoints',
       ],
       { gameSession$: session$.asObservable() },
     );
     gameStateService.getTeamNameById.and.returnValue('Team One');
+    // The classic 3-part default; the "ng minor" describe block below
+    // overrides this to prove the label isn't hardcoded to it.
+    gameStateService.getCurrentRoundMaxBonusPoints.and.returnValue(30);
 
     TestBed.configureTestingModule({
       declarations: [GameBuzzerComponent],
@@ -200,5 +204,12 @@ describe('GameBuzzerComponent bonus display (NG-R2-06)', () => {
     gameStateService.getCurrentRoundBonusPoints.and.returnValue(10);
     fixture.detectChanges();
     expect(bonusScoreText()).toContain('10 / 30');
+  });
+
+  it("shows the real max for a non-3-part bonus rather than a hardcoded '/ 30' (ng minor, NG-V1-02)", () => {
+    gameStateService.getCurrentRoundMaxBonusPoints.and.returnValue(20); // a 2-part bonus
+    gameStateService.getCurrentRoundBonusPoints.and.returnValue(10);
+    fixture.detectChanges();
+    expect(bonusScoreText()).toContain('10 / 20');
   });
 });

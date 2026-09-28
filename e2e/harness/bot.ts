@@ -48,6 +48,15 @@ export class SockbowlBot {
   gameSession: any = null;
   /** Every STOMP error seen (fatal ERROR frames and /user/queue/errors). */
   readonly errors: BotStompError[] = [];
+  /**
+   * Every `ProcessError` game message seen on this bot's private event queue
+   * (`messageContentType: "ProcessError"`, e.g. `SetMatchPacket` rejecting a
+   * DRAFT the sender may not use with `code: "PACKET_NOT_AVAILABLE"`, M3 E1).
+   * Distinct from `errors`, which is STOMP-frame-level (auth/connect) only —
+   * a ProcessError is a normal application message on the game event queue,
+   * not a STOMP ERROR frame or a `/user/queue/errors` item.
+   */
+  readonly processErrors: { code: string | null; error: string | null }[] = [];
   private listeners: Listener[] = [];
 
   /**
@@ -77,6 +86,33 @@ export class SockbowlBot {
 
   /** The most recent STOMP error, if any. */
   get lastError(): BotStompError | undefined { return this.errors[this.errors.length - 1]; }
+
+  /** The most recent `ProcessError` game message, if any. */
+  get lastProcessError(): { code: string | null; error: string | null } | undefined {
+    return this.processErrors[this.processErrors.length - 1];
+  }
+
+  /** Resolve once a `ProcessError` with the given `code` has been seen, else reject after `timeoutMs`. */
+  waitForProcessError(code: string, timeoutMs = 8000): Promise<{ code: string | null; error: string | null }> {
+    return new Promise((resolve, reject) => {
+      const already = this.processErrors.find((e) => e.code === code);
+      if (already) { resolve(already); return; }
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`[${this.name}] waitForProcessError timeout (${code}); seen=${JSON.stringify(this.processErrors)}`));
+      }, timeoutMs);
+      const check = () => {
+        const found = this.processErrors.find((e) => e.code === code);
+        if (found) { cleanup(); resolve(found); }
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.listeners = this.listeners.filter((l) => l !== check);
+      };
+      this.listeners.push(check);
+      check();
+    });
+  }
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -121,6 +157,9 @@ export class SockbowlBot {
     for (const m of batch) {
       // GameSessionUpdate carries the whole session; keep the freshest snapshot.
       if (m?.gameSession) this.gameSession = m.gameSession;
+      if (m?.messageContentType === 'ProcessError') {
+        this.processErrors.push({ code: m.code ?? null, error: m.error ?? null });
+      }
     }
     this.listeners.forEach((l) => l());
   }

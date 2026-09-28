@@ -1,0 +1,60 @@
+/*
+ * Print stylesheet (M3 plan 3.3.3, PB-06/PB-07).
+ *
+ * Used by the packet builder's "Print" export action
+ * (`PacketBuilderComponent.printPacket()`), which switches into the Preview
+ * tab — wrapping `<app-packet-reading-view>` in `.print-area` — and then
+ * calls `window.print()`.
+ *
+ * This has to live in the app's global stylesheet rather than in
+ * `packet-builder.component.scss`: Angular's emulated style encapsulation
+ * appends a per-component attribute selector to everything a component's
+ * own stylesheet declares, so a scoped stylesheet can never reach a sibling
+ * component like `<app-navbar>`. Only a true global stylesheet can hide the
+ * app chrome regardless of which component happens to trigger the print.
+ */
+@media print {
+  app-navbar {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* The reading view scrolls internally on screen (packet-reading-view's
+     `.qset`); let it print in full instead of clipping to the viewport. */
+  .qset {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /*
+   * NG-V1-01: `.print-area` holds two `<app-packet-reading-view>` instances
+   * (packet-builder.component.html) — an on-screen, tabbed one for the
+   * interactive Preview, and a print-only linear one that always has both
+   * Tossups and Bonuses in the DOM (packet-builder.component.scss hides the
+   * linear one on screen with a plain, non-`!important` `display: none`).
+   * Swap which one is visible only for the print media, so the printout
+   * never depends on which tab happened to be active.
+   */
+  .packet-builder__preview-onscreen {
+    display: none !important;
+  }
+
+  .packet-builder__preview-print-only {
+    display: block !important;
+  }
+}

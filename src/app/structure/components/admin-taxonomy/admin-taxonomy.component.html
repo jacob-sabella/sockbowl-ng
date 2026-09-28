@@ -1,0 +1,274 @@
+<div class="admin-taxonomy">
+  <h1 class="admin-taxonomy__title">
+    <mat-icon>category</mat-icon>
+    Taxonomy
+  </h1>
+  <p class="admin-taxonomy__hint">
+    Create, rename and merge categories, subcategories and difficulties. There's no delete here — an
+    unwanted entry is merged into another instead (everything under it moves, and it's removed).
+  </p>
+
+  @if (loading) {
+    <div class="admin-taxonomy__status">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+  } @else if (loadError) {
+    <p class="admin-taxonomy__error">{{ loadError }}</p>
+  } @else {
+    <mat-tab-group class="admin-taxonomy__tabs">
+      <!-- ============================ Categories ============================ -->
+      <mat-tab label="Categories">
+        <mat-card class="admin-taxonomy__card">
+          <mat-card-content>
+            <form class="admin-taxonomy__create-form" (ngSubmit)="submitCreateCategory()">
+              <mat-form-field appearance="outline" class="admin-taxonomy__create-field">
+                <mat-label>New category</mat-label>
+                <input matInput name="newCategoryName" [(ngModel)]="newCategoryName" />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                type="submit"
+                [disabled]="creatingCategory || !newCategoryName.trim()"
+              >
+                <mat-icon>add</mat-icon>
+                Add category
+              </button>
+            </form>
+
+            @if (categories.length === 0) {
+              <p class="admin-taxonomy__empty">No categories yet.</p>
+            } @else {
+              <div class="admin-taxonomy__list">
+                @for (category of categories; track category.id) {
+                  <div class="admin-taxonomy__node">
+                    <div class="admin-taxonomy__node-row">
+                      <button
+                        mat-icon-button
+                        class="admin-taxonomy__expand"
+                        [attr.aria-label]="expandedCategoryId === category.id ? 'Collapse' : 'Expand'"
+                        (click)="toggleCategory(category.id)"
+                      >
+                        <mat-icon>{{ expandedCategoryId === category.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+                      </button>
+
+                      @if (renaming && renaming.kind === 'category' && renaming.id === category.id) {
+                        <mat-form-field appearance="outline" class="admin-taxonomy__rename-field">
+                          <input matInput name="renameDraft" [(ngModel)]="renaming.draft" (keyup.enter)="confirmRename()" />
+                        </mat-form-field>
+                        <button mat-icon-button color="primary" aria-label="Save" [disabled]="renamingBusy" (click)="confirmRename()">
+                          <mat-icon>check</mat-icon>
+                        </button>
+                        <button mat-icon-button aria-label="Cancel" (click)="cancelRename()">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      } @else {
+                        <span class="admin-taxonomy__node-name">{{ category.name }}</span>
+                        <button mat-icon-button aria-label="Rename" (click)="startRename('category', category.id, category.name)">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button aria-label="Merge" (click)="startMerge('category', category.id, category.name)">
+                          <mat-icon>call_merge</mat-icon>
+                        </button>
+                      }
+                    </div>
+
+                    @if (collision && collision.kind === 'category' && collision.sourceId === category.id) {
+                      <div class="admin-taxonomy__collision">
+                        <span>"{{ collision.targetName }}" already exists.</span>
+                        <button mat-button color="warn" (click)="mergeFromCollision()">Merge instead</button>
+                        <button mat-button (click)="cancelRename()">Cancel</button>
+                      </div>
+                    }
+
+                    @if (merging && merging.kind === 'category' && merging.sourceId === category.id) {
+                      <div class="admin-taxonomy__merge-form">
+                        <mat-form-field appearance="outline" class="admin-taxonomy__merge-field">
+                          <mat-label>Merge into</mat-label>
+                          <mat-select name="mergeTarget" [(ngModel)]="merging.targetId">
+                            @for (candidate of mergeCandidatesFor('category', category.id); track candidate.id) {
+                              <mat-option [value]="candidate.id">{{ candidate.name }}</mat-option>
+                            }
+                          </mat-select>
+                        </mat-form-field>
+                        <button mat-button color="warn" [disabled]="!merging.targetId" (click)="confirmMergeSelected()">Merge</button>
+                        <button mat-button (click)="cancelMerge()">Cancel</button>
+                      </div>
+                    }
+
+                    @if (expandedCategoryId === category.id) {
+                      <div class="admin-taxonomy__subcategories">
+                        @for (sub of subcategoriesFor(category.id); track sub.id) {
+                          <div class="admin-taxonomy__node admin-taxonomy__node--sub">
+                            <div class="admin-taxonomy__node-row">
+                              @if (renaming && renaming.kind === 'subcategory' && renaming.id === sub.id) {
+                                <mat-form-field appearance="outline" class="admin-taxonomy__rename-field">
+                                  <input matInput name="renameDraft" [(ngModel)]="renaming.draft" (keyup.enter)="confirmRename()" />
+                                </mat-form-field>
+                                <button mat-icon-button color="primary" aria-label="Save" [disabled]="renamingBusy" (click)="confirmRename()">
+                                  <mat-icon>check</mat-icon>
+                                </button>
+                                <button mat-icon-button aria-label="Cancel" (click)="cancelRename()">
+                                  <mat-icon>close</mat-icon>
+                                </button>
+                              } @else {
+                                <span class="admin-taxonomy__node-name">{{ sub.name }}</span>
+                                <button
+                                  mat-icon-button
+                                  aria-label="Rename"
+                                  (click)="startRename('subcategory', sub.id, sub.name, category.id)"
+                                >
+                                  <mat-icon>edit</mat-icon>
+                                </button>
+                                <button
+                                  mat-icon-button
+                                  aria-label="Merge"
+                                  (click)="startMerge('subcategory', sub.id, sub.name, category.id)"
+                                >
+                                  <mat-icon>call_merge</mat-icon>
+                                </button>
+                              }
+                            </div>
+
+                            @if (collision && collision.kind === 'subcategory' && collision.sourceId === sub.id) {
+                              <div class="admin-taxonomy__collision">
+                                <span>"{{ collision.targetName }}" already exists.</span>
+                                <button mat-button color="warn" (click)="mergeFromCollision()">Merge instead</button>
+                                <button mat-button (click)="cancelRename()">Cancel</button>
+                              </div>
+                            }
+
+                            @if (merging && merging.kind === 'subcategory' && merging.sourceId === sub.id) {
+                              <div class="admin-taxonomy__merge-form">
+                                <mat-form-field appearance="outline" class="admin-taxonomy__merge-field">
+                                  <mat-label>Merge into</mat-label>
+                                  <mat-select name="mergeTarget" [(ngModel)]="merging.targetId">
+                                    @for (candidate of mergeCandidatesFor('subcategory', sub.id, category.id); track candidate.id) {
+                                      <mat-option [value]="candidate.id">{{ candidate.name }}</mat-option>
+                                    }
+                                  </mat-select>
+                                </mat-form-field>
+                                <button mat-button color="warn" [disabled]="!merging.targetId" (click)="confirmMergeSelected()">
+                                  Merge
+                                </button>
+                                <button mat-button (click)="cancelMerge()">Cancel</button>
+                              </div>
+                            }
+                          </div>
+                        } @empty {
+                          <p class="admin-taxonomy__empty admin-taxonomy__empty--sub">No subcategories yet.</p>
+                        }
+
+                        <form class="admin-taxonomy__create-form admin-taxonomy__create-form--sub" (ngSubmit)="submitCreateSubcategory(category)">
+                          <mat-form-field appearance="outline" class="admin-taxonomy__create-field">
+                            <mat-label>New subcategory</mat-label>
+                            <input matInput name="newSubcategoryName" [(ngModel)]="newSubcategoryName" />
+                          </mat-form-field>
+                          <button
+                            mat-stroked-button
+                            color="primary"
+                            type="submit"
+                            [disabled]="creatingSubcategory || !newSubcategoryName.trim()"
+                          >
+                            <mat-icon>add</mat-icon>
+                            Add subcategory
+                          </button>
+                        </form>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </mat-tab>
+
+      <!-- ============================ Difficulties =========================== -->
+      <mat-tab label="Difficulties">
+        <mat-card class="admin-taxonomy__card">
+          <mat-card-content>
+            <form class="admin-taxonomy__create-form" (ngSubmit)="submitCreateDifficulty()">
+              <mat-form-field appearance="outline" class="admin-taxonomy__create-field">
+                <mat-label>New difficulty</mat-label>
+                <input matInput name="newDifficultyName" [(ngModel)]="newDifficultyName" />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                type="submit"
+                [disabled]="creatingDifficulty || !newDifficultyName.trim()"
+              >
+                <mat-icon>add</mat-icon>
+                Add difficulty
+              </button>
+            </form>
+
+            @if (difficulties.length === 0) {
+              <p class="admin-taxonomy__empty">No difficulties yet.</p>
+            } @else {
+              <div class="admin-taxonomy__list">
+                @for (difficulty of difficulties; track difficulty.id) {
+                  <div class="admin-taxonomy__node">
+                    <div class="admin-taxonomy__node-row">
+                      @if (renaming && renaming.kind === 'difficulty' && renaming.id === difficulty.id) {
+                        <mat-form-field appearance="outline" class="admin-taxonomy__rename-field">
+                          <input matInput name="renameDraft" [(ngModel)]="renaming.draft" (keyup.enter)="confirmRename()" />
+                        </mat-form-field>
+                        <button mat-icon-button color="primary" aria-label="Save" [disabled]="renamingBusy" (click)="confirmRename()">
+                          <mat-icon>check</mat-icon>
+                        </button>
+                        <button mat-icon-button aria-label="Cancel" (click)="cancelRename()">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      } @else {
+                        <span class="admin-taxonomy__node-name">{{ difficulty.name }}</span>
+                        <button
+                          mat-icon-button
+                          aria-label="Rename"
+                          (click)="startRename('difficulty', difficulty.id, difficulty.name)"
+                        >
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button
+                          mat-icon-button
+                          aria-label="Merge"
+                          (click)="startMerge('difficulty', difficulty.id, difficulty.name)"
+                        >
+                          <mat-icon>call_merge</mat-icon>
+                        </button>
+                      }
+                    </div>
+
+                    @if (collision && collision.kind === 'difficulty' && collision.sourceId === difficulty.id) {
+                      <div class="admin-taxonomy__collision">
+                        <span>"{{ collision.targetName }}" already exists.</span>
+                        <button mat-button color="warn" (click)="mergeFromCollision()">Merge instead</button>
+                        <button mat-button (click)="cancelRename()">Cancel</button>
+                      </div>
+                    }
+
+                    @if (merging && merging.kind === 'difficulty' && merging.sourceId === difficulty.id) {
+                      <div class="admin-taxonomy__merge-form">
+                        <mat-form-field appearance="outline" class="admin-taxonomy__merge-field">
+                          <mat-label>Merge into</mat-label>
+                          <mat-select name="mergeTarget" [(ngModel)]="merging.targetId">
+                            @for (candidate of mergeCandidatesFor('difficulty', difficulty.id); track candidate.id) {
+                              <mat-option [value]="candidate.id">{{ candidate.name }}</mat-option>
+                            }
+                          </mat-select>
+                        </mat-form-field>
+                        <button mat-button color="warn" [disabled]="!merging.targetId" (click)="confirmMergeSelected()">Merge</button>
+                        <button mat-button (click)="cancelMerge()">Cancel</button>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </mat-tab>
+    </mat-tab-group>
+  }
+</div>

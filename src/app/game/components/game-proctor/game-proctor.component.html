@@ -140,7 +140,7 @@
               <div class="bonus-header">
                 <h3>Bonus for {{ getBonusEligibleTeamName() }}</h3>
                 <div class="bonus-score" aria-live="polite">
-                  {{ gameStateService.getCurrentRoundBonusPoints() }} / 30 points
+                  {{ gameStateService.getCurrentRoundBonusPoints() }} / {{ gameStateService.getCurrentRoundMaxBonusPoints() }} points
                 </div>
               </div>
               <!-- PREAMBLE PHASE -->

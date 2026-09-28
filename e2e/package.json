@@ -6,10 +6,12 @@
   "scripts": {
     "smoke": "tsx scripts/smoke.ts",
     "full-match": "tsx scripts/full-match.ts",
-    "ui": "playwright test",
+    "ui": "playwright test --project=default",
     "m4:limits": "playwright test tests/rate-limit.spec.ts tests/admin-usage.spec.ts",
     "audit": "AUDIT=1 playwright test usability",
-    "cast": "playwright test cast-receiver"
+    "cast": "playwright test cast-receiver",
+    "m3:auth-off": "playwright test --project=m3-auth-off tests/packet-builder.spec.ts",
+    "m3:auth-on": "playwright test --project=m3-auth-on tests/packet-builder.spec.ts"
   },
   "devDependencies": {
     "@stomp/stompjs": "^7.0.0",

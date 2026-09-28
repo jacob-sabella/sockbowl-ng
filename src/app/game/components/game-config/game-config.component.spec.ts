@@ -8,10 +8,11 @@ import { GameConfigComponent } from './game-config.component';
 import { GameStateService } from '../../services/game-state.service';
 import { GameMessageService } from '../../services/game-message.service';
 import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
+import { PendingPacketService } from '../../services/pending-packet.service';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
 import { CastStateService } from '../../services/cast-state.service';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
-import { GameSession, Packet } from '../../models/sockbowl/sockbowl-interfaces';
+import { GameSession, MatchState, Packet } from '../../models/sockbowl/sockbowl-interfaces';
 
 describe('GameConfigComponent proctor preview', () => {
   let session$: ReplaySubject<GameSession>;
@@ -220,5 +221,179 @@ describe('GameConfigComponent proctor preview', () => {
     component.ngOnInit();
     processErrors$.next({ error: 'StartMatch: Permission Denied' });
     expect(snack.open).toHaveBeenCalledWith('StartMatch: Permission Denied', 'Dismiss', jasmine.anything());
+  });
+});
+
+describe('GameConfigComponent pending packet (PB-15)', () => {
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let questions: jasmine.SpyObj<SockbowlQuestionsService>;
+  let pendingPacketService: PendingPacketService;
+  let snack: jasmine.SpyObj<MatSnackBar>;
+  let component: GameConfigComponent;
+
+  function configSession(): GameSession {
+    return {
+      gameSettings: {},
+      currentMatch: { matchState: MatchState.CONFIG, packet: null },
+      teamList: [],
+      playerList: [],
+    } as unknown as GameSession;
+  }
+
+  function configure(): void {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
+      'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
+      'isProctorless', 'getProctor', 'requestGameSession', 'setMatchPacket', 'updateGameSettings',
+    ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
+    questions = jasmine.createSpyObj<SockbowlQuestionsService>('SockbowlQuestionsService', ['getPacketById']);
+    questions.getPacketById.and.returnValue(of({ id: 'packet-9', name: 'Regionals' } as unknown as Packet));
+    snack = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
+
+    TestBed.configureTestingModule({
+      declarations: [GameConfigComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: of(null) } } },
+        { provide: SockbowlQuestionsService, useValue: questions },
+        { provide: MatDialog, useValue: jasmine.createSpyObj<MatDialog>('MatDialog', ['open']) },
+        { provide: MatSnackBar, useValue: snack },
+        { provide: PresentationConnectionService, useValue: { isAvailable$: of(false), connectionState$: of(null) } },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    component = TestBed.createComponent(GameConfigComponent).componentInstance;
+    pendingPacketService = TestBed.inject(PendingPacketService);
+  }
+
+  afterEach(() => pendingPacketService?.clear());
+
+  it('as the owner in a proctorless mode, sets the pending packet once and clears it', () => {
+    configure();
+    pendingPacketService.set('packet-9');
+    gameStateService.isSelfProctor.and.returnValue(false);
+    gameStateService.isProctorless.and.returnValue(true);
+    gameStateService.isCurrentPlayerGameOwner.and.returnValue(true);
+
+    component.ngOnInit();
+    session$.next(configSession());
+
+    expect(gameStateService.setMatchPacket).toHaveBeenCalledOnceWith('packet-9');
+    expect(pendingPacketService.get()).toBeNull();
+
+    // A later session update (e.g. the echo of our own change) must not re-fire it.
+    session$.next(configSession());
+    expect(gameStateService.setMatchPacket).toHaveBeenCalledTimes(1);
+  });
+
+  it('the proctor may also set the pending packet', () => {
+    configure();
+    pendingPacketService.set('packet-9');
+    gameStateService.isSelfProctor.and.returnValue(true);
+    gameStateService.isProctorless.and.returnValue(false);
+    gameStateService.isCurrentPlayerGameOwner.and.returnValue(false);
+
+    component.ngOnInit();
+    session$.next(configSession());
+
+    expect(gameStateService.setMatchPacket).toHaveBeenCalledOnceWith('packet-9');
+  });
+
+  it('a non-owner in a proctorless mode does not set the pending packet', () => {
+    configure();
+    pendingPacketService.set('packet-9');
+    gameStateService.isSelfProctor.and.returnValue(false);
+    gameStateService.isProctorless.and.returnValue(true);
+    gameStateService.isCurrentPlayerGameOwner.and.returnValue(false);
+
+    component.ngOnInit();
+    session$.next(configSession());
+
+    expect(gameStateService.setMatchPacket).not.toHaveBeenCalled();
+    // Left in place so a player who does gain manage rights later can still apply it.
+    expect(pendingPacketService.get()).toBe('packet-9');
+  });
+
+  it('does nothing when there is no pending packet', () => {
+    configure();
+    gameStateService.isSelfProctor.and.returnValue(true);
+
+    component.ngOnInit();
+    session$.next(configSession());
+
+    expect(gameStateService.setMatchPacket).not.toHaveBeenCalled();
+  });
+
+  it('waits for CONFIG before applying the pending packet', () => {
+    configure();
+    pendingPacketService.set('packet-9');
+    gameStateService.isSelfProctor.and.returnValue(true);
+
+    component.ngOnInit();
+    session$.next({
+      gameSettings: {}, currentMatch: { matchState: MatchState.IN_GAME, packet: null }, teamList: [], playerList: [],
+    } as unknown as GameSession);
+
+    expect(gameStateService.setMatchPacket).not.toHaveBeenCalled();
+    expect(pendingPacketService.get()).toBe('packet-9');
+  });
+
+  describe('confirmation snackbar follows the game echo, not the questions fetch (NG-V1-06)', () => {
+    it('does not show "selected" merely because setMatchPacket was called', () => {
+      configure();
+      pendingPacketService.set('packet-9');
+      gameStateService.isSelfProctor.and.returnValue(true);
+
+      component.ngOnInit();
+      session$.next(configSession());
+
+      expect(gameStateService.setMatchPacket).toHaveBeenCalledOnceWith('packet-9');
+      // The old behavior fired this off a separate getPacketById call, regardless
+      // of whether the game ever actually accepted the pick.
+      expect(questions.getPacketById).not.toHaveBeenCalled();
+      expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
+    });
+
+    it('shows "Packet \'<name>\' selected." once the session echoes the same packet id back', () => {
+      configure();
+      pendingPacketService.set('packet-9');
+      gameStateService.isSelfProctor.and.returnValue(true);
+
+      component.ngOnInit();
+      session$.next(configSession());
+      expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
+
+      // The game's own MatchPacketUpdate echo, carried on the next session.
+      session$.next({
+        gameSettings: {},
+        currentMatch: { matchState: MatchState.CONFIG, packet: { id: 'packet-9', name: 'Regionals' } },
+        teamList: [],
+        playerList: [],
+      } as unknown as GameSession);
+
+      expect(snack.open).toHaveBeenCalledWith("Packet 'Regionals' selected.", 'OK', jasmine.anything());
+      expect(questions.getPacketById).not.toHaveBeenCalled();
+    });
+
+    it('never confirms an unrelated packet id landing on the session', () => {
+      configure();
+      pendingPacketService.set('packet-9');
+      gameStateService.isSelfProctor.and.returnValue(true);
+
+      component.ngOnInit();
+      session$.next(configSession());
+
+      // Some other packet (e.g. another proctor's own pick) lands first.
+      session$.next({
+        gameSettings: {},
+        currentMatch: { matchState: MatchState.CONFIG, packet: { id: 'packet-other', name: 'Someone else\'s packet' } },
+        teamList: [],
+        playerList: [],
+      } as unknown as GameSession);
+
+      expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
+    });
   });
 });

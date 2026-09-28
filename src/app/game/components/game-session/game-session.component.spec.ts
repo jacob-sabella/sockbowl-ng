@@ -1,7 +1,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
 
 import { GameSessionComponent } from './game-session.component';
 import { GameSessionService } from '../../services/game-session.service';
@@ -9,6 +9,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { environment } from '../../../../environments/environment';
 import { gameJoinStorageKey } from '../../services/game-join-storage';
 import { JoinGameResponse } from '../../models/sockbowl/sockbowl-interfaces';
+import { PendingPacketService } from '../../services/pending-packet.service';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 
 describe('GameSessionComponent join flow', () => {
@@ -49,6 +50,7 @@ describe('GameSessionComponent join flow', () => {
             getUserProfile: () => (authenticated ? { name: 'Test User', preferredUsername: 'testuser' } : null),
           },
         },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });
@@ -126,6 +128,149 @@ describe('GameSessionComponent join flow', () => {
   });
 });
 
+describe('GameSessionComponent play-test query params (PB-15)', () => {
+  let gameSessionService: jasmine.SpyObj<GameSessionService>;
+  let router: jasmine.SpyObj<Router>;
+  let pendingPacketService: PendingPacketService;
+
+  const joinResponse = {
+    gameSessionId: 'game-1',
+    playerSessionId: 'player-1',
+    playerSecret: 'secret-1',
+  } as JoinGameResponse;
+
+  function configure(queryParams: Record<string, string>): GameSessionComponent {
+    gameSessionService = jasmine.createSpyObj<GameSessionService>('GameSessionService',
+      ['createNewGame', 'joinGame', 'joinGameAuthenticated']);
+    gameSessionService.createNewGame.and.returnValue(of({ id: 'game-1', joinCode: 'ABCD' } as any));
+    gameSessionService.joinGame.and.returnValue(of(joinResponse));
+    gameSessionService.joinGameAuthenticated.and.returnValue(of(joinResponse));
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+
+    TestBed.configureTestingModule({
+      declarations: [GameSessionComponent],
+      providers: [
+        { provide: GameSessionService, useValue: gameSessionService },
+        { provide: Router, useValue: router },
+        { provide: AuthService, useValue: { isAuthenticated: () => false, getUserProfile: () => null } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    const component = TestBed.createComponent(GameSessionComponent).componentInstance;
+    pendingPacketService = TestBed.inject(PendingPacketService);
+    return component;
+  }
+
+  afterEach(() => {
+    pendingPacketService?.clear();
+    sessionStorage.removeItem(gameJoinStorageKey('game-1'));
+  });
+
+  it('stores the packetId query param for GameConfigComponent to pick up', () => {
+    const component = configure({ packetId: 'packet-42' });
+
+    component.ngOnInit();
+
+    expect(pendingPacketService.get()).toBe('packet-42');
+    // mode=single wasn't set, so this shouldn't have auto-started a game.
+    expect(gameSessionService.createNewGame).not.toHaveBeenCalled();
+  });
+
+  it('mode=single preselects and launches the solo flow', () => {
+    const component = configure({ mode: 'single' });
+
+    component.ngOnInit();
+
+    expect(gameSessionService.createNewGame).toHaveBeenCalled();
+    expect(gameSessionService.joinGame).toHaveBeenCalled();
+  });
+
+  it('does nothing extra when there is no packetId or mode', () => {
+    const component = configure({});
+
+    component.ngOnInit();
+
+    expect(pendingPacketService.get()).toBeNull();
+    expect(gameSessionService.createNewGame).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * NG-V1-05: a stale pending packet (left over from a cancelled navigation, or
+ * a solo game that never made it to CONFIG) must not silently attach itself
+ * to a later, unrelated game. GameSessionComponent is the only place that
+ * ever *writes* the pending id (from the packetId query param), so it's also
+ * responsible for clearing it once that intent no longer applies.
+ */
+describe('GameSessionComponent clears a stale pending packet (NG-V1-05)', () => {
+  let gameSessionService: jasmine.SpyObj<GameSessionService>;
+  let router: jasmine.SpyObj<Router>;
+  let pendingPacketService: PendingPacketService;
+  let component: GameSessionComponent;
+
+  function configure(): void {
+    gameSessionService = jasmine.createSpyObj<GameSessionService>('GameSessionService',
+      ['createNewGame', 'joinGame', 'joinGameAuthenticated']);
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+
+    TestBed.configureTestingModule({
+      declarations: [GameSessionComponent],
+      providers: [
+        { provide: GameSessionService, useValue: gameSessionService },
+        { provide: Router, useValue: router },
+        { provide: AuthService, useValue: { isAuthenticated: () => false, getUserProfile: () => null } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    component = TestBed.createComponent(GameSessionComponent).componentInstance;
+    pendingPacketService = TestBed.inject(PendingPacketService);
+    pendingPacketService.set('stale-packet');
+  }
+
+  afterEach(() => {
+    pendingPacketService?.clear();
+  });
+
+  it('clears the pending packet on an explicit "New game"', () => {
+    configure();
+
+    component.onNewGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+  });
+
+  it('clears the pending packet on an explicit "Join" (by code, without a packetId)', () => {
+    configure();
+
+    component.onJoinGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+  });
+
+  it('clears the pending packet when solo-game creation fails', () => {
+    configure();
+    gameSessionService.createNewGame.and.returnValue(throwError(() => new Error('boom')));
+
+    component.startSoloGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+    expect(gameSessionService.joinGame).not.toHaveBeenCalled();
+  });
+
+  it('clears the pending packet when the join step of solo-game creation fails', () => {
+    configure();
+    gameSessionService.createNewGame.and.returnValue(of({ id: 'game-1', joinCode: 'ABCD' } as any));
+    gameSessionService.joinGame.and.returnValue(throwError(() => new Error('boom')));
+
+    component.startSoloGame();
+
+    expect(pendingPacketService.get()).toBeNull();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+});
+
 describe('GameSessionComponent M4-UI-01 session-create cooldown', () => {
   let fixture: ComponentFixture<GameSessionComponent>;
   let component: GameSessionComponent;
@@ -139,6 +284,7 @@ describe('GameSessionComponent M4-UI-01 session-create cooldown', () => {
           ['createNewGame', 'joinGame', 'joinGameAuthenticated']) },
         { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
         { provide: AuthService, useValue: { isAuthenticated: () => false, getUserProfile: () => null } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });

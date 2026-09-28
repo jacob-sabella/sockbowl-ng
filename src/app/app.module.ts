@@ -46,6 +46,7 @@ import {MatProgressBarModule} from "@angular/material/progress-bar";
 import {MatTabsModule} from "@angular/material/tabs";
 import {MatAutocompleteModule} from "@angular/material/autocomplete";
 import {MatMenuModule} from "@angular/material/menu";
+import {MatPaginatorModule} from "@angular/material/paginator";
 import { ProfileComponent } from './structure/components/profile/profile.component';
 import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
 import { AdminBansComponent } from './structure/components/admin-bans/admin-bans.component';
@@ -53,6 +54,12 @@ import { AdminHomeComponent } from './structure/components/admin-home/admin-home
 import { PacketListComponent } from './packets/components/packet-list/packet-list.component';
 import { PacketBuilderComponent } from './packets/components/packet-builder/packet-builder.component';
 import { StompErrorBannerComponent } from './game/components/stomp-error-banner/stomp-error-banner.component';
+import { DragDropModule } from '@angular/cdk/drag-drop';
+import { ConfirmDialogComponent } from './shared/confirm-dialog/confirm-dialog.component';
+import { PacketReadingViewComponent } from './shared/packet-reading-view/packet-reading-view.component';
+import { AiKeyPickerComponent } from './shared/ai-key/ai-key-picker.component';
+import { PacketImportDialogComponent } from './packets/components/packet-import-dialog/packet-import-dialog.component';
+import { AdminTaxonomyComponent } from './structure/components/admin-taxonomy/admin-taxonomy.component';
 
 @NgModule({ declarations: [
         AppComponent,
@@ -75,7 +82,12 @@ import { StompErrorBannerComponent } from './game/components/stomp-error-banner/
         AdminHomeComponent,
         PacketListComponent,
         PacketBuilderComponent,
-        TestClipsModalComponent
+        TestClipsModalComponent,
+        ConfirmDialogComponent,
+        PacketReadingViewComponent,
+        AiKeyPickerComponent,
+        PacketImportDialogComponent,
+        AdminTaxonomyComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         AppRoutingModule,
@@ -103,6 +115,8 @@ import { StompErrorBannerComponent } from './game/components/stomp-error-banner/
         MatTabsModule,
         MatAutocompleteModule,
         MatMenuModule,
+        MatPaginatorModule,
+        DragDropModule,
         StompErrorBannerComponent,
         // OAuth2/OIDC Module
         OAuthModule.forRoot(),

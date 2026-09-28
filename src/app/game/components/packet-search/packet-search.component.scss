@@ -304,6 +304,34 @@
   }
 }
 
+/* ===== MY PACKETS (PB-14) ===== */
+.my-packets-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.my-packets-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.my-packets-loading {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.my-packets-empty {
+  padding: 0.25rem 0.5rem;
+}
+
 /* ===== SEARCH RESULTS ===== */
 .search-results {
   display: flex;
@@ -347,6 +375,20 @@
     }
   }
 
+  &.unplayable {
+    cursor: not-allowed;
+    opacity: 0.6;
+
+    &:hover {
+      transform: none;
+      background: var(--surface);
+
+      &::before {
+        opacity: 0;
+      }
+    }
+  }
+
   &.selected {
     background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
     border-color: var(--accent-primary);
@@ -360,6 +402,41 @@
       color: var(--accent-primary);
       font-weight: 600;
     }
+  }
+}
+
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.draft-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.not-playable-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  white-space: nowrap;
+}
+
+.edit-link {
+  font-size: 0.85rem;
+  color: var(--accent-primary);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
   }
 }
 
@@ -401,16 +478,6 @@
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
-}
-
-.packet-id {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-subtle);
 }
 
 .check-icon {

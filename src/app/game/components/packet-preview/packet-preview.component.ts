@@ -3,8 +3,12 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
 
 /**
- * Proctor-only packet preview: renders every tossup and bonus (with answers) in
- * the reading serif so the proctor can look the questions over before starting.
+ * Proctor-only packet preview dialog: dialog chrome (title, close button)
+ * around the shared {@link PacketReadingViewComponent}, which renders every
+ * tossup and bonus (with answers) in the reading serif so the proctor can
+ * look the questions over before starting. The reading view itself moved to
+ * `shared/packet-reading-view` (M3 plan 3.3.1) so the builder's preview tab
+ * (PB-07) can reuse it without a dialog.
  */
 @Component({
   selector: 'app-packet-preview',
@@ -17,19 +21,12 @@ export class PacketPreviewComponent {
   dialogRef = inject<MatDialogRef<PacketPreviewComponent>>(MatDialogRef);
   packet = inject<Packet>(MAT_DIALOG_DATA);
 
-
-  private byOrder = (a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0);
-
-  get tossups(): any[] {
-    return (this.packet?.tossups ?? []).filter(Boolean).slice().sort(this.byOrder);
+  get tossupCount(): number {
+    return (this.packet?.tossups ?? []).filter(Boolean).length;
   }
 
-  get bonuses(): any[] {
-    return (this.packet?.bonuses ?? []).filter(Boolean).slice().sort(this.byOrder);
-  }
-
-  parts(containsBonus: any): any[] {
-    return (containsBonus?.bonus?.bonusParts ?? []).filter(Boolean).slice().sort(this.byOrder);
+  get bonusCount(): number {
+    return (this.packet?.bonuses ?? []).filter(Boolean).length;
   }
 
   close(): void {

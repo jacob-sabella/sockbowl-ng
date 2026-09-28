@@ -74,6 +74,12 @@
                   <span class="navbar__btn-label">Packets</span>
                 </button>
               }
+              @if ((userProfile$ | async) && authService.hasPermission('taxonomy:manage')) {
+                <button mat-button [routerLink]="['/admin/taxonomy']" aria-label="Taxonomy">
+                  <mat-icon aria-hidden="true">category</mat-icon>
+                  <span class="navbar__btn-label">Taxonomy</span>
+                </button>
+              }
               <button mat-button (click)="logout()" aria-label="Logout">
                 <mat-icon aria-hidden="true">logout</mat-icon>
                 <span class="navbar__btn-label">Logout</span>

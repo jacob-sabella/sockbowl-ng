@@ -2,13 +2,15 @@ import { Component, OnInit, ChangeDetectionStrategy, computed, inject } from '@a
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ImportRandomResult, SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
-import { OpenAiModelService } from '../../services/openai-model.service';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
+import { PacketPage, PacketSummary } from '../../../packets/models/packet-authoring.models';
 import { Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 import { isLimitHandled } from '../../../core/http/limit-errors';
+
+const EMPTY_PACKET_PAGE: PacketPage = { items: [], total: 0, page: 0, size: 0 };
 
 @Component({
     selector: 'app-packet-search',
@@ -24,7 +26,6 @@ import { isLimitHandled } from '../../../core/http/limit-errors';
 export class PacketSearchComponent implements OnInit {
   private dialogRef = inject<MatDialogRef<PacketSearchComponent>>(MatDialogRef);
   private sockbowlQuestionsService = inject(SockbowlQuestionsService);
-  private openAiModelService = inject(OpenAiModelService);
   private snackBar = inject(MatSnackBar);
   private rateLimitState = inject(RateLimitStateService);
   auth = inject(AuthService);
@@ -45,11 +46,22 @@ export class PacketSearchComponent implements OnInit {
   readonly importLocked = computed(() =>
     this.rateLimitState.cooldown('import')() > 0 || this.rateLimitState.cooldown('import-ip')() > 0);
 
-  // Search tab properties
+  // Search tab properties. Both lists are the answer-free, policy-filtered
+  // PacketSummary projection (`listPackets`, PB-19), not full Packet objects;
+  // confirmSelection() fetches the full packet only once a choice is made.
   searchQuery = "";
-  searchResults: Packet[] = [];
+  searchResults: PacketSummary[] = [];
+  // "My packets" (PB-14): the caller's own packets, most recent first, shown
+  // above search results when authenticated. Built entirely from the
+  // server's `mine: true` filter — never from comparing `owner.id` against
+  // the current user, since the API nulls `owner.id` for non-owners (an M2
+  // fix) and that comparison would silently under- or over-match.
+  myPackets: PacketSummary[] = [];
+  myPacketsLoading = false;
   selectedPacketId = "";
   isSearching = false;
+  /** True while confirmSelection() is fetching the full packet to hand back. */
+  selectionLoading = false;
   private searchSubject = new Subject<string>();
 
   // Generate tab properties
@@ -124,15 +136,13 @@ export class PacketSearchComponent implements OnInit {
   // De-dupe against questions this account has already seen (logged-in only).
   qbAvoidRepeats = true;
 
-  // API configuration properties
+  // API configuration properties. The key/model fields, remember-key
+  // persistence and model-fetch state now live in AiKeyPickerComponent
+  // (shared/ai-key, PB-08); this component only keeps the values it needs
+  // to send on generate and to validate the form.
   apiKey = '';
   selectedModel = '';
-  rememberApiKey = false;
-  availableModels: string[] = [];
-  isLoadingModels = false;
-  modelLoadError: string | null = null;
   validationError: string | null = null;
-  showApiKey = false;
 
   // LLM parameter properties with defaults
   temperature = 1.0;
@@ -145,8 +155,6 @@ export class PacketSearchComponent implements OnInit {
   supportsTopP = true;
   supportsFrequencyPenalty = true;
   supportsPresencePenalty = true;
-
-  private readonly STORAGE_KEY = 'openai_api_key';
 
   // Model parameter support mapping
   private readonly MODEL_PARAMS: Record<string, string[]> = {
@@ -170,30 +178,38 @@ export class PacketSearchComponent implements OnInit {
   ngOnInit(): void {
     // Set up debounced search. switchMap cancels the in-flight request when a newer
     // query arrives, so a slow response for an earlier query can never overwrite the
-    // results of a later one (the classic search race).
+    // results of a later one (the classic search race). Uses the paginated,
+    // answer-free `listPackets` projection (PB-19) rather than the deprecated
+    // full-detail `searchPacketsByName`.
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged(),
       switchMap(query => {
         if (!query || query.length < 2) {
           this.isSearching = false;
-          return of([] as Packet[]);
+          return of(EMPTY_PACKET_PAGE);
         }
         this.isSearching = true;
-        return this.sockbowlQuestionsService.searchPacketsByName(query).pipe(
+        return this.sockbowlQuestionsService.listPackets({ nameContains: query }, 0, 25).pipe(
           catchError(error => {
             console.error('Search error:', error);
-            return of([] as Packet[]);
+            return of(EMPTY_PACKET_PAGE);
           })
         );
       })
-    ).subscribe(results => {
-      this.searchResults = results;
+    ).subscribe(page => {
+      this.searchResults = page.items;
       this.isSearching = false;
     });
 
-    // Load saved API key if available
-    this.loadSavedApiKey();
+    if (this.auth.isAuthenticated()) {
+      this.loadMyPackets();
+    }
+
+    // Update the LLM-parameter visibility for the (empty) starting model
+    // selection. AiKeyPickerComponent supplies the actual saved key/model
+    // and re-fires (modelChange) once it does.
+    this.updateParameterVisibility();
 
     // Live "how many match" preview for the Generate tab (debounced).
     // switchMap so a slow count response for an earlier filter set can't overwrite
@@ -227,6 +243,22 @@ export class PacketSearchComponent implements OnInit {
 
   searchPackets(): void {
     this.searchSubject.next(this.searchQuery);
+  }
+
+  /** Load the caller's own packets (PB-14), most recent first, up to 10. */
+  private loadMyPackets(): void {
+    this.myPacketsLoading = true;
+    this.sockbowlQuestionsService.listPackets({ mine: true }, 0, 10).subscribe({
+      next: (page) => {
+        this.myPackets = page.items;
+        this.myPacketsLoading = false;
+      },
+      error: (error) => {
+        console.error('Could not load My packets:', error);
+        this.myPackets = [];
+        this.myPacketsLoading = false;
+      }
+    });
   }
 
   /* ----------------------- Generate breadth preview ---------------------- */
@@ -304,8 +336,14 @@ export class PacketSearchComponent implements OnInit {
     this.queueCount();
   }
 
-  selectPacket(packet: Packet): void {
+  selectPacket(packet: PacketSummary): void {
     this.selectedPacketId = packet.id;
+  }
+
+  /** (modelChange) from AiKeyPickerComponent: also refresh the LLM-parameter visibility. */
+  onGenerateModelChange(model: string): void {
+    this.selectedModel = model;
+    this.updateParameterVisibility();
   }
 
   generateAIPacket(): void {
@@ -316,11 +354,6 @@ export class PacketSearchComponent implements OnInit {
 
     // Clear previous validation errors
     this.validationError = null;
-
-    // Save API key if remember is checked
-    if (this.rememberApiKey && this.apiKey) {
-      localStorage.setItem(this.STORAGE_KEY, this.apiKey);
-    }
 
     this.isGenerating = true;
     this.sockbowlQuestionsService.generatePacket(
@@ -373,106 +406,6 @@ export class PacketSearchComponent implements OnInit {
         });
       }
     });
-  }
-
-  /**
-   * Load saved API key from localStorage
-   */
-  loadSavedApiKey(): void {
-    const savedKey = localStorage.getItem(this.STORAGE_KEY);
-    if (savedKey) {
-      this.apiKey = savedKey;
-      this.rememberApiKey = true;
-      this.fetchAvailableModels();
-    } else {
-      // Update parameter visibility even without saved key
-      this.updateParameterVisibility();
-    }
-  }
-
-  /**
-   * Fetch available models from OpenAI API
-   */
-  fetchAvailableModels(): void {
-    if (!this.apiKey || this.apiKey.trim().length === 0) {
-      this.modelLoadError = 'API key is required to fetch models';
-      this.availableModels = this.openAiModelService.getFallbackModels();
-      return;
-    }
-
-    this.isLoadingModels = true;
-    this.modelLoadError = null;
-
-    this.openAiModelService.fetchModels(this.apiKey).subscribe({
-      next: (models) => {
-        this.availableModels = models;
-        this.isLoadingModels = false;
-
-        // Auto-select first model if none selected
-        if (models.length > 0 && !this.selectedModel) {
-          this.selectedModel = models[0];
-          this.updateParameterVisibility();
-        }
-      },
-      error: (error) => {
-        console.error('Error fetching models:', error);
-        this.isLoadingModels = false;
-        this.modelLoadError = 'Could not fetch models from OpenAI. Using default list.';
-        this.availableModels = this.openAiModelService.getFallbackModels();
-
-        // Auto-select first fallback model
-        if (this.availableModels.length > 0 && !this.selectedModel) {
-          this.selectedModel = this.availableModels[0];
-          this.updateParameterVisibility();
-        }
-
-        this.snackBar.open('Could not fetch models from OpenAI. Using default list.', 'Close', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  /**
-   * Handle API key input changes
-   */
-  onApiKeyChange(): void {
-    // Clear models when API key changes
-    if (!this.apiKey || this.apiKey.trim().length === 0) {
-      this.availableModels = [];
-      this.selectedModel = '';
-      this.modelLoadError = null;
-    }
-  }
-
-  /**
-   * Handle API key field blur event
-   */
-  onApiKeyBlur(): void {
-    // Fetch models when user finishes entering API key
-    if (this.apiKey && this.apiKey.trim().length > 0) {
-      this.fetchAvailableModels();
-    }
-  }
-
-  /**
-   * Toggle API key visibility
-   */
-  toggleApiKeyVisibility(): void {
-    this.showApiKey = !this.showApiKey;
-  }
-
-  /**
-   * Handle remember checkbox change
-   */
-  onRememberChange(): void {
-    if (!this.rememberApiKey) {
-      // Remove from storage if unchecked
-      localStorage.removeItem(this.STORAGE_KEY);
-    } else if (this.apiKey) {
-      // Save to storage if checked and key exists
-      localStorage.setItem(this.STORAGE_KEY, this.apiKey);
-    }
   }
 
   /**
@@ -558,11 +491,27 @@ export class PacketSearchComponent implements OnInit {
       return;
     }
 
-    // Otherwise use selected packet from search
-    const selectedPacket = this.searchResults.find(p => p.id === this.selectedPacketId);
-    if (selectedPacket) {
-      this.dialogRef.close(selectedPacket);
+    // Otherwise fetch the full packet for what was picked from "My packets" or
+    // search (both only carry the answer-free PacketSummary projection).
+    if (!this.selectedPacketId || this.selectionLoading) {
+      return;
     }
+    this.selectionLoading = true;
+    this.sockbowlQuestionsService.getPacketById(this.selectedPacketId).subscribe({
+      next: (packet) => {
+        this.selectionLoading = false;
+        if (packet) {
+          this.dialogRef.close(packet);
+        } else {
+          this.snackBar.open('Could not load that packet.', 'Close', { duration: 4000 });
+        }
+      },
+      error: (error) => {
+        console.error('Could not load the selected packet:', error);
+        this.selectionLoading = false;
+        this.snackBar.open('Could not load that packet.', 'Close', { duration: 4000 });
+      }
+    });
   }
 
   /* ------------------------------- qbreader ------------------------------- */

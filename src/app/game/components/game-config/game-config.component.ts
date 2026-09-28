@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   GameSession,
   GameSettings,
+  MatchState,
   Packet,
   PlayerMode,
   ProcessError,
@@ -15,6 +16,7 @@ import {
 import { Observable } from 'rxjs';
 import { GameStateService } from '../../services/game-state.service';
 import { GameMessageService } from '../../services/game-message.service';
+import { PendingPacketService } from '../../services/pending-packet.service';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
@@ -34,6 +36,7 @@ const PREVIEW_TIMEOUT_MS = 5000;
 export class GameConfigComponent implements OnInit {
   gameStateService = inject(GameStateService);
   private gameMessageService = inject(GameMessageService);
+  private pendingPacketService = inject(PendingPacketService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private presentationConnectionService = inject(PresentationConnectionService);
@@ -65,6 +68,15 @@ export class GameConfigComponent implements OnInit {
   private previewPending = false;
   private previewTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /**
+   * The pending packet id `applyPendingPacketIfReady` just sent through
+   * `setMatchPacket`, if the game hasn't echoed it back on the session yet
+   * (NG-V1-06). Cleared once the echo arrives (a confirmation snackbar
+   * fires) or the server refuses it (`revertToSessionPacket`), whichever
+   * comes first.
+   */
+  private awaitingPacketConfirmationId: string | null = null;
+
   private destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -77,6 +89,7 @@ export class GameConfigComponent implements OnInit {
   ngOnInit(): void {
     this.gameSessionObs.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((gameSession) => {
       this.gameSession = gameSession;
+      this.applyPendingPacketIfReady(gameSession);
 
       // Initialize timer settings from game session
       if (gameSession.gameSettings?.timerSettings) {
@@ -87,6 +100,7 @@ export class GameConfigComponent implements OnInit {
       }
 
       this.syncSelectedPacket(gameSession.currentMatch?.packet);
+      this.confirmPendingPacketIfEchoed(gameSession.currentMatch?.packet);
 
       const sessionPacket = gameSession.currentMatch?.packet;
       if (this.previewPending && sessionPacket?.id && GameConfigComponent.hasQuestions(sessionPacket)) {
@@ -155,6 +169,9 @@ export class GameConfigComponent implements OnInit {
 
   /** Drop an optimistic pick the server refused, back to the session's packet. */
   private revertToSessionPacket(): void {
+    // NG-V1-06: the server just refused a set, so it will never echo the
+    // pending id back — stop waiting for a confirmation that isn't coming.
+    this.awaitingPacketConfirmationId = null;
     const sessionPacket = this.gameSession?.currentMatch?.packet;
     this.packetId = sessionPacket?.id ?? '';
     this.selectedPacketId = '';
@@ -225,6 +242,53 @@ export class GameConfigComponent implements OnInit {
 
   setPacket(): void {
     this.gameStateService.setMatchPacket(this.packetId);
+  }
+
+  /**
+   * Consume the builder's "Play test" pending packet (PB-15), if any, once
+   * the match is in CONFIG and the local player may set it — the owner in a
+   * proctorless mode, or the proctor. Clears the pending id immediately so
+   * this only ever fires once, even though later session updates (including
+   * the echo of our own setMatchPacket call) re-run this same subscription.
+   *
+   * NG-V1-06: this used to confirm with a snackbar as soon as the separate
+   * `getPacketById` questions-service call returned, regardless of whether
+   * the game actually accepted `setMatchPacket` — a PACKET_NOT_AVAILABLE or
+   * PACKET_EMPTY error snackbar could be overwritten by that "selected"
+   * success snackbar landing after it (MatSnackBar shows one message at a
+   * time). It now waits for the game's own echo instead — see
+   * `confirmPendingPacketIfEchoed`, called from the same `gameSession$`
+   * subscription this method runs from.
+   */
+  private applyPendingPacketIfReady(gameSession: GameSession): void {
+    const pendingPacketId = this.pendingPacketService.get();
+    if (!pendingPacketId) return;
+    if (gameSession.currentMatch?.matchState !== MatchState.CONFIG) return;
+    if (!this.mayApplyPendingPacket()) return;
+
+    this.pendingPacketService.clear();
+    this.awaitingPacketConfirmationId = pendingPacketId;
+    this.gameStateService.setMatchPacket(pendingPacketId);
+  }
+
+  /**
+   * NG-V1-06: shows the "Packet selected" confirmation only once the game's
+   * own `MatchPacketUpdate` echoes back the id `applyPendingPacketIfReady`
+   * just sent — never from a separate, unrelated questions-service fetch.
+   * The name is already on the session (`syncSelectedPacket`'s doc comment),
+   * so no extra call is needed to show it.
+   */
+  private confirmPendingPacketIfEchoed(sessionPacket: Packet | null | undefined): void {
+    if (!this.awaitingPacketConfirmationId) return;
+    if (sessionPacket?.id?.toString() !== this.awaitingPacketConfirmationId) return;
+
+    this.awaitingPacketConfirmationId = null;
+    this.snack.open(`Packet '${sessionPacket.name ?? this.selectedPacketId}' selected.`, 'OK', { duration: 2500 });
+  }
+
+  private mayApplyPendingPacket(): boolean {
+    return this.gameStateService.isSelfProctor()
+      || (this.gameStateService.isProctorless() && this.gameStateService.isCurrentPlayerGameOwner());
   }
 
   /**
