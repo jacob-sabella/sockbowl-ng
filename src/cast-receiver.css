@@ -396,20 +396,26 @@ body {
   /* Inherits existing match styles */
 }
 
-/* Connection Status Indicator */
+/* Connection status: an edge toast that reports state without ever covering
+   the board — the room keeps reading the question and scoreboard while it
+   waits (M5 S2-08). Position is a placeholder inset; the formal 5%
+   overscan-safe inset lands with the 10-foot adapt pass. */
 #status {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  padding: 40px 60px;
-  background: rgba(0, 0, 0, 0.8);
-  border-radius: 20px;
-  border: 3px solid var(--border-medium);
+  right: max(24px, 3%);
+  bottom: max(24px, 3%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  padding: 14px 22px;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border-medium);
   backdrop-filter: blur(20px);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   z-index: 1000;
+  max-width: min(420px, 40vw);
   transition: opacity 0.3s ease;
 }
 
@@ -418,9 +424,17 @@ body {
 }
 
 .status-icon {
-  font-size: 4rem;
-  margin-bottom: 20px;
-  animation: rotate 2s linear infinite;
+  font-size: 1.6rem;
+  line-height: 1;
+  flex: none;
+}
+
+/* The spinner is only meaningful while connecting, and only when the
+   viewer hasn't asked for less motion (M5 S2-08). */
+@media (prefers-reduced-motion: no-preference) {
+  #status.connecting .status-icon {
+    animation: rotate 2s linear infinite;
+  }
 }
 
 @keyframes rotate {
@@ -433,7 +447,7 @@ body {
 }
 
 .status-text {
-  font-size: 1.8rem;
+  font-size: 1.1rem;
   font-weight: 500;
   color: var(--text-primary);
 }

@@ -201,9 +201,28 @@
   z-index: 1;
 }
 
+.cast-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
 .cast-button {
   color: var(--text-secondary) !important;
   transition: color var(--transition-fast), background var(--transition-fast);
+
+  &[disabled] {
+    color: var(--text-muted) !important;
+    opacity: 0.6;
+  }
 
   mat-icon {
     font-size: 1.5rem;
@@ -211,13 +230,34 @@
     height: 1.5rem;
   }
 
-  &:hover {
+  &:hover:not([disabled]) {
     color: var(--accent-primary) !important;
     background: color-mix(in srgb, var(--accent-primary) 12%, transparent) !important;
   }
 
-  &.cast-button--connected {
+  &.cast-button--connected,
+  &.cast-button--ended {
     color: var(--accent-primary) !important;
+    border-color: var(--accent-primary) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    padding: 0 0.6rem;
+
+    mat-icon {
+      font-size: 1.15rem;
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+
+    // Below ~380px the labelled button would crowd the title; the icon plus
+    // the still-present aria-label/matTooltip carries the same meaning.
+    @media (max-width: 380px) {
+      .cast-button__label {
+        display: none;
+      }
+    }
   }
 }
 

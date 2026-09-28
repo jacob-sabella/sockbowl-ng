@@ -47,6 +47,8 @@
    * Initializes the Presentation API receiver connection.
    */
   function initializeReceiver() {
+    showConnecting();
+
     if (!navigator.presentation || !navigator.presentation.receiver) {
       console.error('Presentation API receiver not supported');
       showError('This page must be opened via Chrome Presentation API');
@@ -116,6 +118,12 @@
       console.warn('Unknown message type:', state.messageType);
       return;
     }
+
+    // M5 S2-08: a rendered frame is live data on the board, so it always
+    // clears whatever status toast (connecting/disconnected) was showing —
+    // including the very first frame, which is how the capture harness's
+    // __castRender ever gets past the initial "Connecting…" toast.
+    showConnected();
 
     // Mirror the viewer's selected skin (body.theme-<name> drives the tokens).
     if (state.theme) {
@@ -253,10 +261,15 @@
       statusText = 'answered incorrectly';
     }
 
+    // M5 S2-01: names are player-chosen text, not markup — escape them like
+    // every other name on the board (config teams, scoreboard). Collapse any
+    // internal whitespace runs too, so a name typed with extra spaces (or
+    // one containing a stray newline) doesn't read as a double gap next to
+    // the indicator's own flex gap.
     elements.buzzStatus.innerHTML = `
       <div class="buzz-indicator ${statusClass}">
-        <strong>${buzzInfo.playerName}</strong>
-        <span>(${buzzInfo.teamName})</span>
+        <strong>${escapeHtml(collapseWhitespace(buzzInfo.playerName))}</strong>
+        <span>(${escapeHtml(collapseWhitespace(buzzInfo.teamName))})</span>
         <span>${statusText}</span>
       </div>
     `;
@@ -284,31 +297,49 @@
   }
 
   /**
-   * Shows the connected status.
+   * Sets the status toast's state, icon and text in one place, so every
+   * caller agrees on what class drives the CSS (M5 S2-08).
+   * @param {'connecting'|'connected'|'disconnected'|'error'} state
+   * @param {string} icon
+   * @param {string} text
+   */
+  function setStatus(state, icon, text) {
+    elements.status.className = state;
+    elements.statusIcon.textContent = icon;
+    elements.statusText.textContent = text;
+  }
+
+  /**
+   * Shows the "waiting to connect" status, before the receiver has ever
+   * gotten a frame.
+   */
+  function showConnecting() {
+    setStatus('connecting', '⏳', 'Connecting…');
+  }
+
+  /**
+   * Hides the status toast: the board itself is the truth once data is
+   * flowing (`#status.connected` is `display: none`, see cast-receiver.css).
    */
   function showConnected() {
-    elements.status.classList.add('connected');
-    elements.app.style.opacity = '1';
+    setStatus('connected', '', '');
   }
 
   /**
-   * Shows the disconnected status.
+   * Shows the disconnected status as an edge toast, honest about what's
+   * happening without dimming the board into uselessness — the room can
+   * keep reading the last question and scoreboard while it waits (M5 S2-08).
    */
   function showDisconnected() {
-    elements.status.classList.remove('connected');
-    elements.statusIcon.textContent = '⚠️';
-    elements.statusText.textContent = 'Connection lost';
-    elements.app.style.opacity = '0.5';
+    setStatus('disconnected', '⚠️', 'Waiting for the proctor to reconnect');
   }
 
   /**
-   * Shows an error message.
+   * Shows an error message (e.g. the Presentation API itself is missing).
    * @param {string} message The error message to display
    */
   function showError(message) {
-    elements.status.classList.remove('connected');
-    elements.statusIcon.textContent = '❌';
-    elements.statusText.textContent = message;
+    setStatus('error', '❌', message);
   }
 
   /**
@@ -322,10 +353,32 @@
     return div.innerHTML;
   }
 
+  /**
+   * Collapses runs of whitespace (including newlines) in a name to a
+   * single space and trims the ends, so an oddly-typed name never reads as
+   * a double gap next to a flex container's own `gap` (M5 S2-01).
+   * @param {string} text
+   * @returns {string}
+   */
+  function collapseWhitespace(text) {
+    return String(text || '').replace(/\s+/g, ' ').trim();
+  }
+
   // Integration-test hook: drive the receiver UI directly with a CastGameState,
   // bypassing the live Presentation/Cast transport. Lets us verify rendering
   // (the "connects but shows nothing" bug class) without a physical device.
   window.__castRender = updateUI;
+
+  // Integration-test hook: drive the connection-status toast directly,
+  // bypassing the real Presentation connection lifecycle, so the
+  // connecting/disconnected states can be captured and tested without a
+  // device (M5 S2-08).
+  window.__castSetConnectionStatus = function (state) {
+    if (state === 'connecting') return showConnecting();
+    if (state === 'connected') return showConnected();
+    if (state === 'disconnected') return showDisconnected();
+    console.warn('Unknown __castSetConnectionStatus state:', state);
+  };
 
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {

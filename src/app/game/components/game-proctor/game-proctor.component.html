@@ -3,32 +3,50 @@
     <mat-card class="game-proctor">
       <!-- Auto-timer setting moved to game configuration -->
 
-      <!-- Cast Controls -->
-      @if (castAvailable$ | async) {
-        <div class="cast-controls">
-          @if ((castConnectionState$ | async) === PresentationConnectionState.DISCONNECTED) {
-            <button
-              mat-icon-button
-              (click)="startCasting()"
-              matTooltip="Cast to TV"
-              aria-label="Cast this match to a TV"
-              class="cast-button">
-              <mat-icon>cast</mat-icon>
-            </button>
+      <!-- Cast Controls: a single control, always present (M5 S2-07). -->
+      <div class="cast-controls">
+        @switch (castConnectionState$ | async) {
+          @case (PresentationConnectionState.CONNECTING) {
+            <div class="cast-status cast-status--connecting" role="status" aria-live="polite">
+              <mat-spinner diameter="18" aria-hidden="true"></mat-spinner>
+              <span class="cast-status__label">Choose a display&hellip;</span>
+            </div>
           }
-          @if ((castConnectionState$ | async) === PresentationConnectionState.CONNECTED) {
+          @case (PresentationConnectionState.CONNECTED) {
             <button
-              mat-icon-button
-              color="primary"
+              mat-stroked-button
               (click)="stopCasting()"
               matTooltip="Stop casting"
               aria-label="Stop casting to TV"
               class="cast-button cast-button--connected">
-              <mat-icon>cast_connected</mat-icon>
+              <mat-icon aria-hidden="true">cast_connected</mat-icon>
+              <span class="cast-button__label">Stop casting</span>
             </button>
           }
-        </div>
-      }
+          @case (PresentationConnectionState.TERMINATED) {
+            <button
+              mat-stroked-button
+              (click)="startCasting()"
+              matTooltip="The cast session ended. Cast again"
+              aria-label="Cast session ended. Cast again"
+              class="cast-button cast-button--ended">
+              <mat-icon aria-hidden="true">cast</mat-icon>
+              <span class="cast-button__label">Cast again</span>
+            </button>
+          }
+          @default {
+            <button
+              mat-icon-button
+              [disabled]="(castAvailable$ | async) === false"
+              [matTooltip]="(castAvailable$ | async) ? 'Cast to TV' : 'Casting isn\'t available in this browser'"
+              [attr.aria-label]="(castAvailable$ | async) ? 'Cast this match to a TV' : 'Casting is unavailable in this browser'"
+              (click)="startCasting()"
+              class="cast-button">
+              <mat-icon aria-hidden="true">cast</mat-icon>
+            </button>
+          }
+        }
+      </div>
 
       <mat-card-title>
         @if (getTotalTossupCount(); as totalTossups) {

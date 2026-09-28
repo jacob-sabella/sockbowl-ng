@@ -236,3 +236,105 @@ describe('GameProctorComponent tossup position header (M5 S2-09)', () => {
     expect(banner.textContent!.trim().length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * M5 S2-07: the cast control is a single element that is always present,
+ * with a designed appearance for every PresentationConnectionState instead
+ * of rendering nothing for CONNECTING/TERMINATED and silently hiding the
+ * whole control when castAvailable$ is false.
+ */
+describe('GameProctorComponent cast control states (M5 S2-07)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+  let connectionState$: BehaviorSubject<PresentationConnectionState>;
+  let available$: BehaviorSubject<boolean>;
+  let presentationConnectionService: jasmine.SpyObj<{ startPresentation: () => void; stopPresentation: () => void }>;
+
+  function session(): GameSession {
+    return {
+      currentMatch: {
+        currentRound: { roundState: RoundState.PROCTOR_READING, roundNumber: 1 },
+      },
+    } as unknown as GameSession;
+  }
+
+  function castButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('.cast-controls button');
+  }
+
+  function castStatus(): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('.cast-status');
+  }
+
+  function configure(initialConnState: PresentationConnectionState, initialAvailable = true): void {
+    connectionState$ = new BehaviorSubject<PresentationConnectionState>(initialConnState);
+    available$ = new BehaviorSubject<boolean>(initialAvailable);
+    presentationConnectionService = jasmine.createSpyObj('PresentationConnectionService', [
+      'startPresentation',
+      'stopPresentation',
+    ]);
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        {
+          provide: GameStateService,
+          useValue: jasmine.createSpyObj<GameStateService>(
+            'GameStateService',
+            ['getTeamNameById', 'getPlayerNameById', 'getCurrentRoundBonusPoints', 'getCurrentRoundMaxBonusPoints'],
+            { gameSession$: of(session()) },
+          ),
+        },
+        {
+          provide: PresentationConnectionService,
+          useValue: {
+            isAvailable$: available$.asObservable(),
+            connectionState$: connectionState$.asObservable(),
+            startPresentation: presentationConnectionService.startPresentation,
+            stopPresentation: presentationConnectionService.stopPresentation,
+          },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  }
+
+  it('shows a disabled cast button with a reason when the API is unavailable', () => {
+    configure(PresentationConnectionState.DISCONNECTED, false);
+    const btn = castButton()!;
+    expect(btn.disabled).toBeTrue();
+    expect(btn.getAttribute('aria-label')).toContain('unavailable');
+  });
+
+  it('shows an enabled cast button when disconnected but available', () => {
+    configure(PresentationConnectionState.DISCONNECTED, true);
+    const btn = castButton()!;
+    expect(btn.disabled).toBeFalse();
+    expect(btn.getAttribute('aria-label')).toBe('Cast this match to a TV');
+  });
+
+  it('shows a "Choose a display…" status while connecting, with no button', () => {
+    configure(PresentationConnectionState.CONNECTING, true);
+    expect(castStatus()!.textContent).toContain('Choose a display');
+    expect(castButton()).toBeNull();
+  });
+
+  it('shows a Stop casting button when connected, and it calls stopPresentation', () => {
+    configure(PresentationConnectionState.CONNECTED, true);
+    const btn = castButton()!;
+    expect(btn.getAttribute('aria-label')).toBe('Stop casting to TV');
+    btn.click();
+    expect(presentationConnectionService.stopPresentation).toHaveBeenCalled();
+  });
+
+  it('shows a Cast again button when terminated, and it calls startPresentation', () => {
+    configure(PresentationConnectionState.TERMINATED, true);
+    const btn = castButton()!;
+    expect(btn.getAttribute('aria-label')).toContain('Cast again');
+    btn.click();
+    expect(presentationConnectionService.startPresentation).toHaveBeenCalled();
+  });
+});

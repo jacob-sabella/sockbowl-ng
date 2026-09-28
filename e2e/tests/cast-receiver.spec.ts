@@ -76,6 +76,62 @@ test('cast receiver renders config + in-game states', async ({ browser }) => {
   await ctx.close();
 });
 
+// M5 S2-01: player and team names are player-chosen text, not markup, and
+// must render as literal text rather than being interpreted as HTML.
+test('cast receiver escapes player and team names in the buzz indicator', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
+
+  await page.evaluate((s) => (window as any).__castRender(s), {
+    ...INGAME_STATE,
+    currentBuzz: { playerName: '<b>Evil</b>', teamName: 'Team < 1' },
+  });
+  await page.waitForTimeout(400);
+
+  const buzzStatus = page.locator('#buzz-status');
+  // No <b> element was created from the name — it renders as literal text.
+  await expect(buzzStatus.locator('b')).toHaveCount(0);
+  await expect(buzzStatus).toContainText('<b>Evil</b>');
+  await expect(buzzStatus).toContainText('Team < 1');
+  await page.screenshot({ path: `${ART}/cast-03-buzz-escaped.png` });
+
+  await ctx.close();
+});
+
+// M5 S2-08: the connection-status toast reports connecting/connected/
+// disconnected honestly, at the edge, and never covers the board.
+test('cast receiver connection status toast', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
+
+  // A real Cast receiver context starts in "Connecting…" (this test harness
+  // has no Presentation API, so it's driven directly via the test hook —
+  // the same hook the polish capture harness uses for baseline shots).
+  await page.evaluate(() => (window as any).__castSetConnectionStatus('connecting'));
+  await expect(page.locator('#status')).toContainText('Connecting');
+  await expect(page.locator('#status')).toBeVisible();
+
+  // A rendered frame clears the toast — the board itself is now the truth.
+  await page.evaluate((s) => (window as any).__castRender(s), CONFIG_STATE);
+  await page.waitForTimeout(200);
+  await expect(page.locator('#status')).toBeHidden();
+
+  // A disconnect is reported honestly, without dimming the board.
+  await page.evaluate(() => (window as any).__castSetConnectionStatus('disconnected'));
+  await page.waitForTimeout(200);
+  await expect(page.locator('#status')).toContainText('Waiting for the proctor to reconnect');
+  await expect(page.locator('#config-view')).toBeVisible();
+  const appOpacity = await page.locator('#app').evaluate((el) => getComputedStyle(el).opacity);
+  expect(appOpacity).toBe('1');
+  await page.screenshot({ path: `${ART}/cast-04-status-disconnected.png` });
+
+  await ctx.close();
+});
+
 // The board must mirror whatever skin the viewer picked (body.theme-<name>).
 test('cast receiver mirrors the selected skin', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
