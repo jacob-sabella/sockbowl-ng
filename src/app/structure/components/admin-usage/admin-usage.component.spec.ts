@@ -342,10 +342,12 @@ describe('AdminUsageComponent', () => {
       return spyOn((component as any).snackBar, 'open');
     }
 
-    it('editQuota: no "Failed to update quota" snackbar on a 429', () => {
+    it('editQuota: no "Failed to update quota" snackbar on a classified 429', () => {
       configure();
       dialogSpy.open.and.returnValue({ afterClosed: () => of({ limit: 30 }) } as any);
-      usageServiceSpy.setQuotaOverride.and.returnValue(throwError(() => ({ status: 429 })));
+      usageServiceSpy.setQuotaOverride.and.returnValue(
+        throwError(() => ({ status: 429, error: { error: 'rate_limited' } }))
+      );
       const open = spyOnOwnSnackBar();
 
       component.editQuota(bannedRow, bannedRow.counters[0]);
@@ -378,12 +380,14 @@ describe('AdminUsageComponent', () => {
       expect(open).not.toHaveBeenCalled();
     });
 
-    it('banIp: no "Failed to ban IP" snackbar on a 429', () => {
+    it('banIp: no "Failed to ban IP" snackbar on a classified 429', () => {
       configure();
       dialogSpy.open.and.returnValue({
         afterClosed: () => of({ cidr: '203.0.113.5/32', reason: undefined, ttlSeconds: 3600 }),
       } as any);
-      banServiceSpy.createIpBan.and.returnValue(throwError(() => ({ status: 429 })));
+      banServiceSpy.createIpBan.and.returnValue(
+        throwError(() => ({ status: 429, error: { error: 'rate_limited' } }))
+      );
       const open = spyOnOwnSnackBar();
 
       component.banIp('203.0.113.5');
@@ -395,6 +399,22 @@ describe('AdminUsageComponent', () => {
       configure();
       dialogSpy.open.and.returnValue({ afterClosed: () => of({ limit: 30 }) } as any);
       usageServiceSpy.setQuotaOverride.and.returnValue(throwError(() => ({ status: 500 })));
+      const open = spyOnOwnSnackBar();
+
+      component.editQuota(bannedRow, bannedRow.counters[0]);
+
+      expect(open).toHaveBeenCalledWith('Failed to update quota', 'Dismiss', jasmine.anything());
+    });
+
+    // FIX3-NG: a plain 429/503 with no classifiable body is NOT something
+    // RateLimitInterceptor showed a snackbar for (its handle() bails out
+    // when the body's `error` field doesn't classify), so isLimitHandled
+    // must say false and this component's own fallback message must still
+    // show -- otherwise the rejection is swallowed with nothing shown at all.
+    it('still shows "Failed to update quota" for a plain 429 with no classifiable body', () => {
+      configure();
+      dialogSpy.open.and.returnValue({ afterClosed: () => of({ limit: 30 }) } as any);
+      usageServiceSpy.setQuotaOverride.and.returnValue(throwError(() => ({ status: 429 })));
       const open = spyOnOwnSnackBar();
 
       component.editQuota(bannedRow, bannedRow.counters[0]);
