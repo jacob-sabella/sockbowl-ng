@@ -18,7 +18,15 @@ import type { Page } from '@playwright/test';
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 
 /** `phase` values the M5 plan §6 ledger table expects. H0 only ever writes `baseline` and `self-check`. */
-export type CapturePhase = 'baseline' | 'post-f1' | 'final' | 'verdict' | 'v1' | 'self-check';
+export type CapturePhase =
+  | 'baseline'
+  | 'post-f1'
+  | 'final'
+  | 'merged'
+  | 'f2'
+  | 'verdict'
+  | 'v1'
+  | 'self-check';
 
 export interface ManifestRow {
   surface: string;
@@ -36,6 +44,13 @@ export interface ManifestRow {
   fontsLoaded: boolean | null;
   axeSerious: number | null;
   axeCritical: number | null;
+  /**
+   * F2/H0: generic per-row usability findings (document overflow, plus any
+   * visible control under the comfortable-size floor), from
+   * `checks.ts`'s `checkOverflow`/`checkAllControls`. `null` for a skipped
+   * row; `[]` means the sweep ran and found nothing.
+   */
+  usabilityViolations: string[] | null;
   skipped?: string;
   recordedAt: string;
 }

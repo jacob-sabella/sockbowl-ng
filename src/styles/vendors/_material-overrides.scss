@@ -78,12 +78,32 @@
 /* ===== MATERIAL BUTTONS ===== */
 /* Unthemed (no color attr) text/outlined/icon buttons fall back to MDC's black
    label, which is invisible on the dark theme. Theme them; palette-colored
-   buttons (.mat-primary/.mat-accent/.mat-warn) keep their own colors. */
+   buttons (.mat-primary/.mat-accent/.mat-warn) keep their own colors.
+   F2/known-item-4: this used to force the literal `color` property with
+   `!important`, which meant ANY component override of an unthemed button's
+   colour also had to fight it with its own `!important` (S5's
+   admin-usage/admin-bans `&__danger-text-btn`, `&__danger-icon-btn`) or
+   route around it entirely via the mat-accent/mat-primary/mat-warn escape
+   hatch (S6's active-nav-label fix, S6-FF3-01). Setting the actual
+   component tokens Material's own (un-`!important`) CSS already reads for
+   `color` --
+     `.mat-mdc-button:not(:disabled) { color: var(--mat-button-text-label-text-color, ...) }`
+     `.mat-mdc-outlined-button:not(:disabled) { color: var(--mat-button-outlined-label-text-color, ...) }`
+     `.mat-mdc-icon-button { color: var(--mat-icon-button-icon-color, ...) }`
+   (verified against @angular/material's compiled button/icon-button CSS,
+   M5 F2) -- is less forceful: it's the same default for every unthemed
+   button (nothing else sets these tokens for them), but a component-scoped
+   rule with normal, non-`!important` specificity can now set the same
+   token, or add `.mat-accent`/`.mat-primary`/`.mat-warn` to opt out of this
+   rule entirely (S6's existing workaround keeps working unchanged, since
+   the :not() exemption list is unchanged). */
 .mat-mdc-button,
 .mat-mdc-outlined-button,
 .mat-mdc-icon-button {
-  &:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
-    color: var(--text-primary) !important;
+  &:not(.mat-primary, .mat-accent, .mat-warn) {
+    --mat-button-text-label-text-color: var(--text-primary);
+    --mat-button-outlined-label-text-color: var(--text-primary);
+    --mat-icon-button-icon-color: var(--text-primary);
   }
 
   &:disabled {
@@ -166,17 +186,32 @@
 }
 
 /* ===== MATERIAL CHIPS ===== */
+/* F2/H-09: the background/label rules used to force the literal
+   `background-color`/`color` properties with `!important` and no
+   `.mat-primary`/`.mat-accent`/`.mat-warn` escape hatch (unlike the button
+   rule above), so a component that wanted its own chip colour had no way
+   to win short of matching `!important` at higher specificity plus
+   `::ng-deep` for the nested label (S5's admin-usage `&__banned-chip`).
+   Setting the actual component tokens Material's own (un-`!important`) chip
+   CSS already reads --
+     `.mat-mdc-standard-chip { background-color: var(--mat-chip-elevated-container-color, transparent) }`
+     `.mat-mdc-chip-action-label { color: var(--mat-chip-label-text-color, ...) }`
+   (verified against @angular/material's compiled chips CSS, M5 F2) -- is
+   less forceful: same default tint for every unthemed chip, but a
+   component-scoped rule can now set the same two custom properties on the
+   chip's own host with ordinary (non-`!important`) specificity and have it
+   take effect, including on the nested `.mat-mdc-chip-action-label` label,
+   since a CSS custom property inherits into descendants regardless of
+   Angular's emulated encapsulation -- no `::ng-deep` needed for colour
+   alone. Hover keeps its own `!important` (unchanged; not part of this
+   bug and not exercised by any surface's colour override today). */
 .mat-mdc-chip {
-  background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent) !important;
-  color: var(--text-primary) !important;
+  --mat-chip-elevated-container-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  --mat-chip-label-text-color: var(--text-primary);
   border: 1px solid var(--border-medium) !important;
 
   &:hover {
     background-color: color-mix(in srgb, var(--accent-primary) 15%, transparent) !important;
-  }
-
-  .mat-mdc-chip-action-label {
-    color: var(--text-primary) !important;
   }
 }
 

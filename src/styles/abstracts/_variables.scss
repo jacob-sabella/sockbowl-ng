@@ -98,14 +98,30 @@
   --breakpoint-mobile: 768px;
   --breakpoint-tablet: 1024px;
   --breakpoint-desktop: 1280px;
+}
 
-  // ====================
-  // Cross-theme semantic aliases (M5 F1-03/F1-07/F1-08/F1-14)
-  // ====================
-  // Formula tokens, not per-theme literals: each is a function of tokens
-  // every theme already defines, so it resolves correctly under any
-  // body.theme-* class without needing 8 separate declarations.
-
+// ====================
+// Cross-theme semantic aliases (M5 F1-03/F1-07/F1-08/F1-14; moved off :root
+// by F2/H-01/H-09)
+// ====================
+// Formula tokens, not per-theme literals: each is a function of tokens
+// every theme already defines, so it resolves correctly under any
+// body.theme-* class without needing 8 separate declarations.
+//
+// F2: these were declared on `:root` (the <html> element), one level above
+// where `--accent-primary-text`/`--error`/`--surface`/`--bg-tertiary` are
+// actually defined (`body.theme-*`, a *descendant* of :root). A var()
+// resolves using values visible at the element it's declared on, so on
+// :root these all computed invalid (confirmed live via
+// `getComputedStyle(document.body).getPropertyValue('--danger-surface')`
+// === ''). Declaring them on the plain `body` selector instead resolves
+// correctly: custom-property dependencies are resolved from each
+// property's fully cascaded value on the *same* element, so `body`'s
+// `var(--error)` here sees whatever `body.theme-*`'s own (more specific)
+// rule set for `--error` on that same body element, regardless of SCSS
+// import order. `body` matches under every theme, so this needs no
+// per-theme duplication.
+body {
   // Keyboard focus ring. Aliases the text-safe accent variant so it's
   // always >=3:1 against both bg-primary and surface (F1-08).
   --focus-ring: var(--accent-primary-text);

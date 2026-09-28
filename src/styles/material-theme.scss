@@ -71,5 +71,16 @@ body.theme-solarized-dark {
 
 .mat-mdc-icon-button {
   // Keep icon buttons tappable on phones (M3 default can be < 44px).
-  --mdc-icon-button-state-layer-size: 44px;
+  //
+  // F2/H-08: this read `--mdc-icon-button-state-layer-size` (the old MDC
+  // token name), but this Material version's icon-button CSS only ever
+  // reads the renamed M3 token, `--mat-icon-button-state-layer-size`
+  // (confirmed: 0 matches for the mdc- name, 2 for the mat- name in
+  // @angular/material's compiled icon-button styles). The old name was
+  // silently inert, so every `.mat-mdc-icon-button` stayed at Material's
+  // 40px default regardless of this rule. S5 and S6 each worked around it
+  // locally with an explicit width/height on their own icon buttons
+  // (admin-bans, admin-usage, admin-taxonomy, theme-selector); those local
+  // rules are redundant now but harmless to leave in place.
+  --mat-icon-button-state-layer-size: 44px;
 }

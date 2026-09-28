@@ -1,0 +1,19 @@
+<div class="error-state" role="alert">
+  @if (icon) {
+    <mat-icon class="error-state__icon" aria-hidden="true">{{ icon }}</mat-icon>
+  }
+  <p class="error-state__title">{{ title }}</p>
+  @if (message) {
+    <p class="error-state__message">{{ message }}</p>
+  }
+  @if (actionLabel) {
+    <button
+      class="error-state__action"
+      mat-flat-button
+      type="button"
+      (click)="retry.emit()"
+    >
+      {{ actionLabel }}
+    </button>
+  }
+</div>

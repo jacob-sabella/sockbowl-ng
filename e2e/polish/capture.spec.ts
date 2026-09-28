@@ -27,6 +27,7 @@ import {
   appendManifestRow, ngHead, presetTheme, runAxe, sha256File, shotsDir, slug,
   waitForFonts, CAPTURED_THEMES, VIEWPORTS, type CapturePhase,
 } from './manifest.js';
+import { checkAllControls, checkOverflow } from './checks.js';
 import { loadFixture } from './fixtures/load.js';
 import s1 from './scenarios/s1.js';
 import s2 from './scenarios/s2.js';
@@ -52,8 +53,8 @@ const SURFACES: SurfaceScenario[] = [s1, s2, s3, s4, s5, s6];
               surface: surface.id, phase: PHASE, state: state.id, role: state.role,
               auth: (state.authEnabled ?? true) ? 'on' : 'off', viewport: 'n/a', theme: 'n/a',
               route: state.route, file: null, sha256: null, ngHead: ngHead(), mocked: true,
-              fontsLoaded: null, axeSerious: null, axeCritical: null, skipped: state.skip,
-              recordedAt: new Date().toISOString(),
+              fontsLoaded: null, axeSerious: null, axeCritical: null, usabilityViolations: null,
+              skipped: state.skip, recordedAt: new Date().toISOString(),
             });
           });
           continue;
@@ -94,12 +95,21 @@ const SURFACES: SurfaceScenario[] = [s1, s2, s3, s4, s5, s6];
                 const axeKey = slug(`${state.id}__${state.role}__${vpName}__${theme}`);
                 const axe = await runAxe(page, surface.id, PHASE, axeKey);
 
+                // F2/H0: generic usability sweep, wired per row (M5 plan §4 H0
+                // done-when / S6 handoff) rather than per hand-picked
+                // surface+state (that stays admin-responsive.spec.ts's job).
+                const mobile = viewport.width < 768;
+                const usabilityViolations = [
+                  ...(await checkOverflow(page)),
+                  ...(await checkAllControls(page, mobile)),
+                ];
+
                 appendManifestRow({
                   surface: surface.id, phase: PHASE, state: state.id, role: state.role,
                   auth: (state.authEnabled ?? true) ? 'on' : 'off', viewport: vpName, theme,
                   route: state.route, file: fileName, sha256: sha256File(filePath), ngHead: ngHead(),
                   mocked: true, fontsLoaded, axeSerious: axe.serious, axeCritical: axe.critical,
-                  recordedAt: new Date().toISOString(),
+                  usabilityViolations, recordedAt: new Date().toISOString(),
                 });
               } finally {
                 await context.close();
@@ -167,7 +177,7 @@ interface SelfCheckFixture {
           surface: 'selfcheck', phase: 'self-check', state: `renders-${seatName}`, role: 'player',
           auth: 'on', viewport: 'desktop', theme: 'dark', route: '/game', file: fileName,
           sha256: sha256File(filePath), ngHead: ngHead(), mocked: true, fontsLoaded: await waitForFonts(page),
-          axeSerious: null, axeCritical: null, recordedAt: new Date().toISOString(),
+          axeSerious: null, axeCritical: null, usabilityViolations: null, recordedAt: new Date().toISOString(),
         });
       } finally {
         await context.close();
