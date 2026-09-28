@@ -73,7 +73,20 @@ test.describe('M4 admin usage view (live)', () => {
 
     // ---- admin sets the hosted-sessions override to 0 ----
     await editHostedSessionsQuota(adminPage, { limit: 0 });
-    await expect(adminPage.getByText('Quota updated')).toBeVisible({ timeout: 15_000 });
+    const quotaUpdatedToast = adminPage.getByText('Quota updated');
+    await expect(quotaUpdatedToast).toBeVisible({ timeout: 15_000 });
+    // This same "Quota updated" text is shown again below (after the
+    // override is cleared, line ~90). `AdminUsageComponent` gives the
+    // snackbar only a 3s `duration`, but on a fast run the whole
+    // attemptHostSolo(blocked) + editHostedSessionsQuota(resetToDefault)
+    // round trip below can also finish in under 3s, so this toast can
+    // still be in the DOM when the second one opens -- two elements with
+    // identical text, and `getByText('Quota updated')` (no default
+    // uniquifying selector) hits a strict-mode violation (live evidence:
+    // M4 WP-E1 r12's m4:limits run, 2 of 4 attempts). Waiting for this
+    // one to fully close first removes the possibility of overlap instead
+    // of just narrowing its window.
+    await expect(quotaUpdatedToast).toBeHidden({ timeout: 10_000 });
 
     const blocked = await attemptHostSolo(playerPage);
     expect(blocked.result, `expected the override to block this create: ${JSON.stringify(blocked)}`).toBe('quota');
