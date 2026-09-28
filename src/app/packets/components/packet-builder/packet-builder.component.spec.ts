@@ -775,13 +775,30 @@ describe('PacketBuilderComponent', () => {
       expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).toBeNull();
     });
 
-    it('shows editable textareas and the unsaved bar for a manager (control)', () => {
+    it('shows editable textareas for a manager (control)', () => {
       configure(makePacket());
       expect(component.canManagePacket).toBeTrue();
       const areas: HTMLTextAreaElement[] = Array.from(fixture.nativeElement.querySelectorAll('textarea'));
       expect(areas.length).toBeGreaterThan(0);
       areas.forEach((ta) => expect(ta.readOnly).toBeFalse());
+    });
+
+    // FF1 (finish review #6): the sticky save bar is chrome for an unsaved
+    // change, not a permanent fixture — it renders only while a manager
+    // actually has something dirty, and disappears again once clean.
+    it('shows the save bar for a manager only once something is dirty, and hides it again once clean', () => {
+      configure(makePacket());
+      expect(component.canManagePacket).toBeTrue();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).toBeNull();
+
+      component.tossupDraftStore.get('t1')!.question = 'Edited';
+      component.tossupDraftStore.markDirty('t1');
+      fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).not.toBeNull();
+
+      component.tossupDraftStore.markSaved('t1');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.packet-builder__save-bar')).toBeNull();
     });
   });
 
@@ -1071,6 +1088,17 @@ describe('PacketBuilderComponent', () => {
 
     it('ownerDisplayName names the owner for an admin viewing someone else\'s packet', () => {
       configure(makePacket({ owner: { id: 'user-2', name: 'Alex Owner' } }), ['packet:manage-any'], 'user-1');
+      expect(component.ownerDisplayName).toBe('Alex Owner');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Owned by Alex Owner');
+    });
+
+    // FF1 (finish review #3): a non-owner's read redacts owner.id to null
+    // (D2/Q-M2-01, PacketOwner) even though owner.name still comes back —
+    // the old guard required a truthy id first and hid the name in exactly
+    // this case.
+    it('ownerDisplayName names the owner when the read redacts owner.id to null', () => {
+      configure(makePacket({ owner: { id: null, name: 'Alex Owner' } }), ['packet:manage-any'], 'user-1');
       expect(component.ownerDisplayName).toBe('Alex Owner');
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('Owned by Alex Owner');

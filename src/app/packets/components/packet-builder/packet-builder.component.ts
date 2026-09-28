@@ -475,14 +475,29 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   /**
-   * S4-15: an admin (or other `packet:manage-any` holder) editing someone
-   * else's packet sees whose it is. Null for the owner themself, and for an
-   * ownerless/redacted-owner packet with no display name to show.
+   * S4-15/FF1 (finish review #3): an admin (or other `packet:manage-any`
+   * holder) editing someone else's packet sees whose it is. Null for the
+   * owner themself, and for an ownerless/nameless packet with no display
+   * name to show.
+   *
+   * `owner.id` is redacted to `null` for a non-owner's read (`PacketOwner`,
+   * D2/Q-M2-01) — a viewer who isn't the owner never gets a real id back,
+   * only a name. The old guard required a truthy `owner.id` before it would
+   * even consider showing the name, so the redacted (and by definition
+   * "not you") case fell through to `null` and hid the line on exactly the
+   * admin-viewing-someone-else's-packet capture this exists for. A
+   * redacted id therefore always means "not you"; only a *present* id is
+   * worth comparing against the current user's own Keycloak id
+   * (`auth.getCurrentUserId()`, the `sub` claim — the same space `owner.id`
+   * is in when it isn't redacted).
    */
   get ownerDisplayName(): string | null {
     const owner = this.packet?.owner;
-    if (!owner?.id || !owner.name) {
+    if (!owner?.name) {
       return null;
+    }
+    if (owner.id == null) {
+      return owner.name;
     }
     return owner.id === this.auth.getCurrentUserId() ? null : owner.name;
   }

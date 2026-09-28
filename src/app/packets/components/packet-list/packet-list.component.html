@@ -143,7 +143,7 @@
                     <span class="packet-list__item-chip">{{ packet.difficulty?.name }}</span>
                   }
                   <span class="packet-list__item-counts">
-                    {{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses
+                    {{ packet.tossupCount }} tossup{{ packet.tossupCount === 1 ? '' : 's' }} &middot; {{ packet.bonusCount }} bonus{{ packet.bonusCount === 1 ? '' : 'es' }}
                   </span>
                   <span class="packet-list__item-owner">{{ packet.owner?.name ?? 'Anonymous' }}</span>
                 </div>

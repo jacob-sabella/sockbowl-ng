@@ -193,6 +193,17 @@ describe('PacketListComponent', () => {
     expect(el.querySelectorAll('span.packet-list__item-name').length).toBe(3);
   });
 
+  // FF1 (finish review, Truth and Copy): "1 bonuses"/"1 tossups" had no
+  // singular form.
+  it('pluralizes the tossup/bonus counts', () => {
+    configure([], 'user-1');
+    const el = fixture.nativeElement as HTMLElement;
+    const counts = Array.from(el.querySelectorAll('.packet-list__item-counts')).map(n => n.textContent?.trim());
+    expect(counts).toContain('5 tossups · 2 bonuses'); // ownedPacket
+    expect(counts).toContain('10 tossups · 5 bonuses'); // othersPacket
+    expect(counts).toContain('1 tossup · 0 bonuses'); // ownerlessPacket: singular tossup, plural (zero) bonuses
+  });
+
   it('play test navigates to the game lobby with the mode/packetId query params', () => {
     configure(['packet:create'], 'user-1');
     const router = TestBed.inject(Router) as jasmine.SpyObj<Router>;

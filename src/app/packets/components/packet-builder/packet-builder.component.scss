@@ -101,6 +101,18 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     overflow: hidden;
+    /*
+     * FF1 (finish review #4/FIRST VIEWPORT): without a basis to shrink to,
+     * a flex item's default min-width is its own min-content size, so at
+     * 390px the row itself (not just the name's own text) wrapped and
+     * pushed the edit pencil onto its own line. `flex:1 1 auto` lets the
+     * name take the row's remaining space and `min-width:0` lets it
+     * actually shrink into that space (the clamp above still caps it at 2
+     * lines), so the pencil — and the delete button — stay on the name's
+     * own row at every width.
+     */
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__name-field {
@@ -233,13 +245,28 @@
    * short-lived "Add X"/"Generate"/"Create" form submits). Per-card Saves
    * use &__card-save-btn (a plain stroked button) instead, so an editable
    * card never competes with Play test for the single filled accent.
+   *
+   * FF1 (finish review #2): the old rule used `!important` on both
+   * properties, which also beat Material's own `:disabled` state — a
+   * blocked Play test rendered as a fully filled, seemingly-usable button
+   * (DESIGN.md: "Don't add `!important`"). `mat-raised-button` isn't
+   * covered by the frozen global disabled override (that one only lists
+   * `.mat-mdc-button`/`.mat-mdc-outlined-button`/`.mat-mdc-icon-button`),
+   * so the plain, unqualified `&:disabled` rule below is enough on its own
+   * (no `!important` needed) and now actually takes effect.
    */
   &__save-btn {
-    background: var(--accent-primary) !important;
-    color: var(--on-accent-primary) !important;
+    background: var(--accent-primary);
+    color: var(--on-accent-primary);
 
     &:hover:not(:disabled) {
       filter: brightness(1.06);
+    }
+
+    &:disabled {
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      cursor: not-allowed;
     }
   }
 
@@ -271,8 +298,16 @@
     border-top: 1px solid var(--border-subtle);
   }
 
+  /* FF1 (finish review #7): "Tossups"/"Bonuses" (mat-card-title, above) and
+   * "Parts" are section titles, not body copy — the Three-Voice Rule puts
+   * titles in Space Grotesk (DESIGN.md). */
+  &__section-title {
+    font-family: var(--font-display);
+  }
+
   &__parts-title {
     margin: 0 0 8px;
+    font-family: var(--font-display);
     font-size: var(--text-sm);
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -567,6 +602,21 @@
     margin-top: 12px;
   }
 
+  /*
+   * FF1 (finish review #4): `display:contents` keeps Duplicate/Export/Preview
+   * as ordinary flex items of &__actions-row above 600px (desktop/tablet
+   * layout is unchanged); the 600px query below hides this whole span and
+   * shows &__actions-row-more instead, so the row wraps to at most 2 lines
+   * at 390px (chip + Publish + More on one line, Play test on the next).
+   */
+  &__actions-row-full {
+    display: contents;
+  }
+
+  &__actions-row-more {
+    display: none;
+  }
+
   /* S4-08: the Play test block reason, next to the button instead of a tooltip. */
   &__play-test-wrap {
     display: flex;
@@ -612,18 +662,39 @@
    * S4-AY: `mat-expansion-panel-header` carries `role="button"` itself, so a
    * real `<button>` anywhere inside it is a "nested interactive control"
    * (axe: nested-interactive, serious) — assistive tech can't reliably
-   * reach it. The reorder buttons below are DOM siblings of the header
-   * instead, absolutely positioned into a left gutter the header reserves
-   * for them via `padding-left` (`::ng-deep` below), so a mouse or touch
-   * user sees the same layout as before without the two controls actually
-   * nesting.
+   * reach it. The reorder buttons are DOM siblings of the header (via
+   * `ngProjectAs` in the template, so both land in Material's header
+   * projection slot — see FF1's comment there).
+   *
+   * FF1: a wrapping div around the header broke content projection (it no
+   * longer matched `<ng-content select="mat-expansion-panel-header">`, so
+   * the header fell into the collapsed body — finish review finding #1).
+   * `mat-expansion-panel` is made a grid instead, with the header and the
+   * reorder span sharing row 1: row 1's height is then the header's own
+   * height (not the whole panel, which changes height on expand), so the
+   * buttons stay correctly centered over the header whether the panel is
+   * open or closed.
    */
-  &__panel-header-row {
-    position: relative;
+  &__panel--managed {
+    display: grid;
+    grid-template-rows: auto auto;
   }
 
-  &__panel-header-row--managed ::ng-deep .mat-expansion-panel-header {
+  &__panel--managed ::ng-deep .mat-expansion-panel-header {
+    grid-row: 1;
     padding-left: 84px;
+  }
+
+  /*
+   * `.mat-expansion-panel-content` (the collapse/expand region Material
+   * animates) sits one level *inside* `.mat-expansion-panel-content-wrapper`
+   * — the wrapper is the actual direct child of `mat-expansion-panel`, so
+   * it's the one that needs placing in our grid's row 2. (It runs its own,
+   * unrelated `display:grid` internally for the collapse animation; placing
+   * it as an item of *our* grid doesn't touch that.)
+   */
+  &__panel--managed ::ng-deep .mat-expansion-panel-content-wrapper {
+    grid-row: 2;
   }
 
   /*
@@ -632,10 +703,11 @@
    * --mdc-icon-button-state-layer-size, F1 — see S4-01).
    */
   &__reorder-btns {
-    position: absolute;
-    top: 50%;
-    left: 16px;
-    transform: translateY(-50%);
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+    align-self: center;
+    margin-left: 16px;
     z-index: 1;
     display: inline-flex;
     align-items: center;
@@ -721,5 +793,16 @@
     border-radius: 0;
     border-width: 1px 0 0;
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* FF1 (finish review #4/FIRST VIEWPORT): collapse Duplicate/Export/Preview
+   * into the "More actions" menu so the header's action row wraps to at
+   * most 2 lines at 390px. */
+  .packet-builder__actions-row-full {
+    display: none;
+  }
+
+  .packet-builder__actions-row-more {
+    display: inline-flex;
   }
 }

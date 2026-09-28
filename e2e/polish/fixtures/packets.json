@@ -163,7 +163,7 @@
       "visibility": "PUBLISHED",
       "validation": { "playable": true, "tossupCount": 20, "bonusCount": 20, "issues": [] },
       "difficulty": { "id": "diff-easy", "name": "Easy" },
-      "owner": { "id": "demo-player1", "name": "player1" },
+      "owner": { "id": "demo-testuser", "name": "testuser" },
       "bonuses": [],
       "tossups": []
     }
