@@ -62,14 +62,14 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
 
   // Host: sign in as the author demo user. The navbar shows the signed-in
   // display name — assert it's actually HOST's name, not just that some text
-  // rendered. Scoped to the label span, not the whole `.navbar__user-name`
+  // rendered. Scoped to the label span, not the whole `.navbar__account-trigger`
   // block: that block also renders a Material icon whose text-ligature name
   // ("account_circle") is concatenated onto the front of the display name in
   // textContent, e.g. "account_circleTest User" (NG-R2-... / M2R2-NG-03),
   // and asserting against HOST (the username "testuser") never matched the
   // rendered display name ("Test User") to begin with.
   await loginAs(page, HOST);
-  await expect(page.locator('.navbar__user-name .navbar__btn-label')).toHaveText(new RegExp(HOST_DISPLAY_NAME, 'i'));
+  await expect(page.locator('.navbar__account-trigger .navbar__btn-label')).toHaveText(new RegExp(HOST_DISPLAY_NAME, 'i'));
 
   // The host is authenticated too, so "Auto-judged match" drives the same
   // create -> join-game-session-authenticated flow as the player's join
@@ -101,7 +101,7 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
   const playerPage = await playerCtx.newPage();
   await playerPage.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
   await loginAs(playerPage, PLAYER);
-  await expect(playerPage.locator('.navbar__user-name .navbar__btn-label')).toHaveText(new RegExp(PLAYER_DISPLAY_NAME, 'i'));
+  await expect(playerPage.locator('.navbar__account-trigger .navbar__btn-label')).toHaveText(new RegExp(PLAYER_DISPLAY_NAME, 'i'));
 
   await playerPage.getByRole('button', { name: /Join with a code/ }).click();
   await playerPage.getByLabel('Join Code').fill(code);

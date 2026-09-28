@@ -2,19 +2,20 @@
   <!-- Loading State -->
   @if (loading) {
     <div class="loading-container" role="status" aria-live="polite" aria-busy="true">
-      <mat-spinner></mat-spinner>
+      <mat-spinner aria-label="Loading profile"></mat-spinner>
       <p>Loading profile...</p>
     </div>
   }
 
-  <!-- Error State -->
+  <!-- Error State (whole page: the initial load failed) -->
   @if (error && !loading) {
     <div class="error-container" role="alert" aria-live="assertive">
-      <mat-icon color="warn" aria-hidden="true">error</mat-icon>
-      <p>{{ error }}</p>
-      <button mat-raised-button color="primary" (click)="loadUserData()">
-        <mat-icon aria-hidden="true">refresh</mat-icon>
-        Retry
+      <mat-icon class="error-container__icon" aria-hidden="true">{{ error.icon }}</mat-icon>
+      <h2 class="error-container__title">{{ error.title }}</h2>
+      <p>{{ error.message }}</p>
+      <button mat-raised-button color="primary" (click)="handlePrimaryError()">
+        <mat-icon aria-hidden="true">{{ error.primaryAction === 'sign-in' ? 'login' : 'refresh' }}</mat-icon>
+        {{ error.primaryLabel }}
       </button>
     </div>
   }
@@ -27,7 +28,8 @@
         <mat-card class="profile-card" aria-labelledby="profile-name">
           <mat-card-header>
             <mat-icon mat-card-avatar class="profile-icon" aria-hidden="true">account_circle</mat-icon>
-            <mat-card-title id="profile-name">{{ user.name }}</mat-card-title>
+            <!-- S6-13: the page's h1 — styled as today, just a real heading now. -->
+            <h1 mat-card-title id="profile-name">{{ user.name }}</h1>
             <mat-card-subtitle>{{ user.email }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -85,45 +87,52 @@
       <!-- Game History -->
       <mat-card class="history-card" aria-labelledby="history-heading">
         <mat-card-header>
-          <mat-card-title id="history-heading">
+          <!-- S6-13: Statistics (below) and Game History share the h2 level. -->
+          <h2 mat-card-title id="history-heading" class="section-heading">
             <mat-icon aria-hidden="true">history</mat-icon>
             Game History
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle class="history-subtitle">{{ totalElements }} total games played</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          @if (gameHistory.length === 0) {
+          <!-- A later page's load failed: only this card errors, with its own retry (S6-10) -->
+          @if (historyError) {
+            <div class="history-error" role="alert">
+              <mat-icon class="history-error__icon" aria-hidden="true">{{ historyError.icon }}</mat-icon>
+              <p>{{ historyError.message }}</p>
+              <button mat-stroked-button (click)="retryHistory()">
+                <mat-icon aria-hidden="true">refresh</mat-icon>
+                {{ historyError.primaryLabel }}
+              </button>
+            </div>
+          }
+          @if (!historyError && gameHistory.length === 0) {
             <div class="no-history">
               <mat-icon aria-hidden="true">inbox</mat-icon>
               <p>No game history yet. Start playing to see your games here.</p>
             </div>
           }
-          @if (gameHistory.length > 0) {
-            <div class="history-list">
-              <mat-list>
+          @if (!historyError && gameHistory.length > 0) {
+            <div>
+              <ul class="history-list">
                 @for (game of gameHistory; track game) {
-                  <mat-list-item class="history-item">
-                    <mat-icon matListItemIcon aria-hidden="true">sports_esports</mat-icon>
-                    <div matListItemTitle class="game-info">
-                      <span class="team-name">{{ game.teamName || 'No Team' }}</span>
-                      <span class="game-date">{{ formatDate(game.joinedAt) }}</span>
-                    </div>
-                    <div matListItemLine class="game-details">
-                      <span class="game-id">Game: {{ game.gameSessionId.substring(0, 8) }}...</span>
+                  <li class="history-row">
+                    <div class="history-row__primary">
+                      <span class="history-row__team">{{ game.teamName || 'No Team' }}</span>
                       @if (game.finalScore !== null) {
-                        <span class="score">
-                          Score: {{ game.finalScore }}
-                        </span>
+                        <span class="history-row__score">{{ game.finalScore }} pts</span>
                       }
                       @if (game.finalScore === null) {
-                        <span class="score-pending">
-                          In Progress
-                        </span>
+                        <span class="history-row__score history-row__score--pending">In Progress</span>
                       }
                     </div>
-                  </mat-list-item>
+                    <div class="history-row__secondary">
+                      <span class="history-row__date">{{ formatDate(game.joinedAt) }}</span>
+                      <span class="history-row__status">{{ game.finalScore !== null ? 'Completed' : 'In Progress' }}</span>
+                    </div>
+                  </li>
                 }
-              </mat-list>
+              </ul>
               <!-- Pagination -->
               @if (totalPages > 1) {
                 <nav class="pagination" aria-label="Game history pages">

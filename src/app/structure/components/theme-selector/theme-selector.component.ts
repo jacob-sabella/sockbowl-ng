@@ -58,7 +58,7 @@ export class ThemeSelectorComponent {
     {
       value: 'catppuccin',
       label: 'Catppuccin',
-      icon: 'pets'
+      icon: 'local_cafe'
     },
     {
       value: 'dracula',
@@ -68,7 +68,7 @@ export class ThemeSelectorComponent {
     {
       value: 'solarized-dark',
       label: 'Solarized Dark',
-      icon: 'wb_sunny'
+      icon: 'bedtime'
     },
     {
       value: 'solarized-light',
@@ -99,6 +99,19 @@ export class ThemeSelectorComponent {
   getCurrentIcon(theme: Theme): string {
     const themeOption = this.allThemes.find(t => t.value === theme);
     return themeOption ? themeOption.icon : 'palette';
+  }
+
+  /**
+   * The current theme's display label (S6-09), read into the trigger's
+   * `aria-describedby` text so assistive tech can announce it without
+   * changing the trigger's own accessible name ("Theme selector").
+   *
+   * @param theme Current theme
+   * @returns Label for the theme
+   */
+  getCurrentLabel(theme: Theme): string {
+    const themeOption = this.allThemes.find(t => t.value === theme);
+    return themeOption ? themeOption.label : 'Unknown';
   }
 
   /**

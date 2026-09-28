@@ -27,7 +27,7 @@ test('Demo user logs in via Keycloak and plays a solo tossup', async ({ page }) 
   // Back on the app, authenticated as the demo player
   await page.waitForURL('**/game-session**', { timeout: 20_000 });
   await expect(page.getByText('Playing as Guest')).toBeHidden({ timeout: 10_000 });
-  await expect(page.locator('.navbar__user-name')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.navbar__account-trigger')).toBeVisible({ timeout: 10_000 });
 
   // Solo practice end to end, same flow as the guest solo spec
   await page.getByRole('button', { name: /New game/ }).click();

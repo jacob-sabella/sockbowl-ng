@@ -1,4 +1,6 @@
 import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../core/auth/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { Observable, forkJoin } from 'rxjs';
@@ -7,6 +9,95 @@ import {
   UserStatsResponse,
   UserGameHistory
 } from '../../../core/models/user-models';
+
+/**
+ * A designed error state (S6-10), built surface-local because F1's
+ * `shared/state/error-state` primitive doesn't exist yet in this branch
+ * (handoff filed to F2). Shape mirrors that primitive's intended API
+ * (icon, title, message, action) so swapping in the real component later is
+ * a template change, not a rewrite.
+ */
+export interface ProfileErrorState {
+  icon: string;
+  title: string;
+  message: string;
+  primaryLabel: string;
+  primaryAction: 'retry' | 'sign-in';
+}
+
+/**
+ * Builds the designed state for one error class, with copy scoped to what
+ * failed to load (S6-10: "your profile" for the whole page, "this page of
+ * your game history" for a history-only failure) — `subject` is that phrase.
+ */
+function networkError(subject: string): ProfileErrorState {
+  return {
+    icon: 'wifi_off',
+    title: "Can't reach Sockbowl",
+    message: `Check your connection and try again to load ${subject}.`,
+    primaryLabel: 'Retry',
+    primaryAction: 'retry',
+  };
+}
+
+function unauthorizedError(subject: string): ProfileErrorState {
+  return {
+    icon: 'lock',
+    title: 'Signed out',
+    message: `Your session ended. Sign in to see ${subject}.`,
+    primaryLabel: 'Sign In',
+    primaryAction: 'sign-in',
+  };
+}
+
+function forbiddenError(subject: string): ProfileErrorState {
+  return {
+    icon: 'block',
+    title: `Can't show ${subject}`,
+    message: "You don't have permission to view this page.",
+    primaryLabel: 'Retry',
+    primaryAction: 'retry',
+  };
+}
+
+function serverError(subject: string): ProfileErrorState {
+  return {
+    icon: 'report',
+    title: 'Something went wrong',
+    message: `The server had a problem loading ${subject}. Try again in a moment.`,
+    primaryLabel: 'Retry',
+    primaryAction: 'retry',
+  };
+}
+
+function unknownError(subject: string): ProfileErrorState {
+  return {
+    icon: 'error',
+    title: 'Failed to load',
+    message: `Something went wrong loading ${subject}. Please try again.`,
+    primaryLabel: 'Retry',
+    primaryAction: 'retry',
+  };
+}
+
+/** Classifies a load failure into a designed state with distinct copy per class (S6-10). */
+export function describeProfileError(err: unknown, subject: string): ProfileErrorState {
+  if (err instanceof HttpErrorResponse) {
+    if (err.status === 0) {
+      return networkError(subject);
+    }
+    if (err.status === 401) {
+      return unauthorizedError(subject);
+    }
+    if (err.status === 403) {
+      return forbiddenError(subject);
+    }
+    if (err.status >= 500) {
+      return serverError(subject);
+    }
+  }
+  return unknownError(subject);
+}
 
 @Component({
     selector: 'app-profile',
@@ -18,13 +109,20 @@ import {
 export class ProfileComponent implements OnInit {
   private authService = inject(AuthService);
   private userService = inject(UserService);
+  private router = inject(Router);
 
   user$!: Observable<User>;
   stats$!: Observable<UserStatsResponse>;
   gameHistory: UserGameHistory[] = [];
 
   loading = true;
-  error: string | null = null;
+  /** Whole-page failure (initial load): user, stats and history all missing. */
+  error: ProfileErrorState | null = null;
+  /**
+   * A later page of game history failed to load (S6-10): the user card and
+   * stats stay up, only the history card shows its own error and retry.
+   */
+  historyError: ProfileErrorState | null = null;
 
   // Pagination
   currentPage = 0;
@@ -39,6 +137,7 @@ export class ProfileComponent implements OnInit {
   loadUserData(): void {
     this.loading = true;
     this.error = null;
+    this.historyError = null;
 
     // Load user info and stats in parallel
     forkJoin({
@@ -66,10 +165,28 @@ export class ProfileComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading user data:', err);
-        this.error = 'Failed to load user data. Please try again.';
+        this.error = describeProfileError(err, 'your profile');
         this.loading = false;
       }
     });
+  }
+
+  /** The primary action on the whole-page error card: Retry, or Sign In for a 401. */
+  handlePrimaryError(): void {
+    if (this.error?.primaryAction === 'sign-in') {
+      this.signIn();
+      return;
+    }
+    this.loadUserData();
+  }
+
+  /** The primary action on the history card's own error: always a retry of that page. */
+  retryHistory(): void {
+    this.loadPage(this.currentPage);
+  }
+
+  signIn(): void {
+    this.authService.login(this.router.url);
   }
 
   loadPage(page: number): void {
@@ -78,6 +195,7 @@ export class ProfileComponent implements OnInit {
     }
 
     this.currentPage = page;
+    this.historyError = null;
     this.userService.getUserHistory(this.currentPage, this.pageSize).subscribe({
       next: (data) => {
         this.gameHistory = data.content;
@@ -87,7 +205,7 @@ export class ProfileComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading game history:', err);
-        this.error = 'Failed to load game history.';
+        this.historyError = describeProfileError(err, 'your game history');
       }
     });
   }

@@ -1,17 +1,42 @@
 @if (theme$ | async; as currentTheme) {
+  <!-- S6-09: the trigger keeps the accessible name "Theme selector" (tests
+       rely on it — see this component's spec and e2e/polish/scenarios/s6.ts)
+       and additionally exposes the current theme through aria-describedby,
+       pointing at a visually-hidden description rather than changing the
+       name itself. -->
   <button mat-icon-button
     [matMenuTriggerFor]="themeMenu"
     class="theme-toggle"
-    [attr.aria-label]="'Theme selector'">
+    aria-label="Theme selector"
+    aria-describedby="theme-selector-current">
     <mat-icon>{{ getCurrentIcon(currentTheme) }}</mat-icon>
   </button>
+  <span id="theme-selector-current" class="visually-hidden">Current theme: {{ getCurrentLabel(currentTheme) }}</span>
   <mat-menu #themeMenu="matMenu" class="theme-menu">
     @for (themeOption of allThemes; track themeOption) {
+      <!-- S6-09: a set of mutually-exclusive options reads as a radio group
+           to assistive tech, not a plain list of commands. -->
+      <!-- FF2 material fix 1: `MatMenuItem`'s own template has a single
+           `<ng-content select="mat-icon, [matMenuItemIcon]">` leading slot
+           that projects EVERY top-level `mat-icon` child into it together,
+           regardless of source order — so a second, trailing `mat-icon`
+           here (the check) was landing right after the leading icon and
+           before the label, not after it. Nesting the check inside
+           `.theme-label` keeps it out of that top-level icon selector, so
+           it renders where the markup already said it should: trailing the
+           text, in the label's own flex row. -->
       <button mat-menu-item
+        role="menuitemradio"
+        [attr.aria-checked]="isActive(themeOption.value, currentTheme)"
         (click)="setTheme(themeOption.value)"
         [class.active]="isActive(themeOption.value, currentTheme)">
-        <mat-icon>{{ themeOption.icon }}</mat-icon>
-        <span class="theme-label">{{ themeOption.label }}</span>
+        <mat-icon aria-hidden="true">{{ themeOption.icon }}</mat-icon>
+        <span class="theme-label">
+          <span class="theme-label__text">{{ themeOption.label }}</span>
+          @if (isActive(themeOption.value, currentTheme)) {
+            <mat-icon class="check-icon" aria-hidden="true">check</mat-icon>
+          }
+        </span>
       </button>
     }
   </mat-menu>

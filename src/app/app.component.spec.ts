@@ -23,4 +23,13 @@ describe('AppComponent', () => {
     const app = fixture.componentInstance;
     expect(app.title).toEqual('sockbowl-ng');
   });
+
+  it('wraps the routed page in one <main> landmark (S6-05)', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const mains = el.querySelectorAll('main');
+    expect(mains.length).toBe(1);
+    expect(mains[0].querySelector('router-outlet')).not.toBeNull();
+  });
 });

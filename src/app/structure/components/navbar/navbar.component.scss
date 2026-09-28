@@ -41,10 +41,12 @@
   }
 }
 
-/* Shared visible-focus treatment for all interactive navbar elements */
+/* Shared visible-focus treatment for all interactive navbar elements.
+   S6-05: destinations are `<a>` now (routerLink), so this covers anchors
+   alongside buttons — focus must look the same regardless of tag. */
 .navbar__brand:focus-visible,
 .navbar__social a:focus-visible,
-.navbar__auth button:focus-visible {
+.navbar__auth :where(button, a):focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   border-radius: 8px;
@@ -58,6 +60,7 @@
   transition: transform 0.2s ease;
   min-width: 0;
   flex: 1 1 auto;
+  text-decoration: none;
 
   &:hover {
     transform: translateY(-1px);
@@ -76,7 +79,7 @@
   font-size: clamp(1.4rem, 4vw, 2rem);
   width: clamp(1.4rem, 4vw, 2rem);
   height: clamp(1.4rem, 4vw, 2rem);
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
@@ -86,7 +89,7 @@
   font-size: clamp(1.05rem, 3.5vw, 1.8rem);
   font-weight: 800;
   letter-spacing: 0.05em;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -114,7 +117,7 @@
     transition: color 0.2s ease, background-color 0.2s ease;
 
     &:hover {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
     }
 
@@ -161,19 +164,19 @@
     }
   }
 
-  /* The Sign In button is the continuity anchor: it mirrors the primary button
-     on the branded Keycloak page (indigo gradient, glow-on-hover, display font),
-     so the redirect to sign in reads as one continuous surface. */
-  button {
+  /* The Sign In button is the continuity anchor to the branded sign-in page:
+     a flat accent fill, no gradient or glow, matching the button system used
+     everywhere else (S6-07). */
+  .navbar__signin {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
-    border-radius: var(--radius-full);
-    background: linear-gradient(180deg, var(--accent-primary), #4f46e5) !important;
-    color: #fff !important;
-    box-shadow: 0 6px 18px var(--glow-primary);
-    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    --mat-button-filled-container-shape: var(--radius-md);
+    --mat-button-filled-container-color: var(--accent-primary);
+    --mat-button-filled-label-text-color: var(--on-accent-primary);
+    box-shadow: none;
+    transition: background-color 0.15s ease;
 
     .navbar__btn-label {
       font-family: var(--font-display);
@@ -181,14 +184,9 @@
       letter-spacing: 0.01em;
     }
 
-    &:hover {
-      background: linear-gradient(180deg, var(--accent-primary-hover), var(--accent-primary)) !important;
-      box-shadow: 0 10px 26px var(--glow-primary);
-      transform: translateY(-1px);
-    }
-
-    &:active {
-      transform: translateY(0);
+    &:hover,
+    &:focus-visible {
+      --mat-button-filled-container-color: var(--accent-primary-hover);
     }
   }
 }
@@ -202,33 +200,15 @@
     gap: 0.5rem;
   }
 
-  .navbar__user-name {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.85rem;
-    background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
-    border-radius: 20px;
-    color: var(--text-primary);
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-
-    mat-icon {
-      font-size: 1.5rem;
-      width: 1.5rem;
-      height: 1.5rem;
-      flex-shrink: 0;
-    }
-  }
-
-  button {
+  /* S6-05: role destinations are `<a routerLink>` now, not `<button>`; the
+     account trigger (opens a menu, not a route) stays a button. Both take
+     the same look. */
+  :where(button, a) {
     display: flex;
     align-items: center;
     gap: 0.25rem;
     color: var(--text-secondary);
+    text-decoration: none;
     transition: color 0.2s ease, background-color 0.2s ease;
     white-space: nowrap;
 
@@ -239,28 +219,120 @@
       flex-shrink: 0;
     }
 
+    .navbar__caret {
+      font-size: 1.1rem;
+      width: 1.1rem;
+      height: 1.1rem;
+      margin-left: -0.25rem;
+      opacity: 0.7;
+    }
+
     &:hover {
       color: var(--text-primary);
       background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
     }
   }
+
+  /* FORM's token notes reserve `--radius-full` for the buzzer and status
+     dots; buttons take `--radius-md` (contract.md's token notes, and
+     reconciled into FIRST VIEWPORT at contract.md:42 — S6-FF2-04). Material
+     text buttons default their container-shape token to `corner-full` (a
+     full pill), so every toolbar destination gets the same straight-cornered
+     shape regardless of active state, and the active mark below reads as a
+     straight underline, not a crescent following a pill's curve. */
+  .navbar__role-btn {
+    --mat-button-text-container-shape: var(--radius-md);
+  }
+
+  /* S6-05: the current destination reads differently from hover/focus — an
+     accent label plus a 2px inset mark (contract FORM). Toolbar items get a
+     bottom inset (they sit in a horizontal row); menu items get a left
+     inset instead, since a bottom rule would read like a row divider in a
+     vertical list. `[mat-menu-item]` is an attribute selector, so it also
+     reaches the admin submenu's and account menu's `<a mat-menu-item>`
+     items, which don't carry `.navbar__role-menu-item` (that class is only
+     the mobile-fold duplicates). */
+  .navbar__role-btn.navbar__active {
+    color: var(--accent-primary-text);
+    /* FF3: `color` alone can't win here. The frozen
+       `_material-overrides.scss` sets
+       `.mat-mdc-button:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
+       color: var(--text-primary) !important; }` (its own comment: unthemed
+       buttons fall back to MDC's default label, which is invisible in dark
+       themes, so every plain nav button gets forced to `--text-primary`
+       unless it opts out with a Material `color` input). No specificity or
+       token beats an `!important` on the same property, and this component
+       can't add one of its own (contract FORM/OWN-WORLD's no-`!important`
+       rule) or touch that frozen file. So each of these links' template now
+       carries `mat-accent` as a second class in its `routerLinkActive`
+       string (see navbar.component.html) — exactly the escape hatch that
+       file's own comment names — so `.mat-accent` toggles on only while
+       active, exempting just that state from the frozen selector. With the
+       exemption in place, Material's own unforced rule
+       (`.mat-mdc-button:not(:disabled) { color:
+       var(--mat-button-text-label-text-color, var(--mat-sys-primary)); }`)
+       takes over, and this custom property is what it then reads. */
+    --mat-button-text-label-text-color: var(--accent-primary-text);
+    box-shadow: inset 0 -2px 0 0 var(--accent-primary);
+
+    &:hover {
+      color: var(--accent-primary-text);
+    }
+  }
+
+  .navbar__account-trigger {
+    font-weight: 600;
+
+    .navbar__btn-label {
+      /* S6-11: this span's actual parent is Material's own
+         `.mdc-button__label` wrapper (block, not flex), so the span itself
+         renders `display: inline` — and `max-width`/`overflow: hidden` are
+         no-ops on an inline box. `inline-block` is what makes the rest of
+         this rule (plus `text-overflow: ellipsis`, itself a no-op without
+         `white-space: nowrap`) actually clip a long, unbroken display name
+         instead of growing the toolbar to two lines. The `title` attribute
+         on this span carries the full name for a hover/long-press tooltip. */
+      display: inline-block;
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 12rem;
+    }
+  }
+}
+
+/* S6-03: the account menu's mobile-only fold targets (role destinations and
+   the divider that separates them from Sign out) render in the DOM at every
+   width — the `mat-menu` popup is only instantiated on open, so there's no
+   always-visible duplicate to worry about — but stay display:none above
+   640px, where the toolbar's own `.navbar__role-btn` copies are the single
+   visible destination. The `max-width: 640px` query further down flips both
+   to visible and hides the toolbar copies. */
+.navbar__role-menu-item,
+.navbar__mobile-divider {
+  display: none;
+}
+
+/* S6-05: the current destination's menu-item copy (admin submenu, account
+   menu, and the mobile-fold duplicates alike — `[mat-menu-item]` is an
+   attribute selector, so it doesn't care which of those it is) gets the
+   same accent-text-plus-inset mark as its toolbar counterpart, just on the
+   leading edge instead of the underside (a vertical list, not a row). */
+[mat-menu-item].navbar__active {
+  color: var(--accent-primary-text);
+  box-shadow: inset 2px 0 0 0 var(--accent-primary);
 }
 
 /* ---- Responsive condensing ---- */
 
-/* Tablets / small screens: hide button text labels, keep icons */
-@media (max-width: 768px) {
+/* Tablets / small screens: hide button text labels, keep icons.
+   S6-03: 820px (the contract's tablet overflow-check width, with an admin's
+   full label set — "Admin" + caret, "Packets", the account name) overflowed
+   by a few px at the old 768px cutoff, so this now covers 820 too. */
+@media (max-width: 820px) {
   .navbar__auth-user {
-    .navbar__user-name {
-      padding: 0.4rem;
-      max-width: 150px;
-
-      .navbar__btn-label {
-        display: none;
-      }
-    }
-
-    button {
+    :where(button, a) {
       padding: 0 0.5rem;
 
       .navbar__btn-label {
@@ -270,7 +342,37 @@
   }
 }
 
-/* Phones: drop "Playing as Guest" text, condense Sign In to icon + short label */
+/* S6-03: below 640px the bar keeps only brand, theme and the account
+   trigger (or Sign In) — every role destination (Moderation, the Admin
+   menu, standalone Taxonomy, Packets) folds into the account menu instead,
+   so an admin's 6-target toolbar never has to fit beside the wordmark on a
+   280-390px screen. `.navbar__role-menu-item`/`.navbar__mobile-divider`
+   (inside `#accountMenu`, in the template) are this fold's other half: they
+   stay hidden above 640px, where the toolbar copy is the one visible
+   destination. */
+@media (max-width: 640px) {
+  /* `.navbar__auth-user :where(button, a) { display: flex; ... }` above is
+     one class (`:where()` itself carries zero specificity, S6-05), so a
+     bare `.navbar__role-btn` rule would tie it and lose on source order —
+     this stays nested under `.navbar__auth-user` (two classes) to win on
+     specificity rather than reaching for `!important`. */
+  .navbar__auth-user .navbar__role-btn {
+    display: none;
+  }
+
+  .navbar__role-menu-item {
+    display: flex;
+  }
+
+  .navbar__mobile-divider {
+    display: block;
+  }
+}
+
+/* Phones: condense Sign In to icon + short label. The "Playing as Guest"
+   pill has no room beside it at this width (S6-15) — status stays
+   perceivable through the button's accessible name (see the template),
+   not a visual tag that would either overflow or need its own drop point. */
 @media (max-width: 640px) {
   .navbar__auth-guest {
     .navbar__guest-label {

@@ -1,5 +1,8 @@
 .not-found {
-  min-height: 100dvh;
+  // Sized to the content area under the sticky navbar (56px mobile / 64px
+  // desktop), not the full viewport, so it never adds its own scroll
+  // (S6-14).
+  min-height: calc(100dvh - 56px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -10,12 +13,46 @@
   background: var(--bg-primary);
   color: var(--text-primary);
 
-  h1 {
+  @media (min-width: 641px) {
+    min-height: calc(100dvh - 64px);
+  }
+
+  .not-found__headline {
     font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   p {
     color: var(--text-secondary);
     margin: 0;
+  }
+
+  .not-found__path {
+    max-width: 40ch;
+    overflow-wrap: anywhere;
+
+    code {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      padding: 0.15rem 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+    }
+  }
+
+  .not-found__home {
+    --mat-button-filled-container-shape: var(--radius-md);
+    --mat-button-filled-container-color: var(--accent-primary);
+    --mat-button-filled-label-text-color: var(--on-accent-primary);
+    box-shadow: none;
+
+    &:hover,
+    &:focus-visible {
+      --mat-button-filled-container-color: var(--accent-primary-hover);
+    }
   }
 }
