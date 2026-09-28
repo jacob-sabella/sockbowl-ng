@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,6 +25,7 @@ import {
   UserUsageDetail,
   UserUsageSummary,
 } from '../../../core/models/usage-models';
+import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
 import { EditQuotaDialogComponent, EditQuotaDialogResult } from './edit-quota-dialog/edit-quota-dialog.component';
 import { BanUserDialogComponent } from './ban-user-dialog/ban-user-dialog.component';
 import { IpBanDialogComponent } from './ip-ban-dialog/ip-ban-dialog.component';
@@ -66,6 +67,8 @@ export class AdminUsageComponent implements OnInit {
   private banService = inject(BanService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
+  private confirmDialogService = inject(ConfirmDialogService);
 
   readonly displayedColumns = ['user', 'tier', 'lastSeen', 'status', 'sessions', 'packets', 'expand'];
   readonly metricLabel = metricLabel;
@@ -88,6 +91,8 @@ export class AdminUsageComponent implements OnInit {
 
   recentEvents: RateLimitEvent[] = [];
   eventsLoading = true;
+  /** S5-06: kept separate from an empty list, so a failed fetch never reads as "No recent rejections." */
+  eventsError = false;
 
   ngOnInit(): void {
     this.load();
@@ -103,11 +108,13 @@ export class AdminUsageComponent implements OnInit {
         this.rows = page.content;
         this.totalElements = page.totalElements;
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load usage', err);
         this.error = 'Failed to load usage data.';
         this.loading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -118,28 +125,43 @@ export class AdminUsageComponent implements OnInit {
       next: (g) => {
         this.global = g;
         this.globalLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load global usage', err);
         this.global = null;
         this.globalLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
 
   loadEvents(): void {
     this.eventsLoading = true;
+    this.eventsError = false;
     this.usageService.events(100).subscribe({
       next: (events) => {
         this.recentEvents = events;
         this.eventsLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load rejection events', err);
         this.recentEvents = [];
         this.eventsLoading = false;
+        this.eventsError = true;
+        this.cdr.markForCheck();
       },
     });
+  }
+
+  /**
+   * S5-06: a degraded-dependency banner, named rather than silent, derived
+   * only from the existing "—" signal (`packetsDisplay`) — never invented.
+   * Only fires once the table has data, so it can't flash during loading.
+   */
+  get packetCountsDegraded(): boolean {
+    return !this.loading && !this.error && this.rows.length > 0 && this.rows.every((row) => row.packetsOwned == null);
   }
 
   onSearch(): void {
@@ -179,6 +201,11 @@ export class AdminUsageComponent implements OnInit {
     this.loadDetail(row.keycloakId);
   }
 
+  /** Retries a failed detail fetch without collapsing the row (unlike `toggleDetail`, S5-06). */
+  retryDetail(row: UserUsageSummary): void {
+    this.loadDetail(row.keycloakId);
+  }
+
   private loadDetail(sub: string): void {
     this.detail = null;
     this.detailLoading = true;
@@ -187,11 +214,13 @@ export class AdminUsageComponent implements OnInit {
       next: (detail) => {
         this.detail = detail;
         this.detailLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load usage detail', err);
         this.detailError = 'Failed to load detail.';
         this.detailLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -227,17 +256,32 @@ export class AdminUsageComponent implements OnInit {
       });
   }
 
+  /** Confirms, naming the target and the scope, before resetting one metric or every daily metric (S5-02). */
   resetUsage(row: UserUsageSummary, metric?: string): void {
-    this.usageService.resetUsage(row.keycloakId, metric).subscribe({
-      next: () => {
-        this.snackBar.open('Usage reset', 'Dismiss', { duration: 3000 });
-        this.refreshRow(row.keycloakId);
-      },
-      error: (err) => {
-        console.error('Failed to reset usage', err);
-        this.snackBar.open('Failed to reset usage', 'Dismiss', { duration: 4000 });
-      },
-    });
+    const who = row.displayName || row.username || row.keycloakId;
+    const what = metric ? `their ${metricLabel(metric)} usage` : 'all of their daily usage';
+    this.confirmDialogService
+      .confirm({
+        title: 'Reset usage',
+        message: `Reset ${what} for "${who}"?`,
+        confirmText: 'Reset',
+        destructive: true,
+      })
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.usageService.resetUsage(row.keycloakId, metric).subscribe({
+          next: () => {
+            this.snackBar.open('Usage reset', 'Dismiss', { duration: 3000 });
+            this.refreshRow(row.keycloakId);
+          },
+          error: (err) => {
+            console.error('Failed to reset usage', err);
+            this.snackBar.open(err?.error?.message || 'Failed to reset usage', 'Dismiss', { duration: 4000 });
+          },
+        });
+      });
   }
 
   banUser(row: UserUsageSummary): void {
@@ -264,7 +308,8 @@ export class AdminUsageComponent implements OnInit {
       });
   }
 
-  banIp(ip: string): void {
+  /** Bans one of a user's last-seen IPs and refreshes the detail row so the new ban is reflected (S5-16). */
+  banIp(row: UserUsageSummary, ip: string): void {
     this.dialog
       .open(IpBanDialogComponent, { width: '400px', data: { cidr: ip } })
       .afterClosed()
@@ -273,7 +318,10 @@ export class AdminUsageComponent implements OnInit {
           return;
         }
         this.banService.createIpBan(result).subscribe({
-          next: () => this.snackBar.open('IP banned', 'Dismiss', { duration: 3000 }),
+          next: () => {
+            this.snackBar.open('IP banned', 'Dismiss', { duration: 3000 });
+            this.refreshRow(row.keycloakId);
+          },
           error: (err) => {
             console.error('Failed to ban IP', err);
             this.snackBar.open(err?.error?.message || 'Failed to ban IP', 'Dismiss', { duration: 4000 });
@@ -288,5 +336,52 @@ export class AdminUsageComponent implements OnInit {
     }
     const date = new Date(value);
     return isNaN(date.getTime()) ? value : date.toLocaleString();
+  }
+
+  /** Human label for a rejection event's service (`RateLimitEvent.svc`); raw code stays in a title/tooltip. */
+  svcLabel(svc: RateLimitEvent['svc']): string {
+    return svc === 'game' ? 'Game' : svc === 'questions' ? 'Questions' : svc;
+  }
+
+  /** Human label for a rejection event's kind (`RateLimitEvent.kind`); raw code stays in a title/tooltip. */
+  kindLabel(kind: RateLimitEvent['kind']): string {
+    switch (kind) {
+      case 'rate':
+        return 'Rate limit';
+      case 'quota':
+        return 'Quota';
+      case 'ban':
+        return 'Ban';
+      default:
+        return kind;
+    }
+  }
+
+  /**
+   * Human label for a rejection event's rate-limit policy (`RateLimitEvent.policy`,
+   * e.g. `stomp-flood`, `graphql-write`; sockbowl-interfaces.ts:701-702).
+   * `metricLabel` only knows M4 quota metrics, so it silently returned the
+   * raw kebab-case code for every rate-limit policy (M5 finish review, S5
+   * FF1 fix 4). Named policies get a hand-written label; anything unmapped
+   * still avoids leaking the raw code by title-casing the words instead.
+   * The raw code always stays available in a title/tooltip.
+   */
+  policyLabel(policy: string | null | undefined): string {
+    if (!policy) {
+      return 'Usage';
+    }
+    const known: Record<string, string> = {
+      'stomp-flood': 'Buzzer flood',
+      'stomp-buzz': 'Buzz',
+      'graphql-write': 'GraphQL write',
+    };
+    if (known[policy]) {
+      return known[policy];
+    }
+    return policy
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 }

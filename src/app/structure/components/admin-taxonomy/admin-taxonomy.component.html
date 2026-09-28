@@ -1,6 +1,6 @@
 <div class="admin-taxonomy">
   <h1 class="admin-taxonomy__title">
-    <mat-icon>category</mat-icon>
+    <mat-icon aria-hidden="true">category</mat-icon>
     Taxonomy
   </h1>
   <p class="admin-taxonomy__hint">
@@ -10,7 +10,7 @@
 
   @if (loading) {
     <div class="admin-taxonomy__status">
-      <mat-spinner diameter="32"></mat-spinner>
+      <mat-spinner diameter="32" aria-label="Loading taxonomy"></mat-spinner>
     </div>
   } @else if (loadError) {
     <p class="admin-taxonomy__error">{{ loadError }}</p>
@@ -31,7 +31,7 @@
                 type="submit"
                 [disabled]="creatingCategory || !newCategoryName.trim()"
               >
-                <mat-icon>add</mat-icon>
+                <mat-icon aria-hidden="true">add</mat-icon>
                 Add category
               </button>
             </form>
@@ -46,10 +46,11 @@
                       <button
                         mat-icon-button
                         class="admin-taxonomy__expand"
-                        [attr.aria-label]="expandedCategoryId === category.id ? 'Collapse' : 'Expand'"
+                        [attr.aria-label]="(expandedCategoryId === category.id ? 'Collapse ' : 'Expand ') + category.name"
+                        [attr.aria-expanded]="expandedCategoryId === category.id"
                         (click)="toggleCategory(category.id)"
                       >
-                        <mat-icon>{{ expandedCategoryId === category.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+                        <mat-icon aria-hidden="true">{{ expandedCategoryId === category.id ? 'expand_less' : 'expand_more' }}</mat-icon>
                       </button>
 
                       @if (renaming && renaming.kind === 'category' && renaming.id === category.id) {
@@ -57,18 +58,18 @@
                           <input matInput name="renameDraft" [(ngModel)]="renaming.draft" (keyup.enter)="confirmRename()" />
                         </mat-form-field>
                         <button mat-icon-button color="primary" aria-label="Save" [disabled]="renamingBusy" (click)="confirmRename()">
-                          <mat-icon>check</mat-icon>
+                          <mat-icon aria-hidden="true">check</mat-icon>
                         </button>
                         <button mat-icon-button aria-label="Cancel" (click)="cancelRename()">
-                          <mat-icon>close</mat-icon>
+                          <mat-icon aria-hidden="true">close</mat-icon>
                         </button>
                       } @else {
                         <span class="admin-taxonomy__node-name">{{ category.name }}</span>
-                        <button mat-icon-button aria-label="Rename" (click)="startRename('category', category.id, category.name)">
-                          <mat-icon>edit</mat-icon>
+                        <button mat-icon-button [attr.aria-label]="'Rename category ' + category.name" (click)="startRename('category', category.id, category.name)">
+                          <mat-icon aria-hidden="true">edit</mat-icon>
                         </button>
-                        <button mat-icon-button aria-label="Merge" (click)="startMerge('category', category.id, category.name)">
-                          <mat-icon>call_merge</mat-icon>
+                        <button mat-icon-button [attr.aria-label]="'Merge category ' + category.name" (click)="startMerge('category', category.id, category.name)">
+                          <mat-icon aria-hidden="true">call_merge</mat-icon>
                         </button>
                       }
                     </div>
@@ -106,26 +107,26 @@
                                   <input matInput name="renameDraft" [(ngModel)]="renaming.draft" (keyup.enter)="confirmRename()" />
                                 </mat-form-field>
                                 <button mat-icon-button color="primary" aria-label="Save" [disabled]="renamingBusy" (click)="confirmRename()">
-                                  <mat-icon>check</mat-icon>
+                                  <mat-icon aria-hidden="true">check</mat-icon>
                                 </button>
                                 <button mat-icon-button aria-label="Cancel" (click)="cancelRename()">
-                                  <mat-icon>close</mat-icon>
+                                  <mat-icon aria-hidden="true">close</mat-icon>
                                 </button>
                               } @else {
                                 <span class="admin-taxonomy__node-name">{{ sub.name }}</span>
                                 <button
                                   mat-icon-button
-                                  aria-label="Rename"
+                                  [attr.aria-label]="'Rename subcategory ' + sub.name"
                                   (click)="startRename('subcategory', sub.id, sub.name, category.id)"
                                 >
-                                  <mat-icon>edit</mat-icon>
+                                  <mat-icon aria-hidden="true">edit</mat-icon>
                                 </button>
                                 <button
                                   mat-icon-button
-                                  aria-label="Merge"
+                                  [attr.aria-label]="'Merge subcategory ' + sub.name"
                                   (click)="startMerge('subcategory', sub.id, sub.name, category.id)"
                                 >
-                                  <mat-icon>call_merge</mat-icon>
+                                  <mat-icon aria-hidden="true">call_merge</mat-icon>
                                 </button>
                               }
                             </div>
@@ -170,7 +171,7 @@
                             type="submit"
                             [disabled]="creatingSubcategory || !newSubcategoryName.trim()"
                           >
-                            <mat-icon>add</mat-icon>
+                            <mat-icon aria-hidden="true">add</mat-icon>
                             Add subcategory
                           </button>
                         </form>
@@ -199,7 +200,7 @@
                 type="submit"
                 [disabled]="creatingDifficulty || !newDifficultyName.trim()"
               >
-                <mat-icon>add</mat-icon>
+                <mat-icon aria-hidden="true">add</mat-icon>
                 Add difficulty
               </button>
             </form>
@@ -216,26 +217,26 @@
                           <input matInput name="renameDraft" [(ngModel)]="renaming.draft" (keyup.enter)="confirmRename()" />
                         </mat-form-field>
                         <button mat-icon-button color="primary" aria-label="Save" [disabled]="renamingBusy" (click)="confirmRename()">
-                          <mat-icon>check</mat-icon>
+                          <mat-icon aria-hidden="true">check</mat-icon>
                         </button>
                         <button mat-icon-button aria-label="Cancel" (click)="cancelRename()">
-                          <mat-icon>close</mat-icon>
+                          <mat-icon aria-hidden="true">close</mat-icon>
                         </button>
                       } @else {
                         <span class="admin-taxonomy__node-name">{{ difficulty.name }}</span>
                         <button
                           mat-icon-button
-                          aria-label="Rename"
+                          [attr.aria-label]="'Rename difficulty ' + difficulty.name"
                           (click)="startRename('difficulty', difficulty.id, difficulty.name)"
                         >
-                          <mat-icon>edit</mat-icon>
+                          <mat-icon aria-hidden="true">edit</mat-icon>
                         </button>
                         <button
                           mat-icon-button
-                          aria-label="Merge"
+                          [attr.aria-label]="'Merge difficulty ' + difficulty.name"
                           (click)="startMerge('difficulty', difficulty.id, difficulty.name)"
                         >
-                          <mat-icon>call_merge</mat-icon>
+                          <mat-icon aria-hidden="true">call_merge</mat-icon>
                         </button>
                       }
                     </div>

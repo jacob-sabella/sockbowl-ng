@@ -76,12 +76,13 @@ describe('AdminHomeComponent', () => {
     expect(component.aiBudgetPercent()).toBe(0);
   });
 
-  it('does not crash when the global usage fetch fails', () => {
+  it('keeps the AI-budget slot with "unavailable" and a Retry, outside the card link, on a fetch failure (S5-06)', () => {
     usageServiceSpy = jasmine.createSpyObj('UsageService', ['global']);
     usageServiceSpy.global.and.returnValue(throwError(() => new Error('down')));
     const authSpy = jasmine.createSpyObj('AuthService', ['hasPermission']);
     authSpy.hasPermission.and.returnValue(true);
     TestBed.configureTestingModule({
+      imports: [RouterTestingModule],
       declarations: [AdminHomeComponent],
       providers: [
         { provide: AuthService, useValue: authSpy },
@@ -92,7 +93,43 @@ describe('AdminHomeComponent', () => {
     fixture = TestBed.createComponent(AdminHomeComponent);
     component = fixture.componentInstance;
     expect(() => fixture.detectChanges()).not.toThrow();
+
     expect(component.globalUsage).toBeNull();
+    expect(component.globalUsageError).toBeTrue();
+    expect(component.globalUsageLoading).toBeFalse();
+    const root: HTMLElement = fixture.nativeElement;
+    const slot = root.querySelector('.admin-home__ai-budget-slot');
+    expect(slot?.textContent).toContain('AI budget unavailable');
+    // The Retry button must not be nested inside the card's own <a> (axe "nested-interactive").
+    expect(root.querySelector('a.admin-home__card-link--inline button')).toBeNull();
+  });
+
+  it('Retry re-fetches global usage', () => {
+    usageServiceSpy = jasmine.createSpyObj('UsageService', ['global']);
+    usageServiceSpy.global.and.returnValue(throwError(() => new Error('down')));
+    const authSpy = jasmine.createSpyObj('AuthService', ['hasPermission']);
+    authSpy.hasPermission.and.returnValue(true);
+    TestBed.configureTestingModule({
+      imports: [RouterTestingModule],
+      declarations: [AdminHomeComponent],
+      providers: [
+        { provide: AuthService, useValue: authSpy },
+        { provide: UsageService, useValue: usageServiceSpy },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(AdminHomeComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    usageServiceSpy.global.and.returnValue(
+      of({ aiServerKey: { used: 1, limit: 10, resetsAt: null }, activeHostedSessions: 0, topGuestIps: [], rejectionsLastHour: 0 })
+    );
+
+    component.loadGlobalUsage();
+    fixture.detectChanges();
+
+    expect(component.globalUsageError).toBeFalse();
+    expect(component.globalUsage?.aiServerKey.used).toBe(1);
   });
 });
 
@@ -156,5 +193,18 @@ describe('AdminHomeComponent permissions (FIX-N2)', () => {
     setUp(true);
     expect(cardTitles()).toContain('Bans');
     expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open ban management"]')).not.toBeNull();
+  });
+
+  it('hides the Taxonomy card for an admin without taxonomy:manage (S5-13)', () => {
+    setUp(false);
+    expect(cardTitles()).not.toContain('Taxonomy');
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open taxonomy"]')).toBeNull();
+  });
+
+  it('shows a Taxonomy link for an admin holding taxonomy:manage (S5-13)', () => {
+    authSpy.hasPermission.and.callFake((p: string) => p === 'taxonomy:manage');
+    fixture.detectChanges();
+    expect(cardTitles()).toContain('Taxonomy');
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[aria-label="Open taxonomy"]')).not.toBeNull();
   });
 });

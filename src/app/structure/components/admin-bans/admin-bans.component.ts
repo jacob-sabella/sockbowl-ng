@@ -1,8 +1,11 @@
 import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
+import { ErrorStateMatcher } from '@angular/material/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BanService } from '../../../core/services/ban.service';
 import { Ban, CreateBanRequest, CreateIpBanRequest, IpBan } from '../../../core/models/ban-models';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
+import { USER_BAN_EXPIRY_OPTIONS } from '../admin-usage/ban-user-dialog/ban-user-dialog.component';
 
 /** TTL choices for the "Ban IP" form, in seconds. Server max is 30 days (§2.4). */
 export const IP_BAN_TTL_OPTIONS: { label: string; seconds: number }[] = [
@@ -57,6 +60,26 @@ export function validateCidr(value: string): string | null {
 }
 
 /**
+ * `mat-form-field`'s default `ErrorStateMatcher` only flags a control
+ * invalid via Angular's own validators (here, just `required`), so a
+ * non-empty but malformed CIDR never flipped the field into its error
+ * display (S5-04: the projected `<mat-error>` stayed hidden no matter what
+ * `@if` wrapped it, because `mat-form-field` switches to showing it, and
+ * sets `aria-invalid`/`aria-describedby` on the input, only when
+ * `errorState` is true). Delegating `isErrorState` to a callback lets the
+ * CIDR fields opt into the same error-display machinery from a plain
+ * string error computed by {@link validateCidr}, without a template-driven
+ * `NG_VALIDATORS` directive (which would need registering in the frozen
+ * `app.module.ts`).
+ */
+class CallbackErrorStateMatcher implements ErrorStateMatcher {
+  constructor(private readonly hasError: () => boolean) {}
+  isErrorState(): boolean {
+    return this.hasError();
+  }
+}
+
+/**
  * Mobile-friendly admin view for managing user and IP bans: list active
  * bans, add a new ban by Keycloak subject or by CIDR, and remove either
  * kind (M4-AB-02 UI).
@@ -71,9 +94,14 @@ export function validateCidr(value: string): string | null {
 export class AdminBansComponent implements OnInit {
   private banService = inject(BanService);
   private snackBar = inject(MatSnackBar);
+  private confirmDialogService = inject(ConfirmDialogService);
   auth = inject(AuthService);
 
   readonly ipBanTtlOptions = IP_BAN_TTL_OPTIONS;
+  readonly userBanExpiryOptions = USER_BAN_EXPIRY_OPTIONS;
+
+  /** Bound to the IP-ban form's CIDR field so a malformed, non-empty value actually shows its `mat-error` (S5-04). */
+  readonly ipCidrErrorStateMatcher = new CallbackErrorStateMatcher(() => !!this.ipCidrError);
 
   bans: Ban[] = [];
   loading = true;
@@ -85,6 +113,8 @@ export class AdminBansComponent implements OnInit {
     reason: '',
     expiresAt: null
   };
+  /** Seconds until the new ban expires, or `null` for Permanent (S5-03: not the default). */
+  newBanExpirySeconds: number | null = USER_BAN_EXPIRY_OPTIONS[2].seconds; // 7 days
 
   ipBans: IpBan[] = [];
   ipBansLoading = true;
@@ -126,38 +156,73 @@ export class AdminBansComponent implements OnInit {
     }
 
     this.submitting = true;
+    const expiresAt =
+      this.newBanExpirySeconds === null ? null : new Date(Date.now() + this.newBanExpirySeconds * 1000).toISOString();
     const payload: CreateBanRequest = {
       bannedKeycloakId: this.newBan.bannedKeycloakId.trim(),
       reason: this.newBan.reason?.trim() || undefined,
-      expiresAt: this.newBan.expiresAt || null
+      expiresAt
     };
 
     this.banService.createBan(payload).subscribe({
       next: () => {
         this.snackBar.open('User banned', 'Dismiss', { duration: 3000 });
         this.newBan = { bannedKeycloakId: '', reason: '', expiresAt: null };
+        this.newBanExpirySeconds = USER_BAN_EXPIRY_OPTIONS[2].seconds;
         this.submitting = false;
         this.loadBans();
       },
       error: (err) => {
         console.error('Failed to create ban', err);
-        this.snackBar.open('Failed to create ban', 'Dismiss', { duration: 4000 });
+        // S5-09: surface the server's own message the way addIpBan already
+        // does (403/409 come through here; 429/503 quota and rate-limit
+        // copy is shown once by the global RateLimitInterceptor).
+        this.snackBar.open(err?.error?.message || 'Failed to create ban', 'Dismiss', { duration: 4000 });
         this.submitting = false;
       }
     });
   }
 
+  /** Removes a user ban, after naming the target in a confirmation, with an Undo that restores it (S5-02). */
   removeBan(ban: Ban): void {
-    this.banService.removeBan(ban.id).subscribe({
-      next: () => {
-        this.snackBar.open('Ban removed', 'Dismiss', { duration: 3000 });
-        this.loadBans();
-      },
-      error: (err) => {
-        console.error('Failed to remove ban', err);
-        this.snackBar.open('Failed to remove ban', 'Dismiss', { duration: 4000 });
-      }
-    });
+    this.confirmDialogService
+      .confirm({
+        title: 'Remove ban',
+        message: `Remove the ban on "${ban.bannedKeycloakId}"? They will be able to join and play games again.`,
+        confirmText: 'Remove ban',
+        destructive: true
+      })
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.banService.removeBan(ban.id).subscribe({
+          next: () => {
+            const ref = this.snackBar.open('Ban removed', 'Undo', { duration: 6000 });
+            ref.onAction().subscribe(() => this.undoRemoveBan(ban));
+            this.loadBans();
+          },
+          error: (err) => {
+            console.error('Failed to remove ban', err);
+            this.snackBar.open(err?.error?.message || 'Failed to remove ban', 'Dismiss', { duration: 4000 });
+          }
+        });
+      });
+  }
+
+  private undoRemoveBan(ban: Ban): void {
+    this.banService
+      .createBan({ bannedKeycloakId: ban.bannedKeycloakId, reason: ban.reason ?? undefined, expiresAt: ban.expiresAt })
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Ban restored', 'Dismiss', { duration: 3000 });
+          this.loadBans();
+        },
+        error: (err) => {
+          console.error('Failed to restore ban', err);
+          this.snackBar.open('Failed to restore the ban', 'Dismiss', { duration: 4000 });
+        }
+      });
   }
 
   formatDate(value: string | null): string {
@@ -166,6 +231,44 @@ export class AdminBansComponent implements OnInit {
     }
     const date = new Date(value);
     return isNaN(date.getTime()) ? value : date.toLocaleString();
+  }
+
+  /**
+   * A relative expiry ("in 27 days"/"3 hours ago"), with `formatDate` kept
+   * as the absolute value for a title/tooltip (S5-18, only if cheap).
+   */
+  formatRelativeExpiry(value: string | null): string {
+    if (!value) {
+      return 'Never';
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return value;
+    }
+    const diffMs = date.getTime() - Date.now();
+    const absMs = Math.abs(diffMs);
+    const minute = 60_000;
+    const hour = 3_600_000;
+    const day = 86_400_000;
+
+    let amount: number;
+    let unit: string;
+    if (absMs < minute) {
+      return diffMs >= 0 ? 'in under a minute' : 'just now';
+    } else if (absMs < hour) {
+      amount = Math.round(absMs / minute);
+      unit = 'minute';
+    } else if (absMs < day) {
+      amount = Math.round(absMs / hour);
+      unit = 'hour';
+    } else {
+      amount = Math.round(absMs / day);
+      unit = 'day';
+    }
+    if (amount !== 1) {
+      unit += 's';
+    }
+    return diffMs >= 0 ? `in ${amount} ${unit}` : `${amount} ${unit} ago`;
   }
 
   loadIpBans(): void {
@@ -182,6 +285,15 @@ export class AdminBansComponent implements OnInit {
         this.ipBansLoading = false;
       }
     });
+  }
+
+  /** Live-validates the CIDR field as the admin types/leaves it, so the error shows before submit is attempted (S5-04). */
+  onIpCidrChange(): void {
+    this.ipCidrError = this.newIpBan.cidr.trim() ? validateCidr(this.newIpBan.cidr) : null;
+  }
+
+  onIpCidrBlur(): void {
+    this.ipCidrError = validateCidr(this.newIpBan.cidr);
   }
 
   addIpBan(): void {
@@ -212,15 +324,42 @@ export class AdminBansComponent implements OnInit {
     });
   }
 
+  /** Removes an IP ban, after naming the target in a confirmation, with an Undo that restores it (S5-02). */
   removeIpBan(ban: IpBan): void {
-    this.banService.removeIpBan(ban.id).subscribe({
+    this.confirmDialogService
+      .confirm({
+        title: 'Remove IP ban',
+        message: `Remove the ban on "${ban.cidr}"?`,
+        confirmText: 'Remove ban',
+        destructive: true
+      })
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.banService.removeIpBan(ban.id).subscribe({
+          next: () => {
+            const ref = this.snackBar.open('IP ban removed', 'Undo', { duration: 6000 });
+            ref.onAction().subscribe(() => this.undoRemoveIpBan(ban));
+            this.loadIpBans();
+          },
+          error: (err) => {
+            console.error('Failed to remove IP ban', err);
+            this.snackBar.open(err?.error?.message || 'Failed to remove IP ban', 'Dismiss', { duration: 4000 });
+          }
+        });
+      });
+  }
+
+  private undoRemoveIpBan(ban: IpBan): void {
+    this.banService.createIpBan({ cidr: ban.cidr, reason: ban.reason ?? undefined, expiresAt: ban.expiresAt }).subscribe({
       next: () => {
-        this.snackBar.open('IP ban removed', 'Dismiss', { duration: 3000 });
+        this.snackBar.open('IP ban restored', 'Dismiss', { duration: 3000 });
         this.loadIpBans();
       },
       error: (err) => {
-        console.error('Failed to remove IP ban', err);
-        this.snackBar.open('Failed to remove IP ban', 'Dismiss', { duration: 4000 });
+        console.error('Failed to restore IP ban', err);
+        this.snackBar.open('Failed to restore the IP ban', 'Dismiss', { duration: 4000 });
       }
     });
   }

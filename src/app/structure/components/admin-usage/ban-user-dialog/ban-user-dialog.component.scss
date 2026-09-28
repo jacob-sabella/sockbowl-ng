@@ -1,0 +1,16 @@
+.ban-user-dialog {
+  &__target {
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  &__consequence {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin: 0 0 16px;
+  }
+
+  &__field {
+    width: 100%;
+  }
+}

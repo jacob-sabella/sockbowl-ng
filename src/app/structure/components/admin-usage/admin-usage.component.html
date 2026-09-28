@@ -3,6 +3,7 @@
     <mat-icon aria-hidden="true">insights</mat-icon>
     Usage &amp; quotas
   </h1>
+  <p class="admin-usage__lede">The AI budget, per-user quotas, and recent rejections.</p>
 
   <!-- Global card -->
   <mat-card class="admin-usage__card">
@@ -11,9 +12,12 @@
     </mat-card-header>
     <mat-card-content>
       @if (globalLoading) {
-        <div class="admin-usage__status"><mat-spinner diameter="28"></mat-spinner></div>
+        <div class="admin-usage__status"><mat-spinner diameter="28" aria-label="Loading global usage"></mat-spinner></div>
       } @else if (!global) {
-        <p class="admin-usage__empty">Global usage is unavailable right now.</p>
+        <div class="admin-usage__error-row">
+          <p class="admin-usage__empty">Global usage is unavailable right now.</p>
+          <button mat-button type="button" (click)="loadGlobal()">Retry</button>
+        </div>
       } @else {
         <div class="admin-usage__global">
           <div class="admin-usage__global-meter">
@@ -22,7 +26,12 @@
               <span>{{ global.aiServerKey.used }} / {{ global.aiServerKey.limit === -1 ? '∞' : global.aiServerKey.limit }}</span>
             </div>
             @if (global.aiServerKey.limit !== -1) {
-              <mat-progress-bar mode="determinate" [value]="(global.aiServerKey.used / global.aiServerKey.limit) * 100"></mat-progress-bar>
+              <mat-progress-bar
+                mode="determinate"
+                [value]="(global.aiServerKey.used / global.aiServerKey.limit) * 100"
+                aria-label="AI generation budget used"
+                [attr.aria-valuetext]="global.aiServerKey.used + ' of ' + global.aiServerKey.limit + ' AI generations used'"
+              ></mat-progress-bar>
             }
           </div>
 
@@ -63,22 +72,30 @@
       <mat-form-field appearance="outline" class="admin-usage__search">
         <mat-label>Search</mat-label>
         <input matInput name="search" [(ngModel)]="searchQuery" (keyup.enter)="onSearch()" placeholder="Username or Keycloak id" />
-        <button matSuffix mat-icon-button aria-label="Search" (click)="onSearch()">
-          <mat-icon>search</mat-icon>
+        <button matSuffix mat-icon-button class="admin-usage__icon-btn" aria-label="Search" (click)="onSearch()">
+          <mat-icon aria-hidden="true">search</mat-icon>
         </button>
       </mat-form-field>
 
       @if (loading) {
-        <div class="admin-usage__status"><mat-spinner diameter="32"></mat-spinner></div>
+        <div class="admin-usage__status"><mat-spinner diameter="32" aria-label="Loading users"></mat-spinner></div>
       } @else if (error) {
-        <p class="admin-usage__error">{{ error }}</p>
+        <div class="admin-usage__error-row">
+          <p class="admin-usage__error">{{ error }}</p>
+          <button mat-button type="button" (click)="load()">Retry</button>
+        </div>
       } @else if (rows.length === 0) {
         <p class="admin-usage__empty">No users match.</p>
       } @else {
+        @if (packetCountsDegraded) {
+          <div class="admin-usage__degraded">
+            Packet counts are unavailable (the questions service could not be reached). Other data below is unaffected.
+          </div>
+        }
         <table mat-table [dataSource]="rows" class="admin-usage__table" multiTemplateDataRows>
           <ng-container matColumnDef="user">
             <th mat-header-cell *matHeaderCellDef>User</th>
-            <td mat-cell *matCellDef="let row">
+            <td mat-cell *matCellDef="let row" data-label="User">
               <div class="admin-usage__user-cell">
                 <span class="admin-usage__user-name">{{ row.displayName || row.username || row.keycloakId }}</span>
                 <span class="admin-usage__user-id">{{ row.keycloakId }}</span>
@@ -88,17 +105,17 @@
 
           <ng-container matColumnDef="tier">
             <th mat-header-cell *matHeaderCellDef>Tier</th>
-            <td mat-cell *matCellDef="let row">{{ row.tier }}</td>
+            <td mat-cell *matCellDef="let row" data-label="Tier">{{ row.tier }}</td>
           </ng-container>
 
           <ng-container matColumnDef="lastSeen">
             <th mat-header-cell *matHeaderCellDef>Last seen</th>
-            <td mat-cell *matCellDef="let row">{{ formatDate(row.lastSeenAt) }}</td>
+            <td mat-cell *matCellDef="let row" data-label="Last seen">{{ formatDate(row.lastSeenAt) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="status">
             <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let row">
+            <td mat-cell *matCellDef="let row" [attr.data-label]="row.banned ? 'Status' : null">
               @if (row.banned) {
                 <mat-chip class="admin-usage__banned-chip">Banned</mat-chip>
               }
@@ -107,19 +124,25 @@
 
           <ng-container matColumnDef="sessions">
             <th mat-header-cell *matHeaderCellDef>Sessions</th>
-            <td mat-cell *matCellDef="let row">{{ row.activeSessions }}</td>
+            <td mat-cell *matCellDef="let row" data-label="Sessions">{{ row.activeSessions }}</td>
           </ng-container>
 
           <ng-container matColumnDef="packets">
             <th mat-header-cell *matHeaderCellDef>Packets</th>
-            <td mat-cell *matCellDef="let row">{{ packetsDisplay(row) }}</td>
+            <td mat-cell *matCellDef="let row" data-label="Packets">{{ packetsDisplay(row) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="expand">
             <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let row">
-              <button mat-icon-button [attr.aria-label]="expandedSub === row.keycloakId ? 'Collapse' : 'Expand'" (click)="toggleDetail(row)">
-                <mat-icon>{{ expandedSub === row.keycloakId ? 'expand_less' : 'expand_more' }}</mat-icon>
+            <td mat-cell *matCellDef="let row" class="admin-usage__expand-cell">
+              <button
+                mat-icon-button
+                class="admin-usage__icon-btn"
+                [attr.aria-label]="(expandedSub === row.keycloakId ? 'Collapse ' : 'Expand ') + (row.displayName || row.username || row.keycloakId)"
+                [attr.aria-expanded]="expandedSub === row.keycloakId"
+                (click)="toggleDetail(row)"
+              >
+                <mat-icon aria-hidden="true">{{ expandedSub === row.keycloakId ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
             </td>
           </ng-container>
@@ -129,10 +152,18 @@
               @if (expandedSub === row.keycloakId) {
                 <div class="admin-usage__detail">
                   @if (detailLoading) {
-                    <div class="admin-usage__status"><mat-spinner diameter="24"></mat-spinner></div>
+                    <div class="admin-usage__status"><mat-spinner diameter="24" aria-label="Loading user detail"></mat-spinner></div>
                   } @else if (detailError) {
-                    <p class="admin-usage__error">{{ detailError }}</p>
+                    <div class="admin-usage__error-row">
+                      <p class="admin-usage__error">{{ detailError }}</p>
+                      <button mat-button type="button" (click)="retryDetail(row)">Retry</button>
+                    </div>
                   } @else if (detail) {
+                    <p class="admin-usage__detail-help">
+                      Tier sets each metric's default limit; an override replaces it for this user only.
+                      Daily metrics reset at UTC midnight; concurrent and owned metrics recover as sessions
+                      end or items are removed.
+                    </p>
                     <div class="admin-usage__detail-grid">
                       <div class="admin-usage__counters">
                         @for (counter of detail.counters; track counter.metric) {
@@ -147,16 +178,26 @@
                               </span>
                             </div>
                             @if (!isUnlimited(counter)) {
-                              <mat-progress-bar mode="determinate" [value]="meterPercent(counter)"></mat-progress-bar>
+                              <mat-progress-bar
+                                mode="determinate"
+                                [value]="meterPercent(counter)"
+                                [attr.aria-label]="metricLabel(counter.metric) + ' used'"
+                                [attr.aria-valuetext]="counter.used + ' of ' + counter.limit + ' ' + metricLabel(counter.metric) + ' used'"
+                              ></mat-progress-bar>
                             }
                             <div class="admin-usage__counter-actions">
-                              <button mat-button (click)="editQuota(row, counter)">
-                                <mat-icon>edit</mat-icon>
+                              <button mat-button [attr.aria-label]="'Edit ' + metricLabel(counter.metric) + ' quota'" (click)="editQuota(row, counter)">
+                                <mat-icon aria-hidden="true">edit</mat-icon>
                                 Edit quota
                               </button>
                               @if (counter.kind === 'daily') {
-                                <button mat-button (click)="resetUsage(row, counter.metric)">
-                                  <mat-icon>restart_alt</mat-icon>
+                                <button
+                                  mat-button
+                                  class="admin-usage__danger-text-btn"
+                                  [attr.aria-label]="'Reset ' + metricLabel(counter.metric) + ' usage'"
+                                  (click)="resetUsage(row, counter.metric)"
+                                >
+                                  <mat-icon aria-hidden="true">restart_alt</mat-icon>
                                   Reset
                                 </button>
                               }
@@ -171,8 +212,8 @@
                           @for (ip of detail.lastIps; track ip) {
                             <div class="admin-usage__ip-row">
                               <span>{{ ip }}</span>
-                              <button mat-icon-button aria-label="Ban this IP" (click)="banIp(ip)">
-                                <mat-icon>block</mat-icon>
+                              <button mat-icon-button class="admin-usage__icon-btn" [attr.aria-label]="'Ban IP ' + ip" (click)="banIp(row, ip)">
+                                <mat-icon aria-hidden="true">block</mat-icon>
                               </button>
                             </div>
                           }
@@ -182,12 +223,22 @@
                         </div>
 
                         <div class="admin-usage__actions">
-                          <button mat-raised-button color="warn" (click)="banUser(row)">
-                            <mat-icon>gavel</mat-icon>
+                          <button
+                            mat-raised-button
+                            class="admin-usage__danger-btn"
+                            [attr.aria-label]="'Ban user ' + (row.displayName || row.username || row.keycloakId)"
+                            (click)="banUser(row)"
+                          >
+                            <mat-icon aria-hidden="true">gavel</mat-icon>
                             Ban user
                           </button>
-                          <button mat-button (click)="resetUsage(row)">
-                            <mat-icon>restart_alt</mat-icon>
+                          <button
+                            mat-button
+                            class="admin-usage__danger-text-btn"
+                            [attr.aria-label]="'Reset all daily usage for ' + (row.displayName || row.username || row.keycloakId)"
+                            (click)="resetUsage(row)"
+                          >
+                            <mat-icon aria-hidden="true">restart_alt</mat-icon>
                             Reset all daily
                           </button>
                         </div>
@@ -198,8 +249,8 @@
                             @for (event of detail.events; track $index) {
                               <div class="admin-usage__event-row">
                                 <span>{{ formatDate(event.ts) }}</span>
-                                <span>{{ event.policy }}</span>
-                                <span>{{ event.kind }}</span>
+                                <span [title]="event.policy">{{ policyLabel(event.policy) }}</span>
+                                <span [title]="event.kind">{{ kindLabel(event.kind) }}</span>
                               </div>
                             }
                           </div>
@@ -218,6 +269,7 @@
         </table>
 
         <mat-paginator
+          class="admin-usage__paginator"
           [length]="totalElements"
           [pageSize]="pageSize"
           [pageIndex]="pageIndex"
@@ -235,21 +287,37 @@
     </mat-card-header>
     <mat-card-content>
       @if (eventsLoading) {
-        <div class="admin-usage__status"><mat-spinner diameter="28"></mat-spinner></div>
+        <div class="admin-usage__status"><mat-spinner diameter="28" aria-label="Loading recent rejections"></mat-spinner></div>
+      } @else if (eventsError) {
+        <div class="admin-usage__error-row">
+          <p class="admin-usage__error">Recent rejections are unavailable right now.</p>
+          <button mat-button type="button" (click)="loadEvents()">Retry</button>
+        </div>
       } @else if (recentEvents.length === 0) {
         <p class="admin-usage__empty">No recent rejections.</p>
       } @else {
-        <div class="admin-usage__events">
-          @for (event of recentEvents; track $index) {
-            <div class="admin-usage__event-row">
-              <span>{{ formatDate(event.ts) }}</span>
-              <span>{{ event.svc }}</span>
-              <span>{{ event.policy }}</span>
-              <span>{{ event.kind }}</span>
-              <span>{{ event.sub || event.ip }}</span>
-            </div>
-          }
-        </div>
+        <table class="admin-usage__events-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Service</th>
+              <th>Type</th>
+              <th>Policy</th>
+              <th>User / IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (event of recentEvents; track $index) {
+              <tr>
+                <td data-label="Time">{{ formatDate(event.ts) }}</td>
+                <td data-label="Service" [title]="event.svc">{{ svcLabel(event.svc) }}</td>
+                <td data-label="Type" [title]="event.kind">{{ kindLabel(event.kind) }}</td>
+                <td data-label="Policy" [title]="event.policy">{{ policyLabel(event.policy) }}</td>
+                <td data-label="User / IP">{{ event.sub || event.ip || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
       }
     </mat-card-content>
   </mat-card>

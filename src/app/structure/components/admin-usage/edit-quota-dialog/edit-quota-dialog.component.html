@@ -6,7 +6,19 @@
   @if (!unlimited) {
     <mat-form-field appearance="outline" class="edit-quota-dialog__field">
       <mat-label>Limit</mat-label>
-      <input matInput type="number" name="limitValue" min="0" [(ngModel)]="limitValue" />
+      <input
+        matInput
+        type="number"
+        name="limitValue"
+        min="0"
+        step="1"
+        [(ngModel)]="limitValue"
+        required
+        [errorStateMatcher]="limitErrorStateMatcher"
+      />
+      @if (limitInvalid) {
+        <mat-error id="edit-quota-dialog-limit-error">Enter a whole number of 0 or more, or check Unlimited.</mat-error>
+      }
     </mat-form-field>
   }
 
@@ -18,10 +30,10 @@
 <mat-dialog-actions align="end">
   @if (data.overridden) {
     <button mat-button (click)="resetToDefault()">
-      <mat-icon>restart_alt</mat-icon>
+      <mat-icon aria-hidden="true">restart_alt</mat-icon>
       Reset to role default
     </button>
   }
   <button mat-button (click)="cancel()">Cancel</button>
-  <button mat-raised-button color="primary" (click)="save()">Save</button>
+  <button mat-raised-button color="primary" [disabled]="limitInvalid || submitting" (click)="save()">Save</button>
 </mat-dialog-actions>

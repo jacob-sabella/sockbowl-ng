@@ -1,5 +1,5 @@
 .admin-bans {
-  max-width: 760px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 16px;
   display: flex;
@@ -10,27 +10,108 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-tight);
     margin: 0;
   }
 
+  &__lede {
+    color: var(--text-secondary);
+    margin: -8px 0 0;
+  }
+
+  /* M5 finish review FF2 fix 2: this section h2 ("User bans"/"IP bans")
+     must clearly outrank the mat-card-title beneath it ("Active bans"/"Ban
+     a user", --text-xl/20px display face per the FF1 fix 2 comment above).
+     It was pinned to --text-lg (18px), smaller than the card title it
+     introduces, inverting the parent/child hierarchy. h2's global default
+     (styles/base/_typography.scss) is --text-3xl/30px, same as this page's
+     own h1 override just above — too close to the page title, so this
+     keeps its own size, just raised enough (--text-2xl/24px, still under
+     the h1's 30px) to read as clearly bigger than the 20px card title. */
   &__subtitle {
-    font-size: 1.1rem;
+    font-size: var(--text-2xl);
     margin: 8px 0 0;
+  }
+
+  &__consequence {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin: 0 0 12px;
   }
 
   &__card {
     width: 100%;
+
+    /* M5 finish review FF1 fix 2: card titles get the Headline/display
+       voice (Three-Voice Rule) so they read below the page h1 and above
+       the "User bans"/"IP bans" h2s, instead of a plain-Inter title the
+       bold h2 above it visually outranked. */
+    mat-card-title {
+      font-family: var(--font-display);
+      font-weight: var(--font-semibold);
+      font-size: var(--text-xl);
+    }
   }
 
   &__form {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    // M5 finish review FF1 fix 2: a flex column's items stretch to the
+    // container's cross-axis width by default, which is what turned "Ban
+    // user"/"Ban IP" into full-width red slabs — the fields opt back into
+    // full width with their own `&__field { width: 100% }` below, but the
+    // submit button now keeps its natural, normal width at the form's end.
+    align-items: flex-start;
   }
 
   &__field {
     width: 100%;
+  }
+
+  /* Destructive actions name the --error role directly rather than Material's
+     own `warn` palette (OWN-WORLD: "Components must never hold a colour of
+     their own. They name a role.", S5-12). `background-color` keeps its
+     `!important`: Material's protected-button structural CSS also declares
+     `background-color` on this same host element, at equal or higher
+     specificity, so without it the red fill is lost. M5 finish review FF2
+     fix 3: the `color` `!important` below it was never needed for the
+     same reason `&__danger-icon-btn` below needs none on its own `color` —
+     Material's protected/raised button has no competing `!important` on
+     text color (only `.mat-mdc-button`/`-outlined-button`/`-icon-button` in
+     `vendors/_material-overrides.scss` get that treatment, not
+     `.mat-mdc-raised-button`), and this selector's own `[_ngcontent-*]`
+     attribute already out-specifies Material's unadorned button classes. */
+  &__danger-btn {
+    background-color: var(--error) !important;
+    color: var(--on-error);
+  }
+
+  /* M5 finish review FF1 fix 3: the icon's own visible color comes from
+     `mat-icon`'s `color: var(--mat-icon-color, inherit)` rule, not simple
+     inheritance of this button's `color`. `--mat-icon-color` is the custom
+     property that rule reads, so setting it here (rather than fighting
+     Material with `!important` on an unrelated property, which never
+     reached the icon at all) is what actually recolors it. This
+     selector's own `[_ngcontent-*]` attribute already out-specifies
+     Material's `.mat-mdc-icon-button`, so the plain `color` below needs no
+     `!important` either. */
+  &__danger-icon-btn {
+    --mat-icon-color: var(--error);
+    color: var(--error);
+
+    /* S5-14: F1's global `--mdc-icon-button-state-layer-size: 44px`
+       (`vendors/_material-overrides.scss`, frozen) sets the custom
+       property but this Material version's own `.mat-mdc-icon-button`
+       width/height rule doesn't read it, so the box measures 40px
+       regardless (filed as handoff H-08 to F2). Surface-scoped fix here
+       in the meantime, on the one icon button this page owns. */
+    width: 44px;
+    height: 44px;
+    padding: 10px;
   }
 
   &__status {
@@ -40,7 +121,18 @@
   }
 
   &__error {
-    color: var(--mat-sys-error, var(--error));
+    /* M5 finish review FF1 fix 3: role tokens only (OWN-WORLD), not a
+       Material system-token fallback chain. */
+    color: var(--error);
+    margin: 0;
+  }
+
+  &__error-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   &__list {
@@ -55,7 +147,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--surface-hover);
   }
 
@@ -72,12 +164,12 @@
   }
 
   &__item-reason {
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     opacity: 0.85;
   }
 
   &__item-meta {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     opacity: 0.7;
   }
 }
