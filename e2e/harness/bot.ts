@@ -190,6 +190,35 @@ export class SockbowlBot {
   // ---- player actions ----
   buzz() { this.publish('/app/game/player-incoming-buzz', {}); }
 
+  /**
+   * Sends `n` buzz frames back-to-back (M4 WP-E1: `rate-limit.spec.ts`'s
+   * STOMP `stomp-buzz` flood case). This connection's local token bucket
+   * (plan §2.5, capacity set tiny by `docker-compose.limits-e2e.yml`) only
+   * lets the first few through; the rest are soft-dropped with a
+   * `StompError{code:'RATE_LIMITED'}` on `/user/queue/errors`, which lands
+   * in {@link errors} like any other. Pass `delayMs` to space frames out
+   * (0 = fire as fast as the client can write them).
+   */
+  async spamBuzz(n: number, delayMs = 0): Promise<void> {
+    for (let i = 0; i < n; i++) {
+      this.buzz();
+      if (delayMs > 0) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+
+  /**
+   * Publishes a raw STOMP SEND to any destination with caller-chosen headers
+   * and body, bypassing {@link publish}'s fixed `gameSessionId`/
+   * `playerSessionId` header pair. Used by tests that need to shape a frame
+   * `SockbowlBot`'s own action methods don't (e.g. an oversized body, or a
+   * destination outside `/app/game/*`).
+   */
+  rawSend(destination: string, headers: Record<string, string> = {}, body: unknown = {}): void {
+    this.client.publish({ destination, body: typeof body === 'string' ? body : JSON.stringify(body), headers });
+  }
+
   disconnect() { try { this.client?.deactivate(); } catch { /* ignore */ } }
 }
 

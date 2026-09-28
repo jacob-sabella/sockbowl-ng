@@ -47,27 +47,41 @@ describe('UsageService', () => {
     req.flush({ content: [], totalElements: 0, totalPages: 0, size: 20, number: 0 });
   });
 
-  it('detail() GETs /{sub}', () => {
-    service.detail('user-1').subscribe();
+  it('detail() GETs /{sub} and flattens the backend\'s nested summary + recentEvents into UserUsageDetail', () => {
+    let result: any;
+    service.detail('user-1').subscribe((d) => (result = d));
 
     const req = httpMock.expectOne(`${baseUrl}/user-1`);
     expect(req.request.method).toBe('GET');
+    // The real wire shape (`AdminUsageService.getDetail`, game): the list
+    // row nested under `summary`, and `recentEvents` rather than `events`.
+    // Live evidence (WP-E1): flushing this exact shape without the
+    // service's own flattening left `detail.counters`/`detail.events`
+    // undefined and the admin detail panel silently empty.
     req.flush({
-      keycloakId: 'user-1',
-      username: 'u',
-      displayName: 'U',
-      tier: 'PLAYER',
-      lastSeenAt: null,
-      banned: false,
-      activeSessions: 0,
-      packetsOwned: 0,
-      counters: [],
-      recentRejections: 0,
-      lastIps: [],
+      summary: {
+        keycloakId: 'user-1',
+        username: 'u',
+        displayName: 'U',
+        tier: 'PLAYER',
+        lastSeenAt: null,
+        banned: false,
+        activeSessions: 0,
+        packetsOwned: 0,
+        counters: [{ metric: 'hosted-sessions', used: 1, limit: 3, kind: 'concurrent', resetsAt: null, overridden: false }],
+        recentRejections: 0,
+      },
+      lastIps: ['1.2.3.4'],
       overrides: {},
-      events: [],
-      hostedSessionIds: [],
+      recentEvents: [{ ts: 't', svc: 'game', policy: 'p', kind: 'rate', sub: null, ip: null, path: null }],
+      hostedSessionIds: ['s1'],
     });
+
+    expect(result.keycloakId).toBe('user-1');
+    expect(result.counters.length).toBe(1);
+    expect(result.lastIps).toEqual(['1.2.3.4']);
+    expect(result.events.length).toBe(1);
+    expect(result.hostedSessionIds).toEqual(['s1']);
   });
 
   it('global() GETs /global', () => {

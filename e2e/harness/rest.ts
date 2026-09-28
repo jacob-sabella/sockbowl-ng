@@ -9,15 +9,28 @@ export interface JoinResult {
   userId?: string | null;
 }
 
-/** Create a new game session. proctorType ONLINE_PROCTOR drives the read/judge flow. */
+/**
+ * Create a new game session. proctorType ONLINE_PROCTOR drives the read/judge flow.
+ *
+ * With no `token`, this is an unauthenticated (guest) create: the game
+ * backend keys the guest hosted-sessions quota and session-create rate
+ * limit by IP, and under `network_mode: host` every unauthenticated caller
+ * in this suite -- browser and raw fetch alike -- shares that one IP. Pass
+ * an access token (see `harness/auth.ts`) for a call that must not compete
+ * with a guest-quota-exhausting spec elsewhere in the same run.
+ */
 export async function createGame(
   gameMode = 'QUIZ_BOWL_CLASSIC',
   proctorType = 'ONLINE_PROCTOR',
   bonusesEnabled = true,
+  token?: string,
 ): Promise<CreatedGame> {
   const res = await fetch(`${HTTP_BASE}/api/v1/session/create-new-game-session`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ gameSettings: { gameMode, proctorType, bonusesEnabled } }),
   });
   if (!res.ok) throw new Error(`createGame ${res.status}: ${await res.text()}`);
