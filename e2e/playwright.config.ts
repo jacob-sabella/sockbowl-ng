@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: ['tests/**/*.spec.ts', 'usability.spec.ts'],
+  testMatch: ['tests/**/*.spec.ts', 'usability.spec.ts', 'polish/**/*.spec.ts'],
   timeout: 180_000,
   expect: { timeout: 15_000 },
   outputDir: './artifacts/output',
@@ -29,7 +29,7 @@ export default defineConfig({
   projects: [
     {
       name: 'default',
-      testMatch: ['tests/**/*.spec.ts', 'usability.spec.ts'],
+      testMatch: ['tests/**/*.spec.ts', 'usability.spec.ts', 'polish/**/*.spec.ts'],
       testIgnore: ['tests/packet-builder.spec.ts'],
     },
     {

@@ -1,0 +1,171 @@
+{
+  "difficulties": [
+    { "id": "diff-easy", "name": "Easy" },
+    { "id": "diff-regular", "name": "Regular" },
+    { "id": "diff-hard", "name": "Hard" }
+  ],
+  "categories": [
+    { "id": "cat-lit", "name": "Literature" },
+    { "id": "cat-sci", "name": "Science" },
+    { "id": "cat-hist", "name": "History" }
+  ],
+  "subcategories": [
+    { "id": "sub-amlit", "name": "American Literature", "category": { "id": "cat-lit", "name": "Literature" } },
+    { "id": "sub-bio", "name": "Biology", "category": { "id": "cat-sci", "name": "Science" } },
+    { "id": "sub-euro", "name": "European History", "category": { "id": "cat-hist", "name": "History" } }
+  ],
+  "listItems": {
+    "own-and-others": [
+      {
+        "id": "pkt-own-draft",
+        "name": "Regionals Draft — Round 3",
+        "difficulty": { "id": "diff-regular", "name": "Regular" },
+        "owner": { "id": "demo-testuser", "name": "testuser" },
+        "visibility": "DRAFT",
+        "version": 2,
+        "tossupCount": 3,
+        "bonusCount": 1,
+        "playable": false
+      },
+      {
+        "id": "pkt-own-published",
+        "name": "2026 Sockbowl Invitational — Packet 4",
+        "difficulty": { "id": "diff-hard", "name": "Hard" },
+        "owner": { "id": "demo-testuser", "name": "testuser" },
+        "visibility": "PUBLISHED",
+        "version": 5,
+        "tossupCount": 5,
+        "bonusCount": 2,
+        "playable": true
+      },
+      {
+        "id": "pkt-others-published",
+        "name": "Novice Set — Packet 1",
+        "difficulty": { "id": "diff-easy", "name": "Easy" },
+        "owner": { "id": "demo-player1", "name": "player1" },
+        "visibility": "PUBLISHED",
+        "version": 1,
+        "tossupCount": 20,
+        "bonusCount": 20,
+        "playable": true
+      }
+    ],
+    "mine-only": [
+      {
+        "id": "pkt-own-draft",
+        "name": "Regionals Draft — Round 3",
+        "difficulty": { "id": "diff-regular", "name": "Regular" },
+        "owner": { "id": "demo-testuser", "name": "testuser" },
+        "visibility": "DRAFT",
+        "version": 2,
+        "tossupCount": 3,
+        "bonusCount": 1,
+        "playable": false
+      },
+      {
+        "id": "pkt-own-published",
+        "name": "2026 Sockbowl Invitational — Packet 4",
+        "difficulty": { "id": "diff-hard", "name": "Hard" },
+        "owner": { "id": "demo-testuser", "name": "testuser" },
+        "visibility": "PUBLISHED",
+        "version": 5,
+        "tossupCount": 5,
+        "bonusCount": 2,
+        "playable": true
+      }
+    ]
+  },
+  "detail": {
+    "pkt-own-draft": {
+      "id": "pkt-own-draft",
+      "name": "Regionals Draft — Round 3",
+      "version": 2,
+      "visibility": "DRAFT",
+      "validation": {
+        "playable": false,
+        "tossupCount": 3,
+        "bonusCount": 1,
+        "issues": [
+          { "severity": "WARNING", "code": "BONUS_PART_COUNT", "message": "Bonus 1 has 2 parts; bonuses are normally 3.", "tossupId": null, "bonusId": "bon-1" },
+          { "severity": "ERROR", "code": "MORE_BONUSES_THAN_TOSSUPS", "message": "This packet would need at least 1 more tossup to match its bonus count.", "tossupId": null, "bonusId": null }
+        ]
+      },
+      "difficulty": { "id": "diff-regular", "name": "Regular" },
+      "owner": { "id": "demo-testuser", "name": "testuser" },
+      "bonuses": [
+        {
+          "order": 0,
+          "bonus": {
+            "id": "bon-1",
+            "preamble": "For 10 points each, answer the following about 19th-century novels:",
+            "subcategory": { "id": "sub-amlit", "name": "American Literature", "category": { "id": "cat-lit", "name": "Literature" } },
+            "bonusParts": [
+              { "order": 0, "bonusPart": { "id": "bp-1", "question": "This novel opens “Call me Ishmael.”", "answer": "Moby-Dick" } },
+              { "order": 1, "bonusPart": { "id": "bp-2", "question": "This author wrote The Scarlet Letter.", "answer": "Nathaniel Hawthorne" } }
+            ]
+          }
+        }
+      ],
+      "tossups": [
+        { "order": 0, "tossup": { "id": "tu-1", "question": "This poet wrote “The Raven.”", "answer": "Edgar Allan Poe", "subcategory": { "id": "sub-amlit", "name": "American Literature", "category": { "id": "cat-lit", "name": "Literature" } } } },
+        { "order": 1, "tossup": { "id": "tu-2", "question": "This organelle is the site of aerobic respiration.", "answer": "the mitochondrion", "subcategory": { "id": "sub-bio", "name": "Biology", "category": { "id": "cat-sci", "name": "Science" } } } },
+        { "order": 2, "tossup": { "id": "tu-3", "question": "This 1789 event began with the storming of a Parisian prison.", "answer": "the French Revolution", "subcategory": { "id": "sub-euro", "name": "European History", "category": { "id": "cat-hist", "name": "History" } } } }
+      ]
+    },
+    "pkt-own-published": {
+      "id": "pkt-own-published",
+      "name": "2026 Sockbowl Invitational — Packet 4",
+      "version": 5,
+      "visibility": "PUBLISHED",
+      "validation": { "playable": true, "tossupCount": 5, "bonusCount": 2, "issues": [] },
+      "difficulty": { "id": "diff-hard", "name": "Hard" },
+      "owner": { "id": "demo-testuser", "name": "testuser" },
+      "bonuses": [
+        {
+          "order": 0,
+          "bonus": {
+            "id": "bon-10",
+            "preamble": "For 10 points each, answer the following about cell biology:",
+            "subcategory": { "id": "sub-bio", "name": "Biology", "category": { "id": "cat-sci", "name": "Science" } },
+            "bonusParts": [
+              { "order": 0, "bonusPart": { "id": "bp-10", "question": "This organelle degrades cellular waste via hydrolytic enzymes.", "answer": "the lysosome" } },
+              { "order": 1, "bonusPart": { "id": "bp-11", "question": "This process splits one cell into two genetically identical daughter cells.", "answer": "mitosis" } },
+              { "order": 2, "bonusPart": { "id": "bp-12", "question": "This semi-permeable structure surrounds the cell.", "answer": "the (plasma/cell) membrane" } }
+            ]
+          }
+        },
+        {
+          "order": 1,
+          "bonus": {
+            "id": "bon-11",
+            "preamble": "For 10 points each, answer the following about European monarchs:",
+            "subcategory": { "id": "sub-euro", "name": "European History", "category": { "id": "cat-hist", "name": "History" } },
+            "bonusParts": [
+              { "order": 0, "bonusPart": { "id": "bp-13", "question": "This Sun King ruled France for 72 years.", "answer": "Louis XIV" } },
+              { "order": 1, "bonusPart": { "id": "bp-14", "question": "This Habsburg empress reformed Austria in the 18th century.", "answer": "Maria Theresa" } },
+              { "order": 2, "bonusPart": { "id": "bp-15", "question": "This English queen presided over a Golden Age and the defeat of the Armada.", "answer": "Elizabeth I" } }
+            ]
+          }
+        }
+      ],
+      "tossups": [
+        { "order": 0, "tossup": { "id": "tu-10", "question": "This author wrote that “If I were the Head of the Church or the State, / I’d powder my nose and go to bed” in a poem; for 10 points, name this British-American poet of The Age of Anxiety.", "answer": "W. H. Auden", "subcategory": { "id": "sub-amlit", "name": "American Literature", "category": { "id": "cat-lit", "name": "Literature" } } } },
+        { "order": 1, "tossup": { "id": "tu-11", "question": "This process converts glucose into pyruvate in the cytoplasm.", "answer": "glycolysis", "subcategory": { "id": "sub-bio", "name": "Biology", "category": { "id": "cat-sci", "name": "Science" } } } },
+        { "order": 2, "tossup": { "id": "tu-12", "question": "This 1815 battle ended Napoleon's Hundred Days.", "answer": "the Battle of Waterloo", "subcategory": { "id": "sub-euro", "name": "European History", "category": { "id": "cat-hist", "name": "History" } } } },
+        { "order": 3, "tossup": { "id": "tu-13", "question": "This narrator says “Call me Ishmael” at the start of a novel about a white whale.", "answer": "Moby-Dick (accept Ishmael before mentioned)", "subcategory": { "id": "sub-amlit", "name": "American Literature", "category": { "id": "cat-lit", "name": "Literature" } } } },
+        { "order": 4, "tossup": { "id": "tu-14", "question": "This nucleotide is the primary energy currency of the cell.", "answer": "ATP (adenosine triphosphate)", "subcategory": { "id": "sub-bio", "name": "Biology", "category": { "id": "cat-sci", "name": "Science" } } } }
+      ]
+    },
+    "pkt-others-published": {
+      "id": "pkt-others-published",
+      "name": "Novice Set — Packet 1",
+      "version": 1,
+      "visibility": "PUBLISHED",
+      "validation": { "playable": true, "tossupCount": 20, "bonusCount": 20, "issues": [] },
+      "difficulty": { "id": "diff-easy", "name": "Easy" },
+      "owner": { "id": "demo-player1", "name": "player1" },
+      "bonuses": [],
+      "tossups": []
+    }
+  }
+}

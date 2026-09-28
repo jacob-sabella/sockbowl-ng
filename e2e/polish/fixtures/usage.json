@@ -1,0 +1,90 @@
+{
+  "global": {
+    "aiServerKey": { "used": 812, "limit": 1000, "resetsAt": "2026-09-29T00:00:00Z" },
+    "activeHostedSessions": 14,
+    "topGuestIps": [
+      { "ip": "198.51.100.14", "sessions": 3 },
+      { "ip": "198.51.100.77", "sessions": 2 }
+    ],
+    "rejectionsLastHour": 6
+  },
+  "globalPartial": {
+    "aiServerKey": { "used": 0, "limit": -1, "resetsAt": null },
+    "activeHostedSessions": 0,
+    "topGuestIps": [],
+    "rejectionsLastHour": 0
+  },
+  "page": {
+    "content": [
+      {
+        "keycloakId": "demo-testuser",
+        "username": "testuser",
+        "displayName": "Test User",
+        "tier": "author",
+        "lastSeenAt": "2026-09-27T22:11:00Z",
+        "banned": false,
+        "activeSessions": 1,
+        "packetsOwned": 6,
+        "counters": [
+          { "metric": "ai:generate", "used": 4, "limit": 20, "kind": "daily", "resetsAt": "2026-09-29T00:00:00Z", "overridden": false }
+        ],
+        "recentRejections": 0
+      },
+      {
+        "keycloakId": "demo-player2",
+        "username": "player2",
+        "displayName": "Player Two",
+        "tier": "player",
+        "lastSeenAt": "2026-09-27T21:40:00Z",
+        "banned": false,
+        "activeSessions": 2,
+        "packetsOwned": 0,
+        "counters": [
+          { "metric": "stomp-flood", "used": 30, "limit": 60, "kind": "concurrent", "resetsAt": null, "overridden": false }
+        ],
+        "recentRejections": 2
+      },
+      {
+        "keycloakId": "demo-banneduser",
+        "username": "banneduser",
+        "displayName": "Banned User",
+        "tier": "player",
+        "lastSeenAt": "2026-09-20T14:00:00Z",
+        "banned": true,
+        "activeSessions": 0,
+        "packetsOwned": null,
+        "counters": [],
+        "recentRejections": 11
+      }
+    ],
+    "totalElements": 3,
+    "totalPages": 1,
+    "size": 25,
+    "number": 0
+  },
+  "detail": {
+    "keycloakId": "demo-testuser",
+    "username": "testuser",
+    "displayName": "Test User",
+    "tier": "author",
+    "lastSeenAt": "2026-09-27T22:11:00Z",
+    "banned": false,
+    "activeSessions": 1,
+    "packetsOwned": 6,
+    "counters": [
+      { "metric": "ai:generate", "used": 4, "limit": 20, "kind": "daily", "resetsAt": "2026-09-29T00:00:00Z", "overridden": false }
+    ],
+    "recentRejections": 0,
+    "lastIps": ["198.51.100.20"],
+    "overrides": {},
+    "events": [
+      { "ts": "2026-09-27T20:00:00Z", "svc": "questions", "policy": "graphql-write", "kind": "rate", "sub": "demo-testuser", "ip": "198.51.100.20", "path": "/graphql" }
+    ],
+    "hostedSessionIds": []
+  },
+  "events": [
+    { "ts": "2026-09-27T20:00:00Z", "svc": "questions", "policy": "graphql-write", "kind": "rate", "sub": "demo-testuser", "ip": "198.51.100.20", "path": "/graphql" },
+    { "ts": "2026-09-27T19:40:00Z", "svc": "game", "policy": "stomp-flood", "kind": "rate", "sub": "demo-player2", "ip": "198.51.100.30", "path": null },
+    { "ts": "2026-09-25T09:12:00Z", "svc": "game", "policy": null, "kind": "ban", "sub": "demo-flooduser", "ip": null, "path": null }
+  ]
+}
