@@ -87,11 +87,12 @@ export function limitErrorFrom(
 /**
  * Shows the standard snackbar for a {@link LimitError} and, for a
  * `rate_limited` rejection, starts the matching {@link RateLimitStateService}
- * cooldown so bound buttons disable themselves (plan §2.9). Banned/ip-banned
- * errors are intentionally not shown here: the existing 403 handling in
- * `AuthInterceptor` already surfaces those, and this would double the
- * snackbar for a plain REST 403. Callers that classify a GraphQL `BANNED`
- * error (INT1) may still choose to call this for that one case.
+ * cooldown so bound buttons disable themselves (plan §2.9). `RateLimitInterceptor`
+ * calls this for a classified 403 `banned`/`ip_banned` body too (WP-E1fix:
+ * `AuthInterceptor`'s generic 403 handling can't render that body's
+ * `{error,reason,expiresAt}` shape into a useful message, so it defers to
+ * this one instead of double-showing a snackbar). Callers that classify a
+ * GraphQL `BANNED` error (INT1) may still choose to call this for that case.
  */
 export function notifyLimit(
   err: LimitError,

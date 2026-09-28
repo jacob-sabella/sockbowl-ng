@@ -94,10 +94,39 @@ describe('RateLimitInterceptor', () => {
     expect(snackBarSpy.open).not.toHaveBeenCalled();
   });
 
-  it('a 403 banned response is left alone (AuthInterceptor already surfaces it)', () => {
+  // WP-E1fix (M4 live-run evidence, auth-ban.spec.ts): the M4 request-guard
+  // filter's own 403 body has no "message" field
+  // ({"error":"banned","reason":...,"expiresAt":...}, plan m4-limits.md
+  // section 2.1), so AuthInterceptor.extractMessage() can't pull any text
+  // out of it and falls back to its generic "You do not have permission..."
+  // message -- which contains neither "banned" nor "not allowed", so
+  // auth-ban.spec.ts's post-ban assertion (getByText(/not allowed|banned/i))
+  // never finds it. This interceptor sits closer to the backend (registered
+  // after AuthInterceptor) and already knows how to render a proper message
+  // for a classified body via notifyLimit(), so it must handle 403 too.
+  it('a 403 banned response shows the banned snackbar with the reason', () => {
     http.post(URL, {}).subscribe({ error: () => undefined });
 
     httpMock.expectOne(URL).flush({ error: 'banned', reason: 'spam', expiresAt: null },
+      { status: 403, statusText: 'Forbidden' });
+
+    expect(snackBarSpy.open).toHaveBeenCalledWith('spam', 'Dismiss', jasmine.any(Object));
+  });
+
+  it('a 403 ip_banned response shows the banned snackbar with a default message when reason is absent', () => {
+    http.post(URL, {}).subscribe({ error: () => undefined });
+
+    httpMock.expectOne(URL).flush({ error: 'ip_banned', reason: null, expiresAt: null },
+      { status: 403, statusText: 'Forbidden' });
+
+    expect(snackBarSpy.open).toHaveBeenCalledWith(
+      'You have been banned from Sockbowl.', 'Dismiss', jasmine.any(Object));
+  });
+
+  it('a plain 403 with no recognized classification is left alone (not this interceptor\'s concern)', () => {
+    http.post(URL, {}).subscribe({ error: () => undefined });
+
+    httpMock.expectOne(URL).flush({ message: 'You are not allowed to create a game session.' },
       { status: 403, statusText: 'Forbidden' });
 
     expect(snackBarSpy.open).not.toHaveBeenCalled();
