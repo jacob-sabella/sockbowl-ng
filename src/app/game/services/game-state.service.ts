@@ -93,11 +93,25 @@ export class GameStateService {
    */
   public initialize(gameSessionId: string, playerSessionId: string, credentials: SocketCredentials = {}) {
     this._playerSessionId = playerSessionId;
+    // This service is a singleton (providedIn: 'root'), so a fresh seat must
+    // not inherit the previous seat's MatchPacketUpdate counts (NG-R4-02).
+    this.packetCounts = null;
     this.gameMessageService.initialize(gameSessionId, playerSessionId, credentials);
     if (!this.messagesSubscribed) {
       this.messagesSubscribed = true;
       this.subscribeToGameMessages();
     }
+  }
+
+  /**
+   * Call when the player leaves the current game (e.g. GameCanvasComponent's
+   * ngOnDestroy), so the counts from the game just left can't be restored
+   * onto a later resend for a same-named packet in whatever comes next
+   * (NG-R4-02). `initialize` also clears this for the next seat; this covers
+   * the gap between leaving one and initializing another.
+   */
+  public leaveGame(): void {
+    this.packetCounts = null;
   }
 
   /**
