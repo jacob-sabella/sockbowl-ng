@@ -73,6 +73,19 @@ export class GameProctorComponent implements OnInit {
     return currentPart?.bonusPart || currentPart;
   }
 
+  /**
+   * True for every BONUS_* state (M5 S2-06). The template uses it to
+   * collapse the tossup Q/A to a one-line summary once the bonus starts, so
+   * the pinned decision row stays reachable without a scroll at 1366x768.
+   */
+  isBonusPhase(roundState: RoundState | undefined): boolean {
+    return roundState === RoundState.BONUS_PENDING ||
+      roundState === RoundState.BONUS_READING_PREAMBLE ||
+      roundState === RoundState.BONUS_READING_PART ||
+      roundState === RoundState.BONUS_AWAITING_ANSWER ||
+      roundState === RoundState.BONUS_COMPLETED;
+  }
+
   sendBonusPartOutcome(partIndex: number, correct: boolean): void {
     this.gameStateService.sendBonusPartOutcome(partIndex, correct);
   }

@@ -238,6 +238,120 @@ describe('GameProctorComponent tossup position header (M5 S2-09)', () => {
 });
 
 /**
+ * M5 S2-06: empty category/subcategory boxes don't render (a blank labelled
+ * box just pushes the pinned decision row down for nothing), and the
+ * tossup's Q/A collapses to a one-line summary once the bonus starts, since
+ * the proctor's attention has already moved to the bonus content below.
+ */
+describe('GameProctorComponent tossup summary and empty metadata (M5 S2-06)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+  let session$: BehaviorSubject<GameSession>;
+
+  function sessionWith(
+    roundState: RoundState,
+    category?: string,
+    subcategory?: string,
+  ): GameSession {
+    return {
+      currentMatch: {
+        currentRound: {
+          roundState,
+          roundNumber: 1,
+          category,
+          subcategory,
+          question: 'What is the capital of France?',
+          answer: 'Paris',
+          currentBonus: { preamble: 'p', bonusParts: [] },
+          currentBonusPartIndex: 0,
+          bonusPartAnswers: [],
+          bonusEligibleTeamId: 't1',
+        },
+      },
+    } as unknown as GameSession;
+  }
+
+  function root(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  beforeEach(() => {
+    session$ = new BehaviorSubject<GameSession>(sessionWith(RoundState.PROCTOR_READING, 'Science', 'Biology'));
+    const gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getTeamNameById', 'getPlayerNameById', 'getCurrentRoundBonusPoints', 'getCurrentRoundMaxBonusPoints'],
+      { gameSession$: session$.asObservable() },
+    );
+    gameStateService.getCurrentRoundMaxBonusPoints.and.returnValue(30);
+    gameStateService.getCurrentRoundBonusPoints.and.returnValue(0);
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: PresentationConnectionService,
+          useValue: { isAvailable$: of(false), connectionState$: of(PresentationConnectionState.DISCONNECTED) },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders both category and subcategory when both are present', () => {
+    expect(root().querySelector('.category-section')).not.toBeNull();
+    expect(root().querySelector('.subcategory-section')).not.toBeNull();
+  });
+
+  it('omits only the subcategory box when the round has no subcategory', () => {
+    session$.next(sessionWith(RoundState.PROCTOR_READING, 'Science', ''));
+    fixture.detectChanges();
+    expect(root().querySelector('.category-section')).not.toBeNull();
+    expect(root().querySelector('.subcategory-section')).toBeNull();
+  });
+
+  it('renders no category row at all when neither field is set', () => {
+    session$.next(sessionWith(RoundState.PROCTOR_READING, '', ''));
+    fixture.detectChanges();
+    expect(root().querySelector('.category-row')).toBeNull();
+  });
+
+  it('shows the full question and answer sections outside the bonus phase', () => {
+    expect(root().querySelector('.question-section')).not.toBeNull();
+    expect(root().querySelector('.answer-section')).not.toBeNull();
+    expect(root().querySelector('.tossup-summary-section')).toBeNull();
+  });
+
+  it('collapses the tossup to a one-line summary once the bonus starts', () => {
+    session$.next(sessionWith(RoundState.BONUS_PENDING, 'Science', 'Biology'));
+    fixture.detectChanges();
+    expect(root().querySelector('.question-section')).toBeNull();
+    expect(root().querySelector('.answer-section')).toBeNull();
+    const summary = root().querySelector('.tossup-summary-section');
+    expect(summary).not.toBeNull();
+    expect(summary!.textContent!.trim().length).toBeGreaterThan(0);
+  });
+
+  it('keeps the tossup collapsed through every bonus RoundState', () => {
+    const bonusStates = [
+      RoundState.BONUS_PENDING,
+      RoundState.BONUS_READING_PREAMBLE,
+      RoundState.BONUS_READING_PART,
+      RoundState.BONUS_AWAITING_ANSWER,
+      RoundState.BONUS_COMPLETED,
+    ];
+    for (const state of bonusStates) {
+      session$.next(sessionWith(state, 'Science', 'Biology'));
+      fixture.detectChanges();
+      expect(root().querySelector('.tossup-summary-section')).not.toBeNull();
+    }
+  });
+});
+
+/**
  * M5 S2-07: the cast control is a single element that is always present,
  * with a designed appearance for every PresentationConnectionState instead
  * of rendering nothing for CONNECTING/TERMINATED and silently hiding the

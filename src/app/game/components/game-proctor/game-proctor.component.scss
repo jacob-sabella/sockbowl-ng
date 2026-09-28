@@ -136,6 +136,13 @@
       .info-value { font-size: 1.05rem; }
     }
 
+    // The tossup's one-line summary once the bonus starts (M5 S2-06) - a
+    // plain labelled row, not the reading-text treatment, since there is
+    // nothing left here to read aloud.
+    .tossup-summary-section {
+      .info-label { color: var(--text-secondary); }
+    }
+
     // The answer is the single most important thing the proctor reads.
     .answer-section {
       border-left: 4px solid var(--success);
@@ -297,11 +304,38 @@
   }
 }
 
+// The decision row (M5 S2-06): whichever action is due right now stays
+// pinned to the bottom of the scrolling container instead of falling below
+// the fold at 1366x768. Sticky is relative to .game-proctor-container, the
+// nearest scrolling ancestor, so it only engages when the content above
+// would otherwise push the row out of view - it never moves a row that
+// already fits. A solid backing plus a top rule keeps reading text from
+// showing through as it scrolls underneath.
+@mixin pinned-decision-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: 0 -8px 12px -8px var(--shadow-color, rgba(0, 0, 0, 0.25));
+}
+
 .button-container {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   margin: var(--spacing-md) 0;
+
+  // Each of these is the sole action row for its RoundState (only one
+  // renders at a time, aside from the pre-existing manual-timeout pairing),
+  // so pinning them individually keeps just the controls fixed rather than
+  // the reading content that precedes them.
+  > #finished-reading-btn,
+  > #timeout-btn,
+  > #advance-round-btn,
+  > .manual-timeout-btn,
+  > .right-wrong-buttons {
+    @include pinned-decision-row;
+  }
 
   button {
     width: 100%;
@@ -436,6 +470,14 @@
     color: var(--on-accent-primary) !important;
   }
 
+  // The preamble phase's own decision (M5 S2-06): its button is a direct
+  // child of the preamble div rather than a .part-actions row, so it's
+  // pinned here on its own.
+  #finished-reading-preamble-btn {
+    @include pinned-decision-row;
+    width: 100%;
+  }
+
   .bonus-preamble-section {
     margin-bottom: var(--spacing-md);
 
@@ -551,10 +593,15 @@
       }
     }
 
+    // The bonus part's own decision row (M5 S2-06): reading or judging,
+    // pinned so it never falls below the fold while the preamble and any
+    // already-answered parts scroll above it.
     .part-actions {
+      @include pinned-decision-row;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 0.75rem;
+      padding-top: 0.75rem;
       margin-top: var(--spacing-md);
 
       button {

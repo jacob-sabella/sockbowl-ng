@@ -74,24 +74,45 @@
           }
         </div>
 
-        <div class="category-row">
-          <div class="info-section category-section">
-            <span class="info-label">Category:</span>
-            <span class="info-value">{{ gameSession.currentMatch.currentRound.category }}</span>
+        <!-- Empty category/subcategory don't render (M5 S2-06): a blank
+             labelled box is height with no information, and it pushes the
+             pinned decision row down for nothing. -->
+        @if (gameSession.currentMatch.currentRound.category || gameSession.currentMatch.currentRound.subcategory) {
+          <div class="category-row">
+            @if (gameSession.currentMatch.currentRound.category) {
+              <div class="info-section category-section">
+                <span class="info-label">Category:</span>
+                <span class="info-value">{{ gameSession.currentMatch.currentRound.category }}</span>
+              </div>
+            }
+            @if (gameSession.currentMatch.currentRound.subcategory) {
+              <div class="info-section subcategory-section">
+                <span class="info-label">Subcategory:</span>
+                <span class="info-value">{{ gameSession.currentMatch.currentRound.subcategory }}</span>
+              </div>
+            }
           </div>
-          <div class="info-section subcategory-section">
-            <span class="info-label">Subcategory:</span>
-            <span class="info-value">{{ gameSession.currentMatch.currentRound.subcategory }}</span>
+        }
+        <!-- The tossup is already read and judged once the bonus starts, so
+             its full Q/A collapses to a one-line summary (M5 S2-06): the
+             proctor's attention has moved to the bonus preamble/parts below,
+             and the pinned decision row must stay reachable without a
+             scroll at 1366x768 in every BONUS_* state. -->
+        @if (isBonusPhase(gameSession.currentMatch.currentRound.roundState)) {
+          <div class="info-section tossup-summary-section">
+            <div class="info-label">Tossup</div>
+            <div class="info-value">Tossup answered &mdash; now judging the bonus</div>
           </div>
-        </div>
-        <div class="info-section question-section">
-          <div class="info-label">Question</div>
-          <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.question"></div>
-        </div>
-        <div class="info-section answer-section" aria-live="polite">
-          <div class="info-label">Answer</div>
-          <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.answer"></div>
-        </div>
+        } @else {
+          <div class="info-section question-section">
+            <div class="info-label">Question</div>
+            <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.question"></div>
+          </div>
+          <div class="info-section answer-section" aria-live="polite">
+            <div class="info-label">Answer</div>
+            <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.answer"></div>
+          </div>
+        }
         <!-- Buzz Information -->
         @if (gameSession.currentMatch.currentRound.currentBuzz) {
           <div class="active-buzz-info" role="alert" aria-live="assertive">
