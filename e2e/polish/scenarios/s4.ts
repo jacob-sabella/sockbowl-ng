@@ -131,13 +131,33 @@ const states: CaptureState[] = [
     role: 'author',
     setupMocks: async page => mockGraphql(page, builderHandlers('pkt-own-published')),
     afterGoto: async page => {
-      await page.locator('.packet-builder__bonuses mat-expansion-panel-header').first().click();
+      // Cut Material's expansion animation so the capture doesn't land
+      // mid-turn (FF2 verdict: the chevron and header were caught
+      // half-opened because the screenshot raced the panel's own CSS
+      // transition).
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const firstBonusHeader = page.locator('.packet-builder__bonuses mat-expansion-panel-header').first();
+      await firstBonusHeader.click();
+      // Wait for Material's own expanded state, not just content
+      // visibility: `.packet-builder__parts-title` is already in the DOM
+      // (see the `.first()` note below) before the panel finishes opening,
+      // so waiting on it alone resolved on a mid-animation frame.
+      // `aria-expanded="true"` only flips once the panel has actually
+      // opened.
+      await page.locator('.packet-builder__bonuses mat-expansion-panel-header[aria-expanded="true"]').first().waitFor({ state: 'visible' });
       // `.first()` by DOM order, not `getByText` (Material keeps every
       // panel's content in the DOM even collapsed, so "Parts" is present
       // for every bonus and `getByText(exact)` hits strict-mode's
       // multiple-match error). The first bonus in the list is the one the
       // click above just expanded.
       await page.locator('.packet-builder__parts-title').first().waitFor({ state: 'visible' });
+      // Let the animation settle even with reduced motion honoured (some
+      // Material transitions still run a short opacity/height tween) and
+      // give layout a beat to finish before the screenshot.
+      await page.waitForTimeout(400);
+      // The click can leave the page scrolled to the bonus panel; the
+      // capture harness always wants the document top, navbar included.
+      await page.evaluate(() => window.scrollTo(0, 0));
     },
   },
   {
