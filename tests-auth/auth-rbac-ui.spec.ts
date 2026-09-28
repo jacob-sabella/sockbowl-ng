@@ -37,9 +37,17 @@ test.describe('RBAC-gated navigation and routes', () => {
     // that case on its own (NG-R2-01) — and gives every denied route an
     // actual denial signal instead of just a URL check that a router default
     // could satisfy by accident (NG-R2-05).
+    //
+    // `[matsnackbarlabel]` (not `.mat-mdc-snack-bar-label`): Angular
+    // Material's snack-bar container wraps its content in its own div that
+    // *also* carries the `mat-mdc-snack-bar-label` class, and `SimpleSnackBar`
+    // (what `MatSnackBar.open()` renders) nests a second, inner div with that
+    // same class via its `matSnackBarLabel` directive — so the class selector
+    // always matches two elements for a single, single-opened snackbar. The
+    // directive's own attribute is unique to the inner (actual message) div.
     for (const path of ['/packets/00000000-0000-0000-0000-000000000000/edit', '/packets', '/admin', '/admin/bans']) {
       await page.goto(path);
-      await expect(page.locator('.mat-mdc-snack-bar-label')).toHaveText(PERMISSION_DENIED_MESSAGE, { timeout: 5_000 });
+      await expect(page.locator('[matsnackbarlabel]')).toHaveText(PERMISSION_DENIED_MESSAGE, { timeout: 5_000 });
       await page.waitForURL('**/game-session**', { timeout: 10_000 });
     }
 
@@ -65,7 +73,7 @@ test.describe('RBAC-gated navigation and routes', () => {
     await expect(page.locator('.admin-bans')).toBeVisible();
 
     await page.goto('/admin');
-    await expect(page.locator('.mat-mdc-snack-bar-label')).toHaveText(PERMISSION_DENIED_MESSAGE, { timeout: 5_000 });
+    await expect(page.locator('[matsnackbarlabel]')).toHaveText(PERMISSION_DENIED_MESSAGE, { timeout: 5_000 });
     await page.waitForURL('**/game-session**', { timeout: 10_000 });
   });
 
