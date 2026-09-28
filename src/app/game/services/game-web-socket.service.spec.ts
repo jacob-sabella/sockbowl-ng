@@ -217,6 +217,61 @@ describe('GameWebSocketService', () => {
     });
   });
 
+  describe('fatal codes on /user/queue/errors', () => {
+    const queueError = (code: string) => ({
+      headers: {},
+      body: JSON.stringify({ messageType: 'StompError', code, message: 'detail', retryAfterSeconds: null }),
+    });
+
+    it('BANNED mid-game stops reconnecting, deactivates and emits a fatal error', async () => {
+      service.initialize('g1', 'p1', {});
+      await client().connect();
+
+      client().handlers['/user/queue/errors'](queueError('BANNED'));
+
+      expect(client().reconnectDelay).toBe(0);
+      expect(client().deactivate).toHaveBeenCalled();
+      expect(client().activate).toHaveBeenCalledTimes(1);
+      expect(errors).toEqual([jasmine.objectContaining({ code: 'BANNED', fatal: true })]);
+    });
+
+    for (const code of ['INVALID_CREDENTIALS', 'SESSION_NOT_FOUND', 'PLAYER_NOT_IN_SESSION',
+      'IDENTITY_MISMATCH', 'FORBIDDEN_DESTINATION']) {
+      it(`${code} on the queue is fatal`, async () => {
+        service.initialize('g1', 'p1', { playerSecret: 's' });
+        await client().connect();
+
+        client().handlers['/user/queue/errors'](queueError(code));
+
+        expect(client().reconnectDelay).toBe(0);
+        expect(client().deactivate).toHaveBeenCalled();
+        expect(errors).toEqual([jasmine.objectContaining({ code, fatal: true })]);
+      });
+    }
+
+    it('reads a fatal code from the headers when the body is not JSON', async () => {
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      await client().connect();
+
+      client().handlers['/user/queue/errors']({ headers: { 'x-sockbowl-error': 'BANNED' }, body: '' });
+
+      expect(client().deactivate).toHaveBeenCalled();
+      expect(errors).toEqual([jasmine.objectContaining({ code: 'BANNED', fatal: true })]);
+    });
+
+    it('ignores queue errors from a replaced connection', async () => {
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      const first = client();
+      await first.connect();
+      service.initialize('g2', 'p2', { playerSecret: 's' });
+
+      first.handlers['/user/queue/errors'](queueError('BANNED'));
+
+      expect(errors).toEqual([]);
+      expect(client().deactivate).not.toHaveBeenCalled();
+    });
+  });
+
   describe('ERROR frames', () => {
     it('BANNED stops reconnecting and emits a fatal error', async () => {
       service.initialize('g1', 'p1', {});

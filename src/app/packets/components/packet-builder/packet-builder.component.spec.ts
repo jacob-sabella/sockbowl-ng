@@ -299,6 +299,21 @@ describe('PacketBuilderComponent', () => {
     expect(component.canManagePacket).toBeFalse();
   });
 
+  // NG-R2-04 (M2): a non-owner's read redacts owner.id to null (D2's
+  // answer-free projection) rather than nulling out `owner` entirely.
+  it('canManagePacket is true for packet:manage-any on a redacted owner.id:null packet (NG-R2-04)', () => {
+    configure(makePacket({ owner: { id: null, name: null } as any }), ['packet:manage-any'], 'someone-else');
+    expect(component.canManagePacket).toBeTrue();
+  });
+
+  it('canManagePacket is false for a redacted owner.id:null packet while the current user id has not resolved yet (NG-R2-04)', () => {
+    // Before AuthService's ID-token profile has loaded, getCurrentUserId()
+    // can also be null. A naive `owner.id === userId` would wrongly treat
+    // that as a match; canManagePacket must require a real, non-null id.
+    configure(makePacket({ owner: { id: null, name: null } as any }), [], null);
+    expect(component.canManagePacket).toBeFalse();
+  });
+
   describe('drag-and-drop reorder (PB-20)', () => {
     it('a tossup drop renumbers locally and calls reorderTossup once with the target index', () => {
       configure(makePacket());

@@ -13,7 +13,7 @@ const deepLink = (j: JoinResult) =>
 // and screenshot the redesigned in-game surfaces in genuine states.
 test('capture buzzer + in-game surfaces', async ({ browser }) => {
   const game = await createGame();
-  const packetId = await importQbreaderPacket('2021 SMH', 1);
+  const packetId = await importQbreaderPacket();
 
   // Proctor + two teammate bots
   const pj = await joinByCode(game.joinCode, 'Proctor');

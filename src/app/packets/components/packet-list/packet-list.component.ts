@@ -139,8 +139,9 @@ export class PacketListComponent implements OnInit {
    * manage-any only, no grandfather rule).
    */
   canManage(packet: PacketSummary): boolean {
+    const userId = this.auth.getCurrentUserId();
     return this.auth.hasPermission('packet:manage-any')
-      || (!!packet.owner && packet.owner.id === this.auth.getCurrentUserId());
+      || (!!userId && !!packet.owner && packet.owner.id === userId);
   }
 
   toggleCreateForm(): void {

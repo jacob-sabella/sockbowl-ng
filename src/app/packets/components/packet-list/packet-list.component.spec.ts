@@ -194,4 +194,28 @@ describe('PacketListComponent', () => {
     expect(authoringSpy.clonePacket).toHaveBeenCalledWith('p1');
     expect(router.navigate).toHaveBeenCalledWith(['/packets', 'clone-id', 'edit']);
   });
+
+  it('canManage is false for a redacted owner.id:null packet while the current user id has not resolved yet (NG-R2-04)', () => {
+    // A non-owner's read redacts owner.id to null (D2). Before
+    // updateUserProfile resolves, getCurrentUserId() can also be null — a
+    // naive `packet.owner.id === userId` would wrongly match null === null.
+    configure([], null);
+    const redactedPacket = { id: 'p4', name: 'Someone else’s', owner: { id: null, name: null } } as unknown as PacketSummary;
+    expect(component.canManage(redactedPacket)).toBeFalse();
+  });
+
+  it('"My packets" is decided by the server\'s mine filter, never by matching redacted owners, while the current user id has not resolved yet (NG-R2-04)', () => {
+    // M3 (PB-14) replaced the client-side owner.id comparison with the
+    // server's `mine: true` filter, so a null current-user id cannot match a
+    // redacted owner.id:null packet: the page shown is exactly what the
+    // server returned for `mine`.
+    configure([], null);
+    questionsSpy.listPackets.calls.reset();
+    questionsSpy.listPackets.and.returnValue(of(pageOf([])));
+    component.showMineOnly = true;
+    component.onMineToggle();
+    const filterArg = questionsSpy.listPackets.calls.mostRecent().args[0] as PacketFilter;
+    expect(filterArg.mine).toBeTrue();
+    expect(component.packets).toEqual([]);
+  });
 });

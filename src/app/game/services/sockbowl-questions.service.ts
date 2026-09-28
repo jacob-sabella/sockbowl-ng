@@ -7,6 +7,21 @@ import {environment} from "../../../environments/environment";
 import {map, timeout} from "rxjs/operators";
 import { GraphqlClientService } from '../../core/graphql/graphql-client.service';
 
+/**
+ * POST /api/qbreader/import-random's response: the new packet's metadata,
+ * never its questions or answers. `tossupCount`/`bonusCount` are what was
+ * actually drawn (WP-FIXQ5); they may be absent from an older questions
+ * service. With auth on, a guest's or player's packet is EPHEMERAL (D15) and
+ * cannot be read back through getPacketById, so this is all the client gets.
+ */
+export interface ImportRandomResult {
+  id: string;
+  name: string;
+  usedRemoteIds?: string[];
+  tossupCount?: number;
+  bonusCount?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -27,9 +42,9 @@ export class SockbowlQuestionsService {
     categories?: string[]; subcategories?: string[]; alternateSubcategories?: string[]; difficulties?: number[];
     minYear?: number; maxYear?: number; standardOnly?: boolean; balanced?: boolean;
     tossupCount: number; bonusCount: number; name?: string; excludeRemoteIds?: string[];
-  }): Observable<{ id: string; name: string; usedRemoteIds: string[] }> {
+  }): Observable<ImportRandomResult> {
     return this.http
-      .post<{ id: string; name: string; usedRemoteIds: string[] }>(`${this.qbreaderUrl}/import-random`, body)
+      .post<ImportRandomResult>(`${this.qbreaderUrl}/import-random`, body)
       .pipe(timeout(120000));
   }
 

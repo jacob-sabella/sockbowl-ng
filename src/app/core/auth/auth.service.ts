@@ -6,6 +6,7 @@ import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { authConfig } from './auth.config';
 import { environment } from '../../../environments/environment';
 import { ThemeService } from '../services/theme.service';
+import { clearAllGameJoins } from '../../game/services/game-join-storage';
 
 /** OAuth events that mean the session is gone and the user must sign in again. */
 const SESSION_ENDING_EVENTS: ReadonlySet<string> = new Set([
@@ -17,6 +18,12 @@ const SESSION_ENDING_EVENTS: ReadonlySet<string> = new Set([
 
 /** A token with fewer than this many ms left is refreshed before use. */
 const MIN_TOKEN_VALIDITY_MS = 30_000;
+
+/**
+ * Longest the route guards wait for {@link AuthService.whenInitialized}
+ * before deciding anyway (an unreachable Keycloak must not hang navigation).
+ */
+const INIT_TIMEOUT_MS = 10_000;
 
 /** Message shown when the session ends underneath the user (AUTH-13). */
 export const SESSION_ENDED_MESSAGE = 'Your session ended. Sign in again.';
@@ -36,6 +43,8 @@ export const SESSION_ENDED_MESSAGE = 'Your session ended. Sign in again.';
  *   `isAuthenticated$` to false and prompt the user to sign in again.
  * - {@link logout} revokes the tokens and ends the Keycloak session, which
  *   sends the browser to `postLogoutRedirectUri`.
+ * - Both logout and a session end clear the tab's stored game seats
+ *   (`sockbowl.join.*`).
  */
 @Injectable({
   providedIn: 'root'
@@ -65,9 +74,47 @@ export class AuthService {
   /** Set once the "session ended" prompt is shown; cleared by a new token. */
   private sessionEndNotified = false;
 
+  private initializedFlag = false;
+  private resolveInitialized!: () => void;
+  private readonly initializedPromise = new Promise<void>(resolve => { this.resolveInitialized = resolve; });
+  private initTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     if (environment.authEnabled) {
+      this.initTimer = setTimeout(() => this.markInitialized(), INIT_TIMEOUT_MS);
       this.configure();
+    } else {
+      this.markInitialized();
+    }
+  }
+
+  /**
+   * Whether start-up has finished: discovery, the login callback and the
+   * refresh-on-reload of an expired access token (NG-R3-05). Always true
+   * when auth is off.
+   */
+  public isInitialized(): boolean {
+    return this.initializedFlag;
+  }
+
+  /**
+   * Resolves once start-up has finished (see {@link isInitialized}), or after
+   * a timeout if Keycloak can't be reached. Route guards wait on this so a
+   * reload with an expired access token but a live refresh token refreshes
+   * instead of bouncing through a full Keycloak login redirect.
+   */
+  public whenInitialized(): Promise<void> {
+    return this.initializedPromise;
+  }
+
+  private markInitialized(): void {
+    if (this.initTimer) {
+      clearTimeout(this.initTimer);
+      this.initTimer = null;
+    }
+    if (!this.initializedFlag) {
+      this.initializedFlag = true;
+      this.resolveInitialized();
     }
   }
 
@@ -108,7 +155,7 @@ export class AuthService {
       }
     }).catch(error => {
       console.error('[AuthService] Authentication error:', error);
-    });
+    }).finally(() => this.markInitialized());
   }
 
   private onOAuthEvent(e: OAuthEvent): void {
@@ -154,6 +201,7 @@ export class AuthService {
       return;
     }
     this.refreshInFlight = null;
+    clearAllGameJoins();
     this.oauthService.logOut(true);
     this.isAuthenticatedSubject.next(false);
     this.userProfileSubject.next(null);
@@ -193,6 +241,8 @@ export class AuthService {
     if (!environment.authEnabled) {
       return;
     }
+    // Stored seats belong to this session; don't leave them for the next user.
+    clearAllGameJoins();
     if (!this.oauthService.getAccessToken()) {
       // revokeTokenAndLogout is a no-op without an access token.
       this.oauthService.logOut();
@@ -306,11 +356,15 @@ export class AuthService {
    * fine-grained permission like `packet:create` or `user:ban` is just
    * membership in that same array. When auth is disabled (self-hosted
    * single-user mode) every feature permission is granted, so the app is
-   * fully usable without Keycloak; otherwise it is role membership.
+   * fully usable without Keycloak; otherwise it is role membership in a
+   * still-valid access token (an expired token grants nothing).
    */
   public hasPermission(permission: string): boolean {
     if (!environment.authEnabled) {
       return true;
+    }
+    if (!this.oauthService.hasValidAccessToken()) {
+      return false;
     }
     return this.getRoles().includes(permission);
   }
@@ -324,10 +378,19 @@ export class AuthService {
 
   /**
    * Get the current user's Keycloak id (the `sub` claim), or null if there
-   * is no authenticated user (guest mode, or no profile loaded yet).
+   * is no authenticated user (guest mode).
+   *
+   * Falls back to decoding `sub` straight out of the access token when the
+   * ID-token-derived profile hasn't loaded yet: `updateUserProfile` resolves
+   * asynchronously after login, and a caller (e.g. an ownership check) can
+   * run before it does. Without the fallback, `getCurrentUserId()` returned
+   * null during that window, and since a non-owned packet's `owner.id` is
+   * also null (D2's answer-free projection redacts it), an ownership
+   * comparison against a not-yet-loaded id could spuriously match
+   * `null === null` (NG-R2-04).
    */
   public getCurrentUserId(): string | null {
-    return this.getUserProfile()?.sub ?? null;
+    return this.getUserProfile()?.sub ?? this.getAccessTokenPayload()?.sub ?? null;
   }
 
   /**

@@ -2,7 +2,7 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { of, ReplaySubject } from 'rxjs';
+import { of, ReplaySubject, Subject } from 'rxjs';
 
 import { GameConfigComponent } from './game-config.component';
 import { GameStateService } from '../../services/game-state.service';
@@ -21,6 +21,7 @@ describe('GameConfigComponent proctor preview', () => {
   let dialog: jasmine.SpyObj<MatDialog>;
   let snack: jasmine.SpyObj<MatSnackBar>;
   let component: GameConfigComponent;
+  let processErrors$: Subject<any>;
 
   const fullPacket = {
     id: 'packet-1',
@@ -40,6 +41,7 @@ describe('GameConfigComponent proctor preview', () => {
 
   beforeEach(() => {
     session$ = new ReplaySubject<GameSession>(1);
+    processErrors$ = new Subject<any>();
     gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
       'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
       'isProctorless', 'getProctor', 'requestGameSession', 'setMatchPacket', 'updateGameSettings',
@@ -54,7 +56,7 @@ describe('GameConfigComponent proctor preview', () => {
       declarations: [GameConfigComponent],
       providers: [
         { provide: GameStateService, useValue: gameStateService },
-        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: of(null) } } },
+        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: processErrors$ } } },
         { provide: SockbowlQuestionsService, useValue: questions },
         { provide: MatDialog, useValue: dialog },
         { provide: MatSnackBar, useValue: snack },
@@ -114,14 +116,111 @@ describe('GameConfigComponent proctor preview', () => {
     expect(questions.getPacketById).not.toHaveBeenCalled();
   });
 
-  it('a non-proctor loads only packet metadata from questions', () => {
+  it('a non-proctor with a packet id takes the metadata from the session, not from questions', () => {
+    // The owner in a proctorless mode is sent the id but still no questions.
     gameStateService.isSelfProctor.and.returnValue(false);
     component.ngOnInit();
 
-    session$.next(sessionWith({ id: 'packet-1', name: 'Packet One' } as any));
+    session$.next(sessionWith({ id: 'packet-1', name: 'Packet One', tossups: new Array(20), bonuses: new Array(4) } as any));
 
-    expect(questions.getPacketById).toHaveBeenCalledOnceWith('packet-1');
+    expect(questions.getPacketById).not.toHaveBeenCalled();
     expect(gameStateService.requestGameSession).not.toHaveBeenCalled();
+    expect(component.selectedPacket?.name).toBe('Packet One');
+    expect(component.getBonusCount()).toBe(4);
+  });
+
+  // WP-FIXG5 sends non-proctors MatchPacketUpdate{packetId:null, packetName,
+  // tossupCount, bonusCount}, and GameStateService turns it into a session
+  // packet with no id and length-only arrays (NG-R3-01, second effect).
+  it('a non-proctor shows the packet name and bonus count with no packet id and no questions call', () => {
+    gameStateService.isSelfProctor.and.returnValue(false);
+    component.ngOnInit();
+
+    session$.next(sessionWith({ id: null, name: 'Generated Packet', tossups: new Array(10), bonuses: new Array(3) } as any));
+
+    expect(questions.getPacketById).not.toHaveBeenCalled();
+    expect(gameStateService.requestGameSession).not.toHaveBeenCalled();
+    expect(component.isPacketSet()).toBeTrue();
+    expect(component.selectedPacketId).toBe('');
+    expect(component.selectedPacket?.name).toBe('Generated Packet');
+    expect(component.hasPacketBonuses()).toBeTrue();
+    expect(component.getBonusCount()).toBe(3);
+  });
+
+  it('a non-proctor drops the id-less packet when it is cleared', () => {
+    gameStateService.isSelfProctor.and.returnValue(false);
+    component.ngOnInit();
+    session$.next(sessionWith({ id: null, name: 'Generated Packet', tossups: new Array(10), bonuses: new Array(3) } as any));
+
+    session$.next(sessionWith({ id: null, name: null, tossups: [], bonuses: [] } as any));
+
+    expect(component.isPacketSet()).toBeFalse();
+    expect(component.selectedPacket).toBeNull();
+  });
+
+  it('the proctor adopts the server counts over the counts the packet dialog guessed', () => {
+    component.ngOnInit();
+    session$.next(sessionWith({ id: 'packet-1', name: 'Packet One', tossups: new Array(5) } as any));
+    // The dialog handed back a packet with no bonus count (an older questions
+    // service that doesn't return counts from import-random).
+    component.selectedPacket = { id: 'packet-1', name: 'Packet One', tossups: new Array(5), bonuses: [] } as any;
+
+    session$.next(sessionWith({ id: 'packet-1', name: 'Packet One', tossups: new Array(5), bonuses: new Array(2) } as any));
+
+    expect(component.getBonusCount()).toBe(2);
+  });
+
+  it('resets the selected packet display when a MatchPacketUpdate clears the packet', () => {
+    component.ngOnInit();
+
+    session$.next(sessionWith({ id: 'packet-1', name: 'Packet One' } as any));
+    expect(component.selectedPacketId).toBe('packet-1');
+
+    // A proctor seat change or mode change clears the packet: the server
+    // sends MatchPacketUpdate{packetId:null, tossupCount:0}, which
+    // GameStateService turns into a packet with a null id and no tossups.
+    session$.next(sessionWith({ id: null, name: null, tossups: [] } as any));
+
+    expect(component.selectedPacketId).toBe('');
+    expect(component.selectedPacket).toBeNull();
+  });
+  it('explains a PACKET_NOT_AVAILABLE refusal and drops the optimistic pick', () => {
+    component.ngOnInit();
+    session$.next(sessionWith({ id: null, name: null, tossups: [] } as any));
+    // The packet dialog set this optimistically before the server answered.
+    component.packetId = 'other-game-packet';
+    component.selectedPacketId = 'other-game-packet';
+    component.selectedPacket = { id: 'other-game-packet', name: 'Theirs', tossups: new Array(5), bonuses: new Array(5) } as any;
+
+    processErrors$.next({
+      code: 'PACKET_NOT_AVAILABLE',
+      error: 'Packet id other-game-packet is not available for play',
+    });
+
+    expect(snack.open).toHaveBeenCalledWith(
+      jasmine.stringMatching(/can't be used in this game/), 'Dismiss', jasmine.anything());
+    expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/other-game-packet/), jasmine.anything(), jasmine.anything());
+    expect(component.selectedPacket).toBeNull();
+    expect(component.selectedPacketId).toBe('');
+    expect(component.packetId).toBe('');
+  });
+
+  it('keeps the current packet when a refused pick is reverted', () => {
+    component.ngOnInit();
+    session$.next(sessionWith(fullPacket));
+    component.selectedPacketId = 'other-game-packet';
+    component.selectedPacket = { id: 'other-game-packet', name: 'Theirs' } as any;
+
+    processErrors$.next({ code: 'PACKET_NOT_AVAILABLE', error: 'not available' });
+
+    expect(component.selectedPacketId).toBe('packet-1');
+    expect(component.selectedPacket).toBe(fullPacket);
+  });
+
+  it('shows a generic ProcessError as the server sent it', () => {
+    component.ngOnInit();
+    processErrors$.next({ error: 'StartMatch: Permission Denied' });
+    expect(snack.open).toHaveBeenCalledWith('StartMatch: Permission Denied', 'Dismiss', jasmine.anything());
   });
 });
 
