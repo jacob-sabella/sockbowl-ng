@@ -215,18 +215,16 @@
 
   .generate-btn {
     align-self: flex-start;
-    background: var(--warning) !important;
-    color: white !important;
+    // Material's M3 theme uses a fixed brand palette decoupled from this
+    // app's per-theme tokens, so the fill/label still need a functional
+    // override here (S3-06: unify this CTA with the app's one accent,
+    // instead of a one-off warning color, and drop the hover lift + glow).
+    background: var(--accent-primary) !important;
+    color: var(--on-accent-primary) !important;
     border: none !important;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 600;
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--warning) 30%, transparent);
-
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px color-mix(in srgb, var(--warning) 40%, transparent);
-    }
 
     &:disabled {
       opacity: 0.5;
@@ -249,8 +247,10 @@
   text-align: center;
 
   mat-spinner {
+    // Matches the loading-state spinner's token (packet-search.component.scss)
+    // instead of the one-off warning color (S3-06).
     ::ng-deep circle {
-      stroke: var(--warning) !important;
+      stroke: var(--accent-primary) !important;
     }
   }
 
@@ -439,14 +439,18 @@
       .section-text {
         padding: 0.75rem 1rem;
         background: var(--bg-secondary);
-        border-left: 3px solid var(--border-subtle);
+        border: 1px solid var(--border-subtle);
         border-radius: 4px;
         color: var(--text-primary);
         line-height: 1.6;
         font-size: 0.95rem;
 
+        // Full hairline border + tone background instead of a side stripe
+        // (S3-15); the leading icon on .section-label above already marks
+        // which field this is.
         &.answer-text {
-          border-left-color: var(--accent-primary);
+          background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+          border-color: color-mix(in srgb, var(--accent-primary) 35%, var(--border-subtle));
           font-weight: 500;
         }
       }
@@ -556,7 +560,7 @@
       .section-text {
         padding: 0.75rem 1rem;
         background: var(--bg-tertiary);
-        border-left: 3px solid var(--border-subtle);
+        border: 1px solid var(--border-subtle);
         border-radius: 4px;
         color: var(--text-primary);
         line-height: 1.6;

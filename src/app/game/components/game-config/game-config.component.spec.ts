@@ -224,6 +224,111 @@ describe('GameConfigComponent proctor preview', () => {
   });
 });
 
+describe('GameConfigComponent impeccable polish (S3)', () => {
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let component: GameConfigComponent;
+
+  function sessionWith(overrides: Partial<GameSession>): GameSession {
+    return {
+      gameSettings: {},
+      currentMatch: { packet: null },
+      teamList: [],
+      playerList: [],
+      ...overrides,
+    } as unknown as GameSession;
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
+      'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
+      'isProctorless', 'getProctor', 'requestGameSession', 'setMatchPacket', 'updateGameSettings',
+      'getCurrentPlayer',
+    ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
+    gameStateService.isSelfProctor.and.returnValue(true);
+
+    TestBed.configureTestingModule({
+      declarations: [GameConfigComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: of(null) } } },
+        { provide: SockbowlQuestionsService, useValue: jasmine.createSpyObj<SockbowlQuestionsService>('SockbowlQuestionsService', ['getPacketById']) },
+        { provide: MatDialog, useValue: jasmine.createSpyObj<MatDialog>('MatDialog', ['open']) },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']) },
+        { provide: PresentationConnectionService, useValue: { isAvailable$: of(false), connectionState$: of(null) } },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    component = TestBed.createComponent(GameConfigComponent).componentInstance;
+  });
+
+  it('loads bonusesEnabled from the session on init, instead of always starting unchecked (S3-03)', () => {
+    session$.next(sessionWith({ gameSettings: { bonusesEnabled: true } as any }));
+    component.ngOnInit();
+
+    expect(component.bonusesEnabled).toBeTrue();
+  });
+
+  it('keeps bonusesEnabled in step with later session updates (S3-03)', () => {
+    component.ngOnInit();
+    session$.next(sessionWith({ gameSettings: { bonusesEnabled: true } as any }));
+    expect(component.bonusesEnabled).toBeTrue();
+
+    session$.next(sessionWith({ gameSettings: { bonusesEnabled: false } as any }));
+    expect(component.bonusesEnabled).toBeFalse();
+  });
+
+  it('reports the tossup count alongside the bonus count (S3-08)', () => {
+    component.selectedPacket = { tossups: new Array(20), bonuses: new Array(4) } as any;
+    expect(component.getTossupCount()).toBe(20);
+  });
+
+  it('reports zero tossups when no packet is selected (S3-08)', () => {
+    component.selectedPacket = null;
+    expect(component.getTossupCount()).toBe(0);
+  });
+
+  it('labels each packet visibility in words, never the raw enum (S3-08)', () => {
+    component.selectedPacket = { visibility: 'EPHEMERAL' } as any;
+    expect(component.packetVisibilityLabel()).toBe('Game-only, 24h');
+
+    component.selectedPacket = { visibility: 'DRAFT' } as any;
+    expect(component.packetVisibilityLabel()).toBe('Draft');
+
+    component.selectedPacket = { visibility: 'PUBLISHED' } as any;
+    expect(component.packetVisibilityLabel()).toBe('Published');
+  });
+
+  it('shows no visibility label when the view carries none (H-03, S3-08)', () => {
+    component.selectedPacket = {} as any;
+    expect(component.packetVisibilityLabel()).toBeNull();
+  });
+
+  it('states in words why Start is disabled with no packet chosen (S3-17)', () => {
+    session$.next(sessionWith({ currentMatch: { packet: null } as any }));
+    component.ngOnInit();
+
+    expect(component.startDisabledReason()).toBe('Choose a packet to start');
+  });
+
+  it('has no disabled reason once a packet is set (S3-17)', () => {
+    session$.next(sessionWith({ currentMatch: { packet: { id: 'packet-1', name: 'Packet One' } } as any }));
+    component.ngOnInit();
+
+    expect(component.startDisabledReason()).toBe('');
+  });
+
+  it('identifies the signed-in viewer for the "You" marker (S3-11)', () => {
+    gameStateService.getCurrentPlayer.and.returnValue({ playerId: 'p1' } as any);
+
+    expect(component.isSelfPlayer('p1')).toBeTrue();
+    expect(component.isSelfPlayer('p2')).toBeFalse();
+    expect(component.isSelfPlayer(undefined)).toBeFalse();
+  });
+});
+
 describe('GameConfigComponent pending packet (PB-15)', () => {
   let session$: ReplaySubject<GameSession>;
   let gameStateService: jasmine.SpyObj<GameStateService>;

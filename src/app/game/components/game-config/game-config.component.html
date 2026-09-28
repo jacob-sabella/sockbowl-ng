@@ -1,36 +1,20 @@
 @if (gameSessionObs | async; as gameSession) {
   <div class="page">
-    <!-- HERO -->
+    <!-- HERO — the join code is the loudest object on the page (THESIS: "the
+         code comes first"). Proctor and Mode are stated in words by the
+         launch bar just below, so they don't repeat here (S3-04). -->
     <section class="hero">
       <div class="hero__card">
-        <div class="hero__info">
-          <div class="info-item">
-            <mat-icon aria-hidden="true">account_circle</mat-icon>
-            <span class="info-label">Proctor:</span>
-            <span class="info-value">{{ gameSession.gameSettings.proctorType || 'None' }}</span>
-          </div>
-          <div class="info-item">
-            <mat-icon aria-hidden="true">tune</mat-icon>
-            <span class="info-label">Mode:</span>
-            <span class="info-value">{{ gameSession.gameSettings.gameMode || 'None' }}</span>
-          </div>
-          @if (gameStateService.getCurrentPlayer()) {
-            <div class="info-item">
-              <mat-icon aria-hidden="true">person</mat-icon>
-              <span class="info-label">Player:</span>
-              <span class="info-value">{{ gameStateService.getCurrentPlayer()?.name }}</span>
-            </div>
-          }
-          <div class="info-item join-item">
-            <mat-icon aria-hidden="true">qr_code_2</mat-icon>
-            <span class="info-label">Code:</span>
-            <span class="info-value code-value">{{ gameSession.joinCode }}</span>
+        <div class="hero__code">
+          <span class="hero__code-label">Room code</span>
+          <div class="hero__code-row">
+            <span class="hero__code-value">{{ gameSession.joinCode }}</span>
             <button
               type="button"
               mat-icon-button
               aria-label="Copy join code"
               (click)="copyJoinCode(gameSession.joinCode)"
-              class="copy-btn"
+              class="hero__icon-btn"
               >
               <mat-icon>content_copy</mat-icon>
             </button>
@@ -44,7 +28,7 @@
                   aria-label="Cast to TV"
                   (click)="startCasting()"
                   matTooltip="Cast to TV"
-                  class="copy-btn cast-btn">
+                  class="hero__icon-btn hero__icon-btn--cast">
                   <mat-icon>cast</mat-icon>
                 </button>
               }
@@ -56,13 +40,19 @@
                   aria-label="Stop casting"
                   (click)="stopCasting()"
                   matTooltip="Stop casting"
-                  class="copy-btn cast-btn cast-btn--connected">
+                  class="hero__icon-btn hero__icon-btn--cast hero__icon-btn--connected">
                   <mat-icon>cast_connected</mat-icon>
                 </button>
               }
             }
           </div>
         </div>
+        @if (gameStateService.getCurrentPlayer()) {
+          <div class="hero__player">
+            <mat-icon aria-hidden="true">person</mat-icon>
+            <span class="hero__player-name">{{ gameStateService.getCurrentPlayer()?.name }}</span>
+          </div>
+        }
       </div>
     </section>
 
@@ -101,21 +91,32 @@
       </div>
       <div class="launch__cta">
         @if (canBecomeProctor()) {
-          <button mat-stroked-button color="primary" (click)="becomeProctor()">
-            <mat-icon>workspace_premium</mat-icon> Become Proctor
-          </button>
+          <div class="launch__proctor-cta">
+            <button mat-stroked-button color="primary" (click)="becomeProctor()">
+              <mat-icon>workspace_premium</mat-icon> Become Proctor
+            </button>
+            <span class="launch__hint">Manage the packet, timers and start.</span>
+          </div>
         }
         @if (canManageConfig()) {
-          <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
-                  [disabled]="!isPacketSet()">
-            <mat-icon>play_arrow</mat-icon> Start Match
-          </button>
+          <div class="launch__start-cta">
+            <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
+                    [disabled]="!isPacketSet()"
+                    [attr.title]="startDisabledReason() || null">
+              <mat-icon>play_arrow</mat-icon> Start Match
+            </button>
+            @if (startDisabledReason()) {
+              <span class="launch__hint">{{ startDisabledReason() }}</span>
+            }
+          </div>
         }
       </div>
     </section>
 
-    <!-- GRID -->
-    <section class="grid">
+    <!-- GRID. For non-managers the Teams/Players card is reordered (CSS
+         `order` only, nothing removed) to sit right after the launch bar,
+         above the read-only config cards (S3-11 STORY step 2). -->
+    <section class="grid" [class.grid--player-view]="!canManageConfig()">
       <!-- Packet -->
       <mat-card class="card">
         <mat-card-header>
@@ -127,18 +128,35 @@
         </mat-card-header>
         <mat-card-content>
           @if (isPacketSet()) {
-            <div class="kv">
-              <!-- Only the proctor (or a proctorless owner) is sent the id (WP-FIXG5). -->
+            <div class="packet-summary">
+              <div class="packet-summary__name">{{ gameSession.currentMatch.packet.name }}</div>
+              <div class="packet-summary__meta">
+                @if (packetVisibilityLabel()) {
+                  <span class="packet-badge">{{ packetVisibilityLabel() }}</span>
+                }
+                <span class="packet-summary__counts">
+                  {{ getTossupCount() }} {{ getTossupCount() === 1 ? 'tossup' : 'tossups' }}
+                  &middot;
+                  {{ getBonusCount() }} {{ getBonusCount() === 1 ? 'bonus' : 'bonuses' }}
+                </span>
+              </div>
+              <!-- Only the proctor (or a proctorless owner) is sent the id (WP-FIXG5).
+                   Demoted to a secondary, copyable detail (S3-08) — never the headline. -->
               @if (gameSession.currentMatch.packet.id) {
-                <div class="kv__row">
-                  <span class="kv__key">Packet ID: </span>
-                  <span class="kv__val code">{{ gameSession.currentMatch.packet.id }}</span>
+                <div class="packet-summary__id">
+                  <span class="packet-summary__id-label">Packet ID</span>
+                  <span class="packet-summary__id-value">{{ gameSession.currentMatch.packet.id }}</span>
+                  <button
+                    type="button"
+                    mat-icon-button
+                    aria-label="Copy packet ID"
+                    (click)="copyPacketId(gameSession.currentMatch.packet.id)"
+                    class="packet-summary__id-copy"
+                    >
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
                 </div>
               }
-              <div class="kv__row">
-                <span class="kv__key">Name: </span>
-                <span class="kv__val">{{ gameSession.currentMatch.packet.name }}</span>
-              </div>
             </div>
             <!-- Bonus Settings -->
             @if (hasPacketBonuses()) {
@@ -147,7 +165,8 @@
                 <p class="bonus-info">
                   <mat-icon class="info-icon">info</mat-icon>
                   <span>
-                    This packet contains <strong>{{ getBonusCount() }}</strong> bonus questions.
+                    This packet contains <strong>{{ getBonusCount() }}</strong>
+                    {{ getBonusCount() === 1 ? 'bonus question' : 'bonus questions' }}.
                     Each bonus part is worth 10 points (bonuses may have a different number of parts).
                   </span>
                 </p>
@@ -256,7 +275,7 @@
       </mat-card>
       <!-- Teams -->
       @if (!gameStateService.isFreeForAll()) {
-        <mat-card class="card card--span2">
+        <mat-card class="card card--span2 card--teams">
           <mat-card-header>
             <mat-card-title>
               <mat-icon>groups</mat-icon>
@@ -273,7 +292,7 @@
                   <div class="team__header">
                     <h3 class="team__name">
                       {{ team.teamName }}
-                      <span class="team__count">{{ team.teamPlayers.length || 0 }}</span>
+                      <span class="team__count">{{ team.teamPlayers.length || 0 }} {{ team.teamPlayers.length === 1 ? 'player' : 'players' }}</span>
                     </h3>
                   </div>
                   <div class="team__players">
@@ -283,6 +302,9 @@
                         >
                         <mat-icon class="player__avatar">face</mat-icon>
                         <span class="player__name">{{ player.name }}</span>
+                        @if (isSelfPlayer(player.playerId)) {
+                          <span class="you-chip">You</span>
+                        }
                       </div>
                     }
                   </div>
@@ -306,7 +328,7 @@
       }
       <!-- Free for all: flat player list, no join/spectate switching -->
       @if (gameStateService.isFreeForAll()) {
-        <mat-card class="card card--span2">
+        <mat-card class="card card--span2 card--teams">
           <mat-card-header>
             <mat-card-title>
               <mat-icon>person_off</mat-icon>
@@ -320,6 +342,9 @@
                 <div class="player">
                   <mat-icon class="player__avatar">face</mat-icon>
                   <span class="player__name">{{ player.name }}</span>
+                  @if (isSelfPlayer(player.playerId)) {
+                    <span class="you-chip">You</span>
+                  }
                 </div>
               }
             </div>
@@ -342,7 +367,12 @@
                 [style.display]="player.playerMode === PlayerMode.SPECTATOR ? '' : 'none'"
                 >
                 <mat-icon matListItemIcon>face</mat-icon>
-                <div matListItemTitle>{{ player.name }}</div>
+                <div matListItemTitle>
+                  {{ player.name }}
+                  @if (isSelfPlayer(player.playerId)) {
+                    <span class="you-chip">You</span>
+                  }
+                </div>
               </mat-list-item>
             }
           </mat-list>

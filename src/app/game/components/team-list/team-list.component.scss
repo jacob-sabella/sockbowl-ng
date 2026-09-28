@@ -196,9 +196,9 @@
     }
 
     &.current-player {
+      // Tone background + the leading .current-player-icon carry this state;
+      // no side-stripe needed (S3-15).
       background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 20%, transparent) 0%, color-mix(in srgb, var(--accent-secondary) 15%, transparent) 100%) !important;
-      border-left: 4px solid var(--accent-primary) !important;
-      border-bottom-color: color-mix(in srgb, var(--accent-primary) 30%, transparent) !important;
       font-weight: 600 !important;
 
       ::ng-deep .mdc-list-item__content {
@@ -225,8 +225,7 @@
 
     &.current-buzz {
       background: linear-gradient(135deg, color-mix(in srgb, var(--warning) 25%, transparent) 0%, color-mix(in srgb, var(--warning) 20%, transparent) 100%) !important;
-      border-left: 4px solid var(--warning) !important;
-      border-bottom-color: color-mix(in srgb, var(--warning) 30%, transparent) !important;
+      border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border-subtle)) !important;
       color: var(--warning) !important;
       font-weight: 700 !important;
       box-shadow:

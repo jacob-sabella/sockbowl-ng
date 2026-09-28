@@ -53,6 +53,15 @@ export class PacketSearchComponent implements OnInit {
   selectionLoading = false;
   private searchSubject = new Subject<string>();
 
+  /**
+   * Which tab is active (S3-07). The "Question bank" tab commits inline
+   * (`generateFromBank()` closes the dialog itself), so the shared footer
+   * "Use Packet" button is hidden while it's active — one commit per tab.
+   * Index 1 always names it: Library(0), Question bank(1), AI(2, gated).
+   */
+  selectedTabIndex = 0;
+  readonly QUESTION_BANK_TAB_INDEX = 1;
+
   // Generate tab properties
   generateTopic = "";
   generateContext = "";
@@ -666,7 +675,9 @@ export class PacketSearchComponent implements OnInit {
       this.onQbImportError(null);
       return;
     }
-    this.snackBar.open('Packet ready.', 'OK', { duration: 2500 });
+    // S3-07: the game-config screen already confirms with its own
+    // "Packet '<name>' selected." toast once the dialog closes (every
+    // commit path funnels through there) — a second one here just doubled up.
     this.dialogRef.close(PacketSearchComponent.packetFromImport(res));
   }
 

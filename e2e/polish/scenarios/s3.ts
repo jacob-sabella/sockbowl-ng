@@ -98,9 +98,9 @@ async function openPacketSearch(page: Page): Promise<void> {
   await page.getByRole('dialog').waitFor({ state: 'visible' });
 }
 
-/** Fills the "Generate with AI" tab's key/model/topic, stopping just before Generate. */
+/** Fills the "AI" tab's key/model/topic, stopping just before Generate. */
 async function fillGenerateForm(page: Page, topic: string): Promise<void> {
-  await page.getByRole('tab', { name: 'Generate with AI' }).click();
+  await page.getByRole('tab', { name: 'AI' }).click();
   const apiKeyField = page.getByLabel('OpenAI API Key');
   await apiKeyField.fill('sk-h0-mock-key-not-a-real-secret');
   await apiKeyField.blur(); // AiKeyPickerComponent.onApiKeyBlur -> fetchAvailableModels
@@ -172,11 +172,11 @@ const states: CaptureState[] = [
     openPacketSearch,
   ),
 
-  // --- "Generate with AI" tab: needs its own REST/GraphQL backdrop, not just STOMP replay ---
+  // --- "AI" tab: needs its own REST/GraphQL backdrop, not just STOMP replay ---
   withSteps(
     withMocks(
       // `role: 'author'` (not the default `player`) — packet-search's
-      // "Generate with AI" tab is gated on `auth.hasPermission('question:
+      // "AI" tab is gated on `auth.hasPermission('question:
       // generate')`, which only `author`/`admin` carry (`mock/oidc.ts`).
       stompState('config-generate-ai-fails-closed', 'config-quiz-bowl-classic', 'proctor', 0, { role: 'author' }),
       async page => {

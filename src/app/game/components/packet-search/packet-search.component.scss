@@ -87,7 +87,7 @@
       min-width: 120px;
 
       @media (max-width: 600px) { min-width: 0; flex: 1 1 auto; }
-      transition: all 0.2s ease;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 
       &.cancel-btn {
         color: var(--text-secondary);
@@ -101,14 +101,12 @@
 
       &.select-btn {
         background: var(--accent-primary) !important;
-        color: white !important;
+        color: var(--on-accent-primary) !important;
         border: none !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--shadow-md) var(--shadow-color);
 
         &:hover:not(:disabled) {
-          transform: translateY(-2px);
           filter: brightness(1.06);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
         }
 
         &:disabled {
@@ -164,7 +162,7 @@
       background: var(--bg-secondary) !important;
       border-radius: 12px !important;
       border: 1px solid var(--border-medium) !important;
-      transition: all 0.2s ease !important;
+      transition: border-color 0.2s ease !important;
     }
 
     .mat-mdc-form-field-focus-overlay {
@@ -349,30 +347,15 @@
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
-  overflow: hidden;
 
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--accent-primary);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
+  // Selection is already carried by the border/background tint below plus
+  // the .check-icon in the markup, so no side-stripe is needed (S3-15).
   &:hover {
     background: var(--surface-hover);
     border-color: var(--border-medium);
     transform: translateX(4px);
-
-    &::before {
-      opacity: 0.5;
-    }
   }
 
   &.unplayable {
@@ -382,21 +365,13 @@
     &:hover {
       transform: none;
       background: var(--surface);
-
-      &::before {
-        opacity: 0;
-      }
     }
   }
 
   &.selected {
     background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
     border-color: var(--accent-primary);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-
-    &::before {
-      opacity: 1;
-    }
+    box-shadow: var(--shadow-md) var(--shadow-color);
 
     .result-name {
       color: var(--accent-primary);

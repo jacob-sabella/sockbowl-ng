@@ -98,6 +98,9 @@ export class GameConfigComponent implements OnInit {
         this.autoTimerEnabled = gameSession.gameSettings.timerSettings.autoTimerEnabled;
         this.readingWordsPerSecond = gameSession.gameSettings.timerSettings.readingWordsPerSecond;
       }
+      // S3-03 (impeccable polish): the toggle used to stay unchecked forever —
+      // it was never loaded from the session, only ever written to it.
+      this.bonusesEnabled = !!gameSession.gameSettings?.bonusesEnabled;
 
       this.syncSelectedPacket(gameSession.currentMatch?.packet);
       this.confirmPendingPacketIfEchoed(gameSession.currentMatch?.packet);
@@ -396,6 +399,26 @@ export class GameConfigComponent implements OnInit {
     return this.selectedPacket?.bonuses?.length || 0;
   }
 
+  /** Tossup count for display, alongside getBonusCount() (S3-08). */
+  getTossupCount(): number {
+    return this.selectedPacket?.tossups?.length || 0;
+  }
+
+  /**
+   * The packet's visibility badge text (S3-08): EPHEMERAL/DRAFT/PUBLISHED,
+   * read off whichever seat's view carries it. A non-proctor's session
+   * packet may not carry visibility at all (H-03); this only ever shows
+   * what the local view actually has, it never guesses.
+   */
+  packetVisibilityLabel(): string | null {
+    switch (this.selectedPacket?.visibility) {
+      case 'EPHEMERAL': return 'Game-only, 24h';
+      case 'DRAFT': return 'Draft';
+      case 'PUBLISHED': return 'Published';
+      default: return null;
+    }
+  }
+
   /* ─── Timer Settings ────────────────────────────────────────────────────── */
 
   /**
@@ -438,13 +461,32 @@ export class GameConfigComponent implements OnInit {
     this.gameStateService.startMatch();
   }
 
+  /** Why Start is disabled right now, stated in words (S3-17). Empty once ready. */
+  startDisabledReason(): string {
+    return this.isPacketSet() ? '' : 'Choose a packet to start';
+  }
+
   /* ─── UI helpers ───────────────────────────────────────────────────────── */
 
   copyJoinCode(code: string | undefined) {
-    if (!code) return;
-    navigator.clipboard.writeText(code).then(() => {
-      this.snack.open('Join code copied to clipboard.', 'OK', { duration: 2000 });
+    this.copyText(code, 'Join code copied to clipboard.');
+  }
+
+  /** Packet ID is a secondary, proctor-only detail (S3-08); still copyable. */
+  copyPacketId(id: string | undefined) {
+    this.copyText(id, 'Packet ID copied to clipboard.');
+  }
+
+  private copyText(text: string | undefined, confirmation: string) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      this.snack.open(confirmation, 'OK', { duration: 2000 });
     });
+  }
+
+  /** Whether this player is the signed-in viewer, for the "You" marker (S3-11). */
+  isSelfPlayer(playerId: string | undefined): boolean {
+    return !!playerId && this.gameStateService.getCurrentPlayer()?.playerId === playerId;
   }
 
   trackByTeamId(_: number, t: Team) {

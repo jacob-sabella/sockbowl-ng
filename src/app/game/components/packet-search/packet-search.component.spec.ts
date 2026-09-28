@@ -137,6 +137,35 @@ describe('PacketSearchComponent', () => {
     });
   });
 
+  describe('one commit per tab (S3-07)', () => {
+    it('opens on the Library tab, with the shared "Use Packet" footer visible', () => {
+      configure([]);
+      expect(component.selectedTabIndex).toBe(0);
+      expect(component.selectedTabIndex).not.toBe(component.QUESTION_BANK_TAB_INDEX);
+
+      const footerBtn = (fixture.nativeElement as HTMLElement).querySelector('.select-btn');
+      expect(footerBtn).not.toBeNull();
+    });
+
+    it('hides the shared footer button while the Question bank tab is active, since it commits inline', () => {
+      configure([]);
+      component.selectedTabIndex = component.QUESTION_BANK_TAB_INDEX;
+      fixture.detectChanges();
+
+      const footerBtn = (fixture.nativeElement as HTMLElement).querySelector('.select-btn');
+      expect(footerBtn).toBeNull();
+    });
+
+    it('closes the dialog once from generateFromBank, without a second confirmation toast racing game-config\'s own', () => {
+      configure([], { id: 'eph-1', name: 'Random Packet', usedRemoteIds: [], tossupCount: 5, bonusCount: 3 });
+
+      component.generateFromBank();
+
+      expect(dialogClose).toHaveBeenCalledTimes(1);
+      expect(snackOpen).not.toHaveBeenCalledWith(jasmine.stringMatching(/ready/i), jasmine.anything(), jasmine.anything());
+    });
+  });
+
   describe('M4-UI-01 rate-limit cooldowns', () => {
     it('disables the AI Generate button while the ai-generate policy cools down', () => {
       configure(['question:generate']);

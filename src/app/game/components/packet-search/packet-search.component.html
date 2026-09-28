@@ -5,9 +5,9 @@
   </h2>
 
   <mat-dialog-content>
-    <mat-tab-group>
-      <!-- Search Existing Packets Tab -->
-      <mat-tab label="Search Existing">
+    <mat-tab-group [(selectedIndex)]="selectedTabIndex">
+      <!-- Library: search the shared packet library, plus "My packets" -->
+      <mat-tab label="Library">
         <div class="tab-content">
           @if (auth.isAuthenticated()) {
             <div class="my-packets-section">
@@ -180,292 +180,6 @@
         </div>
       </mat-tab>
 
-      <!-- Generate New Packet Tab -->
-      @if (auth.hasPermission('question:generate')) {
-      <mat-tab label="Generate with AI">
-        <div class="tab-content">
-          <div class="generate-container">
-            <!-- Form - hidden when generating -->
-            @if (!isGenerating) {
-              <div class="generate-form">
-                <!-- Validation Error Banner -->
-                @if (validationError) {
-                  <div class="validation-error">
-                    <mat-icon>error</mat-icon>
-                    <span>{{ validationError }}</span>
-                  </div>
-                }
-
-                <!-- API key + model (PB-08, shared/ai-key) -->
-                <app-ai-key-picker
-                  [apiKey]="apiKey"
-                  (apiKeyChange)="apiKey = $event"
-                  [model]="selectedModel"
-                  (modelChange)="onGenerateModelChange($event)"
-                  ></app-ai-key-picker>
-
-                <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
-                  <mat-label>Topic</mat-label>
-                  <input
-                    matInput
-                    type="text"
-                    [(ngModel)]="generateTopic"
-                    placeholder="e.g., Ancient Rome, Organic Chemistry, Jazz Music"
-                    required
-                    >
-                </mat-form-field>
-                <mat-form-field class="context-field" appearance="outline" floatLabel="always">
-                  <mat-label>Context (Optional)</mat-label>
-                  <textarea
-                    matInput
-                    [(ngModel)]="generateContext"
-                    placeholder="e.g., Focus on the Roman Republic, Include chemical reactions, 1920s-1940s era"
-                    rows="3"
-                  ></textarea>
-                </mat-form-field>
-
-                <mat-form-field class="question-count-field" appearance="outline" floatLabel="always">
-                  <mat-label>Number of Questions</mat-label>
-                  <input
-                    matInput
-                    type="number"
-                    [(ngModel)]="questionCount"
-                    placeholder="5"
-                    min="1"
-                    max="30"
-                    required
-                    >
-                  <mat-hint>Number of tossups to generate (1-30). Default: 5</mat-hint>
-                </mat-form-field>
-
-                <mat-checkbox
-                  class="generate-bonuses-checkbox"
-                  [(ngModel)]="generateBonuses"
-                  >
-                  Generate bonuses ({{ questionCount }} bonuses will be generated alongside tossups)
-                </mat-checkbox>
-
-                <!-- Advanced LLM Parameters -->
-                <mat-expansion-panel class="advanced-options">
-                  <mat-expansion-panel-header>
-                    <mat-panel-title>
-                      <mat-icon>tune</mat-icon>
-                      Advanced Options (LLM Parameters)
-                    </mat-panel-title>
-                  </mat-expansion-panel-header>
-
-                  <div class="advanced-options-content">
-                    <!-- Temperature -->
-                    @if (supportsTemperature) {
-                      <mat-form-field appearance="outline" floatLabel="always">
-                        <mat-label>Temperature</mat-label>
-                        <input
-                          matInput
-                          type="number"
-                          [(ngModel)]="temperature"
-                          placeholder="1.0"
-                          min="0"
-                          max="2"
-                          step="0.1"
-                          >
-                        <mat-hint>Controls randomness (0.0 = deterministic, 2.0 = creative). Default: 1.0</mat-hint>
-                      </mat-form-field>
-                    }
-
-                    <!-- Top P -->
-                    @if (supportsTopP) {
-                      <mat-form-field appearance="outline" floatLabel="always">
-                        <mat-label>Top P</mat-label>
-                        <input
-                          matInput
-                          type="number"
-                          [(ngModel)]="topP"
-                          placeholder="1.0"
-                          min="0"
-                          max="1"
-                          step="0.1"
-                          >
-                        <mat-hint>Nucleus sampling for diversity (0.0 = focused, 1.0 = diverse). Default: 1.0</mat-hint>
-                      </mat-form-field>
-                    }
-
-                    <!-- Frequency Penalty -->
-                    @if (supportsFrequencyPenalty) {
-                      <mat-form-field appearance="outline" floatLabel="always">
-                        <mat-label>Frequency Penalty</mat-label>
-                        <input
-                          matInput
-                          type="number"
-                          [(ngModel)]="frequencyPenalty"
-                          placeholder="0.0"
-                          min="-2"
-                          max="2"
-                          step="0.1"
-                          >
-                        <mat-hint>Penalizes repetition (-2.0 to 2.0). Positive = less repetition. Default: 0.0</mat-hint>
-                      </mat-form-field>
-                    }
-
-                    <!-- Presence Penalty -->
-                    @if (supportsPresencePenalty) {
-                      <mat-form-field appearance="outline" floatLabel="always">
-                        <mat-label>Presence Penalty</mat-label>
-                        <input
-                          matInput
-                          type="number"
-                          [(ngModel)]="presencePenalty"
-                          placeholder="0.0"
-                          min="-2"
-                          max="2"
-                          step="0.1"
-                          >
-                        <mat-hint>Penalizes token reuse (-2.0 to 2.0). Positive = new topics. Default: 0.0</mat-hint>
-                      </mat-form-field>
-                    }
-                  </div>
-                </mat-expansion-panel>
-
-                <button
-                  mat-raised-button
-                  color="accent"
-                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked()"
-                  (click)="generateAIPacket()"
-                  class="generate-btn"
-                  >
-                  <mat-icon>auto_awesome</mat-icon>
-                  Generate Packet
-                </button>
-              </div>
-            }
-
-            <!-- Generating state -->
-            @if (isGenerating) {
-              <div class="generating-state">
-                <mat-spinner diameter="50"></mat-spinner>
-                <p>Generating packet with AI...</p>
-                <span class="hint">This may take a minute</span>
-              </div>
-            }
-
-            <!-- Generated packet preview -->
-            @if (generatedPacket && !isGenerating) {
-              <div class="generated-packet">
-                <div class="packet-preview">
-                  <mat-icon class="success-icon">check_circle</mat-icon>
-                  <h3>{{ generatedPacket.name }}</h3>
-                  <div class="packet-details">
-                    <span class="detail-item">
-                      <mat-icon>quiz</mat-icon>
-                      {{ generatedPacket.tossups.length || 0 }} Tossups
-                    </span>
-                    @if (generatedPacket.bonuses && generatedPacket.bonuses.length > 0) {
-                      <span class="detail-item">
-                        <mat-icon>extension</mat-icon>
-                        {{ generatedPacket.bonuses.length }} Bonuses
-                      </span>
-                    }
-                    @if (generatedPacket.difficulty) {
-                      <span class="detail-item">
-                        <mat-icon>signal_cellular_alt</mat-icon>
-                        {{ generatedPacket.difficulty }}
-                      </span>
-                    }
-                  </div>
-                </div>
-                <!-- Tossups Preview -->
-                <div class="tossups-preview">
-                  <h4 class="preview-title">
-                    <mat-icon>visibility</mat-icon>
-                    Preview Tossups
-                  </h4>
-                  <mat-accordion class="tossup-accordion">
-                    @for (tossup of generatedPacket.tossups; track tossup; let i = $index) {
-                      <mat-expansion-panel>
-                        <mat-expansion-panel-header>
-                          <mat-panel-title>
-                            <span class="tossup-number">Tossup {{ i + 1 }}</span>
-                            @if (tossup.tossup?.subcategory) {
-                              <span class="tossup-category">
-                                {{ tossup.tossup.subcategory.category.name }} - {{ tossup.tossup.subcategory.name }}
-                              </span>
-                            }
-                          </mat-panel-title>
-                        </mat-expansion-panel-header>
-                        <div class="tossup-content">
-                          <div class="content-section">
-                            <div class="section-label">
-                              <mat-icon>quiz</mat-icon>
-                              Question
-                            </div>
-                            <div class="section-text">{{ tossup.tossup.question }}</div>
-                          </div>
-                          <div class="content-section">
-                            <div class="section-label">
-                              <mat-icon>lightbulb</mat-icon>
-                              Answer
-                            </div>
-                            <div class="section-text answer-text">{{ tossup.tossup.answer }}</div>
-                          </div>
-                        </div>
-                      </mat-expansion-panel>
-                    }
-                  </mat-accordion>
-                </div>
-                <!-- Bonuses Preview -->
-                @if (generatedPacket.bonuses && generatedPacket.bonuses.length > 0) {
-                  <div class="bonuses-preview">
-                    <h4 class="preview-title">
-                      <mat-icon>visibility</mat-icon>
-                      Preview Bonuses
-                    </h4>
-                    <mat-accordion class="bonus-accordion">
-                      @for (bonusRel of generatedPacket.bonuses; track bonusRel; let i = $index) {
-                        <mat-expansion-panel>
-                          <mat-expansion-panel-header>
-                            <mat-panel-title>
-                              <span class="bonus-number">Bonus {{ i + 1 }}</span>
-                              @if (bonusRel.bonus?.subcategory) {
-                                <span class="bonus-category">
-                                  {{ bonusRel.bonus.subcategory.category.name }} - {{ bonusRel.bonus.subcategory.name }}
-                                </span>
-                              }
-                            </mat-panel-title>
-                          </mat-expansion-panel-header>
-                          <div class="bonus-content">
-                            @if (bonusRel.bonus?.preamble) {
-                              <div class="content-section">
-                                <div class="section-label">
-                                  <mat-icon>description</mat-icon>
-                                  Preamble
-                                </div>
-                                <div class="section-text">{{ bonusRel.bonus.preamble }}</div>
-                              </div>
-                            }
-                            @for (part of bonusRel.bonus?.bonusParts; track part; let partIdx = $index) {
-                              <div class="content-section">
-                                <div class="section-label">
-                                  <mat-icon>{{ ['looks_one', 'looks_two', 'looks_3'][partIdx] || 'circle' }}</mat-icon>
-                                  Part {{ partIdx + 1 }}
-                                </div>
-                                <div class="section-text">
-                                  <strong>Q:</strong> {{ part?.bonusPart?.question }}<br>
-                                  <strong>A:</strong> <span class="answer-text">{{ part?.bonusPart?.answer }}</span>
-                                </div>
-                              </div>
-                            }
-                          </div>
-                        </mat-expansion-panel>
-                      }
-                    </mat-accordion>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        </div>
-      </mat-tab>
-      }
-
       <!--
         ============================ Generate (local bank) ============================
         Deliberately NOT permission-gated (D15 amends D3): guests and players
@@ -474,8 +188,12 @@
         packet instead of an owned DRAFT (WP-Q4); callers with `packet:create`
         still get the D3 owned-DRAFT behavior. Gating this tab on
         `packet:create` would silently break guest/player packet generation.
+        S3-07: ordered before the permission-gated AI tab (it's ungated),
+        and labelled to read as a sibling of "Library"/"AI", not "Generate"
+        twice over. Index 1 — QUESTION_BANK_TAB_INDEX hides the shared
+        footer commit while this tab is active, since it commits inline.
       -->
-      <mat-tab label="Generate">
+      <mat-tab label="Question bank">
         <div class="tab-content qb-content">
           <div class="qb-intro">
             <mat-icon>auto_awesome</mat-icon>
@@ -644,6 +362,292 @@
             </div>
         </div>
       </mat-tab>
+
+      <!-- Generate New Packet Tab -->
+      @if (auth.hasPermission('question:generate')) {
+      <mat-tab label="AI">
+        <div class="tab-content">
+          <div class="generate-container">
+            <!-- Form - hidden when generating -->
+            @if (!isGenerating) {
+              <div class="generate-form">
+                <!-- Validation Error Banner -->
+                @if (validationError) {
+                  <div class="validation-error">
+                    <mat-icon>error</mat-icon>
+                    <span>{{ validationError }}</span>
+                  </div>
+                }
+
+                <!-- API key + model (PB-08, shared/ai-key) -->
+                <app-ai-key-picker
+                  [apiKey]="apiKey"
+                  (apiKeyChange)="apiKey = $event"
+                  [model]="selectedModel"
+                  (modelChange)="onGenerateModelChange($event)"
+                  ></app-ai-key-picker>
+
+                <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
+                  <mat-label>Topic</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="generateTopic"
+                    placeholder="e.g., Ancient Rome, Organic Chemistry, Jazz Music"
+                    required
+                    >
+                </mat-form-field>
+                <mat-form-field class="context-field" appearance="outline" floatLabel="always">
+                  <mat-label>Context (Optional)</mat-label>
+                  <textarea
+                    matInput
+                    [(ngModel)]="generateContext"
+                    placeholder="e.g., Focus on the Roman Republic, Include chemical reactions, 1920s-1940s era"
+                    rows="3"
+                  ></textarea>
+                </mat-form-field>
+
+                <mat-form-field class="question-count-field" appearance="outline" floatLabel="always">
+                  <mat-label>Number of Questions</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    [(ngModel)]="questionCount"
+                    placeholder="5"
+                    min="1"
+                    max="30"
+                    required
+                    >
+                  <mat-hint>Number of tossups to generate (1-30). Default: 5</mat-hint>
+                </mat-form-field>
+
+                <mat-checkbox
+                  class="generate-bonuses-checkbox"
+                  [(ngModel)]="generateBonuses"
+                  >
+                  Include bonuses
+                </mat-checkbox>
+
+                <!-- Advanced LLM Parameters -->
+                <mat-expansion-panel class="advanced-options">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <mat-icon>tune</mat-icon>
+                      Advanced
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
+
+                  <div class="advanced-options-content">
+                    <!-- Temperature -->
+                    @if (supportsTemperature) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Temperature</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="temperature"
+                          placeholder="1.0"
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          >
+                        <mat-hint>Controls randomness (0.0 = deterministic, 2.0 = creative). Default: 1.0</mat-hint>
+                      </mat-form-field>
+                    }
+
+                    <!-- Top P -->
+                    @if (supportsTopP) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Top P</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="topP"
+                          placeholder="1.0"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          >
+                        <mat-hint>Nucleus sampling for diversity (0.0 = focused, 1.0 = diverse). Default: 1.0</mat-hint>
+                      </mat-form-field>
+                    }
+
+                    <!-- Frequency Penalty -->
+                    @if (supportsFrequencyPenalty) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Frequency Penalty</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="frequencyPenalty"
+                          placeholder="0.0"
+                          min="-2"
+                          max="2"
+                          step="0.1"
+                          >
+                        <mat-hint>Penalizes repetition (-2.0 to 2.0). Positive = less repetition. Default: 0.0</mat-hint>
+                      </mat-form-field>
+                    }
+
+                    <!-- Presence Penalty -->
+                    @if (supportsPresencePenalty) {
+                      <mat-form-field appearance="outline" floatLabel="always">
+                        <mat-label>Presence Penalty</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [(ngModel)]="presencePenalty"
+                          placeholder="0.0"
+                          min="-2"
+                          max="2"
+                          step="0.1"
+                          >
+                        <mat-hint>Penalizes token reuse (-2.0 to 2.0). Positive = new topics. Default: 0.0</mat-hint>
+                      </mat-form-field>
+                    }
+                  </div>
+                </mat-expansion-panel>
+
+                <button
+                  mat-raised-button
+                  color="primary"
+                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked()"
+                  (click)="generateAIPacket()"
+                  class="generate-btn"
+                  >
+                  <mat-icon>auto_awesome</mat-icon>
+                  Generate Packet
+                </button>
+              </div>
+            }
+
+            <!-- Generating state -->
+            @if (isGenerating) {
+              <div class="generating-state">
+                <mat-spinner diameter="50"></mat-spinner>
+                <p>Generating packet with AI...</p>
+                <span class="hint">This may take a minute</span>
+              </div>
+            }
+
+            <!-- Generated packet preview -->
+            @if (generatedPacket && !isGenerating) {
+              <div class="generated-packet">
+                <div class="packet-preview">
+                  <mat-icon class="success-icon">check_circle</mat-icon>
+                  <h3>{{ generatedPacket.name }}</h3>
+                  <div class="packet-details">
+                    <span class="detail-item">
+                      <mat-icon>quiz</mat-icon>
+                      {{ generatedPacket.tossups.length || 0 }} Tossups
+                    </span>
+                    @if (generatedPacket.bonuses && generatedPacket.bonuses.length > 0) {
+                      <span class="detail-item">
+                        <mat-icon>extension</mat-icon>
+                        {{ generatedPacket.bonuses.length }} Bonuses
+                      </span>
+                    }
+                    @if (generatedPacket.difficulty) {
+                      <span class="detail-item">
+                        <mat-icon>signal_cellular_alt</mat-icon>
+                        {{ generatedPacket.difficulty }}
+                      </span>
+                    }
+                  </div>
+                </div>
+                <!-- Tossups Preview -->
+                <div class="tossups-preview">
+                  <h4 class="preview-title">
+                    <mat-icon>visibility</mat-icon>
+                    Preview Tossups
+                  </h4>
+                  <mat-accordion class="tossup-accordion">
+                    @for (tossup of generatedPacket.tossups; track tossup; let i = $index) {
+                      <mat-expansion-panel>
+                        <mat-expansion-panel-header>
+                          <mat-panel-title>
+                            <span class="tossup-number">Tossup {{ i + 1 }}</span>
+                            @if (tossup.tossup?.subcategory) {
+                              <span class="tossup-category">
+                                {{ tossup.tossup.subcategory.category.name }} - {{ tossup.tossup.subcategory.name }}
+                              </span>
+                            }
+                          </mat-panel-title>
+                        </mat-expansion-panel-header>
+                        <div class="tossup-content">
+                          <div class="content-section">
+                            <div class="section-label">
+                              <mat-icon>quiz</mat-icon>
+                              Question
+                            </div>
+                            <div class="section-text">{{ tossup.tossup.question }}</div>
+                          </div>
+                          <div class="content-section">
+                            <div class="section-label">
+                              <mat-icon>lightbulb</mat-icon>
+                              Answer
+                            </div>
+                            <div class="section-text answer-text">{{ tossup.tossup.answer }}</div>
+                          </div>
+                        </div>
+                      </mat-expansion-panel>
+                    }
+                  </mat-accordion>
+                </div>
+                <!-- Bonuses Preview -->
+                @if (generatedPacket.bonuses && generatedPacket.bonuses.length > 0) {
+                  <div class="bonuses-preview">
+                    <h4 class="preview-title">
+                      <mat-icon>visibility</mat-icon>
+                      Preview Bonuses
+                    </h4>
+                    <mat-accordion class="bonus-accordion">
+                      @for (bonusRel of generatedPacket.bonuses; track bonusRel; let i = $index) {
+                        <mat-expansion-panel>
+                          <mat-expansion-panel-header>
+                            <mat-panel-title>
+                              <span class="bonus-number">Bonus {{ i + 1 }}</span>
+                              @if (bonusRel.bonus?.subcategory) {
+                                <span class="bonus-category">
+                                  {{ bonusRel.bonus.subcategory.category.name }} - {{ bonusRel.bonus.subcategory.name }}
+                                </span>
+                              }
+                            </mat-panel-title>
+                          </mat-expansion-panel-header>
+                          <div class="bonus-content">
+                            @if (bonusRel.bonus?.preamble) {
+                              <div class="content-section">
+                                <div class="section-label">
+                                  <mat-icon>description</mat-icon>
+                                  Preamble
+                                </div>
+                                <div class="section-text">{{ bonusRel.bonus.preamble }}</div>
+                              </div>
+                            }
+                            @for (part of bonusRel.bonus?.bonusParts; track part; let partIdx = $index) {
+                              <div class="content-section">
+                                <div class="section-label">
+                                  <mat-icon>{{ ['looks_one', 'looks_two', 'looks_3'][partIdx] || 'circle' }}</mat-icon>
+                                  Part {{ partIdx + 1 }}
+                                </div>
+                                <div class="section-text">
+                                  <strong>Q:</strong> {{ part?.bonusPart?.question }}<br>
+                                  <strong>A:</strong> <span class="answer-text">{{ part?.bonusPart?.answer }}</span>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </mat-expansion-panel>
+                      }
+                    </mat-accordion>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </mat-tab>
+      }
     </mat-tab-group>
   </mat-dialog-content>
 
@@ -651,19 +655,24 @@
     <button mat-button (click)="close()" class="cancel-btn">
       Cancel
     </button>
-    <button
-      mat-raised-button
-      color="primary"
-      [disabled]="(!selectedPacketId && !generatedPacket) || selectionLoading"
-      (click)="confirmSelection()"
-      class="select-btn"
-      >
-      @if (selectionLoading) {
-        <mat-spinner diameter="18"></mat-spinner>
-      } @else {
-        <mat-icon>check</mat-icon>
-      }
-      Use Packet
-    </button>
+    <!-- The Question bank tab commits inline (Generate & use) and closes
+         itself — this shared commit stays hidden there so each tab has
+         exactly one commit (S3-07). -->
+    @if (selectedTabIndex !== QUESTION_BANK_TAB_INDEX) {
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="(!selectedPacketId && !generatedPacket) || selectionLoading"
+        (click)="confirmSelection()"
+        class="select-btn"
+        >
+        @if (selectionLoading) {
+          <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+          <mat-icon>check</mat-icon>
+        }
+        Use Packet
+      </button>
+    }
   </mat-dialog-actions>
 </div>
