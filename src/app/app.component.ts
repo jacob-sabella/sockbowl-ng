@@ -11,6 +11,14 @@ import { VersionCheckService } from './core/version-check.service';
 })
 export class AppComponent {
   private themeService = inject(ThemeService);
+  /**
+   * Not private (S6-11): a live capture drives `offerReload()` straight
+   * through the dev-mode `ng.getComponent` hook, the same way the navbar's
+   * `authService` field lets S6-06's capture drive `handleSessionEnded()` —
+   * `ng serve`'s unhashed bundle means the service's real detection never
+   * fires under this harness.
+   */
+  versionCheck = inject(VersionCheckService);
 
   title = 'sockbowl-ng';
 
@@ -22,10 +30,8 @@ export class AppComponent {
    * Initialize ThemeService to apply theme on app startup
    */
   constructor() {
-    const versionCheck = inject(VersionCheckService);
-
     // Theme is automatically initialized in ThemeService constructor
-    versionCheck.start();
+    this.versionCheck.start();
   }
 
   /** Watch for the secret word "clips" typed outside any text field. */

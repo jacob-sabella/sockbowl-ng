@@ -1,6 +1,6 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatIconRegistry } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -10,6 +10,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 
 import { NavbarComponent } from './navbar.component';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
 import { environment } from '../../../../environments/environment';
 
 /**
@@ -29,8 +30,10 @@ const PERMISSION_SETS: Record<string, string[]> = {
 describe('NavbarComponent', () => {
   let fixture: ComponentFixture<NavbarComponent>;
   let authSpy: jasmine.SpyObj<AuthService>;
+  let confirmDialogSpy: jasmine.SpyObj<ConfirmDialogService>;
   let isAuthenticatedSubject: BehaviorSubject<boolean>;
   let userProfileSubject: BehaviorSubject<any>;
+  let sessionEndedSubject: BehaviorSubject<boolean>;
   let originalAuthEnabled: boolean;
   let overlayContainer: OverlayContainer;
 
@@ -72,21 +75,25 @@ describe('NavbarComponent', () => {
 
     isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
     userProfileSubject = new BehaviorSubject<any>(null);
+    sessionEndedSubject = new BehaviorSubject<boolean>(false);
     authSpy = jasmine.createSpyObj(
       'AuthService',
       ['login', 'logout', 'hasPermission'],
       {
         isAuthenticated$: isAuthenticatedSubject.asObservable(),
         userProfile$: userProfileSubject.asObservable(),
+        sessionEnded$: sessionEndedSubject.asObservable(),
       }
     );
     authSpy.hasPermission.and.returnValue(false);
+    confirmDialogSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
 
     TestBed.configureTestingModule({
       declarations: [NavbarComponent],
       imports: [MatMenuModule, NoopAnimationsModule],
       providers: [
         { provide: AuthService, useValue: authSpy },
+        { provide: ConfirmDialogService, useValue: confirmDialogSpy },
         { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/' } },
         { provide: MatIconRegistry, useValue: jasmine.createSpyObj('MatIconRegistry', ['addSvgIconLiteral']) },
         { provide: DomSanitizer, useValue: jasmine.createSpyObj('DomSanitizer', ['bypassSecurityTrustHtml']) },
@@ -114,6 +121,19 @@ describe('NavbarComponent', () => {
     const menuLabels = openMenuLabels('Account menu, Test User');
     expect(menuLabels).toContain('Profile');
     expect(menuLabels).toContain('Sign out');
+  });
+
+  it('gives a long/emoji/RTL display name a full-text title for truncation (S6-11)', () => {
+    const longName = '🎉 مستخدم Bartholomew-Maximilian-Fitzgerald-Worthington the Third';
+    authSpy.hasPermission.and.callFake((p: string) => PERMISSION_SETS['player'].includes(p));
+    userProfileSubject.next({ sub: 'u1', name: longName, roles: PERMISSION_SETS['player'] });
+    isAuthenticatedSubject.next(true);
+    fixture.detectChanges();
+
+    const root: HTMLElement = fixture.nativeElement;
+    const label = root.querySelector('.navbar__account-trigger .navbar__btn-label');
+    expect(label?.getAttribute('title')).toBe(longName);
+    expect(label?.textContent).toBe(longName);
   });
 
   it('shows Packets and a standalone Taxonomy link (no admin:access) for an author', () => {
@@ -154,5 +174,77 @@ describe('NavbarComponent', () => {
     expect(labels).not.toContain('Admin menu');
     // No Admin-menu trigger exists at all, so there is nothing to open.
     expect(openMenuLabels('Admin menu')).toEqual([]);
+  });
+
+  it('signs out immediately (no confirmation) outside /game', () => {
+    setUp(PERMISSION_SETS['player']);
+    fixture.componentInstance.logout();
+    expect(confirmDialogSpy.confirm).not.toHaveBeenCalled();
+    expect(authSpy.logout).toHaveBeenCalled();
+  });
+
+  describe('while in /game (S6-06)', () => {
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      environment.authEnabled = true;
+
+      isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+      sessionEndedSubject = new BehaviorSubject<boolean>(false);
+      authSpy = jasmine.createSpyObj(
+        'AuthService',
+        ['login', 'logout', 'hasPermission'],
+        {
+          isAuthenticated$: isAuthenticatedSubject.asObservable(),
+          userProfile$: userProfileSubject.asObservable(),
+          sessionEnded$: sessionEndedSubject.asObservable(),
+        }
+      );
+      authSpy.hasPermission.and.returnValue(false);
+      confirmDialogSpy = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+
+      TestBed.configureTestingModule({
+        declarations: [NavbarComponent],
+        imports: [MatMenuModule, NoopAnimationsModule],
+        providers: [
+          { provide: AuthService, useValue: authSpy },
+          { provide: ConfirmDialogService, useValue: confirmDialogSpy },
+          { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/game' } },
+          { provide: MatIconRegistry, useValue: jasmine.createSpyObj('MatIconRegistry', ['addSvgIconLiteral']) },
+          { provide: DomSanitizer, useValue: jasmine.createSpyObj('DomSanitizer', ['bypassSecurityTrustHtml']) },
+        ],
+        schemas: [NO_ERRORS_SCHEMA],
+      });
+
+      overlayContainer = TestBed.inject(OverlayContainer);
+      fixture = TestBed.createComponent(NavbarComponent);
+    });
+
+    it('shows no Sign In nag for a guest seat that was never signed in', () => {
+      fixture.detectChanges();
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.textContent).not.toContain('Playing as Guest');
+      expect(visibleLabels().some(l => l.startsWith('Sign in'))).toBeFalse();
+    });
+
+    it('keeps a persistent Sign In once the session has ended underneath the user', () => {
+      isAuthenticatedSubject.next(false);
+      sessionEndedSubject.next(true);
+      fixture.detectChanges();
+      expect(visibleLabels()).toContain('Sign in (your session ended)');
+    });
+
+    it('confirms through the shared dialog before signing out, and only signs out on confirm', () => {
+      confirmDialogSpy.confirm.and.returnValue(of(true));
+      fixture.componentInstance.logout();
+      expect(confirmDialogSpy.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ destructive: true }));
+      expect(authSpy.logout).toHaveBeenCalled();
+    });
+
+    it('does not sign out when the confirmation is cancelled', () => {
+      confirmDialogSpy.confirm.and.returnValue(of(false));
+      fixture.componentInstance.logout();
+      expect(confirmDialogSpy.confirm).toHaveBeenCalled();
+      expect(authSpy.logout).not.toHaveBeenCalled();
+    });
   });
 });

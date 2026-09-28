@@ -2,19 +2,20 @@
   <!-- Loading State -->
   @if (loading) {
     <div class="loading-container" role="status" aria-live="polite" aria-busy="true">
-      <mat-spinner></mat-spinner>
+      <mat-spinner aria-label="Loading profile"></mat-spinner>
       <p>Loading profile...</p>
     </div>
   }
 
-  <!-- Error State -->
+  <!-- Error State (whole page: the initial load failed) -->
   @if (error && !loading) {
     <div class="error-container" role="alert" aria-live="assertive">
-      <mat-icon color="warn" aria-hidden="true">error</mat-icon>
-      <p>{{ error }}</p>
-      <button mat-raised-button color="primary" (click)="loadUserData()">
-        <mat-icon aria-hidden="true">refresh</mat-icon>
-        Retry
+      <mat-icon class="error-container__icon" aria-hidden="true">{{ error.icon }}</mat-icon>
+      <h2 class="error-container__title">{{ error.title }}</h2>
+      <p>{{ error.message }}</p>
+      <button mat-raised-button color="primary" (click)="handlePrimaryError()">
+        <mat-icon aria-hidden="true">{{ error.primaryAction === 'sign-in' ? 'login' : 'refresh' }}</mat-icon>
+        {{ error.primaryLabel }}
       </button>
     </div>
   }
@@ -92,13 +93,24 @@
           <mat-card-subtitle class="history-subtitle">{{ totalElements }} total games played</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          @if (gameHistory.length === 0) {
+          <!-- A later page's load failed: only this card errors, with its own retry (S6-10) -->
+          @if (historyError) {
+            <div class="history-error" role="alert">
+              <mat-icon class="history-error__icon" aria-hidden="true">{{ historyError.icon }}</mat-icon>
+              <p>{{ historyError.message }}</p>
+              <button mat-stroked-button (click)="retryHistory()">
+                <mat-icon aria-hidden="true">refresh</mat-icon>
+                {{ historyError.primaryLabel }}
+              </button>
+            </div>
+          }
+          @if (!historyError && gameHistory.length === 0) {
             <div class="no-history">
               <mat-icon aria-hidden="true">inbox</mat-icon>
               <p>No game history yet. Start playing to see your games here.</p>
             </div>
           }
-          @if (gameHistory.length > 0) {
+          @if (!historyError && gameHistory.length > 0) {
             <div>
               <ul class="history-list">
                 @for (game of gameHistory; track game) {

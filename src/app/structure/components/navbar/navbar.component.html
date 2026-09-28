@@ -32,14 +32,26 @@
       @if (authEnabled) {
         <div class="navbar__auth">
           <!-- Not authenticated -->
-          @if ((isAuthenticated$ | async) === false && !isInGame()) {
-            <div class="navbar__auth-guest">
-              <span class="navbar__guest-label">Playing as Guest</span>
-              <button mat-flat-button class="navbar__signin" (click)="login()">
-                <mat-icon aria-hidden="true">login</mat-icon>
-                <span class="navbar__btn-label">Sign In</span>
-              </button>
-            </div>
+          @if ((isAuthenticated$ | async) === false) {
+            @if (!isInGame()) {
+              <div class="navbar__auth-guest">
+                <span class="navbar__guest-label">Playing as Guest</span>
+                <button mat-flat-button class="navbar__signin" (click)="login()">
+                  <mat-icon aria-hidden="true">login</mat-icon>
+                  <span class="navbar__btn-label">Sign In</span>
+                </button>
+              </div>
+            } @else if (sessionEnded$ | async) {
+              <!-- S6-06: a guest playing an anonymous seat in /game gets no
+                   nag, but a signed-in user whose session ended underneath
+                   them keeps a persistent way back in, not just a 10s toast. -->
+              <div class="navbar__auth-guest">
+                <button mat-flat-button class="navbar__signin" (click)="login()" aria-label="Sign in (your session ended)">
+                  <mat-icon aria-hidden="true">login</mat-icon>
+                  <span class="navbar__btn-label">Sign In</span>
+                </button>
+              </div>
+            }
           }
           <!-- Authenticated -->
           @if (isAuthenticated$ | async) {
@@ -102,7 +114,11 @@
                 [attr.aria-label]="'Account menu, ' + ((userProfile$ | async)?.name || 'User')"
               >
                 <mat-icon aria-hidden="true">account_circle</mat-icon>
-                <span class="navbar__btn-label">{{ (userProfile$ | async)?.name || 'User' }}</span>
+                <span
+                  class="navbar__btn-label"
+                  dir="auto"
+                  [title]="(userProfile$ | async)?.name || 'User'"
+                >{{ (userProfile$ | async)?.name || 'User' }}</span>
                 <mat-icon aria-hidden="true" class="navbar__caret">arrow_drop_down</mat-icon>
               </button>
               <mat-menu #accountMenu="matMenu">

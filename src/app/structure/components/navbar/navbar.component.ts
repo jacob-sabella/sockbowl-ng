@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
+import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
 
 @Component({
     selector: 'app-navbar',
@@ -18,9 +19,12 @@ export class NavbarComponent implements OnInit {
   private router = inject(Router);
   private matIconRegistry = inject(MatIconRegistry);
   private domSanitizer = inject(DomSanitizer);
+  private confirmDialog = inject(ConfirmDialogService);
 
   isAuthenticated$!: Observable<boolean>;
   userProfile$!: Observable<any>;
+  /** Drives the in-game recovery Sign In (S6-06); unused outside `/game`. */
+  sessionEnded$!: Observable<boolean>;
   authEnabled = environment.authEnabled;
 
   constructor() {
@@ -31,6 +35,7 @@ export class NavbarComponent implements OnInit {
     if (this.authEnabled) {
       this.isAuthenticated$ = this.authService.isAuthenticated$;
       this.userProfile$ = this.authService.userProfile$;
+      this.sessionEnded$ = this.authService.sessionEnded$;
     }
   }
 
@@ -38,8 +43,29 @@ export class NavbarComponent implements OnInit {
     this.authService.login();
   }
 
+  /**
+   * Signing out mid-game drops the seat, so in `/game` this confirms first
+   * through the shared dialog rather than acting immediately (S6-06).
+   * Everywhere else it signs out right away, as before.
+   */
   logout(): void {
-    this.authService.logout();
+    if (!this.isInGame()) {
+      this.authService.logout();
+      return;
+    }
+    this.confirmDialog
+      .confirm({
+        title: 'Sign out?',
+        message: 'Signing out now will drop your seat in this game.',
+        confirmText: 'Sign out',
+        cancelText: 'Stay',
+        destructive: true,
+      })
+      .subscribe(confirmed => {
+        if (confirmed) {
+          this.authService.logout();
+        }
+      });
   }
 
   navigateHome(): void {
@@ -50,8 +76,21 @@ export class NavbarComponent implements OnInit {
     // Active game canvas only ('/game'), NOT the '/game-session' lobby — which
     // also starts with '/game' and was wrongly hiding the navbar Sign In button
     // on the landing page (the only place it would ever show).
+    //
+    // S6-06: every real deep link into the canvas carries Angular matrix
+    // params (`/game;gameSessionId=...;playerSessionId=...`, per
+    // `game-canvas.component.ts`'s header comment), and `Router.url` keeps
+    // them even after `scrubSecretsFromUrl`'s `Location.replaceState` tidies
+    // the address bar (that call bypasses the Router, so it never touches
+    // `router.url`). Comparing the raw path against a bare `/game` or
+    // `/game/...` therefore never matched a real game session — only a
+    // param-free URL like a test navigating straight to `/game`. Stripping
+    // the matrix-param segment before comparing is what makes this guard
+    // (and the in-game confirm-before-sign-out / persistent recovery
+    // sign-in below) actually engage during real play.
     const path = this.router.url.split(/[?#]/)[0];
-    return path === '/game' || path.startsWith('/game/');
+    const base = path.split(';')[0];
+    return base === '/game' || base.startsWith('/game/');
   }
 
   private registerCustomIcons(): void {

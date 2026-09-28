@@ -61,6 +61,15 @@ export class AuthService {
   private userProfileSubject = new BehaviorSubject<any>(null);
   public userProfile$ = this.userProfileSubject.asObservable();
 
+  private sessionEndedSubject = new BehaviorSubject<boolean>(false);
+  /**
+   * True once {@link handleSessionEnded} has fired and no new token has
+   * arrived since (S6-06). The navbar keeps a persistent sign-in path
+   * visible in `/game` while this is true, since the ordinary guest chrome
+   * is hidden there for legitimate anonymous seat play.
+   */
+  public readonly sessionEnded$: Observable<boolean> = this.sessionEndedSubject.asObservable();
+
   private tokenChangesSubject = new Subject<string>();
   /**
    * Emits the new access token each time it is refreshed. Long-lived
@@ -162,10 +171,12 @@ export class AuthService {
     switch (e.type) {
       case 'token_received':
         this.sessionEndNotified = false;
+        this.sessionEndedSubject.next(false);
         this.isAuthenticatedSubject.next(true);
         this.updateUserProfile();
         break;
       case 'token_refreshed': {
+        this.sessionEndedSubject.next(false);
         this.isAuthenticatedSubject.next(true);
         this.updateUserProfile();
         const token = this.oauthService.getAccessToken();
@@ -205,6 +216,7 @@ export class AuthService {
     this.oauthService.logOut(true);
     this.isAuthenticatedSubject.next(false);
     this.userProfileSubject.next(null);
+    this.sessionEndedSubject.next(true);
 
     if (!this.sessionEndNotified) {
       this.sessionEndNotified = true;

@@ -74,15 +74,31 @@ export class VersionCheckService {
       .catch(() => { /* offline or transient error; try again next tick */ });
   }
 
-  private offerReload(): void {
+  /**
+   * Public so a live capture (S6-11) can drive it directly through the
+   * dev-mode `ng.getComponent`/`ng.getInjector` hooks, the same way S6-06
+   * drives `AuthService.handleSessionEnded()` — `detectRunningBundle()`
+   * never matches the unhashed `main.js` the dev server serves, so the
+   * real interval/visibilitychange path never fires under `ng serve`.
+   */
+  offerReload(): void {
     const ref = this.snackBar.open(
       'A new version of Sockbowl is available.', 'Reload', {duration: 30000});
-    ref.onAction().subscribe(() => location.reload());
+    ref.onAction().subscribe(() => this.reload());
     // If dismissed without reloading, nag gently on later checks.
     ref.afterDismissed().subscribe(info => {
       if (!info.dismissedByAction) {
         this.notified = false;
       }
     });
+  }
+
+  /**
+   * Thin wrapper so a test can spy on it directly (some browsers' `Location`
+   * won't let Jasmine `spyOn` its own `reload`, since it's a non-configurable
+   * native property).
+   */
+  protected reload(): void {
+    location.reload();
   }
 }

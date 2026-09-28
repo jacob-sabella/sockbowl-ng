@@ -105,6 +105,12 @@ describe('AuthService', () => {
     return value;
   }
 
+  function latestSessionEnded(): boolean | undefined {
+    let value: boolean | undefined;
+    service.sessionEnded$.subscribe(v => (value = v)).unsubscribe();
+    return value;
+  }
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
@@ -216,6 +222,20 @@ describe('AuthService', () => {
         expect(service.getUserProfile()).toBeNull();
       });
     }
+
+    it('sets sessionEnded$ true (S6-06: drives the navbar\'s persistent in-game Sign In)', () => {
+      expect(latestSessionEnded()).toBeFalse();
+      events$.next(new OAuthErrorEvent('token_refresh_error', {}));
+      expect(latestSessionEnded()).toBeTrue();
+    });
+
+    it('clears sessionEnded$ once a token is received again', () => {
+      events$.next(new OAuthErrorEvent('token_refresh_error', {}));
+      expect(latestSessionEnded()).toBeTrue();
+
+      events$.next(new OAuthSuccessEvent('token_received'));
+      expect(latestSessionEnded()).toBeFalse();
+    });
 
     it('prompts to sign in again once, and the action starts login', () => {
       events$.next(new OAuthErrorEvent('token_refresh_error', {}));

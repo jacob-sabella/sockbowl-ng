@@ -230,8 +230,19 @@
     font-weight: 600;
 
     .navbar__btn-label {
+      /* S6-11: this span's actual parent is Material's own
+         `.mdc-button__label` wrapper (block, not flex), so the span itself
+         renders `display: inline` — and `max-width`/`overflow: hidden` are
+         no-ops on an inline box. `inline-block` is what makes the rest of
+         this rule (plus `text-overflow: ellipsis`, itself a no-op without
+         `white-space: nowrap`) actually clip a long, unbroken display name
+         instead of growing the toolbar to two lines. The `title` attribute
+         on this span carries the full name for a hover/long-press tooltip. */
+      display: inline-block;
+      vertical-align: middle;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
       max-width: 12rem;
     }
   }
