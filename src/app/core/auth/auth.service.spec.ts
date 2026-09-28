@@ -304,6 +304,23 @@ describe('AuthService', () => {
       expect(oauthServiceSpy.refreshToken).not.toHaveBeenCalled();
     });
 
+    it('refreshToken rejects instead of throwing when oauthService throws synchronously (NG-R4-01)', () => {
+      oauthServiceSpy.refreshToken.and.throwError('boom');
+
+      let thrown: unknown;
+      let result: Promise<string | null> | undefined;
+      try {
+        result = service.refreshToken();
+      } catch (err) {
+        thrown = err;
+      }
+
+      // The contract every caller relies on (`.catch(...)` or `await`): the
+      // method itself never throws, it always hands back a promise.
+      expect(thrown).toBeUndefined();
+      return expectAsync(result).toBeRejected();
+    });
+
     it('token_expires for the access token triggers a refresh', fakeAsync(() => {
       resolveRefreshWith(freshToken);
       events$.next(new OAuthInfoEvent('token_expires', 'access_token'));

@@ -50,9 +50,10 @@ test('An access-token refresh mid-game keeps the socket and REST calls alive, th
   await page.getByRole('button', { name: /Solo practice/ }).click();
   await page.waitForURL('**/game;**', { timeout: 25_000 });
 
-  // Search Existing, not the qbreader "Generate" tab: that tab draws from a
-  // separate bank of :BankTossup/:BankBonus nodes this compose stack doesn't
-  // seed (a known, reported M3 follow-up; see README.md's e2e section).
+  // Search Existing, not the qbreader "Generate" tab: Generate now works
+  // against a bank seeded by helpers/bank.ts's seedBankFixture() (exercised
+  // by auth-generate.spec.ts), but this spec doesn't seed one, and Search
+  // Existing is enough to exercise the mid-game token refresh under test here.
   await page.getByRole('button', { name: /Find a Packet/ }).click();
   const dialog = page.locator('.packet-search-dialog');
   await expect(dialog).toBeVisible();

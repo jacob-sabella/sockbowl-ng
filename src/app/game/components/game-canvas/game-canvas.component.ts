@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, ChangeDetectionStrategy, OnInit} from '@angular/core';
+import {Component, DestroyRef, inject, ChangeDetectionStrategy, OnDestroy, OnInit} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Location} from '@angular/common';
 import {ActivatedRoute, ParamMap, Router} from "@angular/router";
@@ -21,7 +21,7 @@ const SECRET_ROUTE_PARAMS = ['playerSecret', 'accessToken'];
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class GameCanvasComponent implements OnInit {
+export class GameCanvasComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private location = inject(Location);
@@ -61,6 +61,11 @@ export class GameCanvasComponent implements OnInit {
 
       this.gameStateService.initialize(gameSessionId, playerSessionId, credentials);
     });
+  }
+
+  /** Leaving the canvas means leaving this game seat (NG-R4-02). */
+  ngOnDestroy(): void {
+    this.gameStateService.leaveGame();
   }
 
   /**

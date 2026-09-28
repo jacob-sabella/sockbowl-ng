@@ -249,6 +249,35 @@ describe('GameStateService packet updates (WP-FIXN4)', () => {
     expect(session().currentMatch.packet.tossups).toBeNull();
   });
 
+  it('resets the counts on a fresh initialize, so a later resend for a same-named packet is not restored (NG-R4-02)', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+
+    // Leaving and rejoining a game seat reuses this singleton service.
+    service.initialize('g1', 'p1', {});
+
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { packet: { id: null, name: 'Generated Packet', tossups: null, bonuses: null } } },
+    });
+
+    expect(session().currentMatch.packet.tossups).toBeNull();
+  });
+
+  it('resets the counts when the player leaves the game (NG-R4-02)', () => {
+    eventSubjects['MatchPacketUpdate'].next({
+      packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
+    });
+
+    service.leaveGame();
+
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: { currentMatch: { packet: { id: null, name: 'Generated Packet', tossups: null, bonuses: null } } },
+    });
+
+    expect(session().currentMatch.packet.tossups).toBeNull();
+  });
+
   it('forgets the counts once the packet is cleared', () => {
     eventSubjects['MatchPacketUpdate'].next({
       packetId: null, packetName: 'Generated Packet', tossupCount: 10, bonusCount: 4,
