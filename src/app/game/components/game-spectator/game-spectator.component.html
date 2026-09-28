@@ -69,6 +69,11 @@
                 <p class="font-serif"><span>{{ revealedText }}</span>@if (!readingComplete) { <span class="reveal-cursor" aria-hidden="true">▍</span> }</p>
               } @else if (currentRound.question) {
                 <p class="font-serif" [innerHTML]="currentRound.question"></p>
+              } @else if (currentRound.roundState === RoundState.AWAITING_ANSWER) {
+                <!-- The question text isn't sent to spectators once a player is
+                     answering; say so instead of a generic empty-state line
+                     that reads as still-loading (M5 S1-28f). -->
+                <p><em>Question hidden while a player answers.</em></p>
               } @else {
                 <p>Waiting for the question.</p>
               }

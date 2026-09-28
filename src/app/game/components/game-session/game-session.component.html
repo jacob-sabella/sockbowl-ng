@@ -125,7 +125,7 @@
             Signed in as <strong>{{ currentUsername }}</strong>
           </p>
         }
-        <button mat-raised-button color="accent" [disabled]="sessionCreateLocked() || createInFlight()" (click)="submitCreateGame()">Create</button>
+        <button mat-raised-button [disabled]="sessionCreateLocked() || createInFlight()" (click)="submitCreateGame()">Create</button>
       </div>
     }
 
@@ -154,7 +154,7 @@
           </p>
         }
         <!-- Submit Button -->
-        <button mat-raised-button color="accent" type="submit" [disabled]="joinInFlight()">Join</button>
+        <button mat-raised-button type="submit" [disabled]="joinInFlight()">Join</button>
       </form>
     }
 

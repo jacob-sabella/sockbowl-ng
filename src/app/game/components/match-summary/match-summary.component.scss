@@ -272,7 +272,8 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-family: var(--font-display);
+  // A control, not a heading: Inter (M5 S1-28c), not the display face.
+  font-family: var(--font-body);
   font-size: var(--text-lg);
   font-weight: 600;
   text-align: left;
@@ -501,7 +502,10 @@
 }
 
 /* ============ Sockbowl type roles: scoreboard ============ */
-.summary-header h2, .winning-announcement h3, .section-title, .round-title {
+/* Display face limited to the hero and section headings (M5 S1-28c);
+   .round-title is a per-row label repeated once per round in the history
+   accordion, not a heading, so it stays on Inter (--font-body, its default). */
+.summary-header h2, .winning-announcement h3, .section-title {
   font-family: var(--font-display); letter-spacing: -0.01em;
 }
 [class*="score"], [class*="points"] { font-variant-numeric: tabular-nums; }

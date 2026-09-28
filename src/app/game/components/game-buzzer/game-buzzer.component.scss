@@ -59,7 +59,10 @@
   // Shadow size and colour were split (the size half had no colour, so
   // `currentColor` filled in `--text-primary`, showing as a halo in every
   // dark theme). Pairing them, as `_material-overrides.scss` does, fixes it.
-  box-shadow: var(--shadow-lg) var(--shadow-color);
+  // `--shadow-md`, not `--shadow-lg`: paired with the 1px border above,
+  // the wider blur read as a thin-border-plus-wide-shadow silhouette
+  // (M5 S1-28a); `--shadow-md` keeps the depth without that mismatch.
+  box-shadow: var(--shadow-md) var(--shadow-color);
   padding: 1rem;
   // Fixed-slot layout (M5 S1-04): the card fills the height the container
   // gives it (the container's `min-height: 100dvh` minus its own padding)
