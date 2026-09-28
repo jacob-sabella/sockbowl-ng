@@ -142,7 +142,9 @@ const states: CaptureState[] = [
   // --- Role views of the same real CONFIG session (quiz-bowl-classic, proctor claimed, 2v2, packet chosen) ---
   // Proctorless owner console (AUTO_PROCTOR): the owner manages config
   // directly, no proctor-claim step exists. Real, unsynthesized frame.
-  stompState('config-owner-view', 'auto-proctor', 'buzzer', 1),
+  // S3-10: also the 280px ("mobile-min") spot check for the lobby itself —
+  // the densest managing-seat view (hero + launch bar + Start CTA).
+  stompState('config-owner-view', 'auto-proctor', 'buzzer', 1, { viewports: ['mobile-min', 'mobile', 'desktop'] }),
   // Nobody has claimed proctor yet (empty roster too — canBecomeProctor's
   // "first-come" G-01 design applies equally to any seat while unclaimed).
   stompState('config-proctor-unclaimed', 'config-quiz-bowl-classic', 'player', 1),
@@ -167,8 +169,13 @@ const states: CaptureState[] = [
   stompState('config-packet-chosen-ephemeral', 'config-quiz-bowl-classic', 'proctor', 3),
   stompState('config-packet-chosen-draft', 'config-quiz-bowl-classic', 'proctor', 2),
   stompState('config-packet-chosen-published', 'config-quiz-bowl-classic', 'proctor', 1),
+  // S3-10: also the 280px spot check for the picker dialog (all three tabs
+  // must stay visible with no scroll arrow at the narrowest supported width).
   withSteps(
-    withMocks(stompState('config-my-packets-empty', 'config-quiz-bowl-classic', 'proctor', 0), emptyMyPackets),
+    withMocks(
+      stompState('config-my-packets-empty', 'config-quiz-bowl-classic', 'proctor', 0, { viewports: ['mobile-min', 'mobile', 'desktop'] }),
+      emptyMyPackets,
+    ),
     openPacketSearch,
   ),
 
@@ -206,7 +213,11 @@ const states: CaptureState[] = [
       await openPacketSearch(page);
       await fillGenerateForm(page, 'Organic Chemistry');
       await page.getByRole('button', { name: 'Generate Packet' }).click();
-      await page.getByText(/reached your AI generation limit/).waitFor({ state: 'visible' });
+      // The banner text is echoed by the one-shot limit snackbar too (S3-02:
+      // "exactly one limit snackbar"), so scope to the persistent banner
+      // itself rather than the ambiguous text to avoid a strict-mode
+      // violation across the two matches.
+      await page.locator('.ai-limit-banner__title', { hasText: 'reached your AI generation limit' }).waitFor({ state: 'visible' });
     },
   ),
   withSteps(
