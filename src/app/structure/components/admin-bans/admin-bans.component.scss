@@ -35,12 +35,28 @@
 
   &__card {
     width: 100%;
+
+    /* M5 finish review FF1 fix 2: card titles get the Headline/display
+       voice (Three-Voice Rule) so they read below the page h1 and above
+       the "User bans"/"IP bans" h2s, instead of a plain-Inter title the
+       bold h2 above it visually outranked. */
+    mat-card-title {
+      font-family: var(--font-display);
+      font-weight: var(--font-semibold);
+      font-size: var(--text-xl);
+    }
   }
 
   &__form {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    // M5 finish review FF1 fix 2: a flex column's items stretch to the
+    // container's cross-axis width by default, which is what turned "Ban
+    // user"/"Ban IP" into full-width red slabs — the fields opt back into
+    // full width with their own `&__field { width: 100% }` below, but the
+    // submit button now keeps its natural, normal width at the form's end.
+    align-items: flex-start;
   }
 
   &__field {
@@ -55,8 +71,18 @@
     color: var(--on-error) !important;
   }
 
+  /* M5 finish review FF1 fix 3: the icon's own visible color comes from
+     `mat-icon`'s `color: var(--mat-icon-color, inherit)` rule, not simple
+     inheritance of this button's `color`. `--mat-icon-color` is the custom
+     property that rule reads, so setting it here (rather than fighting
+     Material with `!important` on an unrelated property, which never
+     reached the icon at all) is what actually recolors it. This
+     selector's own `[_ngcontent-*]` attribute already out-specifies
+     Material's `.mat-mdc-icon-button`, so the plain `color` below needs no
+     `!important` either. */
   &__danger-icon-btn {
-    color: var(--error) !important;
+    --mat-icon-color: var(--error);
+    color: var(--error);
 
     /* S5-14: F1's global `--mdc-icon-button-state-layer-size: 44px`
        (`vendors/_material-overrides.scss`, frozen) sets the custom
@@ -76,7 +102,9 @@
   }
 
   &__error {
-    color: var(--mat-sys-error, var(--error));
+    /* M5 finish review FF1 fix 3: role tokens only (OWN-WORLD), not a
+       Material system-token fallback chain. */
+    color: var(--error);
     margin: 0;
   }
 

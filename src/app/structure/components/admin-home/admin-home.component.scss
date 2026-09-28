@@ -24,7 +24,12 @@
 
   &__cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    // M5 finish review FF1 fix 5: `auto-fill` reserves a track for every
+    // column that *could* fit (a 4th, empty one at this shell's 1100px
+    // width) even with only 3 cards to place. `auto-fit` collapses empty
+    // tracks instead, so the 3 cards stretch to fill the row with no
+    // stranded canvas beside them.
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
   }
 
@@ -66,6 +71,15 @@
   &__card-link--inline {
     display: block;
     border-radius: inherit;
+    // M5 finish review FF1 fix 5: `&__card`'s `color: inherit` (above)
+    // only lands on the outer `<a>` for the Bans/Taxonomy cards, where
+    // that anchor IS the `.admin-home__card` element. The Usage card
+    // nests this inline anchor a level deeper (S5-06's axe fix, keeping
+    // Retry out of the link), so it never got the reset and rendered in
+    // the browser's own link colour — the one card whose title read in
+    // the accent instead of matching the other two.
+    color: inherit;
+    text-decoration: none;
   }
 
   &__card-content {
@@ -113,11 +127,18 @@
     padding-top: 4px;
   }
 
+  /* M5 finish review FF1 fix 6: OWN-WORLD's degraded/error notices use the
+     left-stripe-on-tint info block (same pattern as admin-usage's
+     `&__degraded`), not bare coloured text. */
   &__ai-budget-degraded {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    padding: 6px 10px;
+    background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+    border-left: 3px solid var(--warning);
+    border-radius: var(--radius-sm);
     font-size: var(--text-xs);
     color: var(--warning-text);
   }

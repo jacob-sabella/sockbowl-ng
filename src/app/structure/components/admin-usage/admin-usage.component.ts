@@ -356,4 +356,32 @@ export class AdminUsageComponent implements OnInit {
         return kind;
     }
   }
+
+  /**
+   * Human label for a rejection event's rate-limit policy (`RateLimitEvent.policy`,
+   * e.g. `stomp-flood`, `graphql-write`; sockbowl-interfaces.ts:701-702).
+   * `metricLabel` only knows M4 quota metrics, so it silently returned the
+   * raw kebab-case code for every rate-limit policy (M5 finish review, S5
+   * FF1 fix 4). Named policies get a hand-written label; anything unmapped
+   * still avoids leaking the raw code by title-casing the words instead.
+   * The raw code always stays available in a title/tooltip.
+   */
+  policyLabel(policy: string | null | undefined): string {
+    if (!policy) {
+      return 'Usage';
+    }
+    const known: Record<string, string> = {
+      'stomp-flood': 'Buzzer flood',
+      'stomp-buzz': 'Buzz',
+      'graphql-write': 'GraphQL write',
+    };
+    if (known[policy]) {
+      return known[policy];
+    }
+    return policy
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
 }

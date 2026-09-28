@@ -249,7 +249,7 @@
                             @for (event of detail.events; track $index) {
                               <div class="admin-usage__event-row">
                                 <span>{{ formatDate(event.ts) }}</span>
-                                <span [title]="event.policy">{{ metricLabel(event.policy) }}</span>
+                                <span [title]="event.policy">{{ policyLabel(event.policy) }}</span>
                                 <span [title]="event.kind">{{ kindLabel(event.kind) }}</span>
                               </div>
                             }
@@ -295,17 +295,28 @@
       } @else if (recentEvents.length === 0) {
         <p class="admin-usage__empty">No recent rejections.</p>
       } @else {
-        <div class="admin-usage__events">
-          @for (event of recentEvents; track $index) {
-            <div class="admin-usage__event-row">
-              <span>{{ formatDate(event.ts) }}</span>
-              <span [title]="event.svc">{{ svcLabel(event.svc) }}</span>
-              <span [title]="event.policy">{{ metricLabel(event.policy) }}</span>
-              <span [title]="event.kind">{{ kindLabel(event.kind) }}</span>
-              <span>{{ event.sub || event.ip }}</span>
-            </div>
-          }
-        </div>
+        <table class="admin-usage__events-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Service</th>
+              <th>Type</th>
+              <th>Policy</th>
+              <th>User / IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (event of recentEvents; track $index) {
+              <tr>
+                <td data-label="Time">{{ formatDate(event.ts) }}</td>
+                <td data-label="Service" [title]="event.svc">{{ svcLabel(event.svc) }}</td>
+                <td data-label="Type" [title]="event.kind">{{ kindLabel(event.kind) }}</td>
+                <td data-label="Policy" [title]="event.policy">{{ policyLabel(event.policy) }}</td>
+                <td data-label="User / IP">{{ event.sub || event.ip || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
       }
     </mat-card-content>
   </mat-card>
