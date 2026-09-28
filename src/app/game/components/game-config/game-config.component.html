@@ -101,7 +101,7 @@
         @if (canManageConfig()) {
           <div class="launch__start-cta">
             <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
-                    [disabled]="!isPacketSet()"
+                    [disabled]="!isPacketSet() || startPending"
                     [attr.title]="startDisabledReason() || null">
               <mat-icon>play_arrow</mat-icon> Start Match
             </button>
@@ -227,7 +227,7 @@
                 matInput
                 type="number"
                 [(ngModel)]="tossupTimerSeconds"
-                (ngModelChange)="updateTimerSettings()"
+                (change)="commitTossupTimer()"
                 [disabled]="!canEditTimerSettings()"
                 min="1"
                 max="60"
@@ -240,7 +240,7 @@
                 matInput
                 type="number"
                 [(ngModel)]="bonusTimerSeconds"
-                (ngModelChange)="updateTimerSettings()"
+                (change)="commitBonusTimer()"
                 [disabled]="!canEditTimerSettings()"
                 min="1"
                 max="60"
@@ -254,7 +254,7 @@
                   matInput
                   type="number"
                   [(ngModel)]="readingWordsPerSecond"
-                  (ngModelChange)="updateTimerSettings()"
+                  (change)="commitReadingSpeed()"
                   [disabled]="!canEditTimerSettings()"
                   min="1"
                   max="10"
@@ -301,7 +301,7 @@
                         class="player"
                         >
                         <mat-icon class="player__avatar">face</mat-icon>
-                        <span class="player__name">{{ player.name }}</span>
+                        <span class="player__name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
                         @if (isSelfPlayer(player.playerId)) {
                           <span class="you-chip">You</span>
                         }
@@ -309,7 +309,9 @@
                     }
                   </div>
                   <div class="team__actions">
-                    @if (!gameStateService.isSelfOnTeam(team.teamId)) {
+                    <!-- The proctor never gets a seat to join (S3-09): they aren't
+                         "on" any team either, so !isSelfOnTeam alone used to offer it. -->
+                    @if (!gameStateService.isSelfOnTeam(team.teamId) && !gameStateService.isSelfProctor()) {
                       <button
                         mat-stroked-button
                         color="primary"
@@ -341,7 +343,7 @@
               @for (player of gameSession.playerList; track trackByPlayerId($index, player)) {
                 <div class="player">
                   <mat-icon class="player__avatar">face</mat-icon>
-                  <span class="player__name">{{ player.name }}</span>
+                  <span class="player__name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
                   @if (isSelfPlayer(player.playerId)) {
                     <span class="you-chip">You</span>
                   }
@@ -361,21 +363,26 @@
           <mat-card-subtitle>People watching the match.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <mat-list class="spectators">
-            @for (player of gameSession.playerList; track trackByPlayerId($index, player)) {
-              <mat-list-item
-                [style.display]="player.playerMode === PlayerMode.SPECTATOR ? '' : 'none'"
-                >
-                <mat-icon matListItemIcon>face</mat-icon>
-                <div matListItemTitle>
-                  {{ player.name }}
-                  @if (isSelfPlayer(player.playerId)) {
-                    <span class="you-chip">You</span>
-                  }
-                </div>
-              </mat-list-item>
-            }
-          </mat-list>
+          <!-- S3-12: filter to actual spectators (the list used to render every
+               player and hide the rest with CSS, so an empty spectator list
+               rendered as a blank card instead of a designed empty state). -->
+          @if (spectators(gameSession).length === 0) {
+            <app-empty-state icon="visibility_off" title="No one is spectating yet." />
+          } @else {
+            <mat-list class="spectators">
+              @for (player of spectators(gameSession); track trackByPlayerId($index, player)) {
+                <mat-list-item>
+                  <mat-icon matListItemIcon>face</mat-icon>
+                  <div matListItemTitle>
+                    <span class="spectator-name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
+                    @if (isSelfPlayer(player.playerId)) {
+                      <span class="you-chip">You</span>
+                    }
+                  </div>
+                </mat-list-item>
+              }
+            </mat-list>
+          }
         </mat-card-content>
         <mat-card-actions align="end">
           @if (gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()) {

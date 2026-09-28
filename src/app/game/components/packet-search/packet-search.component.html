@@ -5,7 +5,10 @@
   </h2>
 
   <mat-dialog-content>
-    <mat-tab-group [(selectedIndex)]="selectedTabIndex">
+    <!-- dynamicHeight (S3-02): without it MatTabGroup fixes the body's height to
+         its first render, so opening the Advanced panel (or a long AI banner)
+         clips instead of growing the scroll area. -->
+    <mat-tab-group [(selectedIndex)]="selectedTabIndex" [dynamicHeight]="true">
       <!-- Library: search the shared packet library, plus "My packets" -->
       <mat-tab label="Library">
         <div class="tab-content">
@@ -13,12 +16,22 @@
             <div class="my-packets-section">
               <div class="my-packets-header">My packets</div>
               @if (myPacketsLoading) {
-                <div class="my-packets-loading"><mat-spinner diameter="24"></mat-spinner></div>
-              }
-              @if (!myPacketsLoading && myPackets.length === 0) {
-                <div class="hint my-packets-empty">You haven't created any packets yet.</div>
-              }
-              @if (!myPacketsLoading && myPackets.length > 0) {
+                <app-loading-state title="Loading your packets…" [diameter]="24" />
+              } @else if (myPacketsError) {
+                <app-error-state
+                  title="Couldn't load your packets"
+                  message="Check your connection and try again."
+                  actionLabel="Retry"
+                  (retry)="loadMyPackets()"
+                  />
+              } @else if (myPackets.length === 0) {
+                <app-empty-state
+                  icon="inventory_2"
+                  title="You haven't created any packets yet."
+                  [actionLabel]="auth.hasPermission('packet:create') ? 'Open the builder' : null"
+                  (action)="openBuilder()"
+                  />
+              } @else {
                 <div class="search-results">
                   @for (packet of myPackets; track packet.id) {
                     <div
@@ -110,23 +123,28 @@
           <div class="results-container">
             <!-- Loading state -->
             @if (isSearching) {
-              <div class="loading-state">
-                <mat-spinner diameter="40"></mat-spinner>
-                <p>Searching packets...</p>
-              </div>
-            }
-
-            <!-- Empty state -->
-            @if (!searchQuery && !isSearching) {
-              <div class="empty-state">
-                <mat-icon>inventory_2</mat-icon>
-                <p>Search for quiz bowl packets by name</p>
-                <span class="hint">Try searching for a tournament name, year, or difficulty</span>
-              </div>
-            }
-
-            <!-- Results list -->
-            @if (searchResults.length > 0 && !isSearching) {
+              <app-loading-state title="Searching packets…" />
+            } @else if (searchError) {
+              <!-- The search itself failed (S3-01) — never shown as "no results". -->
+              <app-error-state
+                title="Couldn't search packets"
+                message="Check your connection and try again."
+                actionLabel="Retry"
+                (retry)="searchPackets()"
+                />
+            } @else if (!searchQuery) {
+              <app-empty-state
+                icon="inventory_2"
+                title="Search for quiz bowl packets by name"
+                message="Try searching for a tournament name, year, or difficulty"
+                />
+            } @else if (searchQuery.length < 2) {
+              <app-empty-state
+                icon="inventory_2"
+                title="Keep typing…"
+                message="Type at least 2 characters to search"
+                />
+            } @else if (searchResults.length > 0) {
               <div class="search-results">
                 @for (packet of searchResults; track packet.id; let i = $index) {
                   <div
@@ -166,15 +184,13 @@
                   </div>
                 }
               </div>
-            }
-
-            <!-- No results state -->
-            @if (searchResults.length === 0 && searchQuery && !isSearching && searchQuery.length >= 2) {
-              <div class="no-results">
-                <mat-icon>search_off</mat-icon>
-                <p>No packets found matching "{{ searchQuery }}"</p>
-                <span class="hint">Try a different search term</span>
-              </div>
+            } @else {
+              <!-- True empty result, never an error (S3-01). -->
+              <app-empty-state
+                icon="search_off"
+                [title]="'No packets found matching “' + searchQuery + '”'"
+                message="Try a different search term"
+                />
             }
           </div>
         </div>
@@ -371,6 +387,23 @@
             <!-- Form - hidden when generating -->
             @if (!isGenerating) {
               <div class="generate-form">
+                <!-- Fail-closed (D12) / quota (D10) banner (S3-02): persistent,
+                     names the reason and the reset time when known, and points
+                     at the ungated tab instead. Not dismissable — a fresh
+                     attempt needs a fresh 429/503, which clears it. -->
+                @if (aiLimitBanner) {
+                  <div class="ai-limit-banner" role="alert">
+                    <mat-icon aria-hidden="true">{{ aiLimitBanner.icon }}</mat-icon>
+                    <div class="ai-limit-banner__body">
+                      <p class="ai-limit-banner__title">{{ aiLimitBanner.title }}</p>
+                      <p class="ai-limit-banner__message">{{ aiLimitBanner.message }}</p>
+                    </div>
+                    <button type="button" mat-stroked-button (click)="goToQuestionBankTab()">
+                      Use the question bank instead
+                    </button>
+                  </div>
+                }
+
                 <!-- Validation Error Banner -->
                 @if (validationError) {
                   <div class="validation-error">
@@ -379,6 +412,11 @@
                   </div>
                 }
 
+                <!-- Everything below is inert while the banner above is showing
+                     (S3-02: "disable the fields, not only the button"); the
+                     key/model picker is F1's shared, frozen component, so it's
+                     locked from outside rather than given its own disabled input. -->
+                <div class="generate-form__fields" [attr.inert]="aiLimitBanner ? '' : null">
                 <!-- API key + model (PB-08, shared/ai-key) -->
                 <app-ai-key-picker
                   [apiKey]="apiKey"
@@ -507,11 +545,12 @@
                     }
                   </div>
                 </mat-expansion-panel>
+                </div>
 
                 <button
                   mat-raised-button
                   color="primary"
-                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked()"
+                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked() || !!aiLimitBanner"
                   (click)="generateAIPacket()"
                   class="generate-btn"
                   >

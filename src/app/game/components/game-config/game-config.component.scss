@@ -408,6 +408,7 @@ mat-card-actions {
 .you-chip {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0; // never squeezed out by a long name next to it (S3-12)
   margin-left: 0.5rem;
   padding: 0.1rem 0.5rem;
   border-radius: var(--radius-full);
@@ -548,6 +549,7 @@ mat-card-actions {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
+  min-width: 0; // a grid item by default won't shrink below its content (S3-12)
   transition: background 0.2s ease, border-color 0.2s ease;
 
   &:hover {
@@ -564,7 +566,14 @@ mat-card-actions {
     flex-shrink: 0;
   }
 
+  // Bounded to a single line with the full name in `title` (S3-12): a
+  // 100+ character, emoji or RTL name stays inside its row instead of
+  // pushing the card wide or wrapping into a wall of text.
   &__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-weight: 500;
     color: var(--text-primary);
   }
@@ -596,8 +605,24 @@ mat-card-actions {
     }
 
     div {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
       color: var(--text-primary) !important;
       font-weight: 500;
+    }
+
+    // S3-12: bounded to one line, same contract as .player__name.
+    .spectator-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    ::ng-deep .mdc-list-item__content {
+      min-width: 0;
     }
   }
 }

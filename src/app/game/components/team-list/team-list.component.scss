@@ -184,9 +184,13 @@
     }
 
     .player-name {
+      // Single-line ellipsis + title (not wrap) so one extreme name can't
+      // push the score off-row or balloon the roster's height (S3-12).
       min-width: 0;
       flex: 1 1 auto;
-      overflow-wrap: anywhere;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .player-score {

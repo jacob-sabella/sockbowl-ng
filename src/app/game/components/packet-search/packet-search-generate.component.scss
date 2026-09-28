@@ -34,6 +34,59 @@
     }
   }
 
+  // Fail-closed (D12) / quota (D10) banner (S3-02): a warning tone, since
+  // this isn't a broken request, just AI unavailable right now.
+  .ai-limit-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+    border-radius: var(--radius-md);
+
+    mat-icon {
+      flex-shrink: 0;
+      color: var(--warning-text);
+    }
+
+    &__body {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    &__title {
+      margin: 0 0 0.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    &__message {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+    }
+
+    button {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 560px) {
+      flex-direction: column;
+
+      button {
+        align-self: flex-start;
+      }
+    }
+  }
+
+  // Everything the banner above locks out while it's showing (S3-02).
+  // `inert` already blocks focus and pointer events; this just shows it.
+  &__fields[inert] {
+    opacity: 0.5;
+  }
+
   // Remaining text fields (the API key + model fields moved into
   // shared/ai-key/ai-key-picker.component.scss with the picker, M3 N5).
   .topic-field,

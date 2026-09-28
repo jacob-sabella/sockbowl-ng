@@ -40,7 +40,7 @@
             @if (isCurrentPlayer(player.playerId)) {
               <mat-icon class="current-player-icon" aria-hidden="true">person</mat-icon>
             }
-            <span class="player-name">{{ player.name }}</span>
+            <span class="player-name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
             <span class="player-score" aria-hidden="true">{{ getPlayerScore(player.playerId) }}</span>
           </span>
         </mat-list-item>

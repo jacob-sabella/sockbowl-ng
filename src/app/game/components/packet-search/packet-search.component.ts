@@ -1,15 +1,25 @@
 import { Component, OnInit, ChangeDetectionStrategy, computed, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ImportRandomResult, SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
 import { PacketPage, PacketSummary } from '../../../packets/models/packet-authoring.models';
-import { Subject, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
+import { Subject, of, TimeoutError } from 'rxjs';
+import { debounceTime, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
+import { limitErrorFrom } from '../../../core/http/limit-errors';
+import { metricLabel, resetsPhrase } from '../../../core/http/limit-messages';
 
 const EMPTY_PACKET_PAGE: PacketPage = { items: [], total: 0, page: 0, size: 0 };
+
+/** The AI tab's persistent inline banner for a fail-closed (D12) or quota (D10) response (S3-02). */
+interface AiLimitBanner {
+  icon: string;
+  title: string;
+  message: string;
+}
 
 @Component({
     selector: 'app-packet-search',
@@ -47,8 +57,14 @@ export class PacketSearchComponent implements OnInit {
   // fix) and that comparison would silently under- or over-match.
   myPackets: PacketSummary[] = [];
   myPacketsLoading = false;
+  /** "My packets" failed to load (S3-01) — distinct from a true empty result. */
+  myPacketsError = false;
   selectedPacketId = "";
   isSearching = false;
+  /** The debounced search itself failed (S3-01) — distinct from a true "no results". */
+  searchError = false;
+  /** Set from generateAIPacket()'s 429/503 response (S3-02); null once cleared or never hit. */
+  aiLimitBanner: AiLimitBanner | null = null;
   /** True while confirmSelection() is fetching the full packet to hand back. */
   selectionLoading = false;
   private searchSubject = new Subject<string>();
@@ -181,16 +197,21 @@ export class PacketSearchComponent implements OnInit {
     // full-detail `searchPacketsByName`.
     this.searchSubject.pipe(
       debounceTime(300),
-      distinctUntilChanged(),
+      // No distinctUntilChanged: Retry (S3-01) re-emits the same, unchanged
+      // searchQuery to re-run a failed search, and that resubmission must not
+      // be swallowed as a "duplicate" of the query that just failed.
       switchMap(query => {
         if (!query || query.length < 2) {
           this.isSearching = false;
+          this.searchError = false;
           return of(EMPTY_PACKET_PAGE);
         }
         this.isSearching = true;
+        this.searchError = false;
         return this.sockbowlQuestionsService.listPackets({ nameContains: query }, 0, 25).pipe(
           catchError(error => {
             console.error('Search error:', error);
+            this.searchError = true;
             return of(EMPTY_PACKET_PAGE);
           })
         );
@@ -244,8 +265,9 @@ export class PacketSearchComponent implements OnInit {
   }
 
   /** Load the caller's own packets (PB-14), most recent first, up to 10. */
-  private loadMyPackets(): void {
+  loadMyPackets(): void {
     this.myPacketsLoading = true;
+    this.myPacketsError = false;
     this.sockbowlQuestionsService.listPackets({ mine: true }, 0, 10).subscribe({
       next: (page) => {
         this.myPackets = page.items;
@@ -255,6 +277,7 @@ export class PacketSearchComponent implements OnInit {
         console.error('Could not load My packets:', error);
         this.myPackets = [];
         this.myPacketsLoading = false;
+        this.myPacketsError = true;
       }
     });
   }
@@ -352,6 +375,7 @@ export class PacketSearchComponent implements OnInit {
 
     // Clear previous validation errors
     this.validationError = null;
+    this.aiLimitBanner = null;
 
     this.isGenerating = true;
     this.sockbowlQuestionsService.generatePacket(
@@ -373,14 +397,28 @@ export class PacketSearchComponent implements OnInit {
           duration: 3000
         });
       },
-      error: (error) => {
-        console.error('Generation error:', error);
+      error: (err: HttpErrorResponse | TimeoutError) => {
+        console.error('Generation error:', err);
         this.isGenerating = false;
+        this.aiLimitBanner = null;
+
+        // The 660s client-side timeout (rxjs `timeout()`) throws a
+        // TimeoutError, never an HttpErrorResponse — keep it out of the
+        // status-code checks below rather than mistyping it as one.
+        if (err instanceof TimeoutError) {
+          this.snackBar.open('Request timed out. The generation may still be processing.', 'Close', {
+            duration: 5000
+          });
+          return;
+        }
+        const error = err;
 
         // A 429 (rate_limited/quota_exceeded) or 503 (limiter_unavailable) is
-        // already surfaced by the global RateLimitInterceptor, with a cooldown
-        // that disables the Generate button above; don't double the snackbar.
+        // already surfaced by the global RateLimitInterceptor's single
+        // snackbar; render the persistent inline banner ourselves (S3-02),
+        // since the interceptor has no view to put one in.
         if (error.status === 429 || error.status === 503) {
+          this.aiLimitBanner = this.classifyLimitBanner(error);
           return;
         }
 
@@ -393,8 +431,6 @@ export class PacketSearchComponent implements OnInit {
         } else if (error.status === 502) {
           // The AI provider (not our own limiter) rate-limited the server-side call.
           errorMessage = 'The AI provider is rate-limiting requests. Please try again later.';
-        } else if (error.name === 'TimeoutError') {
-          errorMessage = 'Request timed out. The generation may still be processing.';
         }
 
         this.snackBar.open(errorMessage, 'Close', {
@@ -402,6 +438,51 @@ export class PacketSearchComponent implements OnInit {
         });
       }
     });
+  }
+
+  /**
+   * Classifies a 429/503 `generatePacket` response into the AI tab's
+   * persistent banner copy (S3-02: D12 fail-closed, D10 quota). Returns null
+   * for anything `limitErrorFrom` doesn't recognize, so the generic snackbar
+   * path still runs for those.
+   */
+  private classifyLimitBanner(error: HttpErrorResponse): AiLimitBanner | null {
+    const body = (error.error && typeof error.error === 'object' ? error.error : {}) as Record<string, unknown>;
+    const classification = typeof body['error'] === 'string' ? (body['error'] as string) : undefined;
+    const limitError = limitErrorFrom(classification, body);
+    if (!limitError) {
+      return null;
+    }
+    switch (limitError.kind) {
+      case 'limiter_unavailable':
+        return {
+          icon: 'cloud_off',
+          title: "AI generation isn't available right now",
+          message: 'The generator is temporarily offline. Try again shortly, or use the question bank tab instead.',
+        };
+      case 'quota_exceeded': {
+        const label = metricLabel(limitError.metric);
+        const limitText = limitError.limit != null ? ` (${limitError.limit})` : '';
+        return {
+          icon: 'hourglass_top',
+          title: `You've reached your ${label} limit${limitText}`,
+          message: `Resets ${resetsPhrase(limitError.resetsAt)}. Use the question bank tab instead in the meantime.`,
+        };
+      }
+      case 'rate_limited':
+        return {
+          icon: 'hourglass_top',
+          title: 'Slow down',
+          message: `Try again in ${Math.max(1, Math.ceil(limitError.retryAfterSeconds || 1))}s, or use the question bank tab instead.`,
+        };
+      default:
+        return null;
+    }
+  }
+
+  /** The AI banner's "use the question bank instead" action (S3-02). */
+  goToQuestionBankTab(): void {
+    this.selectedTabIndex = this.QUESTION_BANK_TAB_INDEX;
   }
 
   /**
@@ -709,6 +790,11 @@ export class PacketSearchComponent implements OnInit {
       return;
     }
     this.snackBar.open('Could not build a packet. Try loosening the filters.', 'Close', { duration: 5000 });
+  }
+
+  /** "Open the builder" action on the true-empty "My packets" state (S3-14). */
+  openBuilder(): void {
+    window.open('/packets', '_blank', 'noopener');
   }
 
   clearSearch(): void {

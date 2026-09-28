@@ -12,7 +12,7 @@ import { PendingPacketService } from '../../services/pending-packet.service';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
 import { CastStateService } from '../../services/cast-state.service';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
-import { GameSession, MatchState, Packet } from '../../models/sockbowl/sockbowl-interfaces';
+import { GameSession, MatchState, Packet, PlayerMode } from '../../models/sockbowl/sockbowl-interfaces';
 
 describe('GameConfigComponent proctor preview', () => {
   let session$: ReplaySubject<GameSession>;
@@ -226,6 +226,7 @@ describe('GameConfigComponent proctor preview', () => {
 
 describe('GameConfigComponent impeccable polish (S3)', () => {
   let session$: ReplaySubject<GameSession>;
+  let processErrorsS3$: Subject<any>;
   let gameStateService: jasmine.SpyObj<GameStateService>;
   let component: GameConfigComponent;
 
@@ -241,10 +242,11 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
 
   beforeEach(() => {
     session$ = new ReplaySubject<GameSession>(1);
+    processErrorsS3$ = new Subject<any>();
     gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
       'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
       'isProctorless', 'getProctor', 'requestGameSession', 'setMatchPacket', 'updateGameSettings',
-      'getCurrentPlayer',
+      'getCurrentPlayer', 'startMatch',
     ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
     gameStateService.isSelfProctor.and.returnValue(true);
 
@@ -252,7 +254,7 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
       declarations: [GameConfigComponent],
       providers: [
         { provide: GameStateService, useValue: gameStateService },
-        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: of(null) } } },
+        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: processErrorsS3$ } } },
         { provide: SockbowlQuestionsService, useValue: jasmine.createSpyObj<SockbowlQuestionsService>('SockbowlQuestionsService', ['getPacketById']) },
         { provide: MatDialog, useValue: jasmine.createSpyObj<MatDialog>('MatDialog', ['open']) },
         { provide: MatSnackBar, useValue: jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']) },
@@ -326,6 +328,162 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
     expect(component.isSelfPlayer('p1')).toBeTrue();
     expect(component.isSelfPlayer('p2')).toBeFalse();
     expect(component.isSelfPlayer(undefined)).toBeFalse();
+  });
+
+  describe('timer field commit/clamp/revert (S3-09)', () => {
+    beforeEach(() => {
+      // canEditTimerSettings() needs a session with settings to build the
+      // updated GameSettings from; isSelfProctor() already defaults true.
+      session$.next(sessionWith({
+        gameSettings: {
+          proctorType: 'CLASSIC', gameMode: 'STANDARD', bonusesEnabled: false,
+          timerSettings: { tossupTimerSeconds: 5, bonusTimerSeconds: 5, autoTimerEnabled: true, readingWordsPerSecond: 4 },
+        } as any,
+      }));
+      component.ngOnInit();
+    });
+
+    it('clamps a tossup timer value above the max down to 60', () => {
+      component.tossupTimerSeconds = 999;
+      component.commitTossupTimer();
+      expect(component.tossupTimerSeconds).toBe(60);
+      expect(gameStateService.updateGameSettings).toHaveBeenCalled();
+    });
+
+    it('clamps a tossup timer value below the min up to 1', () => {
+      component.tossupTimerSeconds = -3;
+      component.commitTossupTimer();
+      expect(component.tossupTimerSeconds).toBe(1);
+    });
+
+    it('reverts an emptied tossup timer field to the last committed value instead of sending null', () => {
+      component.tossupTimerSeconds = null as unknown as number;
+      component.commitTossupTimer();
+      expect(component.tossupTimerSeconds).toBe(5);
+    });
+
+    it('reverts a NaN tossup timer field (a stray non-numeric keystroke) to the committed value', () => {
+      component.tossupTimerSeconds = NaN;
+      component.commitTossupTimer();
+      expect(component.tossupTimerSeconds).toBe(5);
+    });
+
+    it('remembers a clamped commit as the new revert target', () => {
+      component.tossupTimerSeconds = 40;
+      component.commitTossupTimer();
+      expect(component.tossupTimerSeconds).toBe(40);
+
+      component.tossupTimerSeconds = null as unknown as number;
+      component.commitTossupTimer();
+      expect(component.tossupTimerSeconds).toBe(40);
+    });
+
+    it('clamps the bonus timer to [1,60] independently of the tossup timer', () => {
+      component.bonusTimerSeconds = 0;
+      component.commitBonusTimer();
+      expect(component.bonusTimerSeconds).toBe(1);
+    });
+
+    it('clamps the reading speed to [1,10]', () => {
+      component.readingWordsPerSecond = 25;
+      component.commitReadingSpeed();
+      expect(component.readingWordsPerSecond).toBe(10);
+
+      component.readingWordsPerSecond = undefined as unknown as number;
+      component.commitReadingSpeed();
+      expect(component.readingWordsPerSecond).toBe(10);
+    });
+
+    it('does not push a timer commit when the viewer may not edit timer settings', () => {
+      gameStateService.isSelfProctor.and.returnValue(false);
+      gameStateService.isAutoJudgedMultiplayer.and.returnValue(false);
+      gameStateService.updateGameSettings.calls.reset();
+
+      component.tossupTimerSeconds = 999;
+      component.commitTossupTimer();
+
+      // Still clamps the field locally...
+      expect(component.tossupTimerSeconds).toBe(60);
+      // ...but never sends an update the backend would reject anyway.
+      expect(gameStateService.updateGameSettings).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Start guards against a double click (S3-09)', () => {
+    it('sends StartMatch only once for two rapid clicks', () => {
+      component.startMatch();
+      component.startMatch();
+
+      expect(gameStateService.startMatch).toHaveBeenCalledTimes(1);
+      expect(component.startPending).toBeTrue();
+    });
+
+    it('frees Start back up once a ProcessError arrives', () => {
+      component.ngOnInit();
+      component.startMatch();
+      expect(component.startPending).toBeTrue();
+
+      processErrorsS3$.next({ code: 'START_FAILED', error: 'could not start' });
+
+      expect(component.startPending).toBeFalse();
+      component.startMatch();
+      expect(gameStateService.startMatch).toHaveBeenCalledTimes(2);
+    });
+
+    it('frees Start back up on its own after the timeout even with no ProcessError', fakeAsync(() => {
+      component.startMatch();
+      expect(component.startPending).toBeTrue();
+
+      tick(6000);
+
+      expect(component.startPending).toBeFalse();
+    }));
+  });
+
+  describe('spectators() filtering and the empty spectators state (S3-12)', () => {
+    it('returns only players in SPECTATOR mode', () => {
+      const session = sessionWith({
+        playerList: [
+          { playerId: 'p1', name: 'Alice', playerMode: PlayerMode.BUZZER } as any,
+          { playerId: 'p2', name: 'Bob', playerMode: PlayerMode.SPECTATOR } as any,
+          { playerId: 'p3', name: 'Cara', playerMode: PlayerMode.SPECTATOR } as any,
+        ],
+      });
+
+      const result = component.spectators(session);
+
+      expect(result.map(p => p.playerId)).toEqual(['p2', 'p3']);
+    });
+
+    it('returns an empty array (not a blank-but-populated list) when no one is spectating', () => {
+      const session = sessionWith({
+        playerList: [{ playerId: 'p1', name: 'Alice', playerMode: PlayerMode.BUZZER } as any],
+      });
+
+      expect(component.spectators(session)).toEqual([]);
+    });
+
+    it('handles a missing playerList without throwing', () => {
+      const session = sessionWith({ playerList: undefined as any });
+
+      expect(component.spectators(session)).toEqual([]);
+    });
+
+    it('does not choke on an extreme, emoji or RTL player name (structural only)', () => {
+      const longName = 'A'.repeat(200);
+      const session = sessionWith({
+        playerList: [
+          { playerId: 'p1', name: longName, playerMode: PlayerMode.SPECTATOR } as any,
+          { playerId: 'p2', name: '🎉🎉🎉', playerMode: PlayerMode.SPECTATOR } as any,
+          { playerId: 'p3', name: 'مرحبا', playerMode: PlayerMode.SPECTATOR } as any,
+        ],
+      });
+
+      const result = component.spectators(session);
+
+      expect(result.length).toBe(3);
+      expect(result[0].name).toBe(longName);
+    });
   });
 });
 

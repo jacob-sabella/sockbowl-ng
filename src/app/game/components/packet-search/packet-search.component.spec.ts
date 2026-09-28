@@ -1,6 +1,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -10,6 +11,12 @@ import { OpenAiModelService } from '../../services/openai-model.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PacketSummary } from '../../../packets/models/packet-authoring.models';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
+import { LoadingStateComponent } from '../../../shared/state/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../../shared/state/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../../shared/state/error-state/error-state.component';
+
+/** The F1/F2 shared state primitives, so specs can assert on their real rendered output (S3-01/S3-02/S3-14). */
+const STATE_PRIMITIVES = [LoadingStateComponent, EmptyStateComponent, ErrorStateComponent];
 
 describe('PacketSearchComponent', () => {
   let component: PacketSearchComponent;
@@ -28,6 +35,9 @@ describe('PacketSearchComponent', () => {
       countBankAvailable: jasmine.createSpy('countBankAvailable').and.returnValue(of({ tossups: 0, bonuses: 0 })),
       importQbreaderRandom: jasmine.createSpy('importQbreaderRandom').and.returnValue(
         importResult instanceof Error ? throwError(() => importResult) : of(importResult)),
+      // Default success; S3-02 specs override this per-test with a 429/503.
+      generatePacket: jasmine.createSpy('generatePacket').and.returnValue(
+        of({ id: 'g1', name: 'Generated', tossups: [], bonuses: [] })),
       // With auth on, a guest's or player's generated packet is EPHEMERAL and
       // getPacketById returns null for it (NG-R3-01).
       getPacketById: jasmine.createSpy('getPacketById').and.returnValue(of(null)),
@@ -42,6 +52,7 @@ describe('PacketSearchComponent', () => {
 
     TestBed.configureTestingModule({
       declarations: [PacketSearchComponent],
+      imports: STATE_PRIMITIVES,
       providers: [
         { provide: MatDialogRef, useValue: { close: dialogClose } },
         { provide: MAT_DIALOG_DATA, useValue: {} },
@@ -201,6 +212,84 @@ describe('PacketSearchComponent', () => {
       expect(button.disabled).toBeTrue();
     });
   });
+
+  describe('AI fail-closed (D12) and quota (D10) banner (S3-02)', () => {
+    function fillGenerateForm(): void {
+      component.generateTopic = 'Ancient Rome';
+      component.apiKey = 'sk-test';
+      component.selectedModel = 'gpt-4o';
+    }
+
+    it('shows a persistent banner and locks the fields when the limiter fails closed (503)', () => {
+      configure(['question:generate']);
+      questions['generatePacket'].and.returnValue(throwError(() => new HttpErrorResponse({
+        status: 503, error: { error: 'limiter_unavailable', policy: 'ai-generate' },
+      })));
+      fillGenerateForm();
+
+      component.generateAIPacket();
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(component.aiLimitBanner?.title).toContain("isn't available");
+      expect(el.querySelector('.ai-limit-banner')).not.toBeNull();
+      // The fields, not only the button, are locked (S3-02).
+      expect(el.querySelector('.generate-form__fields')?.getAttribute('inert')).toBe('');
+      const generateBtn = el.querySelector('.generate-btn') as HTMLButtonElement;
+      expect(generateBtn.disabled).toBeTrue();
+    });
+
+    it('names the reset time for a quota-exhausted response (429) and links to the question bank tab', () => {
+      configure(['question:generate']);
+      const resetsAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+      questions['generatePacket'].and.returnValue(throwError(() => new HttpErrorResponse({
+        status: 429,
+        error: { error: 'quota_exceeded', metric: 'ai.generations', limit: 5, used: 5, resetsAt },
+      })));
+      fillGenerateForm();
+
+      component.generateAIPacket();
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.ai-limit-banner__title')?.textContent).toContain('AI generation limit');
+      expect(el.querySelector('.ai-limit-banner__message')?.textContent).toMatch(/Resets in \d+h/);
+
+      const useBankBtn = Array.from(el.querySelectorAll<HTMLButtonElement>('.ai-limit-banner button'))
+        .find(b => b.textContent?.includes('question bank'));
+      useBankBtn?.click();
+
+      expect(component.selectedTabIndex).toBe(component.QUESTION_BANK_TAB_INDEX);
+    });
+
+    it('does not show the banner for a non-limit error — the plain snackbar path still runs', () => {
+      configure(['question:generate']);
+      questions['generatePacket'].and.returnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
+      fillGenerateForm();
+
+      component.generateAIPacket();
+      fixture.detectChanges();
+
+      expect(component.aiLimitBanner).toBeNull();
+      expect(fixture.nativeElement.querySelector('.ai-limit-banner')).toBeNull();
+      expect(snackOpen).toHaveBeenCalledWith(jasmine.stringMatching(/Invalid request/), jasmine.anything(), jasmine.anything());
+    });
+
+    it('clears the banner once a fresh attempt is made', () => {
+      configure(['question:generate']);
+      questions['generatePacket'].and.returnValue(throwError(() => new HttpErrorResponse({
+        status: 503, error: { error: 'limiter_unavailable' },
+      })));
+      fillGenerateForm();
+      component.generateAIPacket();
+      expect(component.aiLimitBanner).not.toBeNull();
+
+      questions['generatePacket'].and.returnValue(of({ id: 'g1', name: 'Generated', tossups: [], bonuses: [] }));
+      component.generateAIPacket();
+
+      expect(component.aiLimitBanner).toBeNull();
+    });
+  });
 });
 
 describe('PacketSearchComponent My packets / search (PB-14)', () => {
@@ -217,7 +306,11 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
     tossupCount: 0, bonusCount: 0, playable: false,
   };
 
-  function configure(authenticated: boolean, myPacketsItems: PacketSummary[] = []): void {
+  function configure(
+    authenticated: boolean,
+    myPacketsItems: PacketSummary[] = [],
+    myPacketsResponse?: Observable<unknown>,
+  ): void {
     const authSpy = jasmine.createSpyObj('AuthService', ['hasPermission', 'isAuthenticated']);
     authSpy.hasPermission.and.returnValue(false);
     authSpy.isAuthenticated.and.returnValue(authenticated);
@@ -227,11 +320,14 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
     ]);
     questions.getBankTaxonomyCounts.and.returnValue(of({ categories: {}, subcategories: {}, alternates: {} }));
     questions.countBankAvailable.and.returnValue(of({ tossups: 0, bonuses: 0 }));
-    questions.listPackets.and.returnValue(of({ items: myPacketsItems, total: myPacketsItems.length, page: 0, size: 10 }));
+    questions.listPackets.and.returnValue(
+      (myPacketsResponse ?? of({ items: myPacketsItems, total: myPacketsItems.length, page: 0, size: 10 })) as any
+    );
     questions.getPacketById.and.returnValue(of(null));
 
     TestBed.configureTestingModule({
       declarations: [PacketSearchComponent],
+      imports: STATE_PRIMITIVES,
       providers: [
         { provide: MatDialogRef, useValue: { close: () => { /* noop test double */ } } },
         { provide: MAT_DIALOG_DATA, useValue: {} },
@@ -300,5 +396,91 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
     component.confirmSelection();
 
     expect(questions.getPacketById).toHaveBeenCalledWith('p1');
+  });
+
+  describe('My packets and search: loading/empty/error states (S3-01, S3-14)', () => {
+    it('shows a retryable error state, never a false "empty" state, when My packets fails to load', () => {
+      configure(true, [], throwError(() => new Error('network down')));
+
+      expect(component.myPacketsError).toBeTrue();
+      expect(component.myPackets).toEqual([]);
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.my-packets-section .error-state')).not.toBeNull();
+      expect(el.querySelector('.my-packets-section .empty-state')).toBeNull();
+    });
+
+    it('retries My packets from the error state and clears the error on success', () => {
+      configure(true, [], throwError(() => new Error('network down')));
+      const el: HTMLElement = fixture.nativeElement;
+
+      questions.listPackets.and.returnValue(of({ items: [somePacket], total: 1, page: 0, size: 10 }));
+      const retryBtn: HTMLButtonElement | null = el.querySelector('.my-packets-section .error-state button');
+      retryBtn?.click();
+      fixture.detectChanges();
+
+      expect(component.myPacketsError).toBeFalse();
+      expect(component.myPackets).toEqual([somePacket]);
+      expect(el.querySelector('.my-packets-section .error-state')).toBeNull();
+    });
+
+    it('shows the shared empty state (not the old overlapping icon) for a true-empty My packets result', () => {
+      configure(true, []);
+
+      const empty = fixture.nativeElement.querySelector('.my-packets-section .empty-state');
+      expect(empty).not.toBeNull();
+      expect(empty?.textContent).toContain("haven't created any packets yet");
+      expect(fixture.nativeElement.querySelector('.my-packets-section .error-state')).toBeNull();
+    });
+
+    it('shows a retryable error state, not "no results", when the search itself fails', fakeAsync(() => {
+      configure(false);
+      questions.listPackets.and.returnValue(throwError(() => new Error('search down')));
+
+      component.searchQuery = 'history';
+      component.searchPackets();
+      tick(300);
+      fixture.detectChanges();
+
+      expect(component.searchError).toBeTrue();
+      expect(component.searchResults).toEqual([]);
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.results-container .error-state')).not.toBeNull();
+      expect(el.querySelector('.results-container')?.textContent).not.toContain('No packets found matching');
+    }));
+
+    it('retries the search from the error state and clears it on success', fakeAsync(() => {
+      configure(false);
+      questions.listPackets.and.returnValue(throwError(() => new Error('search down')));
+      component.searchQuery = 'history';
+      component.searchPackets();
+      tick(300);
+      fixture.detectChanges();
+
+      questions.listPackets.and.returnValue(of({ items: [somePacket], total: 1, page: 0, size: 25 }));
+      const resultsEl: HTMLElement = fixture.nativeElement;
+      const retryBtn: HTMLButtonElement | null = resultsEl.querySelector('.results-container .error-state button');
+      retryBtn?.click();
+      tick(300);
+      fixture.detectChanges();
+
+      expect(component.searchError).toBeFalse();
+      expect(component.searchResults).toEqual([somePacket]);
+      expect(fixture.nativeElement.querySelector('.results-container .error-state')).toBeNull();
+    }));
+
+    it('still shows the true "no results" empty state for a real empty search — never the error state', fakeAsync(() => {
+      configure(false);
+      questions.listPackets.and.returnValue(of({ items: [], total: 0, page: 0, size: 25 }));
+
+      component.searchQuery = 'zzz-nothing';
+      component.searchPackets();
+      tick(300);
+      fixture.detectChanges();
+
+      expect(component.searchError).toBeFalse();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.results-container .error-state')).toBeNull();
+      expect(el.querySelector('.results-container .empty-state')?.textContent).toContain('No packets found matching');
+    }));
   });
 });

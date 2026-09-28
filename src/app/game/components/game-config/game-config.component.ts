@@ -7,6 +7,7 @@ import {
   GameSettings,
   MatchState,
   Packet,
+  Player,
   PlayerMode,
   ProcessError,
   PROCESS_ERROR_PACKET_NOT_AVAILABLE,
@@ -25,6 +26,13 @@ import { PresentationConnectionState } from '../../models/cast-interfaces';
 
 /** How long the proctor preview waits for the server to resend the packet. */
 const PREVIEW_TIMEOUT_MS = 5000;
+
+/**
+ * How long the Start button stays disabled after a click (S3-09), in case
+ * the match never actually starts (a dropped message) and no ProcessError
+ * arrives either — a normal start or a real error both clear it sooner.
+ */
+const START_PENDING_TIMEOUT_MS = 6000;
 
 @Component({
     selector: 'app-game-config',
@@ -54,12 +62,20 @@ export class GameConfigComponent implements OnInit {
   bonusTimerSeconds = 5;
   autoTimerEnabled = true;
   readingWordsPerSecond = 4;
+  /**
+   * The session's last-confirmed timer values (S3-09): what a field reverts
+   * to on commit if the user cleared it rather than typing a new number.
+   */
+  private committedTimer = { tossup: 5, bonus: 5, reading: 4 };
+
+  /** Guards the Start button against a double click while the server hasn't replied yet (S3-09). */
+  startPending = false;
+  private startPendingTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Cast-related observables
   castAvailable$: Observable<boolean>;
   castConnectionState$: Observable<PresentationConnectionState>;
 
-  protected readonly PlayerMode = PlayerMode;
   protected readonly PresentationConnectionState = PresentationConnectionState;
 
   @ViewChild('packetSearchModal') packetSearchModal!: TemplateRef<any>;
@@ -80,7 +96,10 @@ export class GameConfigComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.clearPreviewTimer());
+    this.destroyRef.onDestroy(() => {
+      this.clearPreviewTimer();
+      this.clearStartPendingTimer();
+    });
     this.gameSessionObs = this.gameStateService.gameSession$;
     this.castAvailable$ = this.presentationConnectionService.isAvailable$;
     this.castConnectionState$ = this.presentationConnectionService.connectionState$;
@@ -97,6 +116,12 @@ export class GameConfigComponent implements OnInit {
         this.bonusTimerSeconds = gameSession.gameSettings.timerSettings.bonusTimerSeconds;
         this.autoTimerEnabled = gameSession.gameSettings.timerSettings.autoTimerEnabled;
         this.readingWordsPerSecond = gameSession.gameSettings.timerSettings.readingWordsPerSecond;
+        // S3-09: what a cleared timer field reverts to on commit.
+        this.committedTimer = {
+          tossup: this.tossupTimerSeconds,
+          bonus: this.bonusTimerSeconds,
+          reading: this.readingWordsPerSecond,
+        };
       }
       // S3-03 (impeccable polish): the toggle used to stay unchecked forever —
       // it was never loaded from the session, only ever written to it.
@@ -119,6 +144,9 @@ export class GameConfigComponent implements OnInit {
       .subscribe((error: ProcessError) => {
         if (error?.error || error?.code) {
           this.snack.open(processErrorMessage(error), 'Dismiss', { duration: 5000 });
+          // Whatever failed, the match didn't just start — free Start back up (S3-09).
+          this.clearStartPendingTimer();
+          this.startPending = false;
         }
         if (error?.code === PROCESS_ERROR_PACKET_NOT_AVAILABLE) {
           // The dialog's pick was optimistic; the server kept the old packet
@@ -455,10 +483,56 @@ export class GameConfigComponent implements OnInit {
     // Toast only shown on error (via ProcessError subscription)
   }
 
+  /**
+   * Commits the tossup timer field on change/blur, not on every keystroke
+   * (S3-09): clamps to [1,60] and reverts an emptied field to the last
+   * value the session confirmed, rather than sending `null`.
+   */
+  commitTossupTimer(): void {
+    this.tossupTimerSeconds = this.clampTimerField(this.tossupTimerSeconds, 1, 60, this.committedTimer.tossup);
+    this.committedTimer.tossup = this.tossupTimerSeconds;
+    this.updateTimerSettings();
+  }
+
+  /** Same contract as {@link commitTossupTimer}, for the bonus timer (S3-09). */
+  commitBonusTimer(): void {
+    this.bonusTimerSeconds = this.clampTimerField(this.bonusTimerSeconds, 1, 60, this.committedTimer.bonus);
+    this.committedTimer.bonus = this.bonusTimerSeconds;
+    this.updateTimerSettings();
+  }
+
+  /** Same contract as {@link commitTossupTimer}, for the reading-speed field (S3-09). */
+  commitReadingSpeed(): void {
+    this.readingWordsPerSecond = this.clampTimerField(this.readingWordsPerSecond, 1, 10, this.committedTimer.reading);
+    this.committedTimer.reading = this.readingWordsPerSecond;
+    this.updateTimerSettings();
+  }
+
+  /** Clamp to [min,max] on commit; an empty/NaN field reverts to `fallback` instead of sending it (S3-09). */
+  private clampTimerField(raw: number | null | undefined, min: number, max: number, fallback: number): number {
+    if (raw === null || raw === undefined || (raw as unknown as string) === '' || Number.isNaN(Number(raw))) {
+      return fallback;
+    }
+    return Math.min(max, Math.max(min, Math.round(Number(raw))));
+  }
+
   /* ─── Progression ──────────────────────────────────────────────────────── */
 
   startMatch(): void {
+    // Guard against a double click/tap firing two StartMatch messages (S3-09):
+    // the match should start once, not race to start twice.
+    if (this.startPending) return;
+    this.startPending = true;
     this.gameStateService.startMatch();
+    this.clearStartPendingTimer();
+    this.startPendingTimer = setTimeout(() => { this.startPending = false; }, START_PENDING_TIMEOUT_MS);
+  }
+
+  private clearStartPendingTimer(): void {
+    if (this.startPendingTimer) {
+      clearTimeout(this.startPendingTimer);
+      this.startPendingTimer = null;
+    }
   }
 
   /** Why Start is disabled right now, stated in words (S3-17). Empty once ready. */
@@ -487,6 +561,16 @@ export class GameConfigComponent implements OnInit {
   /** Whether this player is the signed-in viewer, for the "You" marker (S3-11). */
   isSelfPlayer(playerId: string | undefined): boolean {
     return !!playerId && this.gameStateService.getCurrentPlayer()?.playerId === playerId;
+  }
+
+  /**
+   * The actual spectator list (S3-12): the template used to render every
+   * player and hide the non-spectators with `[style.display]`, so an empty
+   * spectator list rendered as a blank card instead of a designed empty
+   * state (the empty-state check ran against the wrong array).
+   */
+  spectators(gameSession: GameSession): Player[] {
+    return (gameSession.playerList ?? []).filter(p => p.playerMode === PlayerMode.SPECTATOR);
   }
 
   trackByTeamId(_: number, t: Team) {

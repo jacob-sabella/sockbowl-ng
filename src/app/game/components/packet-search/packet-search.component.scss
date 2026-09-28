@@ -218,88 +218,9 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-}
-
-/* ===== LOADING STATE ===== */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  gap: 1.5rem;
-
-  mat-spinner {
-    ::ng-deep circle {
-      stroke: var(--accent-primary) !important;
-    }
-  }
-
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 1rem;
-  }
-}
-
-/* ===== EMPTY STATE ===== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  text-align: center;
-
-  mat-icon {
-    font-size: 4rem;
-    width: 4rem;
-    height: 4rem;
-    margin-bottom: 1rem;
-    color: var(--accent-primary);
-    opacity: 0.5;
-  }
-
-  p {
-    margin: 0 0 0.5rem;
-    color: var(--text-primary);
-    font-size: 1.1rem;
-    font-weight: 500;
-  }
-
-  .hint {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
-}
-
-/* ===== NO RESULTS STATE ===== */
-.no-results {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  text-align: center;
-
-  mat-icon {
-    font-size: 4rem;
-    width: 4rem;
-    height: 4rem;
-    margin-bottom: 1rem;
-    color: var(--text-muted);
-  }
-
-  p {
-    margin: 0 0 0.5rem;
-    color: var(--text-primary);
-    font-size: 1.1rem;
-  }
-
-  .hint {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
+  // Loading/empty/error inside here are the shared app-loading-state /
+  // app-empty-state / app-error-state primitives now (S3-01/S3-14); no
+  // surface-local state styling needed.
 }
 
 /* ===== MY PACKETS (PB-14) ===== */
@@ -318,16 +239,6 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
-}
-
-.my-packets-loading {
-  display: flex;
-  justify-content: center;
-  padding: 1rem 0;
-}
-
-.my-packets-empty {
-  padding: 0.25rem 0.5rem;
 }
 
 /* ===== SEARCH RESULTS ===== */
