@@ -76,6 +76,15 @@ export class GraphqlRequestError extends Error {
  * User-facing text for a failed request. Anything not thrown as a
  * {@link GraphqlRequestError} (a plain Error, or a non-Error value) falls back
  * to a generic message.
+ *
+ * INT1: `RATE_LIMITED`, `QUOTA_EXCEEDED` and `BANNED` map to `''`, not a
+ * message. `GraphqlClientService` already shows the canonical,
+ * cooldown-aware text for exactly these three classifications via
+ * `notifyLimit` (see its `notifyIfLimitError`) for every request it makes,
+ * so a caller that also calls `snackBar.open(describeGraphqlError(err), ...)`
+ * must check the result is non-empty first, or it shows the rejection twice
+ * -- once with the right message, once with nothing. Consistent with
+ * `isLimitHandled`'s dedupe of `RateLimitInterceptor` for plain HTTP calls.
  */
 export function describeGraphqlError(err: unknown): string {
   if (err instanceof GraphqlRequestError) {
@@ -87,13 +96,11 @@ export function describeGraphqlError(err: unknown): string {
       case 'VALIDATION_FAILED':
         return err.message || 'That change is not valid.';
       case 'RATE_LIMITED':
-        // Generic for now; after the M3/M4 merge, INT1 routes this through
-        // M4's notifyLimit for a cooldown-aware message instead.
-        return 'Too many requests, try again shortly.';
       case 'QUOTA_EXCEEDED':
-        return "You've reached a usage limit.";
       case 'BANNED':
-        return 'Your account is suspended.';
+        // Already shown by GraphqlClientService's notifyLimit; see the
+        // doc comment above.
+        return '';
       case 'LIMITER_UNAVAILABLE':
         return 'Temporarily unavailable, try again shortly.';
       case 'UNAUTHORIZED':

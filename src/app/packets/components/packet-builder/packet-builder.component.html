@@ -60,6 +60,23 @@
           <p class="packet-builder__difficulty-readonly">Difficulty: {{ packet.difficulty?.name ?? 'Unset' }}</p>
         }
 
+        <!-- Provenance (D13/M4-PV-01, INT1: missing from the M3 builder) -->
+        <p class="packet-builder__provenance">
+          {{ sourceLabel(packet.source) }}
+          @if (packet.createdById) {
+            <span> · created by {{ packet.createdById }}</span>
+          }
+          @if (packet.createdAt) {
+            <span> on {{ packet.createdAt | date:'mediumDate' }}</span>
+          }
+          @if (packet.lastModifiedAt && packet.lastModifiedAt !== packet.createdAt) {
+            <span> · last edited {{ packet.lastModifiedAt | date:'medium' }}</span>
+            @if (packet.lastModifiedById && packet.lastModifiedById !== packet.createdById) {
+              <span> by {{ packet.lastModifiedById }}</span>
+            }
+          }
+        </p>
+
         <!--
           Unsaved changes + Save all (D6/PB-03). NG-V1-07: a non-manager's
           fields are readonly below, so there is nothing here for them to

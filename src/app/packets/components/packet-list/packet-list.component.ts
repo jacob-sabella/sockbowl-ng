@@ -245,7 +245,13 @@ export class PacketListComponent implements OnInit {
             this.total = Math.max(0, this.total - 1);
           },
           error: (err) => {
-            this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
+            // INT1: describeGraphqlError returns '' for RATE_LIMITED/QUOTA_EXCEEDED/
+            // BANNED, since GraphqlClientService's notifyLimit already shows the
+            // canonical snackbar for those; don't show a second, empty one.
+            const message = this.extractError(err);
+            if (message) {
+              this.snackBar.open(message, 'Dismiss', { duration: 4000 });
+            }
           }
         });
       });
