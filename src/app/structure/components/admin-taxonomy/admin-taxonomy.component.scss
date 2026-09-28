@@ -76,6 +76,21 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
+
+    /* S5-14: F1's global `--mdc-icon-button-state-layer-size: 44px`
+       (`vendors/_material-overrides.scss`, frozen) sets the custom
+       property but this Material version's own `.mat-mdc-icon-button`
+       width/height rule doesn't read it, so the box still measures 40px
+       (filed as handoff H-08 to F2). Surface-scoped fix on every icon
+       button this page owns (expand, rename/merge, save/cancel) in the
+       meantime; targeted by attribute rather than a new class on each of
+       the 12 occurrences (all directly in this component's own template,
+       so no `::ng-deep` is needed to reach them). */
+    button[mat-icon-button] {
+      width: 44px;
+      height: 44px;
+      padding: 10px;
+    }
   }
 
   &__node-name {

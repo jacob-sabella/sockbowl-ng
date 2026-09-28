@@ -57,6 +57,16 @@
 
   &__danger-icon-btn {
     color: var(--error) !important;
+
+    /* S5-14: F1's global `--mdc-icon-button-state-layer-size: 44px`
+       (`vendors/_material-overrides.scss`, frozen) sets the custom
+       property but this Material version's own `.mat-mdc-icon-button`
+       width/height rule doesn't read it, so the box measures 40px
+       regardless (filed as handoff H-08 to F2). Surface-scoped fix here
+       in the meantime, on the one icon button this page owns. */
+    width: 44px;
+    height: 44px;
+    padding: 10px;
   }
 
   &__status {
