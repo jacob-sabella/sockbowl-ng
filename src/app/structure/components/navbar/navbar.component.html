@@ -77,7 +77,25 @@
 
               <!-- Moderator without admin:access: standalone Moderation link -->
               @if ((userProfile$ | async) && authService.hasPermission('user:ban') && !authService.hasPermission('admin:access')) {
-                <a mat-button class="navbar__role-btn" [routerLink]="['/admin/bans']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Moderation" matTooltip="Moderation">
+                <!-- FF3: `routerLinkActive` also toggles the Material
+                     `mat-accent` class (a plain second class name in the
+                     string, no different from adding `navbar__active` — see
+                     RouterLinkActive's own `data.split(' ')`). That exempts
+                     this link, only while active, from the frozen
+                     `_material-overrides.scss` unthemed-button `!important`
+                     rule (its own comment names `.mat-primary`/`.mat-accent`/
+                     `.mat-warn` as the intended escape hatch), which is what
+                     was silently keeping the active label at `--text-primary`
+                     no matter what `--mat-button-text-label-text-color` this
+                     component set. `mat-accent` carries no colour of its own
+                     here — the navbar's own `.navbar__active` rule (below)
+                     still sets the actual custom property. An earlier
+                     `#ref="routerLinkActive"` + `[color]` version of this fix
+                     threw `NG0301` in every spec that renders this template
+                     without real routing (most of them, by design — see
+                     `NO_ERRORS_SCHEMA` above); a bare class name needs no
+                     directive to resolve, so it doesn't. -->
+                <a mat-button class="navbar__role-btn" [routerLink]="['/admin/bans']" routerLinkActive="navbar__active mat-accent" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Moderation" matTooltip="Moderation">
                   <mat-icon aria-hidden="true">gavel</mat-icon>
                   <span class="navbar__btn-label">Moderation</span>
                 </a>
@@ -119,13 +137,17 @@
               }
               <!-- Taxonomy manager without admin:access: standalone link (permission gating unchanged) -->
               @if ((userProfile$ | async) && !authService.hasPermission('admin:access') && authService.hasPermission('taxonomy:manage')) {
-                <a mat-button class="navbar__role-btn" [routerLink]="['/admin/taxonomy']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Taxonomy" matTooltip="Taxonomy">
+                <!-- FF3: see the Moderation link's comment above for why
+                     `mat-accent` rides along in `routerLinkActive`. -->
+                <a mat-button class="navbar__role-btn" [routerLink]="['/admin/taxonomy']" routerLinkActive="navbar__active mat-accent" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Taxonomy" matTooltip="Taxonomy">
                   <mat-icon aria-hidden="true">category</mat-icon>
                   <span class="navbar__btn-label">Taxonomy</span>
                 </a>
               }
               @if ((userProfile$ | async) && authService.hasPermission('packet:create')) {
-                <a mat-button class="navbar__role-btn" [routerLink]="['/packets']" routerLinkActive="navbar__active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Packet Builder" matTooltip="Packets">
+                <!-- FF3: see the Moderation link's comment above for why
+                     `mat-accent` rides along in `routerLinkActive`. -->
+                <a mat-button class="navbar__role-btn" [routerLink]="['/packets']" routerLinkActive="navbar__active mat-accent" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" aria-label="Packet Builder" matTooltip="Packets">
                   <mat-icon aria-hidden="true">edit_note</mat-icon>
                   <span class="navbar__btn-label">Packets</span>
                 </a>

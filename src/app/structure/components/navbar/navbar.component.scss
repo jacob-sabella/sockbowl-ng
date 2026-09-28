@@ -233,6 +233,17 @@
     }
   }
 
+  /* FORM's token notes reserve `--radius-full` for the buzzer and status
+     dots; buttons take `--radius-md` (contract.md's token notes, and
+     reconciled into FIRST VIEWPORT at contract.md:42 — S6-FF2-04). Material
+     text buttons default their container-shape token to `corner-full` (a
+     full pill), so every toolbar destination gets the same straight-cornered
+     shape regardless of active state, and the active mark below reads as a
+     straight underline, not a crescent following a pill's curve. */
+  .navbar__role-btn {
+    --mat-button-text-container-shape: var(--radius-md);
+  }
+
   /* S6-05: the current destination reads differently from hover/focus — an
      accent label plus a 2px inset mark (contract FORM). Toolbar items get a
      bottom inset (they sit in a horizontal row); menu items get a left
@@ -243,6 +254,25 @@
      the mobile-fold duplicates). */
   .navbar__role-btn.navbar__active {
     color: var(--accent-primary-text);
+    /* FF3: `color` alone can't win here. The frozen
+       `_material-overrides.scss` sets
+       `.mat-mdc-button:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
+       color: var(--text-primary) !important; }` (its own comment: unthemed
+       buttons fall back to MDC's default label, which is invisible in dark
+       themes, so every plain nav button gets forced to `--text-primary`
+       unless it opts out with a Material `color` input). No specificity or
+       token beats an `!important` on the same property, and this component
+       can't add one of its own (contract FORM/OWN-WORLD's no-`!important`
+       rule) or touch that frozen file. So each of these links' template now
+       carries `mat-accent` as a second class in its `routerLinkActive`
+       string (see navbar.component.html) — exactly the escape hatch that
+       file's own comment names — so `.mat-accent` toggles on only while
+       active, exempting just that state from the frozen selector. With the
+       exemption in place, Material's own unforced rule
+       (`.mat-mdc-button:not(:disabled) { color:
+       var(--mat-button-text-label-text-color, var(--mat-sys-primary)); }`)
+       takes over, and this custom property is what it then reads. */
+    --mat-button-text-label-text-color: var(--accent-primary-text);
     box-shadow: inset 0 -2px 0 0 var(--accent-primary);
 
     &:hover {
