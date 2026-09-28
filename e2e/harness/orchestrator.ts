@@ -24,7 +24,11 @@ export interface StagedMatch {
  * By default the packet comes from `importQbreaderPacket` (the local bank).
  * Pass `packetId` (with its actual `tossupCount`/`bonusCount`) to use an
  * already-seeded packet instead — see `findSeededPacket`, which `full-match`
- * uses so it doesn't depend on the separate, unseeded bank (NG-R2-02).
+ * uses so it doesn't depend on the separate, unseeded bank (NG-R2-02) — or,
+ * as M3's E1 does, to play a bot-driven QUIZ_BOWL_CLASSIC match (proctor +
+ * bonus judging) against a packet just built through the ng packet builder in
+ * a browser, which single-player structurally can't exercise bonuses on
+ * (plan risk 8).
  */
 export async function stageMatch(
   opts: { tossupCount?: number; bonusCount?: number; playerNames?: string[]; packetId?: string } = {},

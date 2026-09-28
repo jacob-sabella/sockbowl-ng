@@ -1,0 +1,30 @@
+Sample Import Packet
+
+TOSSUPS
+
+1. This 1969 event saw Neil Armstrong become the first person to walk on this celestial body, landing there aboard the Eagle module.
+ANSWER: MOON
+
+2. This element with atomic number 79 and symbol Au is prized for its conductivity and resistance to tarnish.
+ANSWER: GOLD
+
+3. This programming language, created by Guido van Rossum and first released in 1991, is named after a British comedy troupe.
+ANSWER: PYTHON
+
+BONUSES
+
+1. For 10 points each, name these capital cities of European countries.
+[10] This city on the Seine is the capital of France.
+ANSWER: PARIS
+[10] This city on the Tiber is the capital of Italy.
+ANSWER: ROME
+[10] This city on the Spree is the capital of Germany.
+ANSWER: BERLIN
+
+2. For 10 points each, answer the following about basic arithmetic.
+[10] This is the sum of two and two.
+ANSWER: FOUR
+[10] This is the product of three and three.
+ANSWER: NINE
+[10] This is the square root of sixteen.
+ANSWER: FOUR
