@@ -181,9 +181,19 @@
 
   .category-meter-fill {
     height: 100%;
+    width: 100%;
     background: var(--accent-primary);
     border-radius: inherit;
-    transition: width var(--transition-base);
+    // A `transform` scale animates on the compositor and never triggers
+    // layout, unlike animating `width` (M5 S1-15). `transform-origin: left`
+    // keeps the fill anchored to the meter's start.
+    transform-origin: left center;
+    transform: scaleX(var(--fill-percent, 0));
+    transition: transform var(--transition-base);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
   }
 }
 
@@ -250,6 +260,53 @@
   }
 }
 
+/* ===== ROUND HISTORY TOGGLE (M5 S1-15) ===== */
+.round-history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.625rem 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-base, 0.2s ease);
+
+  &:hover {
+    border-color: var(--border-medium);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--accent-tertiary);
+    outline-offset: 2px;
+  }
+
+  mat-icon:first-child {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--accent-tertiary);
+    flex-shrink: 0;
+  }
+
+  .round-history-toggle-label {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .round-history-caret {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+}
+
 /* ===== ROUND ACCORDION ===== */
 .round-accordion {
   display: flex;
@@ -269,8 +326,11 @@
         border-color: var(--border-medium) !important;
       }
 
+      // The colour stripe is an inset shadow rather than a `border-left`, so
+      // it follows the panel's own `border-radius` instead of squaring off
+      // past the curve at the top/bottom-left corners (M5 S1-15).
       &.correct {
-        border-left: 4px solid var(--success) !important;
+        box-shadow: inset 4px 0 0 0 var(--success) !important;
 
         .mat-expansion-panel-header {
           background: color-mix(in srgb, var(--success) 10%, transparent) !important;
@@ -282,7 +342,7 @@
       }
 
       &.incorrect {
-        border-left: 4px solid var(--error) !important;
+        box-shadow: inset 4px 0 0 0 var(--error) !important;
 
         .mat-expansion-panel-header {
           background: color-mix(in srgb, var(--error) 10%, transparent) !important;
@@ -294,7 +354,7 @@
       }
 
       &.unanswered {
-        border-left: 4px solid var(--text-muted) !important;
+        box-shadow: inset 4px 0 0 0 var(--text-muted) !important;
 
         .mat-expansion-panel-header {
           background: var(--bg-tertiary) !important;
@@ -356,8 +416,9 @@
 
   .team-answer-info {
     margin-left: auto;
-    font-size: 0.8125rem;
-    font-style: italic;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-style: normal;
     color: var(--text-secondary);
     text-align: right;
     min-width: 0;

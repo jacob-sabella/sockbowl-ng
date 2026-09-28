@@ -105,14 +105,16 @@
                 </mat-chip-set>
               </div>
             }
-            <!-- Round State Indicator -->
+            <!-- Round State Indicator: a plain status label (a dot + text), not a button-styled
+                 chip, so it doesn't visually contradict a plain-text line beside it (M5 S1-19). -->
             <div class="round-state" aria-live="polite" aria-atomic="true">
-              <mat-chip [class.reading]="currentRound.roundState === RoundState.PROCTOR_READING"
+              <span class="round-state-label"
+                [class.reading]="currentRound.roundState === RoundState.PROCTOR_READING"
                 [class.awaiting-buzz]="currentRound.roundState === RoundState.AWAITING_BUZZ"
                 [class.awaiting-answer]="currentRound.roundState === RoundState.AWAITING_ANSWER"
                 [attr.aria-label]="'Round state: ' + getRoundStateLabel(currentRound.roundState)">
                 {{ getRoundStateLabel(currentRound.roundState) }}
-              </mat-chip>
+              </span>
             </div>
           </mat-card-content>
         </mat-card>

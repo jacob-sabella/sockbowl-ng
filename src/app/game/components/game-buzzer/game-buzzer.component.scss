@@ -28,19 +28,27 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 1200px;
-  background: var(--surface) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 16px !important;
-  box-shadow: var(--shadow-lg) !important;
-  padding: 1rem !important;
+  // :host-scoped specificity (emulated encapsulation) already wins over the
+  // Material defaults these were overriding, so the blanket !important on
+  // this card's own box model is dropped (M5 S1-11). mat-card-title/-content
+  // below keep theirs: Material sets color/font-size closer to the element
+  // there, so the specificity fight is real.
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  // Shadow size and colour were split (the size half had no colour, so
+  // `currentColor` filled in `--text-primary`, showing as a halo in every
+  // dark theme). Pairing them, as `_material-overrides.scss` does, fixes it.
+  box-shadow: var(--shadow-lg) var(--shadow-color);
+  padding: 1rem;
 
   @media (min-width: 600px) {
-    border-radius: 20px !important;
-    padding: 1.5rem !important;
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
   }
 
   mat-card-title {
-    font-size: 1.25rem !important;
+    font-size: var(--text-xl) !important;
     font-weight: 700 !important;
     color: var(--text-primary) !important;
     margin-bottom: 1rem !important;
@@ -50,7 +58,12 @@
     overflow-wrap: break-word;
 
     @media (min-width: 600px) {
-      font-size: 1.5rem !important;
+      font-size: var(--text-2xl) !important;
+    }
+
+    .of-total {
+      font-weight: 500;
+      color: var(--text-secondary);
     }
   }
 
@@ -58,21 +71,37 @@
     color: var(--text-primary) !important;
   }
 
-  // ---- Active buzz banner -------------------------------------------------
-  .active-buzz-info {
-    text-align: center;
+  // ---- Buzz outcome strip --------------------------------------------------
+  // Left-stripe-on-tint info block (DESIGN's info-block rule): who has the
+  // buzz is carried by this text, never by colour alone (M5 S1-01).
+  .buzz-outcome-strip {
+    text-align: left;
     font-weight: 600;
+    font-size: var(--text-base);
     margin: 1rem 0;
-    padding: 0.85rem 1rem;
-    background: var(--bg-tertiary);
-    border: 2px solid var(--error);
-    border-radius: 12px;
+    padding: 0.65rem 0.9rem;
+    border-radius: var(--radius-sm);
+    // An inset shadow, not `border-left`, follows the box's own rounded
+    // corner instead of squaring off past the curve (M5 S1-19).
+    box-shadow: inset 4px 0 0 0 var(--text-muted);
+    background: color-mix(in srgb, var(--text-muted) 10%, var(--surface));
+    color: var(--text-primary);
+    overflow-wrap: break-word;
 
-    p {
-      font-size: 1.05rem !important;
-      color: var(--text-primary) !important;
-      margin: 0 !important;
-      overflow-wrap: break-word;
+    &--self {
+      box-shadow: inset 4px 0 0 0 var(--success);
+      background: color-mix(in srgb, var(--success) 10%, var(--surface));
+      color: var(--success-text);
+    }
+
+    &--other {
+      box-shadow: inset 4px 0 0 0 var(--info);
+      background: color-mix(in srgb, var(--info) 10%, var(--surface));
+      color: var(--info-text);
+    }
+
+    &--team-locked {
+      color: var(--text-secondary);
     }
   }
 
@@ -98,7 +127,9 @@
       line-height: 1.15;
       border-radius: 50%;
       background: var(--error) !important;
-      color: #ffffff !important;
+      // Token, not a component hex, so themes can tune it (Role-Not-Hue;
+      // M5 S1-18). Verified >= white's contrast on --error in every theme.
+      color: var(--on-error) !important;
       border: none !important;
       // Physical dome: neutral base ring + soft cast shadow, light top / dark
       // bottom insets. No colored glow.
@@ -149,136 +180,140 @@
     }
   }
 
-  // ---- Timer --------------------------------------------------------------
+  // ---- Timer ----------------------------------------------------------------
+  // Neutral text by default; only turns to --warning-text once time is short
+  // (<=5s), rather than sitting in an amber bordered box the whole time
+  // (M5 S1-12).
   .timer-display {
     text-align: center;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     margin-top: 0.75rem;
-    padding: 0.75rem;
-    background: var(--bg-tertiary);
-    border: 2px solid var(--warning);
-    border-radius: 12px;
-    color: var(--text-primary);
+    color: var(--text-secondary);
+    transition: color var(--transition-base, 0.2s ease);
+
+    &--urgent {
+      color: var(--warning-text);
+    }
 
     p {
       margin: 0 !important;
-      font-size: 1.15rem !important;
+      font-size: var(--text-lg) !important;
     }
 
     .bonus-timer {
-      color: var(--text-primary) !important;
+      color: inherit !important;
       font-weight: 700 !important;
     }
   }
 
-  // ---- Bonus section ------------------------------------------------------
+  // ---- Bonus section ---------------------------------------------------------
+  // One heading + one info block (who/part/phase) + a plain score line,
+  // instead of four nested bordered boxes (M5 S1-12).
   .bonus-section {
     margin: 1.5rem 0;
     padding: 1.25rem;
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
-    border-top: 3px solid var(--accent-secondary);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
 
     .bonus-info {
       text-align: center;
 
       h3 {
-        font-size: 1.3rem;
+        font-size: var(--text-2xl);
         font-weight: 700;
-        color: var(--accent-secondary);
-        margin: 0 0 1rem;
-
-        @media (min-width: 600px) {
-          font-size: 1.5rem;
-        }
-      }
-
-      > p {
-        font-size: 1.05rem;
         color: var(--text-primary);
-        margin: 0.75rem 0;
-        line-height: 1.6;
-        overflow-wrap: break-word;
-
-        strong {
-          color: var(--accent-secondary);
-          font-weight: 700;
-        }
+        margin: 0 0 1rem;
       }
 
       .bonus-score {
-        display: inline-block;
-        margin: 1rem 0;
-        padding: 0.75rem 1.25rem;
-        background: var(--surface);
-        border: 2px solid var(--accent-secondary);
-        border-radius: 12px;
-        font-size: 1.15rem;
+        margin: 1rem 0 0;
+        font-size: var(--text-lg);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
-        color: var(--text-primary);
+        color: var(--text-secondary);
       }
 
-      .bonus-status {
-        margin-top: 1rem;
+      // Left-stripe-on-tint info block (DESIGN's info-block rule), left-aligned.
+      .bonus-status.info-block {
+        text-align: left;
+        margin: 0;
         padding: 0.85rem 1rem;
-        background: var(--surface);
-        border-radius: 10px;
-        border: 1px solid var(--border-subtle);
+        background: color-mix(in srgb, var(--accent-secondary) 10%, var(--surface));
+        // Inset shadow, not `border-left`, follows the rounded corner (M5 S1-19).
+        box-shadow: inset 4px 0 0 0 var(--accent-secondary);
+        border-radius: var(--radius-sm);
 
         p {
-          font-size: 1.05rem;
-          color: var(--text-secondary);
+          font-size: var(--text-base);
+          color: var(--text-primary);
           margin: 0;
           font-weight: 500;
           line-height: 1.5;
           overflow-wrap: break-word;
         }
+
+        strong {
+          color: var(--accent-secondary-text);
+          font-weight: 700;
+        }
       }
     }
   }
 
-  // ---- Round completed ----------------------------------------------------
+  // ---- Round completed --------------------------------------------------------
+  // Left-stripe info blocks in the reading voice, left-aligned, no accent
+  // top border (M5 S1-13).
   .round-completed-info {
-    text-align: center;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-subtle);
-    border-top: 3px solid var(--accent-primary);
-    border-radius: 12px;
-    padding: 1rem;
+    text-align: left;
+    padding: 0.25rem 0;
     margin: 1rem 0;
 
     h3 {
-      color: var(--accent-primary);
-      font-size: 1.2rem;
+      color: var(--text-primary);
+      font-size: var(--text-xl);
       font-weight: 700;
       margin: 0 0 0.75rem;
-
-      @media (min-width: 600px) {
-        font-size: 1.3rem;
-      }
+      text-align: center;
     }
 
-    p {
-      font-size: 1rem;
-      color: var(--text-primary);
-      margin: 0.5rem 0;
-      line-height: 1.5;
-      overflow-wrap: break-word;
+    .info-block {
+      margin: 0.75rem 0;
+      padding: 0.85rem 1rem;
+      background: color-mix(in srgb, var(--accent-primary) 10%, var(--surface));
+      // Inset shadow, not `border-left`, follows the rounded corner (M5 S1-19).
+      box-shadow: inset 4px 0 0 0 var(--accent-primary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
 
-      strong {
-        color: var(--accent-primary);
-        font-weight: 600;
+      .info-label {
+        font-family: var(--font-body);
+        font-size: var(--text-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--accent-primary-text);
+      }
+
+      .info-value {
+        font-family: var(--font-serif);
+        font-size: var(--text-base);
+        color: var(--text-primary);
+        line-height: 1.6;
+        overflow-wrap: break-word;
       }
     }
   }
 }
 
-// Team list styling
-::ng-deep app-team-list {
+// Team list styling. `:host` scopes the descendant selector to this
+// component's own template instead of every `app-team-list` on the page
+// (M5 S1-11).
+:host ::ng-deep app-team-list {
   margin-top: 1rem;
   display: block;
 }

@@ -16,98 +16,100 @@
   <!-- Buzzer card: Allows players to buzz in during a game -->
   <mat-card class="game-buzzer">
     <mat-card-title>
-      <!-- Display the current round number -->
-      Buzz in for Round {{ gameSession.currentMatch.currentRound.roundNumber }}
+      <!-- "Tossup N of M" (M omitted until the packet size is known), matching solo/auto-proctor -->
+      Tossup {{ gameSession.currentMatch.currentRound.roundNumber }}@if (totalTossups) { <span class="of-total"> of {{ totalTossups }}</span> }
     </mat-card-title>
     <mat-card-content>
-      <!-- Active buzz info: Shown if there's a current buzz -->
-      @if (gameSession.currentMatch.currentRound.currentBuzz) {
-        <div class="active-buzz-info" role="status" aria-live="polite">
-          <!-- Display the name of the player and team who have buzzed in -->
-          <p>{{ gameStateService.getPlayerNameById(gameSession.currentMatch.currentRound.currentBuzz.playerId) }}
-            ({{ gameStateService.getTeamNameById(gameSession.currentMatch.currentRound.currentBuzz.teamId) }})
-            has buzzed in
-          </p>
+      <!-- Buzz outcome: who has it, in text (not colour alone), one line above the dome. -->
+      @if (isTossupRoundState() && getBuzzOutcomeText(); as outcomeText) {
+        <div class="buzz-outcome-strip"
+          [class.buzz-outcome-strip--self]="getBuzzState() === 'self'"
+          [class.buzz-outcome-strip--other]="getBuzzState() === 'other'"
+          [class.buzz-outcome-strip--team-locked]="getBuzzState() === 'teamLocked'"
+          role="status" aria-live="polite">
+          {{ outcomeText }}
         </div>
       }
 
-      <!-- Buzz button: Allows players to buzz in, visibility and state depend on round conditions -->
-      <div class="buzz-button-container">
-        @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ ||
-          gameSession.currentMatch.currentRound.roundState === RoundState.PROCTOR_READING) {
+      <!-- Buzz button: mounted for every tossup round state (open, answered, locked), so it never
+           unmounts between AWAITING_BUZZ and AWAITING_ANSWER; label and enabled-state carry the
+           round state (M5 S1-01). -->
+      @if (isTossupRoundState()) {
+        <div class="buzz-button-container">
           <button
             mat-raised-button
             id="buzz-button"
             type="button"
             (click)="onBuzzClick()"
-            [disabled]="gameStateService.hasCurrentPlayerTeamBuzzed() || buzzLocked()"
-            [class.is-locked]="gameStateService.hasCurrentPlayerTeamBuzzed() || buzzLocked()"
+            [disabled]="getBuzzState() !== 'open'"
+            [class.is-locked]="getBuzzState() !== 'open'"
             [attr.aria-label]="getBuzzButtonAriaLabel()"
             class="buzz-button">
             <!-- Display appropriate text on the buzz button -->
             {{ getBuzzButtonText() }}
           </button>
-        }
-      </div>
-
-      <!-- Timer Display -->
-      @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ && getTossupTimerDisplay()) {
-        <div class="timer-display" role="timer" aria-live="polite">
-          <p>Time remaining: {{ getTossupTimerDisplay() }}s</p>
         </div>
       }
 
-      <!-- Bonus Display - Simple view for players -->
+      <!-- Timer Display -->
+      @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ && getTossupTimerDisplay(); as tossupSeconds) {
+        <div class="timer-display" [class.timer-display--urgent]="tossupSeconds <= 5" role="timer" aria-live="polite">
+          <p>Time remaining: {{ tossupSeconds }}s</p>
+        </div>
+      }
+
+      <!-- Bonus Display - Simple view for players: one heading, one info block (who/part/phase),
+           and a plain score line, instead of four nested bordered boxes (M5 S1-12). -->
       @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PREAMBLE ||
         gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PART ||
         gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER ||
         gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED) {
         <div class="bonus-section">
           <div class="bonus-info">
-            <h3>Bonus Round in Progress</h3>
-            <p><strong>{{ getBonusEligibleTeamName() }}</strong> is answering bonus questions</p>
-            <div class="bonus-score" role="status" aria-live="polite">
-              Current Bonus Score: {{ gameStateService.getCurrentRoundBonusPoints() }} / {{ gameStateService.getCurrentRoundMaxBonusPoints() }} points
+            <h3>Bonus Round</h3>
+            <!-- Status message based on phase: who is up, and the part -->
+            <div class="bonus-status info-block" role="status" aria-live="polite">
+              @switch (gameSession.currentMatch.currentRound.roundState) {
+                @case (RoundState.BONUS_READING_PREAMBLE) {
+                  <p>Proctor is reading the bonus preamble. <strong>{{ getBonusEligibleTeamName() }}</strong> will answer.</p>
+                }
+                @case (RoundState.BONUS_READING_PART) {
+                  <p>Proctor is reading part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }} of {{ getBonusPartCount() }}. <strong>{{ getBonusEligibleTeamName() }}</strong> will answer.</p>
+                }
+                @case (RoundState.BONUS_AWAITING_ANSWER) {
+                  <p><strong>{{ getBonusEligibleTeamName() }}</strong> is answering Part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }} of {{ getBonusPartCount() }}.</p>
+                }
+                @case (RoundState.BONUS_COMPLETED) {
+                  <p>Bonus completed.</p>
+                }
+              }
             </div>
             <!-- Timer Display during answer phase -->
-            @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay()) {
-              <div class="timer-display" role="timer" aria-live="polite">
-                <p class="bonus-timer">Time remaining: {{ getBonusTimerDisplay() }}s</p>
+            @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay(); as bonusSeconds) {
+              <div class="timer-display" [class.timer-display--urgent]="bonusSeconds <= 5" role="timer" aria-live="polite">
+                <p class="bonus-timer">Time remaining: {{ bonusSeconds }}s</p>
               </div>
             }
-            <!-- Status message based on phase -->
-            <div class="bonus-status" role="status" aria-live="polite">
-              @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PREAMBLE) {
-                <p>
-                  Proctor is reading the preamble...
-                </p>
-              }
-              @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PART) {
-                <p>
-                  Proctor is reading Part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }}...
-                </p>
-              }
-              @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER) {
-                <p>
-                  {{ getBonusEligibleTeamName() }} is answering Part {{ gameSession.currentMatch.currentRound.currentBonusPartIndex + 1 }}
-                </p>
-              }
-              @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED) {
-                <p>
-                  Bonus completed!
-                </p>
-              }
+            <div class="bonus-score" role="status" aria-live="polite">
+              Bonus score: {{ gameStateService.getCurrentRoundBonusPoints() }} / {{ gameStateService.getCurrentRoundMaxBonusPoints() }} points
             </div>
           </div>
         </div>
       }
 
-      <!-- Round completed. Show question and answer -->
+      <!-- Round completed. Show question and answer as left-stripe info blocks in the reading voice
+           (Newsreader), matching the Three-Voice Rule (M5 S1-13). -->
       @if (gameSession.currentMatch.currentRound.roundState === 'COMPLETED') {
         <div class="round-completed-info" role="status" aria-live="polite">
           <h3>Round Completed</h3>
-          <p><strong>Question:</strong> <span [innerHTML]="gameSession.currentMatch.currentRound.question"></span></p>
-          <p><strong>Answer:</strong> <span [innerHTML]="gameSession.currentMatch.currentRound.answer"></span></p>
+          <div class="info-block">
+            <span class="info-label">Question</span>
+            <span class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.question"></span>
+          </div>
+          <div class="info-block">
+            <span class="info-label">Answer</span>
+            <span class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.answer"></span>
+          </div>
         </div>
       }
 

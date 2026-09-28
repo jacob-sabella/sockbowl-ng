@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, OnInit, ChangeDetectionStrategy} from '@angular/core';
+import {Component, DestroyRef, inject, OnInit, ChangeDetectionStrategy, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Observable} from "rxjs";
 import {GameSession, Player, Round, Team} from "../../models/sockbowl/sockbowl-interfaces";
@@ -17,6 +17,9 @@ export class MatchSummaryComponent implements OnInit {
 
   gameSessionObs!: Observable<GameSession>;
   gameSession!: GameSession;
+
+  /** Round history is collapsed behind one toggle instead of always rendered (M5 S1-15). */
+  readonly roundHistoryOpen = signal(false);
 
   private destroyRef = inject(DestroyRef);
 
@@ -131,6 +134,44 @@ export class MatchSummaryComponent implements OnInit {
       // In case no team has scored
       return "No team has scored.";
     }
+  }
+
+  /**
+   * The hero headline plus the final score (e.g. "Team 1 wins, 110-100"),
+   * so the winner is legible from across a room without reading the team
+   * list below (M5 S1-15). Falls back to {@link getWinningTeamAnnouncement}
+   * when nobody has scored yet.
+   */
+  getWinningAnnouncementWithScore(): string {
+    const teams = this.gameSession?.teamList ?? [];
+    if (teams.length === 0) {
+      return this.getWinningTeamAnnouncement();
+    }
+
+    const scored = teams
+      .map(team => ({ team, score: this.calculateTeamScore(team) }))
+      .sort((a, b) => b.score - a.score);
+    const highestScore = scored[0].score;
+
+    if (highestScore === 0) {
+      return this.getWinningTeamAnnouncement(); // "No team has scored."
+    }
+
+    const winners = scored.filter(entry => entry.score === highestScore);
+    if (winners.length > 1) {
+      const names = winners.map(entry => entry.team.teamName).join(' and ');
+      return `${names} tie, ${highestScore}–${highestScore}`;
+    }
+
+    // Runner-up score for a 2-team match reads as "110-100"; with more than
+    // two teams this is the winner against the next-highest score.
+    const runnerUpScore = scored[1]?.score ?? 0;
+    return `${winners[0].team.teamName} wins, ${highestScore}–${runnerUpScore}`;
+  }
+
+  /** Toggles the collapsed round-history list (M5 S1-15). */
+  toggleRoundHistory(): void {
+    this.roundHistoryOpen.update(open => !open);
   }
 
   /**

@@ -213,3 +213,160 @@ describe('GameBuzzerComponent bonus display (NG-R2-06)', () => {
     expect(bonusScoreText()).toContain('10 / 20');
   });
 });
+
+/**
+ * M5 S1-01: self / other / team-locked used to render identically ("<name>
+ * (<team>) has buzzed in" for everyone) and the dome unmounted outside
+ * AWAITING_BUZZ/PROCTOR_READING. `getBuzzState()` now derives a distinct
+ * state from `currentBuzz`, and the dome stays mounted (one slot) across
+ * every tossup round state.
+ */
+describe('GameBuzzerComponent buzz state (M5 S1-01)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let errors$: Subject<StompError>;
+
+  const SELF_ID = 'p-self';
+  const OTHER_ID = 'p-other';
+  const TEAM_SELF = 't-self';
+  const TEAM_OTHER = 't-other';
+
+  function sessionIn(roundState: RoundState, currentBuzz?: { playerId: string; teamId: string }): GameSession {
+    return {
+      currentMatch: {
+        currentRound: { roundState, roundNumber: 3, currentBuzz },
+        packet: { tossups: [{}, {}, {}, {}, {}, {}, {}, {}, {}] }, // 9 tossups
+      },
+    } as unknown as GameSession;
+  }
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  function outcomeStrip(): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('.buzz-outcome-strip');
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    errors$ = new Subject<StompError>();
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      [
+        'getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam',
+      ],
+      { gameSession$: session$.asObservable(), playerSessionId: SELF_ID },
+    );
+    gameStateService.getPlayerNameById.and.callFake((id: string) => (id === SELF_ID ? 'Ada' : 'Blaise'));
+    gameStateService.getTeamNameById.and.callFake((id: string) => (id === TEAM_SELF ? 'Team One' : 'Team Two'));
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(false);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable() } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('is open with no current buzz: dome enabled, no outcome strip', () => {
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.disabled).toBeFalse();
+    expect(buzzButton()?.textContent).toContain('Buzz!');
+    expect(outcomeStrip()).toBeNull();
+  });
+
+  it('is self when this seat holds the buzz: dome stays mounted and disabled, distinct label and strip', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: SELF_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('self');
+    expect(buzzButton()).not.toBeNull(); // mounted through AWAITING_ANSWER, not just AWAITING_BUZZ
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain("You're in, answer!");
+    expect(outcomeStrip()?.textContent).toContain('You buzzed. Answer out loud.');
+  });
+
+  it('is teamLocked when a teammate holds the buzz: dome muted, strip names the teammate', () => {
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(true);
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('teamLocked');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Team locked');
+    expect(outcomeStrip()?.textContent).toContain('Blaise has the buzz');
+  });
+
+  it('is other when the opposing team holds the buzz: distinct label and strip naming player and team', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_OTHER }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('other');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Blaise has it');
+    expect(outcomeStrip()?.textContent).toContain('Blaise (Team Two) has the buzz');
+  });
+
+  it('self, other and teamLocked no longer render the same outcome text', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: SELF_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+    const selfText = outcomeStrip()?.textContent?.trim();
+
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(true);
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+    const teamLockedText = outcomeStrip()?.textContent?.trim();
+
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(false);
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_OTHER }));
+    fixture.detectChanges();
+    const otherText = outcomeStrip()?.textContent?.trim();
+
+    expect(selfText).not.toBe(teamLockedText);
+    expect(teamLockedText).not.toBe(otherText);
+    expect(selfText).not.toBe(otherText);
+  });
+
+  it('is rateLimited while the stomp-buzz lockout is active, regardless of currentBuzz', () => {
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture.detectChanges();
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz', retryAfterMs: 5000 } as StompError);
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('rateLimited');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Slow down');
+  });
+
+  it('renders "Tossup N of M" from the packet size, matching solo/auto-proctor', () => {
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Tossup 3 of 9');
+  });
+
+  it('falls back to "Tossup N" with no "of M" when the packet size is unknown', () => {
+    const session = {
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 3 } },
+    } as unknown as GameSession;
+    session$.next(session);
+    fixture.detectChanges();
+
+    const title = (fixture.nativeElement as HTMLElement).querySelector('mat-card-title')?.textContent ?? '';
+    expect(title).toContain('Tossup 3');
+    expect(title).not.toContain('of');
+  });
+});

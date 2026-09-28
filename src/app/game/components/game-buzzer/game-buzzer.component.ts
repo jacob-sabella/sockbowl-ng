@@ -10,6 +10,16 @@ export const BUZZ_PRESS_DEBOUNCE_MS = 300;
 /** Lockout used when a stomp-buzz RATE_LIMITED error carries no `retryAfterMs`/`retryAfterSeconds`. */
 export const BUZZ_LOCKOUT_FALLBACK_MS = 1000;
 
+/**
+ * What the dome should show right now, for a tossup round. `open` is the
+ * only interactive state; every other value keeps the dome mounted but
+ * disabled, distinguished by its label and the outcome strip text (never by
+ * colour alone) (M5 S1-01). `rateLimited` covers the existing `stomp-buzz`
+ * RATE_LIMITED lockout (M4-UI-02); a `disconnected` value is left for HD
+ * (M5 S1-03) to wire once `GameWebSocketService` grows a `connectionState$`.
+ */
+export type BuzzState = 'open' | 'self' | 'other' | 'teamLocked' | 'rateLimited';
+
 @Component({
     selector: 'app-game-buzzer',
     templateUrl: './game-buzzer.component.html',
@@ -103,36 +113,119 @@ export class GameBuzzerComponent implements OnInit {
     return this.gameSession?.currentMatch?.currentRound?.remainingBonusTimerSeconds ?? null;
   }
 
-  getBuzzButtonText(): string {
+  /**
+   * True for every round state the dome should stay mounted in (open,
+   * answered by someone, locked out). Kept as one slot across these states
+   * so switching between them never unmounts the button (M5 S1-01).
+   */
+  isTossupRoundState(): boolean {
+    const state = this.gameSession?.currentMatch?.currentRound?.roundState;
+    return state === RoundState.PROCTOR_READING
+      || state === RoundState.AWAITING_BUZZ
+      || state === RoundState.AWAITING_ANSWER;
+  }
+
+  /**
+   * Derives what the dome should show right now. `self`/`other`/`teamLocked`
+   * are read off `currentBuzz` rather than a separate flag, so they always
+   * agree with the team list (M5 S1-01).
+   */
+  getBuzzState(): BuzzState {
     if (this.buzzLocked()) {
-      return 'Slow down…';
+      return 'rateLimited';
     }
-    return this.gameStateService.hasCurrentPlayerTeamBuzzed() ? 'Team already buzzed' : 'Buzz!';
+    const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;
+    if (!buzz) {
+      return 'open';
+    }
+    if (buzz.playerId === this.gameStateService.playerSessionId) {
+      return 'self';
+    }
+    return this.gameStateService.hasCurrentPlayerTeamBuzzed() ? 'teamLocked' : 'other';
+  }
+
+  getBuzzButtonText(): string {
+    switch (this.getBuzzState()) {
+      case 'rateLimited':
+        return 'Slow down';
+      case 'self':
+        return "You're in, answer!";
+      case 'teamLocked':
+        return 'Team locked';
+      case 'other': {
+        const name = this.buzzerName();
+        return name ? `${name} has it` : 'Locked';
+      }
+      default:
+        return 'Buzz!';
+    }
+  }
+
+  /**
+   * One-line outcome strip shown above the dome for the self / other /
+   * team-locked states, so the identity carried by the dome's label is also
+   * carried by text elsewhere on screen (never colour alone). `null` (open,
+   * rate-limited) renders no strip.
+   */
+  getBuzzOutcomeText(): string | null {
+    const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;
+    switch (this.getBuzzState()) {
+      case 'self':
+        return 'You buzzed. Answer out loud.';
+      case 'teamLocked': {
+        const name = this.buzzerName();
+        return name ? `${name} has the buzz` : 'Your team has the buzz';
+      }
+      case 'other': {
+        const name = this.buzzerName();
+        const team = buzz ? this.gameStateService.getTeamNameById(buzz.teamId) : undefined;
+        if (name && team) {
+          return `${name} (${team}) has the buzz`;
+        }
+        return name ? `${name} has the buzz` : null;
+      }
+      default:
+        return null;
+    }
   }
 
   /**
    * Descriptive accessible label for the buzz button, reflecting its enabled or locked state.
    */
   getBuzzButtonAriaLabel(): string {
-    if (this.buzzLocked()) {
-      return 'Buzzer temporarily locked. Wait a moment before buzzing again.';
+    switch (this.getBuzzState()) {
+      case 'rateLimited':
+        return 'Buzzer temporarily locked. Wait a moment before buzzing again.';
+      case 'self':
+        return 'You have the buzz. Answer out loud.';
+      case 'teamLocked':
+        return 'Buzzer locked. Your team has already buzzed in.';
+      case 'other':
+        return this.getBuzzOutcomeText() ?? 'Buzzer locked. Another team has the buzz.';
+      default:
+        return 'Buzz in to answer the tossup';
     }
-    return this.gameStateService.hasCurrentPlayerTeamBuzzed()
-      ? 'Buzzer locked. Your team has already buzzed in.'
-      : 'Buzz in to answer the tossup';
   }
 
-  getCurrentBonusPart(bonus: any, partIndex: number): any {
-    if (!bonus || !bonus.bonusParts || partIndex === undefined || partIndex === null) {
-      return null;
-    }
-
-    return bonus.bonusParts[partIndex];
+  /** The name of the player behind the current buzz, if any. */
+  private buzzerName(): string | undefined {
+    const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;
+    return buzz ? this.gameStateService.getPlayerNameById(buzz.playerId) : undefined;
   }
 
   getBonusEligibleTeamName(): string {
     const teamId = this.gameSession?.currentMatch?.currentRound?.bonusEligibleTeamId;
     return teamId ? (this.gameStateService.getTeamNameById(teamId) || '') : '';
+  }
+
+  /** Total parts in the current bonus (classic 3-part default when none is in play yet). */
+  getBonusPartCount(): number {
+    return Math.round(this.gameStateService.getCurrentRoundMaxBonusPoints() / 10);
+  }
+
+  /** Total tossups in the packet, for the "Tossup N of M" title (matches solo/auto-proctor). */
+  get totalTossups(): number {
+    return this.gameSession?.currentMatch?.packet?.tossups?.length || 0;
   }
 
 }

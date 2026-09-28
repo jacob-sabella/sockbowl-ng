@@ -146,8 +146,10 @@ h2 {
       margin-bottom: 1.25rem;
       padding: 1rem;
       background: var(--bg-secondary);
-      border-left: 4px solid var(--accent-primary);
-      border-radius: 8px;
+      // An inset shadow (not `border-left`) follows the box's own rounded
+      // corner instead of squaring off past the curve (M5 S1-19).
+      box-shadow: inset 4px 0 0 0 var(--accent-primary);
+      border-radius: var(--radius-sm);
       overflow-wrap: anywhere;
 
       p {
@@ -232,28 +234,38 @@ h2 {
       justify-content: center;
       margin-top: 1.25rem;
 
-      mat-chip {
+      // A plain text status label (dot + text), not a filled pill: it sits
+      // next to plain sentences like "Waiting for the question." and
+      // shouldn't read as a separate clickable control (M5 S1-19).
+      .round-state-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
         font-weight: 600;
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
+        font-size: var(--text-sm);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        background: var(--surface);
         color: var(--text-secondary);
 
+        &::before {
+          content: '';
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: currentColor;
+          flex-shrink: 0;
+        }
+
         &.reading {
-          background: var(--surface);
-          color: var(--info);
+          color: var(--info-text);
         }
 
         &.awaiting-buzz {
-          background: var(--surface);
-          color: var(--warning);
+          color: var(--warning-text);
         }
 
         &.awaiting-answer {
-          background: var(--surface);
-          color: var(--accent-secondary);
+          color: var(--accent-secondary-text);
         }
       }
     }
@@ -338,8 +350,9 @@ h2 {
           p {
             padding: 0.75rem;
             background: var(--bg-secondary);
-            border-left: 4px solid var(--success);
-            border-radius: 4px;
+            // Inset shadow, not `border-left`, follows the rounded corner (M5 S1-19).
+            box-shadow: inset 4px 0 0 0 var(--success);
+            border-radius: var(--radius-sm);
           }
         }
 
