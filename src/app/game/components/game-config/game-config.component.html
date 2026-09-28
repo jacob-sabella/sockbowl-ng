@@ -50,7 +50,12 @@
         @if (gameStateService.getCurrentPlayer()) {
           <div class="hero__player">
             <mat-icon aria-hidden="true">person</mat-icon>
-            <span class="hero__player-name">{{ gameStateService.getCurrentPlayer()?.name }}</span>
+            <div class="hero__player-meta">
+              <!-- S3-23: "Playing as" so the in-game name reads distinctly
+                   from the navbar's signed-in account name. -->
+              <span class="hero__code-label">Playing as</span>
+              <span class="hero__player-name">{{ gameStateService.getCurrentPlayer()?.name }}</span>
+            </div>
           </div>
         }
       </div>
@@ -109,6 +114,10 @@
               <span class="launch__hint">{{ startDisabledReason() }}</span>
             }
           </div>
+        } @else if (!canBecomeProctor()) {
+          <!-- S3-20: everyone who isn't managing config is told where they
+               stand instead of seeing an empty CTA slot. -->
+          <span class="launch__status-line" aria-live="polite">{{ nonManagerStatusLine() }}</span>
         }
       </div>
     </section>
@@ -183,26 +192,30 @@
           } @else {
             <div class="empty-state">
               <mat-icon>inventory_2</mat-icon>
-              <p>No packet yet. Generate one from the question bank or search the library to set the questions for this match.</p>
+              <p>{{ packetEmptyMessage() }}</p>
             </div>
           }
         </mat-card-content>
-        <mat-card-actions align="end">
-          <!-- Preview reveals answers, so only a human proctor may see it — never a
-               player in a proctorless (solo / auto-judged) mode. -->
-          @if (gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) {
-            <button mat-stroked-button color="primary" (click)="openPacketPreview()">
-              <mat-icon>visibility</mat-icon>
-              Preview
-            </button>
-          }
-          @if (canManageConfig()) {
-            <button mat-raised-button color="primary" (click)="openPacketSearch()">
-              <mat-icon>travel_explore</mat-icon>
-              Find a Packet
-            </button>
-          }
-        </mat-card-actions>
+        <!-- S3-23: no empty ruled action bar left behind for a viewer who gets
+             neither button (a non-proctor in a proctorless-owner match). -->
+        @if ((gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) || canManageConfig()) {
+          <mat-card-actions align="end">
+            <!-- Preview reveals answers, so only a human proctor may see it — never a
+                 player in a proctorless (solo / auto-judged) mode. -->
+            @if (gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) {
+              <button mat-stroked-button color="primary" (click)="openPacketPreview()">
+                <mat-icon>visibility</mat-icon>
+                Preview
+              </button>
+            }
+            @if (canManageConfig()) {
+              <button mat-raised-button color="primary" (click)="openPacketSearch()">
+                <mat-icon>travel_explore</mat-icon>
+                Find a Packet
+              </button>
+            }
+          </mat-card-actions>
+        }
       </mat-card>
       <!-- Timer Settings -->
       <mat-card class="card">
@@ -365,9 +378,12 @@
         <mat-card-content>
           <!-- S3-12: filter to actual spectators (the list used to render every
                player and hide the rest with CSS, so an empty spectator list
-               rendered as a blank card instead of a designed empty state). -->
+               rendered as a blank card instead of a designed empty state).
+               S3-23: a one-line empty, not a tall empty-state block — the
+               Spectators card doesn't need the same weight as the Packet
+               card's true "nothing set up yet" empty state. -->
           @if (spectators(gameSession).length === 0) {
-            <app-empty-state icon="visibility_off" title="No one is spectating yet." />
+            <p class="spectators-empty">No one is spectating yet.</p>
           } @else {
             <mat-list class="spectators">
               @for (player of spectators(gameSession); track trackByPlayerId($index, player)) {
@@ -384,8 +400,10 @@
             </mat-list>
           }
         </mat-card-content>
-        <mat-card-actions align="end">
-          @if (gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()) {
+        <!-- S3-23: no empty ruled action bar for a viewer who can't spectate
+             from here (already spectating, or not on a team/proctor). -->
+        @if (gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()) {
+          <mat-card-actions align="end">
             <button
               mat-raised-button
               color="primary"
@@ -394,8 +412,8 @@
               <mat-icon>visibility</mat-icon>
               Spectate
             </button>
-          }
-        </mat-card-actions>
+          </mat-card-actions>
+        }
       </mat-card>
     </section>
   </div>

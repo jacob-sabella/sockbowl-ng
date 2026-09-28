@@ -540,6 +540,54 @@ export class GameConfigComponent implements OnInit {
     return this.isPacketSet() ? '' : 'Choose a packet to start';
   }
 
+  /**
+   * The name the non-manager status line waits on (S3-20): the proctor's
+   * name in a proctor mode, or the game owner's name in a proctorless
+   * multiplayer mode (nobody else manages config there — see
+   * `canManageConfig`). Falls back to a generic "the host" before either is
+   * known.
+   */
+  private managerName(): string {
+    return this.gameStateService.getProctor()?.name
+      || this.gameSession?.playerList?.find(p => p.gameOwner)?.name
+      || 'the host';
+  }
+
+  /**
+   * The launch bar's status line for everyone who isn't managing config
+   * (S3-20 / contract STORY step 2): a seated player is told whose team
+   * they're on and who they're waiting for, an unseated player is told to
+   * pick a team, and a spectator is told they're watching. Previously this
+   * slot was simply empty for every non-manager once a proctor (or owner)
+   * was already in place. It's polite-live so a mode or seat change is
+   * announced (html aria-live).
+   */
+  nonManagerStatusLine(): string {
+    if (this.gameStateService.isSelfSpectator()) {
+      return 'Watching as a spectator';
+    }
+    const team = this.gameStateService.getCurrentPlayerTeam();
+    if (!team) {
+      return 'Pick a team to play';
+    }
+    return `You're on ${team.teamName} · Waiting for ${this.managerName()} to start`;
+  }
+
+  /**
+   * The "no packet yet" message (S3-20): only the manager can act on it, so
+   * a non-manager gets a status sentence instead of an instruction they
+   * can't follow ("Generate one from the question bank..."). Mirrors the
+   * launch bar's own "proctor" / "the host" wording.
+   */
+  packetEmptyMessage(): string {
+    if (this.canManageConfig()) {
+      return 'No packet yet. Generate one from the question bank or search the library to set the questions for this match.';
+    }
+    return this.gameStateService.getProctor()
+      ? "The proctor hasn't chosen a packet yet."
+      : "The host hasn't chosen a packet yet.";
+  }
+
   /* ─── UI helpers ───────────────────────────────────────────────────────── */
 
   copyJoinCode(code: string | undefined) {

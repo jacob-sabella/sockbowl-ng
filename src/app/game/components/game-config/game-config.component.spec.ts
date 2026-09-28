@@ -246,7 +246,7 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
     gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
       'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
       'isProctorless', 'getProctor', 'requestGameSession', 'setMatchPacket', 'updateGameSettings',
-      'getCurrentPlayer', 'startMatch',
+      'getCurrentPlayer', 'startMatch', 'isSelfSpectator', 'getCurrentPlayerTeam',
     ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
     gameStateService.isSelfProctor.and.returnValue(true);
 
@@ -328,6 +328,76 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
     expect(component.isSelfPlayer('p1')).toBeTrue();
     expect(component.isSelfPlayer('p2')).toBeFalse();
     expect(component.isSelfPlayer(undefined)).toBeFalse();
+  });
+
+  describe('non-manager launch-bar status line (S3-20)', () => {
+    it('tells a spectator they are watching', () => {
+      gameStateService.isSelfSpectator.and.returnValue(true);
+
+      expect(component.nonManagerStatusLine()).toBe('Watching as a spectator');
+    });
+
+    it('tells a seated player their team and who they are waiting for', () => {
+      gameStateService.isSelfSpectator.and.returnValue(false);
+      gameStateService.getCurrentPlayerTeam.and.returnValue({ teamName: 'Team A' } as any);
+      gameStateService.getProctor.and.returnValue({ name: 'Grace' } as any);
+
+      expect(component.nonManagerStatusLine()).toBe("You're on Team A · Waiting for Grace to start");
+    });
+
+    it('falls back to the game owner\'s name when no proctor has claimed the seat yet', () => {
+      session$.next(sessionWith({
+        playerList: [{ playerId: 'p9', name: 'Owen', gameOwner: true } as any],
+      }));
+      component.ngOnInit();
+      gameStateService.isSelfSpectator.and.returnValue(false);
+      gameStateService.getCurrentPlayerTeam.and.returnValue({ teamName: 'Team A' } as any);
+      gameStateService.getProctor.and.returnValue(undefined);
+
+      expect(component.nonManagerStatusLine()).toBe("You're on Team A · Waiting for Owen to start");
+    });
+
+    it('falls back to "the host" when neither a proctor nor a game owner is known', () => {
+      gameStateService.isSelfSpectator.and.returnValue(false);
+      gameStateService.getCurrentPlayerTeam.and.returnValue({ teamName: 'Team A' } as any);
+      gameStateService.getProctor.and.returnValue(undefined);
+
+      expect(component.nonManagerStatusLine()).toBe("You're on Team A · Waiting for the host to start");
+    });
+
+    it('tells an unseated player to pick a team', () => {
+      gameStateService.isSelfSpectator.and.returnValue(false);
+      gameStateService.getCurrentPlayerTeam.and.returnValue(undefined);
+
+      expect(component.nonManagerStatusLine()).toBe('Pick a team to play');
+    });
+  });
+
+  describe('role-aware "no packet" copy (S3-20)', () => {
+    it('gives the manager an actionable instruction', () => {
+      gameStateService.isSelfProctor.and.returnValue(true);
+
+      expect(component.packetEmptyMessage()).toBe(
+        'No packet yet. Generate one from the question bank or search the library to set the questions for this match.');
+    });
+
+    it('tells a non-manager the proctor has not chosen one yet', () => {
+      gameStateService.isSelfProctor.and.returnValue(false);
+      gameStateService.isSinglePlayer.and.returnValue(false);
+      gameStateService.isAutoJudgedMultiplayer.and.returnValue(false);
+      gameStateService.getProctor.and.returnValue({ name: 'Grace' } as any);
+
+      expect(component.packetEmptyMessage()).toBe("The proctor hasn't chosen a packet yet.");
+    });
+
+    it('says "the host" instead when there is no proctor role in this mode', () => {
+      gameStateService.isSelfProctor.and.returnValue(false);
+      gameStateService.isSinglePlayer.and.returnValue(false);
+      gameStateService.isAutoJudgedMultiplayer.and.returnValue(false);
+      gameStateService.getProctor.and.returnValue(undefined);
+
+      expect(component.packetEmptyMessage()).toBe("The host hasn't chosen a packet yet.");
+    });
   });
 
   describe('timer field commit/clamp/revert (S3-09)', () => {
