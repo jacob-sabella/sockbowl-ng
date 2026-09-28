@@ -109,7 +109,8 @@ export interface CastTeamScore {
   /**
    * Total team score (tossup points + bonus points)
    * - Tossup: 10 points per correct buzz
-   * - Bonus: 10 points per correct bonus part (max 30 per bonus)
+   * - Bonus: 10 points per correct bonus part (a bonus can have 1-6 parts, so
+   *   its max is 10-60, not always the classic 3-part 30)
    */
   score: number;
 }

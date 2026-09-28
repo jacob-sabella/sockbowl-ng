@@ -67,7 +67,7 @@
             <h3>Bonus Round in Progress</h3>
             <p><strong>{{ getBonusEligibleTeamName() }}</strong> is answering bonus questions</p>
             <div class="bonus-score" role="status" aria-live="polite">
-              Current Bonus Score: {{ gameStateService.getCurrentRoundBonusPoints() }} / 30 points
+              Current Bonus Score: {{ gameStateService.getCurrentRoundBonusPoints() }} / {{ gameStateService.getCurrentRoundMaxBonusPoints() }} points
             </div>
             <!-- Timer Display during answer phase -->
             @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay()) {
