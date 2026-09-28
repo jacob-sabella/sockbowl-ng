@@ -6,7 +6,7 @@ import {MatSnackBar} from '@angular/material/snack-bar';
 import {GameStateService} from "../../services/game-state.service";
 import {Observable} from "rxjs";
 import {GameSession, MatchState, StompError} from "../../models/sockbowl/sockbowl-interfaces";
-import {SocketCredentials} from "../../services/game-web-socket.service";
+import {GameConnectionState, GameWebSocketService, SocketCredentials} from "../../services/game-web-socket.service";
 import {clearGameJoin, loadGameJoin, saveGameJoin} from "../../services/game-join-storage";
 import {describeStompError} from "../../models/stomp-errors";
 import {AuthService} from "../../../core/auth/auth.service";
@@ -28,6 +28,7 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private authService = inject(AuthService);
   private gameStateService = inject(GameStateService);
+  private gameWebSocketService = inject(GameWebSocketService);
 
 
   gameSession$: Observable<GameSession>;
@@ -35,12 +36,20 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
   /** Latest socket error, shown by the stomp-error-banner. */
   latestStompError: StompError | null = null;
 
+  /**
+   * The socket's connection lifecycle (M5 S1-03), for a non-fatal
+   * "Reconnecting…" strip so a dropped socket is never silently mistaken for
+   * a live, working game.
+   */
+  connectionState$: Observable<GameConnectionState>;
+
   private gameSessionId = '';
 
   private destroyRef = inject(DestroyRef);
 
   constructor() {
     this.gameSession$ = this.gameStateService.gameSession$;
+    this.connectionState$ = this.gameWebSocketService.connectionState$;
   }
 
   ngOnInit() {
@@ -118,6 +127,13 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
       // The token could not be refreshed: the session is over. AuthService
       // prompts the user to sign in again.
       this.authService.handleSessionEnded();
+    } else if (error.code === 'BANNED' || error.code === 'IP_BANNED') {
+      // A banned player gets a persistent lobby notice (M5 S1-16), not a
+      // 10s snackbar followed by a generic join failure: navigate with the
+      // reason in the router state, which GameSessionComponent reads to show
+      // shared/state/error-state instead of the transient banner copy.
+      this.router.navigate(['/game-session'], {state: {reason: 'BANNED'}});
+      return;
     } else {
       this.snackBar.open(describeStompError(error), 'Dismiss', {duration: 10000});
     }

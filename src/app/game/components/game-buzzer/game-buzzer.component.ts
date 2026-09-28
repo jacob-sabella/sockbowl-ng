@@ -15,10 +15,12 @@ export const BUZZ_LOCKOUT_FALLBACK_MS = 1000;
  * only interactive state; every other value keeps the dome mounted but
  * disabled, distinguished by its label and the outcome strip text (never by
  * colour alone) (M5 S1-01). `rateLimited` covers the existing `stomp-buzz`
- * RATE_LIMITED lockout (M4-UI-02); a `disconnected` value is left for HD
- * (M5 S1-03) to wire once `GameWebSocketService` grows a `connectionState$`.
+ * RATE_LIMITED lockout (M4-UI-02), unified with the banner's own countdown
+ * (M5 S1-22). `disconnected` covers a dropped/reconnecting socket, driven by
+ * `GameWebSocketService.connectionState$` (M5 S1-03), so a buzz is never
+ * silently lost to a socket the player can't see is down.
  */
-export type BuzzState = 'open' | 'self' | 'other' | 'teamLocked' | 'rateLimited';
+export type BuzzState = 'open' | 'self' | 'other' | 'teamLocked' | 'rateLimited' | 'disconnected';
 
 @Component({
     selector: 'app-game-buzzer',
@@ -39,13 +41,33 @@ export class GameBuzzerComponent implements OnInit {
   /** True while the buzzer is locked out after a `stomp-buzz` RATE_LIMITED rejection (M4-UI-02). */
   readonly buzzLocked = signal(false);
 
+  /**
+   * Seconds left in the current rate-limit lockout, ticking down once a
+   * second so the dome's label matches the banner's own countdown instead of
+   * a static "Slow down" for the whole window (M5 S1-22). `null` when not
+   * locked, or when the lockout duration is unknown.
+   */
+  readonly rateLimitRemainingSeconds = signal<number | null>(null);
+
+  /**
+   * True once the socket has connected at least once and is currently
+   * `connected` (not `connecting`, `reconnecting` or `closed`). Drives the
+   * `disconnected` buzz state so a dropped socket disables the dome instead
+   * of leaving it looking live while buzzes would be silently lost (M5 S1-03).
+   */
+  private readonly connected = signal(true);
+
   private destroyRef = inject(DestroyRef);
   private lastBuzzAtMs = 0;
   private lockoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private rateLimitTickTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.gameSessionObs = this.gameStateService.gameSession$;
-    this.destroyRef.onDestroy(() => this.clearLockoutTimer());
+    this.destroyRef.onDestroy(() => {
+      this.clearLockoutTimer();
+      this.clearRateLimitTick();
+    });
   }
 
   /**
@@ -62,6 +84,10 @@ export class GameBuzzerComponent implements OnInit {
           ?? (error.retryAfterSeconds != null ? error.retryAfterSeconds * 1000 : BUZZ_LOCKOUT_FALLBACK_MS);
         this.lockBuzzer(lockoutMs);
       }
+    });
+
+    this.gameWebSocketService.connectionState$?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(state => {
+      this.connected.set(state === 'connected');
     });
   }
 
@@ -85,17 +111,35 @@ export class GameBuzzerComponent implements OnInit {
 
   private lockBuzzer(durationMs: number): void {
     this.clearLockoutTimer();
+    this.clearRateLimitTick();
     this.buzzLocked.set(true);
+    const clampedMs = Math.max(durationMs, 0);
+    const endsAt = Date.now() + clampedMs;
+    this.updateRateLimitCountdown(endsAt);
+    this.rateLimitTickTimer = setInterval(() => this.updateRateLimitCountdown(endsAt), 1000);
     this.lockoutTimer = setTimeout(() => {
       this.lockoutTimer = null;
+      this.clearRateLimitTick();
       this.buzzLocked.set(false);
-    }, Math.max(durationMs, 0));
+      this.rateLimitRemainingSeconds.set(null);
+    }, clampedMs);
+  }
+
+  private updateRateLimitCountdown(endsAtMs: number): void {
+    this.rateLimitRemainingSeconds.set(Math.max(0, Math.ceil((endsAtMs - Date.now()) / 1000)));
   }
 
   private clearLockoutTimer(): void {
     if (this.lockoutTimer) {
       clearTimeout(this.lockoutTimer);
       this.lockoutTimer = null;
+    }
+  }
+
+  private clearRateLimitTick(): void {
+    if (this.rateLimitTickTimer) {
+      clearInterval(this.rateLimitTickTimer);
+      this.rateLimitTickTimer = null;
     }
   }
 
@@ -134,6 +178,9 @@ export class GameBuzzerComponent implements OnInit {
     if (this.buzzLocked()) {
       return 'rateLimited';
     }
+    if (!this.connected()) {
+      return 'disconnected';
+    }
     const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;
     if (!buzz) {
       return 'open';
@@ -146,8 +193,12 @@ export class GameBuzzerComponent implements OnInit {
 
   getBuzzButtonText(): string {
     switch (this.getBuzzState()) {
-      case 'rateLimited':
-        return 'Slow down';
+      case 'rateLimited': {
+        const seconds = this.rateLimitRemainingSeconds();
+        return seconds != null ? `Slow down (${seconds}s)` : 'Slow down';
+      }
+      case 'disconnected':
+        return 'Reconnecting';
       case 'self':
         return "You're in, answer!";
       case 'teamLocked':
@@ -194,8 +245,14 @@ export class GameBuzzerComponent implements OnInit {
    */
   getBuzzButtonAriaLabel(): string {
     switch (this.getBuzzState()) {
-      case 'rateLimited':
-        return 'Buzzer temporarily locked. Wait a moment before buzzing again.';
+      case 'rateLimited': {
+        const seconds = this.rateLimitRemainingSeconds();
+        return seconds != null
+          ? `Buzzer temporarily locked. Wait ${seconds} second${seconds === 1 ? '' : 's'} before buzzing again.`
+          : 'Buzzer temporarily locked. Wait a moment before buzzing again.';
+      }
+      case 'disconnected':
+        return 'Buzzer disabled while reconnecting to the game.';
       case 'self':
         return 'You have the buzz. Answer out loud.';
       case 'teamLocked':

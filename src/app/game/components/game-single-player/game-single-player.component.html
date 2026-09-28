@@ -44,7 +44,11 @@
             <div class="info-value font-serif" [innerHTML]="round.question"></div>
           } @else {
             <div class="info-value font-serif" aria-live="polite" aria-atomic="true">
-              <span>{{ revealedText }}</span>@if (!readingComplete && !hasBuzzed) { <span class="reveal-cursor" aria-hidden="true">▍</span> }
+              @if (revealedText) {
+                <span>{{ revealedText }}</span>@if (!readingComplete && !hasBuzzed) { <span class="reveal-cursor" aria-hidden="true">▍</span> }
+              } @else {
+                <span class="waiting-hint">Reading… the question will appear here</span>
+              }
             </div>
           }
         </div>

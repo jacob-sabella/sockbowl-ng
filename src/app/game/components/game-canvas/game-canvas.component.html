@@ -1,5 +1,13 @@
 <!-- Socket errors: fatal ones persist until dismissed, non-fatal ones for 5s. -->
 <app-stomp-error-banner [error]="latestStompError"></app-stomp-error-banner>
+
+<!-- Non-fatal "the socket dropped and is coming back" indicator (M5 S1-03): distinct
+     from the stomp-error-banner (which only shows actual ERROR/queue frames), so a
+     silent WebSocket close is never mistaken for a live, working game. -->
+@if ((connectionState$ | async) === 'reconnecting') {
+  <div class="reconnect-strip" role="status" aria-live="polite">Reconnecting…</div>
+}
+
 <!-- Game Session Container -->
 @if (gameSession$ | async) {
   <div>
@@ -45,5 +53,12 @@
         <app-match-summary></app-match-summary>
       </div>
     }
+  </div>
+} @else {
+  <!-- Blank canvas before the first gameSession$ emission (M5 S1-02): a designed
+       connecting state, with a way back out, instead of a black page. -->
+  <div class="canvas-connecting">
+    <app-loading-state title="Connecting to the game…"></app-loading-state>
+    <a class="canvas-connecting__back" routerLink="/game-session">Back to lobby</a>
   </div>
 }

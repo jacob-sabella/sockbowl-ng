@@ -1,10 +1,10 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReplaySubject, Subject } from 'rxjs';
+import { of, ReplaySubject, Subject } from 'rxjs';
 
 import { GameBuzzerComponent } from './game-buzzer.component';
 import { GameStateService } from '../../services/game-state.service';
-import { GameWebSocketService } from '../../services/game-web-socket.service';
+import { GameConnectionState, GameWebSocketService } from '../../services/game-web-socket.service';
 import { GameSession, RoundState, StompError } from '../../models/sockbowl/sockbowl-interfaces';
 
 describe('GameBuzzerComponent (M4-UI-02)', () => {
@@ -29,7 +29,7 @@ describe('GameBuzzerComponent (M4-UI-02)', () => {
       declarations: [GameBuzzerComponent],
       providers: [
         { provide: GameStateService, useValue: gameStateService },
-        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable() } },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });
@@ -171,7 +171,13 @@ describe('GameBuzzerComponent bonus display (NG-R2-06)', () => {
       providers: [
         { provide: GameStateService, useValue: gameStateService },
         // M4-UI-02: the buzzer listens for stomp-buzz RATE_LIMITED errors.
-        { provide: GameWebSocketService, useValue: { errors$: new Subject<StompError>().asObservable() } },
+        {
+          provide: GameWebSocketService,
+          useValue: {
+            errors$: new Subject<StompError>().asObservable(),
+            connectionState$: of<GameConnectionState>('connected'),
+          },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });
@@ -269,7 +275,7 @@ describe('GameBuzzerComponent buzz state (M5 S1-01)', () => {
       declarations: [GameBuzzerComponent],
       providers: [
         { provide: GameStateService, useValue: gameStateService },
-        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable() } },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });
@@ -368,5 +374,150 @@ describe('GameBuzzerComponent buzz state (M5 S1-01)', () => {
     const title = (fixture.nativeElement as HTMLElement).querySelector('mat-card-title')?.textContent ?? '';
     expect(title).toContain('Tossup 3');
     expect(title).not.toContain('of');
+  });
+});
+
+/**
+ * M5 S1-03: a dropped/reconnecting socket disables the dome with a distinct
+ * label and aria reason, so a buzz is never silently swallowed by a socket
+ * the player can't see is down.
+ */
+describe('GameBuzzerComponent disconnected state (M5 S1-03)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let connectionState$: Subject<GameConnectionState>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    connectionState$ = new Subject<GameConnectionState>();
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: GameWebSocketService,
+          useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: connectionState$.asObservable() },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1 } },
+    } as unknown as GameSession);
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('starts open (the socket connected before the buzzer ever mounts)', () => {
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.disabled).toBeFalse();
+  });
+
+  it('disables the dome with a distinct label and aria reason while reconnecting', () => {
+    fixture.detectChanges();
+
+    connectionState$.next('reconnecting');
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('disconnected');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Reconnecting');
+    expect(buzzButton()?.getAttribute('aria-label')).toContain('reconnecting');
+  });
+
+  it('re-enables the dome once the socket reports connected again', () => {
+    fixture.detectChanges();
+    connectionState$.next('reconnecting');
+    fixture.detectChanges();
+
+    connectionState$.next('connected');
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.disabled).toBeFalse();
+  });
+});
+
+/** M5 S1-22: the dome's rate-limit label ticks down, matching the banner's own countdown. */
+describe('GameBuzzerComponent rate-limit countdown (M5 S1-22)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let errors$: Subject<StompError>;
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date());
+
+    errors$ = new Subject<StompError>();
+    const gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['sendPlayerIncomingBuzz', 'hasCurrentPlayerTeamBuzzed', 'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: new ReplaySubject<GameSession>(1) },
+    );
+    (gameStateService.gameSession$ as ReplaySubject<GameSession>).next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1 } },
+    } as unknown as GameSession);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('shows a ticking countdown that matches the real lockout window', () => {
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz', retryAfterSeconds: 3 } as StompError);
+    fixture.detectChanges();
+
+    expect(buzzButton()?.textContent).toContain('Slow down (3s)');
+
+    jasmine.clock().tick(1000);
+    fixture.detectChanges();
+    expect(buzzButton()?.textContent).toContain('Slow down (2s)');
+
+    jasmine.clock().tick(1000);
+    fixture.detectChanges();
+    expect(buzzButton()?.textContent).toContain('Slow down (1s)');
+
+    jasmine.clock().tick(1000);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.textContent).toContain('Buzz!');
+  });
+
+  it('counts down from the 1s fallback lockout when neither retryAfterMs nor retryAfterSeconds is present', () => {
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz' } as StompError);
+    fixture.detectChanges();
+
+    expect(buzzButton()?.textContent).toContain('Slow down (1s)'); // BUZZ_LOCKOUT_FALLBACK_MS = 1000ms
   });
 });

@@ -7,6 +7,7 @@ import { BehaviorSubject, NEVER, Subject } from 'rxjs';
 
 import { GameCanvasComponent } from './game-canvas.component';
 import { GameStateService } from '../../services/game-state.service';
+import { GameConnectionState, GameWebSocketService } from '../../services/game-web-socket.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { gameJoinStorageKey, saveGameJoin } from '../../services/game-join-storage';
 import { StompError } from '../../models/sockbowl/sockbowl-interfaces';
@@ -14,6 +15,7 @@ import { StompError } from '../../models/sockbowl/sockbowl-interfaces';
 describe('GameCanvasComponent', () => {
   let params$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let errors$: Subject<StompError>;
+  let connectionState$: BehaviorSubject<GameConnectionState>;
   let gameStateService: {
     gameSession$: typeof NEVER; errors$: Subject<StompError>; initialize: jasmine.Spy; leaveGame: jasmine.Spy;
   };
@@ -26,11 +28,19 @@ describe('GameCanvasComponent', () => {
     sessionStorage.removeItem(gameJoinStorageKey('g1'));
     params$ = new BehaviorSubject(convertToParamMap({}));
     errors$ = new Subject<StompError>();
+    connectionState$ = new BehaviorSubject<GameConnectionState>('connected');
     gameStateService = {
       gameSession$: NEVER, errors$,
       initialize: jasmine.createSpy('initialize'),
       leaveGame: jasmine.createSpy('leaveGame'),
-    };
+      getMatchState: jasmine.createSpy('getMatchState').and.returnValue(undefined),
+      isSelfProctor: jasmine.createSpy('isSelfProctor').and.returnValue(false),
+      isSelfOnAnyTeam: jasmine.createSpy('isSelfOnAnyTeam').and.returnValue(false),
+      isProctorless: jasmine.createSpy('isProctorless').and.returnValue(false),
+      isSinglePlayer: jasmine.createSpy('isSinglePlayer').and.returnValue(false),
+      isAutoJudgedMultiplayer: jasmine.createSpy('isAutoJudgedMultiplayer').and.returnValue(false),
+      isSelfSpectator: jasmine.createSpy('isSelfSpectator').and.returnValue(false),
+    } as any;
     location = jasmine.createSpyObj<Location>('Location', ['replaceState']);
     snackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
     authService = jasmine.createSpyObj<AuthService>('AuthService', ['getAccessToken', 'handleSessionEnded']);
@@ -42,6 +52,7 @@ describe('GameCanvasComponent', () => {
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { paramMap: params$ } },
         { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { connectionState$: connectionState$.asObservable() } },
         { provide: Location, useValue: location },
         { provide: MatSnackBar, useValue: snackBar },
         { provide: AuthService, useValue: authService },
@@ -59,6 +70,15 @@ describe('GameCanvasComponent', () => {
     const component = TestBed.createComponent(GameCanvasComponent).componentInstance;
     component.ngOnInit();
     return component;
+  }
+
+  /** Like {@link start}, but returns the fixture so the template can be inspected. */
+  function startFixture(routeParams: Record<string, string> = {}) {
+    params$.next(convertToParamMap(routeParams));
+    const fixture = TestBed.createComponent(GameCanvasComponent);
+    fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('ignores an accessToken route param and scrubs it from the URL', () => {
@@ -108,12 +128,40 @@ describe('GameCanvasComponent', () => {
     saveGameJoin('g1', { playerSessionId: 'p1', authenticated: true });
     const component = start({ gameSessionId: 'g1', playerSessionId: 'p1' });
 
+    errors$.next({ code: 'INTERNAL', message: 'boom', fatal: true });
+
+    expect(component.latestStompError?.code).toBe('INTERNAL');
+    expect(snackBar.open).toHaveBeenCalledWith(jasmine.stringMatching(/game server|reconnecting/i), 'Dismiss', jasmine.anything());
+    expect(router.navigate).toHaveBeenCalledWith(['/game-session']);
+    expect(sessionStorage.getItem(gameJoinStorageKey('g1'))).toBeNull();
+  });
+
+  /**
+   * M5 S1-16: a BANNED (or IP_BANNED) fatal error gets a persistent lobby
+   * notice, not a 10s snackbar followed by a generic join failure. The
+   * reason travels in router state; GameSessionComponent reads it to render
+   * shared/state/error-state (see its own spec).
+   */
+  it('a BANNED fatal error navigates with the reason in router state, no snackbar', () => {
+    saveGameJoin('g1', { playerSessionId: 'p1', authenticated: true });
+    const component = start({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
     errors$.next({ code: 'BANNED', message: 'banned', fatal: true });
 
     expect(component.latestStompError?.code).toBe('BANNED');
-    expect(snackBar.open).toHaveBeenCalledWith(jasmine.stringMatching(/banned/i), 'Dismiss', jasmine.anything());
-    expect(router.navigate).toHaveBeenCalledWith(['/game-session']);
+    expect(snackBar.open).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/game-session'], { state: { reason: 'BANNED' } });
     expect(sessionStorage.getItem(gameJoinStorageKey('g1'))).toBeNull();
+  });
+
+  it('an IP_BANNED fatal error is treated the same as BANNED', () => {
+    const component = start({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+    errors$.next({ code: 'IP_BANNED', message: 'ip banned', fatal: true });
+
+    expect(component.latestStompError?.code).toBe('IP_BANNED');
+    expect(snackBar.open).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/game-session'], { state: { reason: 'BANNED' } });
   });
 
   it('an unrecoverable token error ends the auth session', () => {
@@ -142,5 +190,59 @@ describe('GameCanvasComponent', () => {
     component.ngOnDestroy();
 
     expect(gameStateService.leaveGame).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * M5 S1-02: the canvas used to render nothing at all before the first
+   * gameSession$ emission. It now shows a designed connecting state with a
+   * way back to the lobby, and swaps to the real children once the session
+   * arrives.
+   */
+  describe('connecting state before the first gameSession$ emission (M5 S1-02)', () => {
+    it('renders the loading state and a back-to-lobby link while gameSession$ has not emitted', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('app-loading-state')).not.toBeNull();
+      const back = root.querySelector('a[routerlink="/game-session"]') as HTMLAnchorElement | null;
+      expect(back).not.toBeNull();
+      expect(back?.textContent).toContain('Back to lobby');
+    });
+
+    it('renders the children instead once gameSession$ emits', () => {
+      const session$ = new Subject<unknown>();
+      (gameStateService as any).gameSession$ = session$;
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      session$.next({ currentMatch: { currentRound: {} } });
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('app-loading-state')).toBeNull();
+    });
+  });
+
+  /** M5 S1-03: a non-fatal, reconnecting socket gets a visible, distinct strip. */
+  describe('reconnecting strip (M5 S1-03)', () => {
+    it('is hidden while connected', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.reconnect-strip')).toBeNull();
+    });
+
+    it('shows a role=status strip while the socket is reconnecting, and clears once connected again', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      connectionState$.next('reconnecting');
+      fixture.detectChanges();
+      const strip = (fixture.nativeElement as HTMLElement).querySelector('.reconnect-strip');
+      expect(strip).not.toBeNull();
+      expect(strip?.getAttribute('role')).toBe('status');
+      expect(strip?.textContent).toContain('Reconnecting');
+
+      connectionState$.next('connected');
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.reconnect-strip')).toBeNull();
+    });
   });
 });

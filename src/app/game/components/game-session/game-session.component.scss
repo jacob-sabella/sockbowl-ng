@@ -282,6 +282,22 @@
   }
 }
 
+/* M5 S1-05/S1-06: a visible cooldown hint on the create paths, and an inline
+   error under the join-code field, instead of relying solely on a snackbar. */
+.cooldown-hint {
+  margin: 0 0 0.75em;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--warning-text, var(--text-secondary));
+}
+
+.field-error {
+  margin: -1em 0 0.5em;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--error, #d32f2f);
+}
+
 .signed-in-as {
   display: flex;
   align-items: center;

@@ -1,0 +1,32 @@
+/* Non-fatal reconnect indicator (M5 S1-03): a plain status strip, distinct from
+   the stomp-error-banner (fatal/error frames only). */
+.reconnect-strip {
+  padding: 0.5rem 1rem;
+  text-align: center;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--warning-text, var(--text-primary));
+  background: var(--warning-surface, var(--bg-secondary));
+}
+
+/* Connecting state before the first gameSession$ emission (M5 S1-02). */
+.canvas-connecting {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md, 1rem);
+  padding: var(--spacing-md, 1rem);
+
+  &__back {
+    color: var(--accent-primary-text, var(--accent-primary));
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
+}
