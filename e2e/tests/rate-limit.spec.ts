@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { createGame, joinByCode, findSeededPacket, type JoinResult } from '../harness/rest.js';
 import { SockbowlBot, spawnBot } from '../harness/bot.js';
 import { APP_URL } from '../harness/config.js';
+import { getDemoAccessToken } from '../harness/auth.js';
 
 // M4 plan WP-E1 (`plans/m4-limits.md` §3 "Wave F", "E1: Playwright e2e for
 // limits and admin usage"): live proof, against a real stack running
@@ -110,18 +111,20 @@ test.describe('M4 rate limiting (live)', () => {
   test('STOMP stomp-buzz: a flooding connection is throttled, another player still buzzes in', async ({ browser }) => {
     test.setTimeout(120_000);
 
-    // The previous test (guest session-create) deliberately trips and then
-    // recovers the guest `session-create` bucket, ending with one more
-    // successful create that spends a just-refilled token. This test's
-    // own `createGame` below is *also* an unauthenticated, IP-keyed guest
-    // request (harness/rest.ts sends no Authorization header) -- under
-    // `network_mode: host` every guest-ish caller in this suite shares one
-    // bucket -- so without a pause here it can arrive before the bucket has
-    // refilled and get rejected with the same `rate_limited` 429 the prior
-    // test just proved. Wait out the full refill window first.
-    await sleep(21_000);
-
-    const game = await createGame('QUIZ_BOWL_CLASSIC', 'ONLINE_PROCTOR', false);
+    // The previous test (guest session-create) deliberately creates two
+    // guest-hosted sessions (the initial one before it trips, then the
+    // recovery one) to prove the rate limit -- exactly the compose stack's
+    // `SOCKBOWL_QUOTA_GUEST_HOSTED_SESSIONS` cap. `HostedSessionQuota` is
+    // concurrent, not a refilling rate limit (plan §2.3 -- a session only
+    // stops counting once it goes idle or its document disappears, on a
+    // clock far longer than this suite's runtime), so waiting cannot free
+    // it back up. This test's own game create authenticates as a demo
+    // account instead of going in as a guest, so it's keyed by *subject*
+    // and never touches the already-exhausted guest quota (or, under
+    // `network_mode: host`, the guest session-create rate bucket the prior
+    // test also just spent).
+    const proctorToken = await getDemoAccessToken('player3');
+    const game = await createGame('QUIZ_BOWL_CLASSIC', 'ONLINE_PROCTOR', false, proctorToken);
     // `import-random` draws from a separate :BankTossup/:BankBonus bank this
     // compose stack doesn't seed (see `harness/rest.ts` and
     // `scripts/full-match.ts`), so this looks up a real, already-seeded
