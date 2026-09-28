@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectionStrategy, computed, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
+import { ImportRandomResult, SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { OpenAiModelService } from '../../services/openai-model.service';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
 import { Subject, of } from 'rxjs';
@@ -707,28 +707,37 @@ export class PacketSearchComponent implements OnInit {
     }
   }
 
-  private afterRandomImport(res: { id: string; usedRemoteIds?: string[] }): void {
+  private afterRandomImport(res: ImportRandomResult): void {
     // Record what this account was served, so future generations avoid it. Fire-and-forget.
     if (this.qbDedupActive && res.usedRemoteIds && res.usedRemoteIds.length) {
       this.sockbowlQuestionsService.recordUsedQuestionIds(res.usedRemoteIds).subscribe({ error: () => { /* best-effort; ignore */ } });
     }
-    this.useImportedPacket(res.id);
+    this.qbImporting = false;
+    if (!res?.id) {
+      this.onQbImportError(null);
+      return;
+    }
+    this.snackBar.open('Packet ready.', 'OK', { duration: 2500 });
+    this.dialogRef.close(PacketSearchComponent.packetFromImport(res));
   }
 
-  /** Fetch the full imported packet and hand it back to the config screen. */
-  private useImportedPacket(id: string): void {
-    this.sockbowlQuestionsService.getPacketById(id).subscribe({
-      next: (packet) => {
-        this.qbImporting = false;
-        if (packet) {
-          this.snackBar.open('Packet ready.', 'OK', { duration: 2500 });
-          this.dialogRef.close(packet);
-        } else {
-          this.onQbImportError(null);
-        }
-      },
-      error: (err) => this.onQbImportError(err)
-    });
+  /**
+   * The config screen's view of a just-generated packet, built from the
+   * import-random response alone. The packet is never re-read from questions:
+   * with auth on, a guest's or player's generated packet is EPHEMERAL (D15),
+   * which only the game service may read (getPacketById returns null to
+   * everyone else, NG-R3-01). The game server supplies the proctor's full
+   * packet once it is set (D2). The questions and bonuses arrays are
+   * length-only, like the ones MatchPacketUpdate produces, so the config
+   * screen can show the counts but never holds question text.
+   */
+  private static packetFromImport(res: ImportRandomResult): Packet {
+    return {
+      id: res.id,
+      name: res.name,
+      tossups: new Array(Math.max(0, res.tossupCount ?? 0)),
+      bonuses: new Array(Math.max(0, res.bonusCount ?? 0)),
+    } as unknown as Packet;
   }
 
   private onQbImportError(err: any): void {

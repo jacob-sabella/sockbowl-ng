@@ -64,7 +64,13 @@ export class PacketListComponent implements OnInit {
       return this.packets;
     }
     const userId = this.auth.getCurrentUserId();
-    return this.packets.filter(p => p.ownerId === userId);
+    // A non-owner's read of someone else's packet has owner.id redacted to
+    // null (D2). Never let a not-yet-resolved current-user id match that:
+    // require a real, non-null userId before comparing (NG-R2-04).
+    if (!userId) {
+      return [];
+    }
+    return this.packets.filter(p => p.owner?.id === userId);
   }
 
   /**
@@ -73,8 +79,9 @@ export class PacketListComponent implements OnInit {
    * packets are manage-any only, no grandfather rule).
    */
   canManage(packet: Packet): boolean {
+    const userId = this.auth.getCurrentUserId();
     return this.auth.hasPermission('packet:manage-any')
-      || (!!packet.ownerId && packet.ownerId === this.auth.getCurrentUserId());
+      || (!!userId && !!packet.owner && packet.owner.id === userId);
   }
 
   search(): void {

@@ -86,6 +86,17 @@ check_headers() {
     FAIL=1
   fi
 
+  # The service worker fetches the Google Fonts stylesheets and font files
+  # with fetch(), which connect-src governs (NG-1).
+  local csp origin
+  csp="$(echo "$headers" | grep -i "^Content-Security-Policy:" || true)"
+  for origin in https://fonts.googleapis.com https://fonts.gstatic.com; do
+    if ! echo "$csp" | grep -Eqi "connect-src[^;]* ${origin}( |;|$)"; then
+      echo "   FAIL: CSP connect-src is missing ${origin}"
+      FAIL=1
+    fi
+  done
+
   if [[ "$expect_nocache" == "yes" ]] && ! echo "$headers" | grep -qi "^Cache-Control:.*no-cache"; then
     echo "   MISSING: Cache-Control: no-cache (was set before this change; must not regress)"
     FAIL=1

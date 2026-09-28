@@ -39,7 +39,9 @@ import { GameMode,
   UpdateGameSettings,
   UpdatePlayerTeam,
   StompError,
-  SockbowlInMessage
+  SockbowlInMessage,
+  Packet,
+  processErrorMessage
 } from '../models/sockbowl/sockbowl-interfaces';
 import {SocketCredentials} from './game-web-socket.service';
 
@@ -66,6 +68,14 @@ export class GameStateService {
   public gameSession$: Observable<GameSession> = this.gameSessionSubject.asObservable();
 
   private messagesSubscribed = false;
+
+  /**
+   * The counts from the last MatchPacketUpdate. A non-proctor's copy of the
+   * session carries no questions and (after WP-FIXG5) no packet id, so a
+   * session resend would otherwise lose the tossup and bonus counts that only
+   * MatchPacketUpdate carries.
+   */
+  private packetCounts: { name: string | null; tossupCount: number; bonusCount: number } | null = null;
 
   /** STOMP errors from the game socket (see GameWebSocketService.errors$). */
   public get errors$(): Observable<StompError> {
@@ -100,6 +110,19 @@ export class GameStateService {
   }
 
 
+  /**
+   * Put the last MatchPacketUpdate's counts back on a resent session whose
+   * packet has no questions (a non-proctor's sanitized view), when it is
+   * still the same packet (same name).
+   */
+  private restorePacketCounts(): void {
+    const packet = this.gameSessionState?.currentMatch?.packet;
+    const counts = this.packetCounts;
+    if (!packet || !counts || !packet.name || packet.name !== counts.name) return;
+    if (!Array.isArray(packet.tossups)) packet.tossups = new Array(counts.tossupCount);
+    if (!Array.isArray(packet.bonuses)) packet.bonuses = new Array(counts.bonusCount);
+  }
+
   // ----------------------
   // Messaging
   // ----------------------
@@ -116,6 +139,7 @@ export class GameStateService {
         filter(msg => !!msg),
         tap((msg: GameSessionUpdate) => {
           this.gameSessionState = msg.gameSession;
+          this.restorePacketCounts();
           this.gameSessionSubject.next(this.gameSessionState);
         })
       )
@@ -149,11 +173,21 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: MatchPacketUpdate) => {
-          this.gameSessionState.currentMatch.packet.id = msg.packetId;
-          this.gameSessionState.currentMatch.packet.name = msg.packetName;
-          // Clients aren't sent the tossups (anti-spoiler); keep a length-only array so
-          // "Tossup N of M" progress can read packet.tossups.length.
-          this.gameSessionState.currentMatch.packet.tossups = new Array(msg.tossupCount || 0);
+          const match = this.gameSessionState.currentMatch;
+          if (!match) return;
+          if (!match.packet) match.packet = {} as Packet;
+          // Only the proctor (or the owner in a proctorless mode) is sent the
+          // packet id (WP-FIXG5); everyone else gets null plus the metadata.
+          match.packet.id = msg.packetId ?? (null as unknown as string);
+          match.packet.name = msg.packetName as string;
+          // Clients aren't sent the questions (anti-spoiler); keep length-only
+          // arrays so "Tossup N of M" progress can read packet.tossups.length
+          // and the config screen can read the bonus count.
+          match.packet.tossups = new Array(msg.tossupCount || 0);
+          match.packet.bonuses = new Array(msg.bonusCount || 0);
+          this.packetCounts = msg.packetName || msg.tossupCount
+            ? { name: msg.packetName, tossupCount: msg.tossupCount || 0, bonusCount: msg.bonusCount || 0 }
+            : null;
           this.gameSessionSubject.next(this.gameSessionState);
         })
       )
@@ -166,7 +200,7 @@ export class GameStateService {
         tap((msg: ProcessError) => {
           console.error('ProcessError:', msg);
           // Show error message in toast
-          this.snackBar.open(msg.error, 'Dismiss', {
+          this.snackBar.open(processErrorMessage(msg), 'Dismiss', {
             duration: 5000,
             panelClass: ['error-snackbar'],
             horizontalPosition: 'center',

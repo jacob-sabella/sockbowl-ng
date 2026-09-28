@@ -15,9 +15,9 @@ describe('PacketListComponent', () => {
   let component: PacketListComponent;
   let authSpy: jasmine.SpyObj<AuthService>;
 
-  const ownedPacket: Packet = { id: 'p1', name: 'Mine', ownerId: 'user-1', ownerDisplayName: 'Me' } as Packet;
-  const othersPacket: Packet = { id: 'p2', name: 'Theirs', ownerId: 'user-2', ownerDisplayName: 'Them' } as Packet;
-  const ownerlessPacket: Packet = { id: 'p3', name: 'Ownerless' } as Packet;
+  const ownedPacket: Packet = { id: 'p1', name: 'Mine', owner: { id: 'user-1', name: 'Me' } } as Packet;
+  const othersPacket: Packet = { id: 'p2', name: 'Theirs', owner: { id: 'user-2', name: 'Them' } } as Packet;
+  const ownerlessPacket: Packet = { id: 'p3', name: 'Ownerless', owner: null } as Packet;
 
   function configure(permissions: string[], currentUserId: string | null): void {
     authSpy = jasmine.createSpyObj('AuthService', ['hasPermission', 'getCurrentUserId']);
@@ -76,5 +76,20 @@ describe('PacketListComponent', () => {
     expect(component.canManage(ownedPacket)).toBeTrue();
     expect(component.canManage(othersPacket)).toBeTrue();
     expect(component.canManage(ownerlessPacket)).toBeTrue();
+  });
+
+  it('canManage is false for a redacted owner.id:null packet while the current user id has not resolved yet (NG-R2-04)', () => {
+    // A non-owner's read redacts owner.id to null (D2). Before
+    // updateUserProfile resolves, getCurrentUserId() can also be null — a
+    // naive `packet.owner.id === userId` would wrongly match null === null.
+    configure([], null);
+    const redactedPacket = { id: 'p4', name: 'Someone else’s', owner: { id: null, name: null } } as unknown as Packet;
+    expect(component.canManage(redactedPacket)).toBeFalse();
+  });
+
+  it('"My packets" is empty rather than matching redacted owners while the current user id has not resolved yet (NG-R2-04)', () => {
+    configure([], null);
+    component.showMineOnly = true;
+    expect(component.filteredPackets).toEqual([]);
   });
 });

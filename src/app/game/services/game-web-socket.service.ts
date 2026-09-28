@@ -52,8 +52,9 @@ export const RATE_LIMIT_JITTER = new InjectionToken<RateLimitJitterFn>('RATE_LIM
  *   can extend the session's token expiry;
  * - ERROR frames are mapped per the ng contract: fatal codes stop reconnecting,
  *   TOKEN_EXPIRED/AUTH_REQUIRED refresh and reconnect once, INTERNAL backs off;
- * - non-fatal errors from `/user/queue/errors` and fatal ones both surface on
- *   {@link errors$}.
+ * - `/user/queue/errors` items are non-fatal unless their code is fatal (e.g.
+ *   BANNED mid-game), which stops the connection like an ERROR frame;
+ * - non-fatal and fatal errors both surface on {@link errors$}.
  */
 @Injectable({
   providedIn: 'root',
@@ -73,7 +74,7 @@ export class GameWebSocketService {
   public messageObservable$ = this.messageSubject.asObservable();
 
   private errorsSubject = new Subject<StompError>();
-  /** STOMP errors: fatal ERROR frames and non-fatal `/user/queue/errors` items. */
+  /** STOMP errors: ERROR frames and `/user/queue/errors` items, flagged `fatal` when the seat is over. */
   public readonly errors$: Observable<StompError> = this.errorsSubject.asObservable();
 
   private gameSessionId = '';
@@ -226,9 +227,19 @@ export class GameWebSocketService {
       this.messageSubject.next(message);
     });
 
-    // Non-fatal errors from message handlers (the socket stays open).
+    // Errors from message handlers. Most are non-fatal (the socket stays
+    // open), but a fatal code here - e.g. BANNED arriving mid-game when a
+    // moderator bans the player - ends the seat exactly like an ERROR frame:
+    // stop reconnecting and report it as fatal so the canvas leaves the game.
     client.subscribe('/user/queue/errors', message => {
+      if (client !== this.stompClient) {
+        return;
+      }
       const error = parseStompError(message.body, message.headers);
+      if (FATAL_STOMP_CODES.has(error.code)) {
+        this.stop(client, error);
+        return;
+      }
       this.errorsSubject.next({...error, fatal: false});
     });
 

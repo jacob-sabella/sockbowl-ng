@@ -1,4 +1,4 @@
-import { TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
+import { TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 import {
@@ -113,12 +113,77 @@ describe('AuthService', () => {
     expect(service.getRoles()).toEqual(['packet:read', 'game:host']);
   });
 
+  it('getCurrentUserId falls back to the access token sub before the ID-token profile has loaded (NG-R2-04)', () => {
+    // getIdentityClaims isn't stubbed in this describe's default setup, so
+    // updateUserProfile never ran and getUserProfile() is still null — the
+    // exact window in which an ownership check used to compare against a
+    // stale null and could match a redacted owner.id of null.
+    expect(service.getUserProfile()).toBeNull();
+    oauthServiceSpy.getAccessToken.and.returnValue(
+      buildFakeAccessToken({ sub: 'fallback-sub', realm_access: { roles: [] } })
+    );
+    expect(service.getCurrentUserId()).toBe('fallback-sub');
+  });
+
+  it('getCurrentUserId is null with no valid access token at all', () => {
+    oauthServiceSpy.getAccessToken.and.returnValue(null as unknown as string);
+    expect(service.getCurrentUserId()).toBeNull();
+  });
+
   it('hasPermission is true for a role present in realm_access.roles', () => {
+    oauthServiceSpy.hasValidAccessToken.and.returnValue(true);
     expect(service.hasPermission('packet:read')).toBeTrue();
   });
 
   it('hasPermission is false for a role not present in realm_access.roles', () => {
+    oauthServiceSpy.hasValidAccessToken.and.returnValue(true);
     expect(service.hasPermission('packet:create')).toBeFalse();
+  });
+
+  it('hasPermission is false once the access token is no longer valid, even for a held role', () => {
+    oauthServiceSpy.hasValidAccessToken.and.returnValue(false);
+    expect(service.hasPermission('packet:read')).toBeFalse();
+    expect(service.hasPermission('game:host')).toBeFalse();
+  });
+
+  describe('stored game seats (sockbowl.join.*)', () => {
+    beforeEach(() => {
+      sessionStorage.setItem('sockbowl.join.g1', JSON.stringify({ playerSessionId: 'p1', authenticated: true }));
+      sessionStorage.setItem('sockbowl.join.g2', JSON.stringify({ playerSessionId: 'p2', playerSecret: 's', authenticated: false }));
+      sessionStorage.setItem('unrelated.key', 'keep');
+    });
+
+    afterEach(() => {
+      sessionStorage.removeItem('sockbowl.join.g1');
+      sessionStorage.removeItem('sockbowl.join.g2');
+      sessionStorage.removeItem('unrelated.key');
+    });
+
+    it('are cleared on logout', async () => {
+      oauthServiceSpy.revokeTokenAndLogout.and.returnValue(Promise.resolve());
+
+      await service.logout();
+
+      expect(sessionStorage.getItem('sockbowl.join.g1')).toBeNull();
+      expect(sessionStorage.getItem('sockbowl.join.g2')).toBeNull();
+      expect(sessionStorage.getItem('unrelated.key')).toBe('keep');
+    });
+
+    it('are cleared when the session ends', () => {
+      events$.next(new OAuthErrorEvent('token_refresh_error', {}));
+
+      expect(sessionStorage.getItem('sockbowl.join.g1')).toBeNull();
+      expect(sessionStorage.getItem('sockbowl.join.g2')).toBeNull();
+      expect(sessionStorage.getItem('unrelated.key')).toBe('keep');
+    });
+
+    it('are kept when auth is off (logout is a no-op)', async () => {
+      environment.authEnabled = false;
+
+      await service.logout();
+
+      expect(sessionStorage.getItem('sockbowl.join.g1')).not.toBeNull();
+    });
   });
 
   describe('configuration', () => {
@@ -350,14 +415,15 @@ describe('AuthService login callback', () => {
     environment.authEnabled = originalAuthEnabled;
   });
 
-  function setup(opts: { validToken: boolean; refreshToken: string | null }) {
+  function setup(opts: { validToken: boolean; refreshToken: string | null; discoveryFails?: boolean }) {
     const oauth = jasmine.createSpyObj(
       'OAuthService',
       ['configure', 'loadDiscoveryDocument', 'tryLoginCodeFlow', 'hasValidAccessToken',
         'getAccessToken', 'getRefreshToken', 'getIdentityClaims', 'refreshToken', 'logOut'],
       { events: EMPTY }
     );
-    oauth.loadDiscoveryDocument.and.returnValue(Promise.resolve({}));
+    oauth.loadDiscoveryDocument.and.returnValue(
+      opts.discoveryFails ? Promise.reject(new Error('down')) : Promise.resolve({}));
     oauth.tryLoginCodeFlow.and.returnValue(Promise.resolve());
     oauth.hasValidAccessToken.and.returnValue(opts.validToken);
     oauth.getRefreshToken.and.returnValue(opts.refreshToken);
@@ -390,4 +456,48 @@ describe('AuthService login callback', () => {
     flushMicrotasks();
     expect(oauth.refreshToken).not.toHaveBeenCalled();
   }));
+  // NG-R3-05: route guards wait on whenInitialized, so it must not resolve
+  // until the refresh-on-reload has finished.
+  it('is initialized only after the refresh-on-reload has finished', fakeAsync(() => {
+    let finishRefresh!: () => void;
+    const { oauth, service } = setup({ validToken: false, refreshToken: 'r1' });
+    oauth.refreshToken.and.callFake(() => new Promise(resolve => {
+      finishRefresh = () => { oauth.hasValidAccessToken.and.returnValue(true); resolve({}); };
+    }));
+    let resolved = false;
+    service.whenInitialized().then(() => (resolved = true));
+
+    flushMicrotasks();
+    expect(oauth.refreshToken).toHaveBeenCalledTimes(1);
+    expect(service.isInitialized()).toBeFalse();
+    expect(resolved).toBeFalse();
+
+    finishRefresh();
+    flushMicrotasks();
+    expect(service.isInitialized()).toBeTrue();
+    expect(resolved).toBeTrue();
+    expect(service.isAuthenticated()).toBeTrue();
+  }));
+
+  it('is initialized even when discovery fails', fakeAsync(() => {
+    const { service } = setup({ validToken: false, refreshToken: null, discoveryFails: true });
+    flushMicrotasks();
+    expect(service.isInitialized()).toBeTrue();
+  }));
+
+  it('gives up waiting after a timeout when start-up never finishes', fakeAsync(() => {
+    const { oauth, service } = setup({ validToken: false, refreshToken: 'r1' });
+    oauth.refreshToken.and.returnValue(new Promise(() => { /* never settles */ }));
+    flushMicrotasks();
+    expect(service.isInitialized()).toBeFalse();
+
+    tick(10_000);
+    expect(service.isInitialized()).toBeTrue();
+  }));
+
+  it('is initialized immediately when auth is off', () => {
+    environment.authEnabled = false;
+    const { service } = setup({ validToken: false, refreshToken: null });
+    expect(service.isInitialized()).toBeTrue();
+  });
 });

@@ -32,11 +32,11 @@ pre-M2 server).
 | Path | Purpose |
 |------|---------|
 | `harness/config.ts` | Target endpoints (env-overridable; default = live prod) |
-| `harness/rest.ts` | `createGame` / `joinByCode` / `importQbreaderPacket` |
+| `harness/rest.ts` | `createGame` / `joinByCode` / `importQbreaderPacket` / `findSeededPacket` |
 | `harness/bot.ts` | `SockbowlBot` — headless STOMP client + every player/proctor action |
 | `harness/orchestrator.ts` | `stageMatch()` + `driveFullMatch()` |
 | `scripts/smoke.ts` | Connect one bot, read live state |
-| `scripts/full-match.ts` | Stage + drive a full match, assert it completes |
+| `scripts/full-match.ts` | Look up a seeded PUBLISHED packet, stage + drive a full match, assert every one of its rounds completes |
 | `tests/in-game-surfaces.spec.ts` | Playwright: screenshot buzzer + spectator |
 
 ## Run
@@ -46,7 +46,7 @@ cd e2e && npm install
 npx playwright install chromium     # once
 
 npm run smoke        # protocol check (create → join → read state)
-npm run full-match   # headless full match: proctor + 4 players, 3 rounds
+npm run full-match   # headless full match: proctor + 4 players, every round of a seeded packet
 npm run ui           # Playwright UI capture → artifacts/*.png
 ```
 
