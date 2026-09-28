@@ -78,7 +78,13 @@ const states: CaptureState[] = [
     setupMocks: async page => mockRest(page, usageRoutes()),
   },
   {
-    id: 'home-moderator-limited-cards',
+    // S5-19: `/admin` requires `admin:access` (app-routing.module.ts, frozen);
+    // a moderator (user:ban only) never sees an admin hub with "limited
+    // cards" — permissionGuard redirects to /game-session with a snackbar,
+    // same as `home-route-denied-player` below. Needs input N-01 keeps that
+    // redirect as the M5 default. The moderator's actual, permitted view is
+    // `bans-empty` (role: moderator, route /admin/bans) below.
+    id: 'admin-hub-denied-moderator',
     route: '/admin',
     role: 'moderator',
     setupMocks: async page => mockRest(page, usageRoutes()),
