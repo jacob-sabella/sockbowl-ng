@@ -207,6 +207,25 @@ describe('AuthInterceptor', () => {
         'You do not have permission to perform this action.', 'Dismiss', jasmine.any(Object));
     });
 
+    // WP-E1fix (M4 live-run evidence, auth-ban.spec.ts): the M4 request-guard
+    // filter's 403 banned body ({error,reason,expiresAt}, no "message" field)
+    // is classified and reported by RateLimitInterceptor instead, so this
+    // interceptor must not also show its own (unhelpful, generic) snackbar
+    // for it -- that would either double the snackbar or, before this fix,
+    // be the ONLY snackbar shown and contain neither "banned" nor "not
+    // allowed" (see rate-limit.interceptor.spec.ts for the other half).
+    it('does not show its own snackbar for a 403 banned/ip_banned body (RateLimitInterceptor owns it)', () => {
+      let error: HttpErrorResponse | undefined;
+      http.post(`${API_BASE}/api/v1/session/create-new-game-session`, {}).subscribe({ error: e => (error = e) });
+
+      httpMock
+        .expectOne(`${API_BASE}/api/v1/session/create-new-game-session`)
+        .flush({ error: 'banned', reason: 'spam', expiresAt: null }, { status: 403, statusText: 'Forbidden' });
+
+      expect(snackBarSpy.open).not.toHaveBeenCalled();
+      expect(error?.status).toBe(403);
+    });
+
     it('shows the snackbar when the retry after a refresh returns 403', fakeAsync(() => {
       authSpy.refreshToken.and.returnValue(Promise.resolve('token-2'));
       const url = `${API_BASE}/api/v1/admin/bans`;
