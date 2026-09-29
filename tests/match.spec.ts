@@ -11,8 +11,8 @@ test('Auto-judged match: two players buzz and answer', async ({ page, browser })
   await page.getByRole('button', { name: /Auto-judged match/ }).click();
   await page.waitForURL('**/game;**', { timeout: 25_000 });
 
-  const code = (await page.locator('.code-value').innerText()).trim();
-  await page.locator('.team__actions button').first().click(); // host joins a team
+  const code = (await page.locator('.hero__code-value').innerText()).trim();
+  await page.locator('.team__join').first().click(); // host joins a team
 
   // Second player joins by code in a separate (non-recorded) context
   const guestCtx = await browser.newContext();
@@ -23,12 +23,12 @@ test('Auto-judged match: two players buzz and answer', async ({ page, browser })
   await guest.getByLabel('Name').fill('Robin');
   await guest.getByRole('button', { name: 'Join', exact: true }).click();
   await guest.waitForURL('**/game;**', { timeout: 25_000 });
-  await guest.locator('.team__actions button').last().click(); // guest takes the other team
+  await guest.locator('.team__join').last().click(); // guest takes the other team
 
   // Host sets a packet from the bank
   await page.getByRole('button', { name: /Find a Packet/ }).click();
   const dialog = page.locator('.packet-search-dialog');
-  await dialog.getByRole('tab', { name: 'Generate', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Question bank', exact: true }).click();
   await expect(dialog.getByText(/tossups/).first()).toBeVisible({ timeout: 20_000 });
   await dialog.getByRole('button', { name: /Generate & use/ }).click();
   await expect(dialog).toBeHidden({ timeout: 30_000 });

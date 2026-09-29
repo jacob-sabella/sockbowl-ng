@@ -10,8 +10,8 @@ test('Spectating a live auto-judged match', async ({ page, browser }) => {
   await host.getByRole('button', { name: /New game/ }).click();
   await host.getByRole('button', { name: /Auto-judged match/ }).click();
   await host.waitForURL('**/game;**', { timeout: 25_000 });
-  const code = (await host.locator('.code-value').innerText()).trim();
-  await host.locator('.team__actions button').first().click();
+  const code = (await host.locator('.hero__code-value').innerText()).trim();
+  await host.locator('.team__join').first().click();
 
   // A player joins and takes the other team (side context)
   const playerCtx = await browser.newContext();
@@ -22,7 +22,7 @@ test('Spectating a live auto-judged match', async ({ page, browser }) => {
   await player.getByLabel('Name').fill('Robin');
   await player.getByRole('button', { name: 'Join', exact: true }).click();
   await player.waitForURL('**/game;**', { timeout: 25_000 });
-  await player.locator('.team__actions button').last().click();
+  await player.locator('.team__join').last().click();
 
   // The spectator (this recorded page) joins by code and switches to spectating
   await page.addInitScript(() => { try { localStorage.setItem('tts_enabled', 'false'); } catch {} });
@@ -38,7 +38,7 @@ test('Spectating a live auto-judged match', async ({ page, browser }) => {
   // Host sets a packet and starts; the spectator watches the tossup read
   await host.getByRole('button', { name: /Find a Packet/ }).click();
   const dialog = host.locator('.packet-search-dialog');
-  await dialog.getByRole('tab', { name: 'Generate', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Question bank', exact: true }).click();
   await expect(dialog.getByText(/tossups/).first()).toBeVisible({ timeout: 20_000 });
   await dialog.getByRole('button', { name: /Generate & use/ }).click();
   await expect(dialog).toBeHidden({ timeout: 30_000 });

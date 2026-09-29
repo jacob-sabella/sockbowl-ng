@@ -13,7 +13,7 @@ test('Solo practice reads a tossup, buzz and answer', async ({ page }) => {
   await page.getByRole('button', { name: /Find a Packet/ }).click();
   const dialog = page.locator('.packet-search-dialog');
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('tab', { name: 'Generate', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Question bank', exact: true }).click();
   await expect(dialog.getByText(/tossups/).first()).toBeVisible({ timeout: 20_000 });
   await dialog.getByRole('button', { name: /Generate & use/ }).click();
   await expect(dialog).toBeHidden({ timeout: 30_000 });

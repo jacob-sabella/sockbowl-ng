@@ -12,7 +12,7 @@ test('Generate a packet from the bank with live filters', async ({ page }) => {
   const dialog = page.locator('.packet-search-dialog');
   await expect(dialog).toBeVisible();
 
-  await dialog.getByRole('tab', { name: 'Generate', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Question bank', exact: true }).click();
   // the live breadth preview shows how many bank questions match the filters
   await expect(dialog.getByText(/tossups/).first()).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(1400);

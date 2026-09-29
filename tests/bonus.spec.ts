@@ -35,8 +35,8 @@ test('Auto-judged bonus flow advances through all parts without stalling', async
   await page.getByRole('button', { name: /New game/ }).click();
   await page.getByRole('button', { name: /Auto-judged match/ }).click();
   await page.waitForURL('**/game;**', { timeout: 25_000 });
-  const code = (await page.locator('.code-value').innerText()).trim();
-  await page.locator('.team__actions button').first().click();
+  const code = (await page.locator('.hero__code-value').innerText()).trim();
+  await page.locator('.team__join').first().click();
 
   // A second player takes the other team.
   const guestCtx = await browser.newContext();
@@ -47,7 +47,7 @@ test('Auto-judged bonus flow advances through all parts without stalling', async
   await guest.getByLabel('Name').fill('Robin');
   await guest.getByRole('button', { name: 'Join', exact: true }).click();
   await guest.waitForURL('**/game;**', { timeout: 25_000 });
-  await guest.locator('.team__actions button').last().click();
+  await guest.locator('.team__join').last().click();
 
   // Generate a small packet from the UI, capturing its id to look up the tossup answer.
   let packetId = '';
@@ -61,7 +61,7 @@ test('Auto-judged bonus flow advances through all parts without stalling', async
   for (let attempt = 0; attempt < 4; attempt++) {
     packetId = '';
     await page.getByRole('button', { name: /Find a Packet/ }).click();
-    await dialog.getByRole('tab', { name: 'Generate', exact: true }).click();
+    await dialog.getByRole('tab', { name: 'Question bank', exact: true }).click();
     await expect(dialog.getByText(/tossups/).first()).toBeVisible({ timeout: 20_000 });
     const nums = dialog.locator('.qb-num-field input');
     await nums.nth(0).fill('2');   // tossups
@@ -75,8 +75,16 @@ test('Auto-judged bonus flow advances through all parts without stalling', async
   }
   expect(tossupAns).toBeTruthy();
 
-  // Enable bonuses (the toggle shows because the generated packet carries bonuses).
-  await page.getByText('Enable Bonuses').click();
+  // Enable bonuses (the toggle shows because the generated packet carries
+  // bonuses). M5V1-04: "Auto-judged match" quick-launch now defaults
+  // bonusesEnabled to true, so a blind click here turned bonuses *off* and
+  // the test's whole "the bonus must start" assertion below never had a
+  // bonus to observe. Only click if it isn't already on.
+  const bonusToggle = page.getByRole('switch', { name: 'Enable Bonuses' });
+  await expect(bonusToggle).toBeVisible();
+  if (!(await bonusToggle.isChecked())) {
+    await bonusToggle.click();
+  }
   await page.waitForTimeout(500);
 
   // Start; answer the tossup correctly to earn the bonus.

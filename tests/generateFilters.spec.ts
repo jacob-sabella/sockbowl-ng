@@ -10,7 +10,7 @@ test('Generate tab: category filters and live counts', async ({ page }) => {
 
   await page.getByRole('button', { name: /Find a Packet/ }).click();
   const dialog = page.locator('.packet-search-dialog');
-  await dialog.getByRole('tab', { name: 'Generate', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Question bank', exact: true }).click();
   await expect(dialog.getByText(/tossups/).first()).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(1200);
 
