@@ -105,6 +105,14 @@ body {
   gap: clamp(10px, 1.8vh, 25px);
   min-height: 0;
   overflow: hidden;
+  /* M5 FF2 (fix 1): a size query container so the reading text below is
+     sized from THIS row's own real height (cqh), not the page's vh. A vh
+     clamp can only ever guess at how much of the viewport the header, buzz
+     row and scoreboard leave for this row; cqh reads the row's actual
+     computed height directly, so the type grows to use it on both a
+     content-light board (mostly header/scoreboard) and a content-heavy one. */
+  container-type: size;
+  container-name: reading;
 }
 
 /* Section Labels */
@@ -120,7 +128,13 @@ body {
 /* Content Containers. M5 FF1: tone-only depth (border + surface contrast),
    no drop shadow - the match grid's own `overflow: hidden` backstop (M5
    S2-23) was clipping this box's shadow into a hard band wherever it met a
-   row edge, worst in the light theme. */
+   row edge, worst in the light theme.
+   M5 FF2 (fix 1): `flex: 1` divides #content-area's height between
+   whichever of question/answer are visible, and this card centers its own
+   text vertically inside that full share, instead of the card only ever
+   being as tall as its own content and floating centered in a mostly-empty
+   row (the FF1 capture measured the question box at ~255px of a ~700px
+   row). */
 #question-container,
 #answer-container {
   background: var(--surface);
@@ -129,8 +143,12 @@ body {
   border: 2px solid var(--surface-hover);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* The board is read, not pointed at (M5 S2-14): a TV has no cursor, and a
@@ -155,9 +173,18 @@ body {
    720p down at ~13px - unreadable at 10 feet. Rebased to grow into that
    row instead of floating small inside it; the long tier now holds a floor
    at or above 3vh at 720p (3.1vh = ~22px there) rather than falling to a
-   fixed rem floor well under it. */
+   fixed rem floor well under it.
+   M5 FF2 (fix 1): a `vh` coefficient can only size off the whole viewport,
+   so it stayed small even after the rebase above - the review measured the
+   box at ~255px of a ~700px row at 1080p. `cqh` reads #content-area's own
+   height (see its `container-type: size` above), which is what "the height
+   of the flexible row" actually means, so the preferred value now tracks
+   the row itself. `max(_, Nvh)` keeps each tier's 10-foot floor (the 3vh
+   long-question floor from FF1) as an absolute backstop, since a very
+   short row (e.g. a small TV with a tall header) could otherwise still
+   under-size against `cqh` alone. */
 .content-text {
-  font-size: clamp(1.3rem, 4.2vh, 3rem);
+  font-size: clamp(1.3rem, max(4.2vh, 8cqh), 3.2rem);
   line-height: 1.4;
   color: var(--text-primary);
   font-weight: 400;
@@ -165,12 +192,12 @@ body {
 }
 
 .content-text.q-len-medium {
-  font-size: clamp(1.15rem, 3.6vh, 2.4rem);
+  font-size: clamp(1.15rem, max(3.6vh, 7cqh), 2.6rem);
   line-height: 1.35;
 }
 
 .content-text.q-len-long {
-  font-size: clamp(1.05rem, 3.1vh, 2rem);
+  font-size: clamp(1.05rem, max(3.1vh, 6cqh), 2.1rem);
   line-height: 1.3;
 }
 
@@ -194,13 +221,17 @@ body {
   justify-content: center;
 }
 
+/* M5 FF2 (fix 2): shrunk from the FF1 sizing (padding up to 20px/40px,
+   text up to 2rem, ~80px tall) - the scoreboard is the surface's dominant
+   object (DESIGN.md), not this transient pill, so its footprint is trimmed
+   even though its text alone already measured under the score text. */
 .buzz-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 15px;
-  padding: clamp(10px, 2vh, 20px) clamp(20px, 3vw, 40px);
+  gap: 12px;
+  padding: clamp(8px, 1.5vh, 14px) clamp(16px, 2.4vw, 30px);
   border-radius: 12px;
-  font-size: clamp(1.1rem, 2.6vh, 2rem);
+  font-size: clamp(1rem, 2vh, 1.5rem);
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   border: 3px solid transparent;
@@ -306,16 +337,18 @@ body {
 }
 
 /* M5 FF1: names must read at >=28px at 1080p (they were truncating to
-   "Team Ve…" at ~18px), and the score is the largest element on the board -
-   bigger than the header and the buzz pill, not smaller (it was ~26px,
-   under both). */
+   "Team Ve…" at ~18px).
+   M5 FF2 (fix 2): FF1's score override (2.2rem cap, ~35px) still landed
+   under the header (~34px) and barely over the pill's own text (~30px) -
+   "largest element" needs a clearer gap, so the cap is raised again while
+   the pill above is trimmed from the other side. */
 #scoreboard:has(.team-score:nth-child(5)) .team-score {
   padding: clamp(6px, 1.1vh, 14px) clamp(12px, 1.8vw, 20px);
   font-size: clamp(1.15rem, 2.6vh, 1.9rem);
 }
 
 #scoreboard:has(.team-score:nth-child(5)) .team-points {
-  font-size: clamp(1.5rem, 3.2vh, 2.2rem);
+  font-size: clamp(1.7rem, 3.7vh, 2.6rem);
 }
 
 .team-score {
@@ -325,7 +358,10 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: clamp(1.1rem, 2.2vh, 1.8rem);
+  /* M5 FF2 (fix 2): this size also sets `.team-name`'s size (no rule of its
+     own overrides it) - the 8-team floor (>=28px at 1080p) now applies to
+     the 2-team board too, not just the 4x2 one above. */
+  font-size: clamp(1.3rem, 2.8vh, 2rem);
   border: 2px solid var(--border-subtle);
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
@@ -440,9 +476,13 @@ body {
   text-align: center;
 }
 
-/* M5 FF1: floor raised from ~10px (720p) to the 12px text-under-12px floor. */
+/* M5 FF1: floor raised from ~10px (720p) to the 12px text-under-12px floor.
+   M5 FF2 (fix 7): that floor was the whole value - the coefficient (1.2vh)
+   resolved under the rem minimum at both TV sizes, so this never actually
+   scaled past ~12px. Raised to an actual 10-foot size (16-22px) rather
+   than the bare legibility minimum. */
 .info-label {
-  font-size: clamp(0.75rem, 1.2vh, 1.2rem);
+  font-size: clamp(1rem, 2vh, 1.4rem);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -488,8 +528,9 @@ body {
 
 .teams-grid:has(.config-team:nth-child(5)) .config-player {
   padding: clamp(3px, 0.6vh, 6px) clamp(6px, 1vw, 10px);
-  /* M5 FF1: floor raised to clear the 12px text-under-12px floor at 720p. */
-  font-size: clamp(0.75rem, 1.3vh, 1.1rem);
+  /* M5 FF1: floor raised to clear the 12px text-under-12px floor at 720p.
+     M5 FF2 (fix 7): same real-10-foot-size pass as `.config-player` below. */
+  font-size: clamp(0.95rem, 1.9vh, 1.4rem);
 }
 
 .config-team {
@@ -539,7 +580,9 @@ body {
   align-items: center;
   gap: 10px;
   padding: clamp(4px, 0.8vh, 10px) 0;
-  font-size: clamp(0.85rem, 1.5vh, 1.4rem);
+  /* M5 FF2 (fix 7): the ~14px this measured at 720p was the rem floor, not
+     a scaled value - raised to a real 10-foot size (~17-24px). */
+  font-size: clamp(1.05rem, 2.2vh, 1.7rem);
   color: var(--text-primary);
 }
 
@@ -550,9 +593,11 @@ body {
 }
 
 /* M5 FF1: floor raised for 10-foot comfort above the 12px text-under-12px
-   floor. */
+   floor.
+   M5 FF2 (fix 7): still landing at the rem floor (~14px) at 720p in
+   practice - raised to a real 10-foot size. */
 .waiting-message {
-  font-size: clamp(0.9rem, 1.7vh, 1.8rem);
+  font-size: clamp(1.15rem, 2.3vh, 2rem);
   font-weight: 500;
   color: var(--text-muted);
   text-align: center;
@@ -589,6 +634,15 @@ body {
    means a visible toast takes its own row and everything below it (the
    flexible content row, via its `minmax(0, 1fr)` track) simply gives up
    that height, so it can never sit over real content. */
+/* M5 FF2 (fix R1): `#status.connected` used to be `display: none`, so the
+   lane collapsed to 0 height while connected and sprang back to full height
+   the moment a disconnect fired - the review measured the header and
+   question box both jumping down by ~60px, right when a live board most
+   needs to hold still. `min-height` reserves the same lane at every state
+   (set from this rule's own visible content - connecting/disconnected icon
+   line-height plus padding), and `connected` only hides what's inside it
+   (`visibility` + `opacity`, not `display`), so the row is always there,
+   just empty. */
 #status {
   align-self: flex-end;
   flex: none;
@@ -598,6 +652,7 @@ body {
   text-align: left;
   padding: 10px 20px;
   margin-bottom: clamp(8px, 1.6vh, 20px);
+  min-height: 48px;
   background: var(--surface);
   border-radius: 12px;
   border: 1px solid var(--border-medium);
@@ -607,7 +662,10 @@ body {
 }
 
 #status.connected {
-  display: none;
+  visibility: hidden;
+  opacity: 0;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 .status-icon {

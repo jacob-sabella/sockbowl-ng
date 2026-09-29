@@ -790,7 +790,17 @@ app-team-list {
   // ragged right edge across otherwise-aligned blocks. `rem` is tied to the
   // root font-size only, so the same ~70ch measure now lands identically
   // regardless of weight.
-  max-width: 44rem;
+  // M5 FF2 (fix R2): 44rem was picked to fix that raggedness but landed
+  // well short of the actual "~70ch" DESIGN.md measure (a serif "0" at this
+  // block's own max font-size is closer to 56rem) - unlike the tossup's own
+  // `.info-value`, the bonus elements here (`.bonus-preamble`/`.part-question`/
+  // `.part-answer`) ARE their own visible bordered/tinted box, so shrinking
+  // their width shrank that box itself, opening a dead column next to the
+  // bonus header and its full-width button/PART row that the tossup's
+  // unboxed text never had. Back to a width that approximates the intended
+  // measure closes most of that gap while keeping the exact-edge win (still
+  // `rem`, not `ch`).
+  max-width: 56rem;
 }
 .game-proctor mat-card-content .answer-section .info-value { font-weight: 700; }
 
