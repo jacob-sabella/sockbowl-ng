@@ -56,7 +56,11 @@ test('A moderator bans a player mid-lobby; the ban is enforced and then lifted',
     await targetPage.goto('/game-session');
     await targetPage.getByRole('button', { name: /New game/ }).click();
     await targetPage.getByRole('button', { name: /Auto-judged match/ }).click();
-    await expect(targetPage.getByText(/not allowed|banned/i)).toBeVisible({ timeout: 10_000 });
+    // The error-state view renders the ban as a title ("You're banned") plus
+    // a separate message paragraph ("Your account is banned from playing.");
+    // both match /banned/i, so this needs `.first()` like the check above
+    // (strict mode otherwise rejects the 2-element match).
+    await expect(targetPage.getByText(/not allowed|banned/i).first()).toBeVisible({ timeout: 10_000 });
   } finally {
     if (banned) {
       const banRow = page.locator('.admin-bans__item', { hasText: targetSub });
