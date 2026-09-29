@@ -116,6 +116,35 @@
     gap: 0.5rem;
   }
 
+  // FF8 fix (regression, commit 1ac032b/FF4): at 390px the API key field's
+  // own hint ("Your OpenAI API key (never shared or stored on server)")
+  // wraps to 2 lines and its second line collides with the frozen
+  // component's Remember-key checkbox row right after it (handoff H-06 —
+  // shared/ai-key/ai-key-picker.component.scss is F1's, not edited here).
+  // The cause: Material's default ("fixed") subscript sizing makes
+  // `.mat-mdc-form-field-hint-wrapper` `position: absolute` over a fixed
+  // 16px spacer, so a wrapped second line overflows the field's own box
+  // without growing it — the checkbox that follows is laid out as if the
+  // hint were one line, right on top of the overflow. `subscriptSizing`
+  // isn't an input this component can set on markup it doesn't own, but
+  // the two rules it toggles are ordinary Material-element CSS, so they're
+  // reproduced here from outside instead: `position: static` lets the
+  // field's box actually grow to include the wrapped line, and dropping
+  // the fixed spacer (`content: unset`, Material's own dynamic-size rule)
+  // avoids double-reserving that space once the box does. Both selectors
+  // out-specify Material's own single-class rules already (no `!important`
+  // needed), and only this one field's hint/error wrappers are touched.
+  ::ng-deep app-ai-key-picker .ai-key-picker__key {
+    .mat-mdc-form-field-hint-wrapper,
+    .mat-mdc-form-field-error-wrapper {
+      position: static;
+    }
+
+    .mat-mdc-form-field-bottom-align::before {
+      content: unset;
+    }
+  }
+
   // Everything the banner above locks out while it's showing (S3-02).
   // `inert` already blocks focus and pointer events; this just shows it.
   &__fields[inert] {
