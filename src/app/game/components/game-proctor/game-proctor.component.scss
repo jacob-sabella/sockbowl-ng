@@ -540,6 +540,13 @@
   padding-top: var(--spacing-lg);
   border-top: 2px solid var(--border-subtle);
 
+  // M5 FF3 (R2): the reading-role rule at the bottom of this file caps the
+  // bonus preamble/Q/A boxes at 56rem, but this header rule, the per-part
+  // rule below and the reading-phase button all ran the full card width -
+  // two widths for what reads as one column, opening a dead gap next to
+  // the narrower reading blocks. Capped to the same 56rem so the whole
+  // bonus column shares one width; left-aligned like the reading blocks
+  // (no margin: auto), so the right edges - not the left - line up.
   .bonus-header {
     display: flex;
     flex-wrap: wrap;
@@ -549,6 +556,7 @@
     margin-bottom: var(--spacing-md);
     padding-bottom: 0.75rem;
     border-bottom: 2px solid color-mix(in srgb, var(--accent-secondary) 30%, transparent);
+    max-width: 56rem;
 
     h3 {
       font-size: 1.2rem;
@@ -579,12 +587,23 @@
     color: var(--on-accent-primary) !important;
   }
 
+  // M5 FF3 (R2): same 56rem reading-column width as the bonus header, the
+  // PART rule and the preamble/Q&A boxes. Targeted by id, not `.part-actions`
+  // itself - that class also wraps the Right/Wrong/Timeout judging row,
+  // which the finding didn't flag and keeps its own full-width grid.
+  #finished-reading-part-btn {
+    max-width: 56rem;
+  }
+
   // The preamble phase's own decision (M5 S2-06): its button is a direct
   // child of the preamble div rather than a .part-actions row, so it's
   // pinned here on its own.
   #finished-reading-preamble-btn {
     @include pinned-decision-row;
     width: 100%;
+    // M5 FF3 (R2): same 56rem reading-column width as the bonus header,
+    // the per-part rule and the preamble/Q&A boxes above it.
+    max-width: 56rem;
   }
 
   .bonus-preamble-section {
@@ -629,6 +648,10 @@
       }
     }
 
+    // M5 FF3 (R2): the "PART rule" - same 56rem reading-column width as
+    // the bonus header, the preamble/Q&A boxes and the reading-phase
+    // button, so the rule sits under the text it belongs to instead of
+    // running past it.
     .part-header {
       display: flex;
       flex-wrap: wrap;
@@ -638,6 +661,7 @@
       margin-bottom: 0.75rem;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid color-mix(in srgb, var(--accent-secondary) 20%, transparent);
+      max-width: 56rem;
 
       .part-label {
         font-size: 0.95rem;
@@ -801,6 +825,14 @@ app-team-list {
   // measure closes most of that gap while keeping the exact-edge win (still
   // `rem`, not `ch`).
   max-width: 56rem;
+  // M5 FF3 (R2): `.part-question`/`.part-answer` carry their own 4px
+  // `border-left` (the verdict stripe) but `.bonus-preamble` doesn't. With
+  // the default content-box sizing, `max-width` bounds the content box
+  // only, so the border is added on top - the bordered blocks rendered
+  // 4px wider (right edge) than the unbordered preamble even at the same
+  // `max-width`. `border-box` folds padding and border inside the bound
+  // so all four elements share the exact same outer edge.
+  box-sizing: border-box;
 }
 .game-proctor mat-card-content .answer-section .info-value { font-weight: 700; }
 

@@ -182,7 +182,18 @@ body {
    the row itself. `max(_, Nvh)` keeps each tier's 10-foot floor (the 3vh
    long-question floor from FF1) as an absolute backstop, since a very
    short row (e.g. a small TV with a tall header) could otherwise still
-   under-size against `cqh` alone. */
+   under-size against `cqh` alone.
+   M5 FF3 (fix 1): the medium/long tiers' own rem ceiling was the actual
+   cap in practice, not the vh floor or `cqh` itself - a real tossup's
+   content-area row measures ~540-610px at 1080p (2 vs 8 teams), so 7cqh/
+   6cqh there (~38-43px / ~32-37px) already clears the old 2.6rem/2.1rem
+   ceilings, and the review's measured ~32px at 1080p was exactly the
+   2.1rem=33.6px ceiling, not a `cqh`-derived value. Raised each tier's
+   ceiling just past that observed row-height range (2.75rem/2.4rem) so
+   `cqh` is the term that actually governs there, while still bounding an
+   unusually tall row - the base (untiered) tier's 3.2rem ceiling was
+   already clear of its own 8cqh value at these heights, so it needed no
+   change. */
 .content-text {
   font-size: clamp(1.3rem, max(4.2vh, 8cqh), 3.2rem);
   line-height: 1.4;
@@ -192,12 +203,12 @@ body {
 }
 
 .content-text.q-len-medium {
-  font-size: clamp(1.15rem, max(3.6vh, 7cqh), 2.6rem);
+  font-size: clamp(1.15rem, max(3.6vh, 7cqh), 2.75rem);
   line-height: 1.35;
 }
 
 .content-text.q-len-long {
-  font-size: clamp(1.05rem, max(3.1vh, 6cqh), 2.1rem);
+  font-size: clamp(1.05rem, max(3.1vh, 6cqh), 2.4rem);
   line-height: 1.3;
 }
 
@@ -490,8 +501,15 @@ body {
   margin-bottom: clamp(2px, 0.5vh, 10px);
 }
 
+/* M5 FF3 (fix 7 / R3): the FF2 "fix 7" pass raised `.info-label` off its
+   rem floor but left this rule untouched, so the value under each label
+   (the actual content: the proctor's name, the mode, the packet) stayed at
+   its old ~0.85rem floor while the label above it grew past it - a label
+   now outranking its own value. Raised past both `.info-label` and
+   `.config-player` (the player-name size) at both TV sizes so the config
+   view's real content, not its chrome, is the biggest text in each tile. */
 .info-value {
-  font-size: clamp(0.85rem, 1.9vh, 1.8rem);
+  font-size: clamp(1.15rem, 2.5vh, 2.1rem);
   font-weight: 700;
   color: var(--text-primary);
 }
