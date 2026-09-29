@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { APP_URL } from './harness/config.js';
 
 export default defineConfig({
   testDir: '.',
@@ -7,15 +8,24 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   outputDir: './artifacts/output',
   reporter: [['list']],
+  // M4's rate-limit and admin-usage specs both mutate shared, server-side
+  // state (Redis buckets, hosted-session quota, the Postgres `users` table)
+  // scoped by keycloak id / IP, not by test file. Running them concurrently
+  // lets one spec's requests count against the other's rate-limit/quota
+  // budget, so this mirrors the same `fullyParallel: false` + `workers: 1`
+  // pattern `playwright.auth.config.ts` already uses for the same reason.
+  fullyParallel: false,
+  workers: 1,
   use: {
-    // WP-E1's packet-builder.spec.ts (and the tests-auth/helpers/login.ts it
-    // reuses) navigate with bare relative paths (page.goto('/packets'),
-    // page.goto('/game-session')), unlike this file's older specs, which
-    // build absolute URLs themselves from harness/config.ts's APP_URL. That
-    // needs a baseURL here, defaulted the same way APP_URL is (SOCKBOWL_APP,
-    // else the live deployment) so `m3:auth-on`/`m3:auth-off` can point it at
-    // a local docker-compose stack per e2e/README.md's M3 section.
-    baseURL: process.env.SOCKBOWL_APP || 'https://sockbowl.com',
+    // M4 WP-E1's specs and M3 WP-E1's packet-builder.spec.ts (and
+    // `tests-auth/helpers/login.ts`'s `loginAs`, which they import) navigate
+    // with relative paths like `/game-session`, `/admin/usage` and `/packets`;
+    // without a baseURL Playwright rejects those as invalid URLs. The older
+    // specs build absolute `${APP_URL}/...` URLs themselves, so this is
+    // additive only. APP_URL is SOCKBOWL_APP, else the live deployment, so
+    // `m3:auth-on`/`m3:auth-off` can point it at a local docker-compose stack
+    // per e2e/README.md's M3 section.
+    baseURL: APP_URL,
     headless: true,
     viewport: { width: 1400, height: 900 },
     ignoreHTTPSErrors: true,

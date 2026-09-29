@@ -65,7 +65,20 @@ async function addTossup(page: Page, question: string, answer: string): Promise<
   await expect(form).toBeHidden({ timeout: 10000 });
 }
 
-/** Adds a bonus (with its parts) through the builder's "Add bonus" form. */
+/**
+ * Adds a bonus (with its parts) through the builder's "Add bonus" form.
+ *
+ * M3-V1 done-gate (audit/m3-verify-v1.json): the judge wants the e2e bonus
+ * leg proven on a builder packet with a *non*-3-part bonus, since a 3-part
+ * bonus can't distinguish "the game reads exactly this packet's parts" from
+ * "the game always plays 3 parts" (which was the actual, now-fixed, bug
+ * behind M3V1-G-01). The new-bonus form seeds `expectedPartsPerBonus` (3)
+ * rows by default (packet-builder.component.ts's `freshNewBonusDraft`), so
+ * for any other `parts.length` this drives the form's own "Add part row" /
+ * "Remove part" controls first -- the same D7-legal (warning, not
+ * error -- PacketValidator.BONUS_PART_COUNT) path a real author would use --
+ * rather than assuming the row count already matches.
+ */
 async function addBonus(
   page: Page,
   preamble: string,
@@ -75,7 +88,18 @@ async function addBonus(
   const form = page.locator('.packet-builder__generate-form');
   await form.getByLabel('Preamble').fill(preamble);
   const rows = form.locator('.packet-builder__part');
+
+  let count = await rows.count();
+  while (count < parts.length) {
+    await form.getByRole('button', { name: 'Add part row' }).click();
+    count++;
+  }
+  while (count > parts.length) {
+    await rows.last().getByRole('button', { name: 'Remove part' }).click();
+    count--;
+  }
   await expect(rows).toHaveCount(parts.length, { timeout: 5000 });
+
   for (let i = 0; i < parts.length; i++) {
     const row = rows.nth(i);
     await row.getByLabel('Question').fill(parts[i].question);
@@ -96,7 +120,15 @@ async function pickFirstSubcategory(panel: Locator): Promise<string | null> {
   const page = panel.page();
   const select = panel.locator('.packet-builder__subcategory-field mat-select');
   await select.click();
-  const options = page.locator('.cdk-overlay-container mat-option');
+  // M3-V1 live-run fix: this Angular/CDK version's overlay for mat-select no
+  // longer wraps its panel in a `.cdk-overlay-container` div -- it uses the
+  // browser's native Popover API instead (confirmed live: a
+  // `.cdk-overlay-container mat-option` CSS locator matched 0 elements while
+  // the panel was open and fully populated; a plain `mat-option` tag locator
+  // matched 68, and role=listbox/option matched the same 68). Select by ARIA
+  // role instead, scoped to the one open listbox, matching the pattern
+  // newPacketInBuilder's difficulty picker already uses below.
+  const options = page.getByRole('listbox').getByRole('option');
   await expect(options.first()).toBeVisible({ timeout: 5000 });
   // Index 0 is always the "None" option (packet-builder.component.html); a
   // real, seeded subcategory (if any) is index 1 onward.
@@ -133,6 +165,17 @@ async function expandPanel(panel: Locator): Promise<void> {
 
 /** Best-effort CDK drag-and-drop: drags `source`'s handle onto `target`'s header. */
 async function dragOnto(page: Page, source: Locator, target: Locator): Promise<void> {
+  // M3-V1 live-run fix: this always ran right after the NG-V1-08 subcategory
+  // pick, which leaves the T1 panel expanded (its Save button is what got
+  // clicked), pushing T3's drag handle below the 900px viewport
+  // (boundingBox() showed y≈1040 live). Locator methods like .click()/.fill()
+  // auto-scroll their target into view; raw page.mouse.move() to a manually
+  // read boundingBox() does not, so the pointer landed outside the rendered
+  // viewport and every move/down/up below was a no-op -- no CDK drag classes
+  // ever appeared, confirmed live, and the order was unchanged even before
+  // the reload this test then checked. Scroll both ends into view first.
+  await source.scrollIntoViewIfNeeded();
+  await target.scrollIntoViewIfNeeded();
   const s = await source.boundingBox();
   const t = await target.boundingBox();
   if (!s || !t) throw new Error('dragOnto: missing bounding box for source or target');
@@ -143,9 +186,23 @@ async function dragOnto(page: Page, source: Locator, target: Locator): Promise<v
   await page.mouse.move(sx, sy);
   await page.mouse.down();
   await page.mouse.move(sx, sy - 15, { steps: 5 });
-  await page.mouse.move(tx, ty, { steps: 20 });
-  await page.mouse.move(tx, ty, { steps: 3 });
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(100);
+  // M3-V1 live-run fix: two big jumps straight to the target (the previous
+  // version of this helper) left CDK's drag fully engaged
+  // (cdk-drag-dragging/-placeholder/-preview all present, confirmed with a
+  // standalone repro) but never actually reordered past the target's
+  // midpoint in this environment -- CDK's drop-list sort needs several
+  // separate pointermove events along the way, each given a moment to run
+  // its own reorder pass, not just a fine-grained final approach. Walk the
+  // pointer there in ~10 waypoints instead.
+  const steps = 10;
+  for (let i = 1; i <= steps; i++) {
+    const ix = sx + (tx - sx) * (i / steps);
+    const iy = sy + (ty - sy) * (i / steps);
+    await page.mouse.move(ix, iy, { steps: 3 });
+    await page.waitForTimeout(80);
+  }
+  await page.waitForTimeout(300);
   await page.mouse.up();
   await page.waitForTimeout(300);
 }
@@ -169,7 +226,17 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     const packetName = `E2E ${Date.now()}`;
     packetId = await newPacketInBuilder(page, packetName);
 
-    // Step 2: 3 tossups with distinct one-word answers, plus 1 bonus (3 parts).
+    // Step 2: 3 tossups with distinct one-word answers, plus 1 bonus.
+    //
+    // M3-V1 done-gate (audit/m3-verify-v1.json, "ideally on a builder packet
+    // with a non-3-part bonus"): this bonus has 4 parts, not the D7
+    // "expected" 3 (PacketValidator.EXPECTED_PARTS_PER_BONUS). A 3-part
+    // bonus can't tell "the game read this packet's actual part count" from
+    // "the game always plays 3 parts regardless of the packet" -- that was
+    // M3V1-G-01, a real bug the FIX1 wave found and fixed
+    // (Round.advanceToNextBonusPart hardcoded `>= 3`). A 4-part bonus is
+    // still fully playable (BONUS_PART_COUNT is a WARNING, not an ERROR --
+    // PacketValidator.validate), so the Playable badge below still applies.
     const T1 = { q: 'This element with atomic number 8 is essential for respiration.', a: 'OXYGEN' };
     const T2 = { q: 'This polygon has three sides and three angles.', a: 'TRIANGLE' };
     const T3 = { q: 'This is the closest planet to the Sun.', a: 'MERCURY' };
@@ -180,6 +247,7 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
       { question: 'This is the largest ocean by area.', answer: 'PACIFIC' },
       { question: 'This river is generally credited as the longest in the world.', answer: 'NILE' },
       { question: 'This is the smallest continent by area.', answer: 'AUSTRALIA' },
+      { question: 'This mountain range is the longest above sea level, running the length of South America.', answer: 'ANDES' },
     ]);
 
     // NG-V1-08: pick a subcategory on one tossup, saved on its own (not
@@ -194,6 +262,14 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
       // unsaved change, not a permanent fixture -- it's gone entirely once
       // there's nothing left to save, rather than reading "All changes saved".
       await expect(page.locator('.packet-builder__save-bar')).toBeHidden({ timeout: 10000 });
+      // M3-V1 live-run fix: collapse T1 again once its own save lands. Left
+      // expanded, its full editable form (question/answer/subcategory
+      // fields) is tall enough to push T3's drag handle below the viewport
+      // for the Step 3 drag below -- confirmed live (boundingBox() read
+      // y≈1040 against a 900px-tall viewport, so every mouse event in that
+      // drag landed outside the rendered page and silently did nothing). A
+      // real author would naturally collapse it too once done.
+      await t1PanelForSubcategory.locator('mat-expansion-panel-header').click(); // was open; this collapses it
     }
 
     // NG-V1-08: dirty more than one entity (the bonus's preamble and two of
@@ -227,9 +303,16 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
       await expect(panelByText(page, T1.q)).toContainText(pickedSubcategory);
     }
 
-    // Step 4: Preview shows all 3 tossups and the bonus's 3 parts.
+    // Step 4: Preview shows all 3 tossups and the bonus's 4 parts.
+    //
+    // M3-V1 live-run fix: NG-V1-01 (print) added a second, always-present
+    // `app-packet-reading-view.packet-builder__preview-print-only` sibling
+    // to this on-screen one whenever preview mode is on (see the print-only
+    // assertions below) -- an unscoped `app-packet-reading-view` locator
+    // matches both, and `toContainText` (single-string form) needs exactly
+    // one match. Scope to the on-screen instance's own class.
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
-    const preview = page.locator('app-packet-reading-view');
+    const preview = page.locator('app-packet-reading-view.packet-builder__preview-onscreen');
     await expect(preview.getByRole('tab', { name: /Tossups \(3\)/ })).toBeVisible({ timeout: 10000 });
     await expect(preview).toContainText(T1.q);
     await expect(preview).toContainText(T2.q);
@@ -238,6 +321,32 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     await expect(preview).toContainText('PACIFIC');
     await expect(preview).toContainText('NILE');
     await expect(preview).toContainText('AUSTRALIA');
+    await expect(preview).toContainText('ANDES');
+
+    // Also verify printing includes the bonuses (NG-V1-01, audit/m3-verify-v1.json
+    // item 2): packet-builder.component.html renders a second, print-only
+    // `app-packet-reading-view` (`.packet-builder__preview-print-only`, always
+    // `[linear]="true"`) into the DOM whenever preview mode is on -- printPacket()
+    // just flips the same `preview` flag this Preview button did, and a CSS
+    // `@media print` rule is the only thing that decides which of the two
+    // instances is visible on paper (packet-reading-view.component.spec.ts's
+    // "linear mode" describe block and packet-builder.component.spec.ts's own
+    // "print (NG-V1-01)" describe block cover that CSS switch at the unit
+    // level). Playwright's headless renderer doesn't evaluate print media, so
+    // this asserts directly on that print-only node's DOM content instead --
+    // the same node a real print or "save as PDF" renders -- proving the
+    // packet's one bonus (all 4 parts, not just the tab currently open above)
+    // is actually present in it, not merely that the component compiles.
+    const printOnly = page.locator('app-packet-reading-view.packet-builder__preview-print-only');
+    await expect(printOnly).toBeAttached({ timeout: 5000 });
+    await expect(printOnly).toContainText(T1.q);
+    await expect(printOnly).toContainText(T2.q);
+    await expect(printOnly).toContainText(T3.q);
+    await expect(printOnly).toContainText('PACIFIC');
+    await expect(printOnly).toContainText('NILE');
+    await expect(printOnly).toContainText('AUSTRALIA');
+    await expect(printOnly).toContainText('ANDES');
+
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
 
     // Step 5: guard check — dirty T2 without saving, try to navigate away via
@@ -286,6 +395,15 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
     // guarantees the bonus-paired round is reached, and asserting the exact
     // score of that specific round -- not just any nonzero team total --
     // proves the bonus was actually read, judged and scored, not skipped.
+    //
+    // M3-V1 done-gate: this bonus has 4 parts (step 2), not the D7 "expected"
+    // 3, specifically so this exact-score assertion can't be satisfied by a
+    // game that silently always plays (or always maxes at) 3 parts
+    // regardless of what the packet actually holds -- see M3V1-G-01's fix in
+    // Round.advanceToNextBonusPart / bonusPartCount(). A hardcoded-3 game
+    // would either stop this bonus one part early (bonusPartsTotal 3, not 4)
+    // or reject/ignore the 4th BonusPartOutcome outright; either way this
+    // assertion fails loudly instead of coincidentally matching.
     const bonusMatch = await stageMatch({ packetId, playerNames: ['Ada', 'Blaise'], tossupCount: 3, bonusCount: 1 });
     try {
       const result = await driveFullMatch(bonusMatch, bonusMatch.tossupCount, false);
@@ -293,14 +411,15 @@ test('build packet from scratch and play it', async ({ page }, testInfo) => {
       // The match actually entered bonus play (not just a lucky nonzero score).
       expect(result.roundStatesSeen).toContain('BONUS_AWAITING_ANSWER');
       // Exactly one of the 3 tossups carries this packet's one bonus, and it
-      // must have been played: 1 correct tossup (10) + all 3 correct parts
-      // (30) = 40, the exact score PB-15/G1 promise for this packet.
+      // must have been played: 1 correct tossup (10) + all 4 correct parts
+      // (40) = 50, the exact score PB-15/G1 promise for this specific,
+      // non-3-part packet.
       expect(result.bonusRounds).toHaveLength(1);
       const [bonus] = result.bonusRounds;
       expect(bonus.tossupCorrect).toBe(true);
-      expect(bonus.bonusPartsTotal).toBe(3);
-      expect(bonus.bonusPartsCorrect).toBe(3);
-      expect(bonus.score).toBe(40);
+      expect(bonus.bonusPartsTotal).toBe(4);
+      expect(bonus.bonusPartsCorrect).toBe(4);
+      expect(bonus.score).toBe(50);
     } finally {
       bonusMatch.cleanup();
     }

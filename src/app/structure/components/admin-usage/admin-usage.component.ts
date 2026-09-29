@@ -18,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsageService } from '../../../core/services/usage.service';
 import { BanService } from '../../../core/services/ban.service';
 import { metricLabel } from '../../../core/http/limit-messages';
+import { isLimitHandled } from '../../../core/http/limit-errors';
 import {
   GlobalUsage,
   RateLimitEvent,
@@ -212,12 +213,23 @@ export class AdminUsageComponent implements OnInit {
     this.detailError = null;
     this.usageService.detail(sub).subscribe({
       next: (detail) => {
+        // NG-V1-04: this request isn't cancelled when a newer one starts (two
+        // in-flight `detail` calls for different rows are possible if an
+        // admin expands row A then quickly switches to row B before A's
+        // response lands), so a slow response for a row that's no longer
+        // expanded must never overwrite what's currently shown.
+        if (this.expandedSub !== sub) {
+          return;
+        }
         this.detail = detail;
         this.detailLoading = false;
         this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load usage detail', err);
+        if (this.expandedSub !== sub) {
+          return;
+        }
         this.detailError = 'Failed to load detail.';
         this.detailLoading = false;
         this.cdr.markForCheck();
@@ -247,10 +259,17 @@ export class AdminUsageComponent implements OnInit {
           next: () => {
             this.snackBar.open('Quota updated', 'Dismiss', { duration: 3000 });
             this.refreshRow(row.keycloakId);
+            this.cdr.markForCheck();
           },
           error: (err) => {
             console.error('Failed to set quota override', err);
+            // A 429 or a 403 banned/ip_banned is already surfaced by the
+            // global RateLimitInterceptor; don't double the snackbar (NG-V1-01).
+            if (isLimitHandled(err)) {
+              return;
+            }
             this.snackBar.open('Failed to update quota', 'Dismiss', { duration: 4000 });
+            this.cdr.markForCheck();
           },
         });
       });
@@ -275,10 +294,17 @@ export class AdminUsageComponent implements OnInit {
           next: () => {
             this.snackBar.open('Usage reset', 'Dismiss', { duration: 3000 });
             this.refreshRow(row.keycloakId);
+            this.cdr.markForCheck();
           },
           error: (err) => {
             console.error('Failed to reset usage', err);
+            // A 429 or a 403 banned/ip_banned is already surfaced by the
+            // global RateLimitInterceptor; don't double the snackbar (NG-V1-01).
+            if (isLimitHandled(err)) {
+              return;
+            }
             this.snackBar.open(err?.error?.message || 'Failed to reset usage', 'Dismiss', { duration: 4000 });
+            this.cdr.markForCheck();
           },
         });
       });
@@ -299,10 +325,17 @@ export class AdminUsageComponent implements OnInit {
           next: () => {
             this.snackBar.open('User banned', 'Dismiss', { duration: 3000 });
             this.refreshRow(row.keycloakId);
+            this.cdr.markForCheck();
           },
           error: (err) => {
             console.error('Failed to ban user', err);
+            // A 429 or a 403 banned/ip_banned is already surfaced by the
+            // global RateLimitInterceptor; don't double the snackbar (NG-V1-01).
+            if (isLimitHandled(err)) {
+              return;
+            }
             this.snackBar.open('Failed to ban user', 'Dismiss', { duration: 4000 });
+            this.cdr.markForCheck();
           },
         });
       });
@@ -321,10 +354,17 @@ export class AdminUsageComponent implements OnInit {
           next: () => {
             this.snackBar.open('IP banned', 'Dismiss', { duration: 3000 });
             this.refreshRow(row.keycloakId);
+            this.cdr.markForCheck();
           },
           error: (err) => {
             console.error('Failed to ban IP', err);
+            // A 429 or a 403 banned/ip_banned is already surfaced by the
+            // global RateLimitInterceptor; don't double the snackbar (NG-V1-01).
+            if (isLimitHandled(err)) {
+              return;
+            }
             this.snackBar.open(err?.error?.message || 'Failed to ban IP', 'Dismiss', { duration: 4000 });
+            this.cdr.markForCheck();
           },
         });
       });

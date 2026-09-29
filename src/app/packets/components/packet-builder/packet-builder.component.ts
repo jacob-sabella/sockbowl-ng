@@ -17,6 +17,7 @@ import {
   AuthoringPacket,
   Category,
   Difficulty,
+  packetSourceLabel,
   PacketValidation,
   PacketVisibility,
   Subcategory,
@@ -24,11 +25,9 @@ import {
 } from '../../models/packet-authoring.models';
 import { PACKET_LIMITS } from '../../models/packet-limits';
 import { AuthService } from '../../../core/auth/auth.service';
-import { describeGraphqlError, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
+import { describeGraphqlError, describeGraphqlErrorInline, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
-import { limitErrorFrom, notifyLimit } from '../../../core/http/limit-errors';
-import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 import { DraftEntitySource, PacketDraftStore } from './packet-draft-store';
 
 interface TossupDraft {
@@ -101,7 +100,6 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   private packetAuthoring = inject(PacketAuthoringService);
   private snackBar = inject(MatSnackBar);
   private confirmDialog = inject(ConfirmDialogService);
-  private rateLimitState = inject(RateLimitStateService);
   private liveAnnouncer = inject(LiveAnnouncer);
   auth = inject(AuthService);
 
@@ -298,7 +296,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.applyPacket(packet);
         onDone?.();
       },
-      error: (err) => this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 })
+      error: (err) => this.reportError(err)
     });
   }
 
@@ -313,7 +311,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.conflictBanner = false;
         this.applyPacket(packet, true);
       },
-      error: (err) => this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 })
+      error: (err) => this.reportError(err)
     });
   }
 
@@ -396,6 +394,20 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
     // can never spuriously match that null (NG-R2-04).
     return this.auth.hasPermission('packet:manage-any')
       || (!!userId && !!this.packet?.owner && this.packet.owner.id === userId);
+  }
+
+  /**
+   * INT1 (M4-PV-01 provenance display, missing from the M3 builder): a
+   * short label for the header's "how this packet was made" line.
+   * `getPacketById` now selects `source` (plus `createdById`/
+   * `lastModifiedById`/`createdAt`/`lastModifiedAt`), so this is the only
+   * place in the app currently reading it. `createdById`/`lastModifiedById`
+   * are shown as raw ids -- there is no display-name lookup for them yet,
+   * the same known limitation as the M5 bans list (see PROGRESS.md's
+   * H-05 follow-up).
+   */
+  sourceLabel(source: Packet['source'] | null | undefined): string {
+    return packetSourceLabel(source);
   }
 
   get sortedTossups(): TossupElement[] {
@@ -835,9 +847,9 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   /**
    * Every mutation's error handler (HD: wires every §2 error class to one
    * outcome). A CONFLICT opens the persistent banner instead of a snackbar.
-   * RATE_LIMITED, QUOTA_EXCEEDED, and BANNED go through M4's `notifyLimit`
-   * so the message includes the cooldown/quota/ban detail instead of the
-   * generic text `describeGraphqlError` would otherwise show — exactly one
+   * RATE_LIMITED, QUOTA_EXCEEDED, and BANNED were already shown once, with
+   * the cooldown/quota/ban detail, by `GraphqlClientService`'s `notifyLimit`
+   * (INT1 single-snackbar rule), so `reportError` skips them — exactly one
    * snackbar either way, never both.
    */
   private handleMutationError(err: unknown): void {
@@ -846,13 +858,22 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.conflictBanner = true;
         return;
       }
-      const limitError = limitErrorFrom(err.classification, err.extensions);
-      if (limitError) {
-        notifyLimit(limitError, this.snackBar, this.rateLimitState);
-        return;
-      }
     }
-    this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
+    this.reportError(err);
+  }
+
+  /**
+   * Shows `describeGraphqlError(err)` as a snackbar, unless it's `''`
+   * (INT1: RATE_LIMITED/QUOTA_EXCEEDED/BANNED, already shown once by
+   * `GraphqlClientService`'s `notifyLimit` -- see `describeGraphqlError`'s
+   * doc comment). Opening a second, empty-text snackbar for those would
+   * both duplicate the notice and show nothing useful.
+   */
+  private reportError(err: unknown): void {
+    const message = this.extractError(err);
+    if (message) {
+      this.snackBar.open(message, 'Dismiss', { duration: 4000 });
+    }
   }
 
   /* -------------------------------- tossups -------------------------------- */
@@ -1365,8 +1386,9 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
    * failure it stops (remaining dirty cards stay dirty), refetches, expands
    * + scrolls + focuses the failing card and renders the error inline on
    * it, and routes the failure through {@link handleMutationError} so a
-   * 429/QUOTA/BANNED response shows exactly one snackbar (via
-   * `notifyLimit`) instead of stacking a second generic one on top.
+   * 429/QUOTA/BANNED response shows exactly one snackbar (the one
+   * `GraphqlClientService`'s `notifyLimit` already showed) instead of
+   * stacking a second generic one on top.
    */
   private runSaveWorklist(items: SaveWorkItem[], index: number): void {
     if (index >= items.length) {
@@ -1389,7 +1411,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
         this.saveAllTotal = 0;
         this.saveAllCurrent = 0;
         this.refetch();
-        this.entitySaveErrors[item.id] = this.extractError(err);
+        this.entitySaveErrors[item.id] = describeGraphqlErrorInline(err);
         this.focusSaveWorkItem(item);
         this.handleMutationError(err);
       }

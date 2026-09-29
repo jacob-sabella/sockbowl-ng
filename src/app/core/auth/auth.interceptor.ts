@@ -22,7 +22,12 @@ import { AuthService } from './auth.service';
  *   retries the request once. A second 401, or a failed refresh, ends the
  *   session locally and prompts the user to sign in again (AUTH-13).
  * - On a 403 response (e.g. a banned user) it shows a clear, non-blocking
- *   message instead of letting the error fail silently.
+ *   message instead of letting the error fail silently. WP-E1fix: a 403 body
+ *   M4's `RateLimitInterceptor` already classifies and reports itself
+ *   (`{error:"banned"|"ip_banned",...}`, plan m4-limits.md §2.1, no
+ *   `message` field) is skipped here, so the ban is surfaced exactly once
+ *   with real text instead of twice, once with this interceptor's own
+ *   generic fallback that names neither "banned" nor "not allowed".
  */
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -83,14 +88,27 @@ export class AuthInterceptor implements HttpInterceptor {
     );
   }
 
-  /** Surfaces a 403 to the user, then rethrows the error unchanged. */
+  /**
+   * Surfaces a 403 to the user, then rethrows the error unchanged. Skips its
+   * own snackbar for a body `RateLimitInterceptor` already classifies and
+   * reports (403 `banned`/`ip_banned`, WP-E1fix), so a ban is reported once,
+   * with real text, instead of once here with an unhelpful generic fallback.
+   */
   private fail(error: unknown): Observable<never> {
-    if (error instanceof HttpErrorResponse && error.status === 403) {
+    if (error instanceof HttpErrorResponse && error.status === 403
+        && !AuthInterceptor.isLimitClassified403(error)) {
       const message = this.extractMessage(error)
         || 'You do not have permission to perform this action.';
       this.snackBar?.open(message, 'Dismiss', { duration: 6000 });
     }
     return throwError(() => error);
+  }
+
+  /** True for the M4 `{error:"banned"|"ip_banned",...}` 403 body (plan m4-limits.md §2.1). */
+  private static isLimitClassified403(error: HttpErrorResponse): boolean {
+    const body = error.error;
+    return !!body && typeof body === 'object'
+      && (body.error === 'banned' || body.error === 'ip_banned');
   }
 
   private static withBearer(request: HttpRequest<unknown>, token: string): HttpRequest<unknown> {

@@ -1,8 +1,25 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, TimeoutError, throwError } from 'rxjs';
 import { catchError, map, timeout } from 'rxjs/operators';
 import { GraphqlErrorClassification, GraphqlErrorLike, GraphqlRequestError } from './graphql-errors';
+import { isLimitHandled, limitErrorFrom, notifyLimit } from '../http/limit-errors';
+import { RateLimitStateService } from '../http/rate-limit-state.service';
+
+/**
+ * The three {@link GraphqlErrorClassification} values that are also
+ * {@link import('../http/limit-errors').LimitError} kinds (INT1, M4-UI-01's
+ * M3-dependent tail): a field-level rate limit, a per-role/per-metric quota,
+ * or a subject/IP ban raised from inside a GraphQL data fetcher. Every other
+ * classification (`CONFLICT`, `VALIDATION_FAILED`, `NOT_FOUND`, ...) is
+ * business-as-usual and never routed through {@link notifyLimit}.
+ */
+const LIMIT_CLASSIFICATIONS: ReadonlySet<GraphqlErrorClassification> = new Set([
+  'RATE_LIMITED',
+  'QUOTA_EXCEEDED',
+  'BANNED',
+]);
 
 interface GraphqlHttpResponse<T> {
   data?: T | null;
@@ -92,6 +109,8 @@ function toRequestError(err: unknown): GraphqlRequestError {
 })
 export class GraphqlClientService {
   private http = inject(HttpClient);
+  private snackBar = inject(MatSnackBar);
+  private rateLimitState = inject(RateLimitStateService);
 
   /**
    * Posts `{ query, variables }` to `url` and resolves with `data`.
@@ -103,6 +122,13 @@ export class GraphqlClientService {
    *   {@link GraphqlRequestError} classified from the status code, unless the
    *   error body itself is a GraphQL `errors` response, in which case that
    *   takes precedence.
+   *
+   * INT1 (M4-UI-01's M3-dependent tail): either path may classify as
+   * `RATE_LIMITED`/`QUOTA_EXCEEDED`/`BANNED`, and this is the only place that
+   * reports the GraphQL-body kind -- questions' `RateLimitingInstrumentation`
+   * always answers those with HTTP 200 (`LimitsGraphQlExceptionResolver`),
+   * which `RateLimitInterceptor` never sees (it only reacts to 429/503/403).
+   * See {@link notifyIfLimitError}.
    */
   request<T>(
     url: string,
@@ -115,17 +141,50 @@ export class GraphqlClientService {
       map((response) => {
         if (response?.errors?.length) {
           const first = response.errors[0];
-          throw new GraphqlRequestError({
+          const requestError = new GraphqlRequestError({
             message: first.message,
             classification: classificationOf(first),
             extensions: first.extensions,
             path: first.path,
             all: response.errors
           });
+          // A 200 response can never have been seen by RateLimitInterceptor
+          // (it only inspects HttpErrorResponses), so there is nothing to
+          // dedupe against here -- pass no raw error.
+          this.notifyIfLimitError(requestError, undefined);
+          throw requestError;
         }
         return response.data as T;
       }),
-      catchError((err) => throwError(() => toRequestError(err)))
+      catchError((err) => {
+        const requestError = toRequestError(err);
+        this.notifyIfLimitError(requestError, err);
+        return throwError(() => requestError);
+      })
     );
+  }
+
+  /**
+   * Shows the standard {@link notifyLimit} snackbar for a `RATE_LIMITED`,
+   * `QUOTA_EXCEEDED` or `BANNED` {@link GraphqlRequestError}, unless
+   * `RateLimitInterceptor` already reported the exact same rejection --
+   * checked with {@link isLimitHandled} against `rawError` (the value this
+   * service caught before converting it), never against the converted
+   * {@link GraphqlRequestError} itself, since only the raw `HttpErrorResponse`
+   * carries the `status`/`error.error` shape `isLimitHandled` inspects. This
+   * is the single-snackbar rule (INT1): a real HTTP 429/503/403 (the coarse
+   * `graphql-http` REST policy, or a ban) is that interceptor's to report;
+   * everything else (a 200 GraphQL business error, or a 429/503/403 whose
+   * body the interceptor didn't recognize) is this client's to report, so a
+   * caller-visible rejection is never left silent and never shown twice.
+   */
+  private notifyIfLimitError(requestError: GraphqlRequestError, rawError: unknown): void {
+    if (!LIMIT_CLASSIFICATIONS.has(requestError.classification) || isLimitHandled(rawError)) {
+      return;
+    }
+    const limitError = limitErrorFrom(requestError.classification, requestError.extensions);
+    if (limitError) {
+      notifyLimit(limitError, this.snackBar, this.rateLimitState);
+    }
   }
 }

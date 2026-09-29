@@ -6,9 +6,8 @@ import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questi
 import { PacketAuthoringService } from '../../services/packet-authoring.service';
 import { Difficulty, ImportIssue, ImportPacketResult, IssueSeverity } from '../../models/packet-authoring.models';
 import { IMPORT_MAX_BYTES } from '../../models/packet-limits';
-import { describeGraphqlError, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
-import { limitErrorFrom, notifyLimit } from '../../../core/http/limit-errors';
-import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
+import { describeGraphqlError, describeGraphqlErrorInline, GraphqlRequestError } from '../../../core/graphql/graphql-errors';
+import { limitErrorFrom } from '../../../core/http/limit-errors';
 
 /**
  * Paste-or-upload plaintext import (PB-05, D5), with a dry-run preview
@@ -33,7 +32,6 @@ export class PacketImportDialogComponent {
   private sockbowlQuestionsService = inject(SockbowlQuestionsService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
-  private rateLimitState = inject(RateLimitStateService);
 
   readonly maxBytes = IMPORT_MAX_BYTES;
   readonly severityOrder: IssueSeverity[] = ['ERROR', 'WARNING', 'INFO'];
@@ -200,22 +198,22 @@ export class PacketImportDialogComponent {
   }
 
   /**
-   * S4-14: RATE_LIMITED/QUOTA_EXCEEDED (M4 Q4) go through `notifyLimit` for
-   * one cooldown/quota-aware snackbar, mirrored as an inline message next to
-   * the failing action so the reason stays visible after the snackbar times
-   * out. Anything else keeps the plain snackbar (no inline duplicate — the
-   * error is generic enough that the snackbar alone is the answer).
+   * S4-14: RATE_LIMITED/QUOTA_EXCEEDED/BANNED (M4 Q4) are shown once, as the
+   * cooldown/quota-aware snackbar, by `GraphqlClientService`'s `notifyLimit`
+   * (INT1 single-snackbar rule); here they only get the inline message next
+   * to the failing action, so the reason stays visible after the snackbar
+   * times out. Anything else keeps the plain snackbar (no inline duplicate —
+   * the error is generic enough that the snackbar alone is the answer).
    */
   private handleError(err: unknown): void {
-    if (err instanceof GraphqlRequestError) {
-      const limitError = limitErrorFrom(err.classification, err.extensions);
-      if (limitError) {
-        notifyLimit(limitError, this.snackBar, this.rateLimitState);
-        this.dialogError = describeGraphqlError(err);
-        return;
-      }
+    if (err instanceof GraphqlRequestError && limitErrorFrom(err.classification, err.extensions)) {
+      this.dialogError = describeGraphqlErrorInline(err);
+      return;
     }
-    this.snackBar.open(describeGraphqlError(err), 'Dismiss', { duration: 5000 });
+    const message = describeGraphqlError(err);
+    if (message) {
+      this.snackBar.open(message, 'Dismiss', { duration: 5000 });
+    }
   }
 }
 

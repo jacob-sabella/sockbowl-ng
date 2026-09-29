@@ -87,11 +87,16 @@ export function limitErrorFrom(
 /**
  * Shows the standard snackbar for a {@link LimitError} and, for a
  * `rate_limited` rejection, starts the matching {@link RateLimitStateService}
- * cooldown so bound buttons disable themselves (plan §2.9). Banned/ip-banned
- * errors are intentionally not shown here: the existing 403 handling in
- * `AuthInterceptor` already surfaces those, and this would double the
- * snackbar for a plain REST 403. Callers that classify a GraphQL `BANNED`
- * error (INT1) may still choose to call this for that one case.
+ * cooldown so bound buttons disable themselves (plan §2.9). `RateLimitInterceptor`
+ * calls this for a classified 403 `banned`/`ip_banned` body too (WP-E1fix:
+ * `AuthInterceptor`'s generic 403 handling can't render that body's
+ * `{error,reason,expiresAt}` shape into a useful message, so it defers to
+ * this one instead of double-showing a snackbar). Callers that classify a
+ * GraphQL `BANNED` error (INT1) may still choose to call this for that case.
+ * The `banned`/`ip_banned` message always leads with fixed wording that says
+ * "banned" and appends a moderator's free-text reason, if any, rather than
+ * showing the reason alone -- a caller-supplied reason has no guarantee of
+ * containing that word itself.
  */
 export function notifyLimit(
   err: LimitError,
@@ -119,11 +124,61 @@ export function notifyLimit(
     case 'limiter_unavailable':
       snackBar.open('AI generation is temporarily unavailable', 'Dismiss', { duration: 6000 });
       break;
-    case 'banned':
-    case 'ip_banned':
-      snackBar.open(err.reason || 'You have been banned from Sockbowl.', 'Dismiss', { duration: 8000 });
+    case 'banned': {
+      // Always say "banned" even when a moderator's free-text reason doesn't
+      // happen to include that word itself (found live: auth-ban.spec.ts's
+      // own ban reason, e.g. "e2e ban test (auth-ban.spec.ts)", showed with
+      // no other wording and so never matched a /banned/i-style assertion --
+      // the STOMP-side fatal ban notice, stomp-errors.ts's fixed
+      // 'Your account is banned from playing.', never had this gap because
+      // it never mixes in caller-supplied text).
+      const base = 'You have been banned from Sockbowl.';
+      snackBar.open(err.reason ? `${base} Reason: ${err.reason}` : base, 'Dismiss', { duration: 8000 });
       break;
+    }
+    case 'ip_banned': {
+      const base = 'Your network has been banned from Sockbowl.';
+      snackBar.open(err.reason ? `${base} Reason: ${err.reason}` : base, 'Dismiss', { duration: 8000 });
+      break;
+    }
   }
+}
+
+/**
+ * True when `err` (an `HttpErrorResponse`, or anything shaped like one --
+ * component `error` callbacks in tests are often given a plain object) is
+ * one `RateLimitInterceptor` already turned into a snackbar (plan §2.9,
+ * NG-V1-01): 429 `rate_limited`/`quota_exceeded`, 503 `limiter_unavailable`,
+ * or a 403 whose body classifies as `banned`/`ip_banned`. Callers whose own
+ * error handler would otherwise show a second, generic failure message
+ * (`packet-search`'s Generate/Import, `admin-usage`'s quota/ban/reset
+ * actions) check this first and return early when it's true, so a rejection
+ * the interceptor already reported is never shown twice.
+ *
+ * A 403 that ISN'T a ban (a plain permission failure, or no classifiable
+ * body at all) returns `false` -- `RateLimitInterceptor` doesn't touch it
+ * either (`limitErrorFrom` returns `null` for it), so the caller's own
+ * error handling still needs to run.
+ *
+ * FIX3-NG: this must mirror `limitErrorFrom` exactly, for every status the
+ * interceptor reacts to, not just 403. `RateLimitInterceptor` only shows a
+ * snackbar when the body's `error` field classifies (`handle()` bails out
+ * early otherwise), so a plain 429/503 -- no body, or a body with no
+ * recognized `error` field -- was NOT already handled. Returning `true` for
+ * it anyway made a caller skip its own error handling too, so a plain 503
+ * (e.g. an upstream outage with no JSON body) was swallowed with no message
+ * shown at all.
+ */
+export function isLimitHandled(err: unknown): boolean {
+  const candidate = err as { status?: number; error?: { error?: unknown } } | null | undefined;
+  if (!candidate || typeof candidate.status !== 'number') {
+    return false;
+  }
+  if (candidate.status === 429 || candidate.status === 503 || candidate.status === 403) {
+    const bodyError = candidate.error?.error;
+    return typeof bodyError === 'string' && limitErrorFrom(bodyError, null) !== null;
+  }
+  return false;
 }
 
 function asString(value: unknown): string | undefined {

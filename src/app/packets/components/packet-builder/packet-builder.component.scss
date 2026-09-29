@@ -145,6 +145,12 @@
     margin: 8px 0 0;
   }
 
+  &__provenance {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    margin: 4px 0 0;
+  }
+
   &__index {
     font-family: var(--font-display);
     font-weight: 600;

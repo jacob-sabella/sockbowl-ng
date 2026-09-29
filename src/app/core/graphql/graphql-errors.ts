@@ -76,6 +76,15 @@ export class GraphqlRequestError extends Error {
  * User-facing text for a failed request. Anything not thrown as a
  * {@link GraphqlRequestError} (a plain Error, or a non-Error value) falls back
  * to a generic message.
+ *
+ * INT1: `RATE_LIMITED`, `QUOTA_EXCEEDED` and `BANNED` map to `''`, not a
+ * message. `GraphqlClientService` already shows the canonical,
+ * cooldown-aware text for exactly these three classifications via
+ * `notifyLimit` (see its `notifyIfLimitError`) for every request it makes,
+ * so a caller that also calls `snackBar.open(describeGraphqlError(err), ...)`
+ * must check the result is non-empty first, or it shows the rejection twice
+ * -- once with the right message, once with nothing. Consistent with
+ * `isLimitHandled`'s dedupe of `RateLimitInterceptor` for plain HTTP calls.
  */
 export function describeGraphqlError(err: unknown): string {
   if (err instanceof GraphqlRequestError) {
@@ -87,13 +96,11 @@ export function describeGraphqlError(err: unknown): string {
       case 'VALIDATION_FAILED':
         return err.message || 'That change is not valid.';
       case 'RATE_LIMITED':
-        // Generic for now; after the M3/M4 merge, INT1 routes this through
-        // M4's notifyLimit for a cooldown-aware message instead.
-        return 'Too many requests, try again shortly.';
       case 'QUOTA_EXCEEDED':
-        return "You've reached a usage limit.";
       case 'BANNED':
-        return 'Your account is suspended.';
+        // Already shown by GraphqlClientService's notifyLimit; see the
+        // doc comment above.
+        return '';
       case 'LIMITER_UNAVAILABLE':
         return 'Temporarily unavailable, try again shortly.';
       case 'UNAUTHORIZED':
@@ -115,4 +122,29 @@ export function describeGraphqlError(err: unknown): string {
     return (err as { message: string }).message;
   }
   return 'Something went wrong.';
+}
+
+/**
+ * M5 merge A: text for an *inline* error next to the failing action (the
+ * import dialog's `dialogError`, the builder's per-card Save-all error).
+ * Same as {@link describeGraphqlError}, except the three limit
+ * classifications it maps to `''` get a short fixed line here, so the
+ * inline message is never blank. The snackbar with the cooldown/quota
+ * detail is still shown once, by `GraphqlClientService`.
+ */
+export function describeGraphqlErrorInline(err: unknown): string {
+  const message = describeGraphqlError(err);
+  if (message || !(err instanceof GraphqlRequestError)) {
+    return message;
+  }
+  switch (err.classification) {
+    case 'RATE_LIMITED':
+      return 'Too many requests. Try again shortly.';
+    case 'QUOTA_EXCEEDED':
+      return "You've reached your usage limit. Try again after it resets.";
+    case 'BANNED':
+      return 'Your account is banned from Sockbowl.';
+    default:
+      return 'Something went wrong.';
+  }
 }

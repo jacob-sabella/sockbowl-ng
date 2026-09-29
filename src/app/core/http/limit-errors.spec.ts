@@ -1,5 +1,5 @@
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { limitErrorFrom, notifyLimit } from './limit-errors';
+import { isLimitHandled, limitErrorFrom, notifyLimit } from './limit-errors';
 import { RateLimitStateService } from './rate-limit-state.service';
 
 describe('limitErrorFrom', () => {
@@ -70,6 +70,52 @@ describe('limitErrorFrom', () => {
   });
 });
 
+// NG-V1-01: components that already skip re-showing a snackbar for the
+// status codes `RateLimitInterceptor` handles globally (429, 503, and now a
+// 403 classified as `banned`/`ip_banned`) share this one check, so a new
+// caller can't drift from the interceptor's own classification.
+describe('isLimitHandled', () => {
+  it('is true for a 429 or 503 whose body classifies (the interceptor showed a snackbar)', () => {
+    expect(isLimitHandled({ status: 429, error: { error: 'rate_limited' } })).toBeTrue();
+    expect(isLimitHandled({ status: 429, error: { error: 'quota_exceeded' } })).toBeTrue();
+    expect(isLimitHandled({ status: 503, error: { error: 'limiter_unavailable' } })).toBeTrue();
+  });
+
+  // FIX3-NG: isLimitHandled must mirror limitErrorFrom -- RateLimitInterceptor
+  // only shows a snackbar when the body's `error` field classifies, so a
+  // plain 503/429 (no body, or a body with no recognized `error` field) is
+  // NOT already handled, and a caller that skips its own error handling here
+  // would swallow it with no message shown at all.
+  it('is false for a plain 503 with no classifiable body (nothing was shown for it)', () => {
+    expect(isLimitHandled({ status: 503 })).toBeFalse();
+    expect(isLimitHandled({ status: 503, error: {} })).toBeFalse();
+    expect(isLimitHandled({ status: 503, error: { message: 'Service Unavailable' } })).toBeFalse();
+  });
+
+  it('is false for a plain 429 with no classifiable body', () => {
+    expect(isLimitHandled({ status: 429 })).toBeFalse();
+    expect(isLimitHandled({ status: 429, error: { error: 'something_else' } })).toBeFalse();
+  });
+
+  it('is true for a 403 whose body classifies as banned or ip_banned', () => {
+    expect(isLimitHandled({ status: 403, error: { error: 'banned' } })).toBeTrue();
+    expect(isLimitHandled({ status: 403, error: { error: 'ip_banned' } })).toBeTrue();
+  });
+
+  it('is false for a 403 that is not a ban (e.g. a plain permission failure)', () => {
+    expect(isLimitHandled({ status: 403, error: { error: 'forbidden' } })).toBeFalse();
+    expect(isLimitHandled({ status: 403 })).toBeFalse();
+    expect(isLimitHandled({ status: 403, error: {} })).toBeFalse();
+  });
+
+  it('is false for other statuses, and for null/undefined', () => {
+    expect(isLimitHandled({ status: 400 })).toBeFalse();
+    expect(isLimitHandled({ status: 500 })).toBeFalse();
+    expect(isLimitHandled(null)).toBeFalse();
+    expect(isLimitHandled(undefined)).toBeFalse();
+  });
+});
+
 describe('notifyLimit', () => {
   let snackBar: jasmine.SpyObj<MatSnackBar>;
   let state: RateLimitStateService;
@@ -107,8 +153,26 @@ describe('notifyLimit', () => {
       'AI generation is temporarily unavailable', 'Dismiss', jasmine.any(Object));
   });
 
-  it('shows a banned snackbar using the reason when present', () => {
+  // WP-E1fix (M4 live-run evidence, auth-ban.spec.ts): showing the reason
+  // ALONE (no earlier version's behavior) broke a live assertion that just
+  // checks the shown text says "banned" -- a moderator's free-text reason
+  // isn't guaranteed to contain that word itself, so the fixed lead-in must
+  // always be there too.
+  it('shows a banned snackbar that always says "banned", with the reason appended when present', () => {
     notifyLimit({ kind: 'banned', reason: 'Spamming the buzzer.', expiresAt: null }, snackBar, state);
-    expect(snackBar.open).toHaveBeenCalledWith('Spamming the buzzer.', 'Dismiss', jasmine.any(Object));
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'You have been banned from Sockbowl. Reason: Spamming the buzzer.', 'Dismiss', jasmine.any(Object));
+  });
+
+  it('shows the default banned snackbar when no reason is present', () => {
+    notifyLimit({ kind: 'banned', reason: undefined, expiresAt: null }, snackBar, state);
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'You have been banned from Sockbowl.', 'Dismiss', jasmine.any(Object));
+  });
+
+  it('shows an ip_banned snackbar with its own wording and the reason appended when present', () => {
+    notifyLimit({ kind: 'ip_banned', reason: 'Abuse from this network.', expiresAt: null }, snackBar, state);
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'Your network has been banned from Sockbowl. Reason: Abuse from this network.', 'Dismiss', jasmine.any(Object));
   });
 });

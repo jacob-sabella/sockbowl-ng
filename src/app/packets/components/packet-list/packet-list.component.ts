@@ -9,7 +9,7 @@ import { SockbowlQuestionsService } from '../../../game/services/sockbowl-questi
 import { PacketAuthoringService } from '../../services/packet-authoring.service';
 import { Difficulty, PacketFilter, PacketSummary } from '../../models/packet-authoring.models';
 import { AuthService } from '../../../core/auth/auth.service';
-import { describeGraphqlError } from '../../../core/graphql/graphql-errors';
+import { describeGraphqlError, describeGraphqlErrorInline } from '../../../core/graphql/graphql-errors';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
 import { PacketImportDialogComponent } from '../packet-import-dialog/packet-import-dialog.component';
 
@@ -109,7 +109,7 @@ export class PacketListComponent implements OnInit {
         this.loading = false;
         // S4-13: a per-class state block replaces the snackbar for a page
         // load failure (an action failure, e.g. delete, still gets one).
-        this.loadError = this.extractError(err);
+        this.loadError = describeGraphqlErrorInline(err);
       }
     });
   }
@@ -263,7 +263,13 @@ export class PacketListComponent implements OnInit {
             this.total = Math.max(0, this.total - 1);
           },
           error: (err) => {
-            this.snackBar.open(this.extractError(err), 'Dismiss', { duration: 4000 });
+            // INT1: describeGraphqlError returns '' for RATE_LIMITED/QUOTA_EXCEEDED/
+            // BANNED, since GraphqlClientService's notifyLimit already shows the
+            // canonical snackbar for those; don't show a second, empty one.
+            const message = this.extractError(err);
+            if (message) {
+              this.snackBar.open(message, 'Dismiss', { duration: 4000 });
+            }
           }
         });
       });

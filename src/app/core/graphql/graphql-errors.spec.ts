@@ -17,16 +17,21 @@ describe('describeGraphqlError', () => {
     expect(describeGraphqlError(errorOf('VALIDATION_FAILED', 'Name exceeds 200 characters'))).toBe('Name exceeds 200 characters');
   });
 
-  it('maps RATE_LIMITED to generic text', () => {
-    expect(describeGraphqlError(errorOf('RATE_LIMITED'))).toBe('Too many requests, try again shortly.');
+  // INT1: RATE_LIMITED/QUOTA_EXCEEDED/BANNED map to '', not a message --
+  // GraphqlClientService's notifyLimit already shows the canonical,
+  // cooldown-aware snackbar for these three, so a second, generic message
+  // here would either duplicate or (worse) silently blank it out. See the
+  // doc comment on describeGraphqlError.
+  it('maps RATE_LIMITED to empty (already shown by notifyLimit)', () => {
+    expect(describeGraphqlError(errorOf('RATE_LIMITED'))).toBe('');
   });
 
-  it('maps QUOTA_EXCEEDED to generic text', () => {
-    expect(describeGraphqlError(errorOf('QUOTA_EXCEEDED'))).toBe("You've reached a usage limit.");
+  it('maps QUOTA_EXCEEDED to empty (already shown by notifyLimit)', () => {
+    expect(describeGraphqlError(errorOf('QUOTA_EXCEEDED'))).toBe('');
   });
 
-  it('maps BANNED to generic text', () => {
-    expect(describeGraphqlError(errorOf('BANNED'))).toBe('Your account is suspended.');
+  it('maps BANNED to empty (already shown by notifyLimit)', () => {
+    expect(describeGraphqlError(errorOf('BANNED'))).toBe('');
   });
 
   it('maps LIMITER_UNAVAILABLE to generic text', () => {

@@ -21,6 +21,7 @@ export interface Packet {
     ownerId:          string;
     source:           Source;
     tossups:          TossupElement[];
+    version:          number;
     visibility:       Visibility;
     [property: string]: unknown;
 }
@@ -73,18 +74,21 @@ export interface Subcategory {
     category: Category;
     id:       string;
     name:     string;
+    nameKey:  string;
     [property: string]: unknown;
 }
 
 export interface Category {
-    id:   string;
-    name: string;
+    id:      string;
+    name:    string;
+    nameKey: string;
     [property: string]: unknown;
 }
 
 export interface Difficulty {
-    id:   string;
-    name: string;
+    id:      string;
+    name:    string;
+    nameKey: string;
     [property: string]: unknown;
 }
 

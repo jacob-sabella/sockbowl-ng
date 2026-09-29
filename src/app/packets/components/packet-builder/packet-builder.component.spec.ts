@@ -186,6 +186,25 @@ describe('PacketBuilderComponent', () => {
     expect(snackBarSpy.open).not.toHaveBeenCalled();
   });
 
+  // INT1 (single-snackbar rule): GraphqlClientService's notifyLimit already
+  // shows the canonical snackbar for RATE_LIMITED/QUOTA_EXCEEDED/BANNED, so
+  // describeGraphqlError maps them to '' and handleMutationError must not
+  // open a second, empty one.
+  it('a RATE_LIMITED mutation error does not open a second (empty) snackbar', () => {
+    configure(makePacket());
+    authoringSpy.updateTossup.and.returnValue(
+      throwError(() => new GraphqlRequestError({ message: 'Too many requests', classification: 'RATE_LIMITED' }))
+    );
+
+    component.tossupDraftStore.get('t1')!.question = 'Edited';
+    component.tossupDraftStore.markDirty('t1');
+
+    component.saveTossup(component.sortedTossups[0]);
+
+    expect(component.conflictBanner).toBeFalse();
+    expect(snackBarSpy.open).not.toHaveBeenCalled();
+  });
+
   it('Reload after a conflict refetches, clears the banner, and flags dirty cards as stale', () => {
     configure(makePacket());
     component.conflictBanner = true;
@@ -317,6 +336,45 @@ describe('PacketBuilderComponent', () => {
     // that as a match; canManagePacket must require a real, non-null id.
     configure(makePacket({ owner: { id: null, name: null } as any }), [], null);
     expect(component.canManagePacket).toBeFalse();
+  });
+
+  // INT1 (M4-PV-01 provenance display, missing from the M3 builder).
+  describe('provenance display', () => {
+    it('shows "Unknown" and no created/edited details when the fields are absent', () => {
+      configure(makePacket());
+      const text = (fixture.nativeElement as HTMLElement).querySelector('.packet-builder__provenance')?.textContent ?? '';
+      expect(text).toContain('Unknown');
+      expect(text).not.toContain('created by');
+      expect(text).not.toContain('last edited');
+    });
+
+    it('shows the source label, creator and creation date', () => {
+      configure(makePacket({
+        source: 'AI_GENERATED',
+        createdById: 'user-42',
+        createdAt: '2026-01-05T00:00:00Z' as any,
+        lastModifiedAt: '2026-01-05T00:00:00Z' as any
+      }));
+      const text = (fixture.nativeElement as HTMLElement).querySelector('.packet-builder__provenance')?.textContent ?? '';
+      expect(text).toContain('AI generated');
+      expect(text).toContain('created by user-42');
+      expect(text).not.toContain('last edited');
+    });
+
+    it('shows a separate last-edited line when it differs from creation', () => {
+      configure(makePacket({
+        source: 'TEXT_IMPORT',
+        createdById: 'user-1',
+        createdAt: '2026-01-01T00:00:00Z' as any,
+        lastModifiedById: 'user-2',
+        lastModifiedAt: '2026-02-01T00:00:00Z' as any
+      }));
+      const text = (fixture.nativeElement as HTMLElement).querySelector('.packet-builder__provenance')?.textContent ?? '';
+      expect(text).toContain('Imported from text');
+      expect(text).toContain('created by user-1');
+      expect(text).toContain('last edited');
+      expect(text).toContain('by user-2');
+    });
   });
 
   describe('bumpLocalVersion on every mutation success path (NG-V1-04)', () => {
@@ -963,7 +1021,10 @@ describe('PacketBuilderComponent', () => {
       expect(component.entitySaveErrors['bp1']).toBeDefined();
     });
 
-    it('a RATE_LIMITED failure shows exactly one snackbar, via notifyLimit', () => {
+    // M5 merge A (INT1 single-snackbar rule): GraphqlClientService already
+    // showed the one notifyLimit snackbar, so the component opens none and
+    // only renders the inline card error.
+    it('a RATE_LIMITED failure opens no second snackbar and shows an inline card error', () => {
       configure(makePacket());
       authoringSpy.updateTossup.and.returnValue(
         throwError(() => new GraphqlRequestError({
@@ -977,11 +1038,11 @@ describe('PacketBuilderComponent', () => {
 
       component.saveAll();
 
-      expect(snackBarSpy.open).toHaveBeenCalledTimes(1);
-      expect(snackBarSpy.open.calls.mostRecent().args[0]).toContain('try again');
+      expect(snackBarSpy.open).not.toHaveBeenCalled();
+      expect(component.entitySaveErrors['t1']).toContain('Try again');
     });
 
-    it('a QUOTA_EXCEEDED failure shows exactly one snackbar, via notifyLimit', () => {
+    it('a QUOTA_EXCEEDED failure opens no second snackbar and shows an inline card error', () => {
       configure(makePacket());
       authoringSpy.updateTossup.and.returnValue(
         throwError(() => new GraphqlRequestError({
@@ -995,11 +1056,11 @@ describe('PacketBuilderComponent', () => {
 
       component.saveAll();
 
-      expect(snackBarSpy.open).toHaveBeenCalledTimes(1);
-      expect(snackBarSpy.open.calls.mostRecent().args[0]).toContain('limit');
+      expect(snackBarSpy.open).not.toHaveBeenCalled();
+      expect(component.entitySaveErrors['t1']).toContain('limit');
     });
 
-    it('a BANNED mutation failure (any mutation, not just Save all) routes through notifyLimit for one snackbar', () => {
+    it('a BANNED mutation failure (any mutation, not just Save all) opens no second snackbar', () => {
       configure(makePacket());
       authoringSpy.setPacketVisibility.and.returnValue(
         throwError(() => new GraphqlRequestError({ message: 'banned', classification: 'BANNED', extensions: { reason: 'Spam' } }))
@@ -1007,8 +1068,7 @@ describe('PacketBuilderComponent', () => {
 
       component.setVisibility('PUBLISHED');
 
-      expect(snackBarSpy.open).toHaveBeenCalledTimes(1);
-      expect(snackBarSpy.open.calls.mostRecent().args[0]).toBe('Spam');
+      expect(snackBarSpy.open).not.toHaveBeenCalled();
     });
   });
 

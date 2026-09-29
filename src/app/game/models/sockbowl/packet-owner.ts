@@ -17,5 +17,18 @@ export interface PacketOwner {
 declare module './packet-types.generated' {
   interface Packet {
     owner?: PacketOwner | null;
+
+    /**
+     * INT1 (M4-PV-01 provenance, packet-builder display): same mismatch as
+     * `owner` above. The generated `createdBy`/`lastModifiedBy` fields come
+     * from the Java model's JSON Schema and are never returned by GraphQL --
+     * the schema names these fields `createdById`/`lastModifiedById`
+     * instead (`schema.graphqls`'s `# --- M4 ---` block on `Packet`),
+     * visible only to the packet's owner, `packet:manage-any`, or the game
+     * service (`null` otherwise, including for anonymous callers). Use
+     * these, never `createdBy`/`lastModifiedBy`.
+     */
+    createdById?: string | null;
+    lastModifiedById?: string | null;
   }
 }
