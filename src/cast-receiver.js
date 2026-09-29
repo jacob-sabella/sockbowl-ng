@@ -205,6 +205,7 @@
       if (state.questionText) {
         clearQuestionWaitTimer();
         elements.questionText.innerHTML = state.questionText;
+        applyContentLengthClass(elements.questionText, state.questionText);
       } else {
         if (questionWaitRoundNumber !== state.roundNumber) {
           clearQuestionWaitTimer();
@@ -213,6 +214,7 @@
         elements.questionText.textContent = questionNeverArrived
           ? 'Waiting for the proctor…'
           : 'Question loading…';
+        applyContentLengthClass(elements.questionText, '');
         scheduleQuestionWaitTimeout();
       }
     } else {
@@ -226,7 +228,9 @@
     // Show/hide answer
     if (state.answerVisible) {
       elements.answerContainer.classList.remove('hidden');
-      elements.answerText.innerHTML = state.answerText || 'Answer loading…';
+      const answerText = state.answerText || 'Answer loading…';
+      elements.answerText.innerHTML = answerText;
+      applyContentLengthClass(elements.answerText, answerText);
     } else {
       elements.answerContainer.classList.add('hidden');
     }
@@ -408,6 +412,33 @@
     }
     questionNeverArrived = false;
     questionWaitRoundNumber = null;
+  }
+
+  // M5 S2-23: the match view is a fixed 100vh grid with `overflow: hidden`,
+  // so a long question or answer has to step its own type down instead of
+  // growing the board past the frame. Thresholds are plain-text length
+  // (HTML markup such as an answer's <b> tag doesn't count toward it): a
+  // typical tossup (~190 chars) reads at the default reading size, and only
+  // packets on the long tail step down.
+  const CONTENT_LENGTH_MEDIUM = 220;
+  const CONTENT_LENGTH_LONG = 380;
+  const CONTENT_LENGTH_CLASSES = ['q-len-medium', 'q-len-long'];
+
+  /**
+   * Sizes `.content-text` (question or answer) to the length of the text it
+   * holds, so a long tossup steps down in size rather than pushing the
+   * fixed-height TV frame taller than it is (M5 S2-23).
+   * @param {HTMLElement} el The `.content-text` element being rendered
+   * @param {string} html The HTML just assigned to it (markup allowed)
+   */
+  function applyContentLengthClass(el, html) {
+    el.classList.remove(...CONTENT_LENGTH_CLASSES);
+    const plain = (html || '').replace(/<[^>]*>/g, '');
+    if (plain.length > CONTENT_LENGTH_LONG) {
+      el.classList.add('q-len-long');
+    } else if (plain.length > CONTENT_LENGTH_MEDIUM) {
+      el.classList.add('q-len-medium');
+    }
   }
 
   /**

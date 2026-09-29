@@ -55,20 +55,26 @@
         <div id="category-info">Category</div>
       </div>
 
-      <!-- Question Container (hidden during PROCTOR_READING) -->
-      <div id="question-container" class="hidden">
-        <div class="section-label">Question</div>
-        <div id="question-text" class="content-text"></div>
+      <!-- M5 S2-23: question + answer share the grid's flexible 1fr row (see
+           cast-receiver.css), so together they never push the fixed-height
+           board past the frame - each one's own length class steps its
+           type down instead. -->
+      <div id="content-area">
+        <!-- Question Container (hidden during PROCTOR_READING) -->
+        <div id="question-container" class="hidden">
+          <div class="section-label">Question</div>
+          <div id="question-text" class="content-text"></div>
+        </div>
+
+        <!-- Answer Container (shown when round COMPLETED) -->
+        <div id="answer-container" class="hidden">
+          <div class="section-label">Answer</div>
+          <div id="answer-text" class="content-text"></div>
+        </div>
       </div>
 
       <!-- Buzz Status (shows who buzzed and correctness) -->
       <div id="buzz-status"></div>
-
-      <!-- Answer Container (shown when round COMPLETED) -->
-      <div id="answer-container" class="hidden">
-        <div class="section-label">Answer</div>
-        <div id="answer-text" class="content-text"></div>
-      </div>
 
       <!-- Team Scoreboard -->
       <div id="scoreboard"></div>

@@ -237,3 +237,81 @@ test('cast receiver clamps an extreme-length name in the buzz pill and scoreboar
   await page.screenshot({ path: `${ART}/cast-06-extreme-name.png` });
   await ctx.close();
 });
+
+// M5 S2-23: the board is a fixed 100vh frame at TV sizes — a long question,
+// answer shown, an 8-team config/scoreboard and the plain config view must
+// all fit inside it (viewport-only, never full-page) at both TV resolutions.
+const LONG_QUESTION_STATE = {
+  ...INGAME_STATE,
+  category: 'History',
+  subcategory: 'World History',
+  questionText:
+    'This ruler, whose reign saw the construction of an extensive network of royal roads and ' +
+    'way-stations to speed communication across a territory stretching from the Indus Valley to ' +
+    'the Aegean Sea, organized his domain into provinces called satrapies, each overseen by a ' +
+    'governor who answered to roving inspectors known as the "eyes and ears of the king"; for 10 ' +
+    'points, name this Achaemenid emperor, the son of Cambyses and successor of Cyrus the Great, ' +
+    'who was defeated by a coalition of Greek city-states at the Battle of Marathon.',
+};
+
+const ANSWER_SHOWN_STATE = {
+  ...INGAME_STATE,
+  roundState: 'COMPLETED',
+  currentBuzz: { playerName: 'Ada', teamName: 'Team 1' },
+  answerVisible: true,
+  answerText: 'W. H. <b>Auden</b>',
+};
+
+const EIGHT_TEAM_SCORES = Array.from({ length: 8 }, (_, i) => ({
+  teamId: `t${i + 1}`,
+  teamName: `Team ${i + 1}`,
+  score: 40 - i * 5,
+}));
+
+const EIGHT_TEAM_STATE = { ...INGAME_STATE, teamScores: EIGHT_TEAM_SCORES };
+
+const EIGHT_TEAM_CONFIG_STATE = {
+  ...CONFIG_STATE,
+  teamRosters: Array.from({ length: 8 }, (_, i) => ({
+    teamId: `t${i + 1}`,
+    teamName: `Team ${i + 1}`,
+    playerNames: ['Ada', 'Cleo', 'Ravi'],
+  })),
+};
+
+const TV_VIEWPORTS = [
+  { width: 1280, height: 720 },
+  { width: 1920, height: 1080 },
+];
+
+const TV_FIT_STATES: Array<[string, unknown]> = [
+  ['config', CONFIG_STATE],
+  ['config-8-teams', EIGHT_TEAM_CONFIG_STATE],
+  ['long-question', LONG_QUESTION_STATE],
+  ['answer-shown', ANSWER_SHOWN_STATE],
+  ['8-teams', EIGHT_TEAM_STATE],
+];
+
+for (const viewport of TV_VIEWPORTS) {
+  for (const [name, state] of TV_FIT_STATES) {
+    test(`cast receiver never overflows the ${viewport.width}x${viewport.height} frame (${name})`, async ({ browser }) => {
+      const ctx = await browser.newContext({ viewport });
+      const page = await ctx.newPage();
+      await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
+
+      await page.evaluate((s) => (window as any).__castRender(s), state);
+      await page.waitForTimeout(300);
+
+      const scrollHeight = await page.evaluate(() => document.scrollingElement?.scrollHeight ?? 0);
+      const scrollWidth = await page.evaluate(() => document.scrollingElement?.scrollWidth ?? 0);
+      const innerHeight = await page.evaluate(() => window.innerHeight);
+      const innerWidth = await page.evaluate(() => window.innerWidth);
+      expect(scrollHeight).toBeLessThanOrEqual(innerHeight);
+      expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+
+      await page.screenshot({ path: `${ART}/cast-fit-${viewport.width}x${viewport.height}-${name}.png` });
+      await ctx.close();
+    });
+  }
+}
