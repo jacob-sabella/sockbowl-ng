@@ -21,6 +21,18 @@
     padding: 1.25rem !important;
   }
 
+  // S3-10 (r3): below 600px `openPacketSearch()` opens the dialog full-screen
+  // (`width/maxWidth: '100vw'`, `height/maxHeight: '100dvh'`, panelClass
+  // `packet-search-dialog--fullscreen`) so the picker never fights the
+  // viewport for room. `:host-context` reaches that panelClass on an
+  // ancestor of this component's own host without a global selector or
+  // `::ng-deep` on the CDK container.
+  :host-context(.packet-search-dialog--fullscreen) & {
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
   *, *::before, *::after { box-sizing: border-box; }
 
   h2[mat-dialog-title] {
@@ -43,16 +55,35 @@
     }
   }
 
+  // S3-10 (r3): the ONE scroll container for the whole dialog body. It used
+  // to be `overflow: visible` while `.tab-content` (below) did its own
+  // `overflow-y: auto` nested inside it — two scrollers stacked, and a
+  // fixed `calc(85vh - 250px)` on the inner one clipped the AI tab's
+  // Context field and advanced-options panel regardless of how much room
+  // was actually free (the detector's `clipped-overflow-container` x3).
+  // `flex: 1; min-height: 0` is what lets a flex child actually shrink and
+  // scroll instead of growing to fit its content.
   mat-dialog-content {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
     gap: 2rem;
     padding: 0 !important;
-    overflow: visible;
+    overflow-y: auto;
   }
 
-  /* Fix tab label colors */
+  /* Fix tab label colors. The header is sticky within `mat-dialog-content`'s
+     single scroll container (S3-10 r3) so it, like the dialog's title and
+     footer, stays visible while only the body scrolls. */
   ::ng-deep {
+    .mat-mdc-tab-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--bg-elevated);
+    }
+
     .mat-mdc-tab-labels {
       background: transparent !important;
     }
@@ -136,28 +167,10 @@
     }
   }
 
+  // S3-10 (r3): no overflow/max-height of its own — `mat-dialog-content` is
+  // now the one scroll container (above), and this sizes to its content.
   .tab-content {
     padding-top: 1.5rem;
-    overflow-y: auto;
-    max-height: calc(85vh - 250px);
-    padding-right: 0.5rem;
-
-    &::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--surface-hover);
-      border-radius: 4px;
-
-      &:hover {
-        background: var(--surface-active);
-      }
-    }
   }
 }
 
@@ -228,7 +241,10 @@
 
 /* ===== RESULTS CONTAINER ===== */
 .results-container {
-  min-height: 350px;
+  // S3-10 (r3): sized to its content, not a flat 350px that (combined with
+  // the AI tab's own fields above it) used to force the picker past the
+  // dialog's old fixed max-height and clip. The state primitives below
+  // (loading/empty/error) each carry their own comfortable padding.
   padding: 1rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);

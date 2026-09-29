@@ -69,7 +69,7 @@ function withSteps(base: CaptureState, extra: (page: Page) => Promise<void>): Ca
  * (`presentationRequest.start()`) resolve instead of hanging/rejecting
  * against a receiver that doesn't exist, so `config-cast-button` below can
  * drive the UI all the way to `PresentationConnectionState.CONNECTED`
- * (`cast_connected` icon, "Stop casting" button) — the only way this row
+ * (`cast_connected` icon, "Casting · Stop" button) — the only way this row
  * ends up visually distinct from every other proctor row, since the idle
  * "Cast to TV" button is already on all of them regardless.
  */
@@ -248,7 +248,12 @@ const states: CaptureState[] = [
     withMocks(stompState('config-cast-button', 'config-quiz-bowl-classic', 'proctor', 1), mockPresentationApi),
     async page => {
       await page.getByRole('button', { name: 'Cast to TV' }).click();
-      await page.getByRole('button', { name: 'Stop casting' }).waitFor({ state: 'visible' });
+      // S3-26 (already landed) renamed the CONNECTED label from "Stop
+      // casting" to "Casting · Stop" (castButtonLabel() in
+      // game-config.component.ts) — this selector was left stale and hung
+      // every run past this row. `exact: true` avoids the substring match
+      // also picking up the DISCONNECTED "Cast to TV" button by accident.
+      await page.getByRole('button', { name: 'Casting · Stop', exact: true }).waitFor({ state: 'visible' });
       // H0 follow-up: this row's own snackbar (`MatSnackBar.open` for
       // "Connected to cast device") reliably left the Material Icons
       // ligature text unstyled document-wide under the `light` theme only

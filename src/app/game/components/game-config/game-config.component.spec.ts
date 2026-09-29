@@ -13,6 +13,7 @@ import { PendingPacketService } from '../../services/pending-packet.service';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
 import { CastStateService } from '../../services/cast-state.service';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
+import { PacketSearchComponent } from '../packet-search/packet-search.component';
 import { GameSession, MatchState, Packet, PlayerMode } from '../../models/sockbowl/sockbowl-interfaces';
 import { PresentationConnectionState } from '../../models/cast-interfaces';
 
@@ -263,6 +264,47 @@ describe('GameConfigComponent proctor preview', () => {
       session$.next(sessionWith({ id: 'packet-other', name: "Someone else's" } as any));
 
       expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
+    });
+  });
+
+  describe('picker opens full-screen below 600px (S3-10)', () => {
+    let matchMediaSpy: jasmine.Spy;
+
+    beforeEach(() => {
+      component.ngOnInit();
+      session$.next(sessionWith(fullPacket));
+      dialog.open.and.returnValue({ afterClosed: () => of(undefined) } as any);
+    });
+
+    afterEach(() => {
+      matchMediaSpy?.and.stub();
+    });
+
+    function stubMatchMedia(matches: boolean): void {
+      matchMediaSpy = spyOn(window, 'matchMedia').and.returnValue({ matches } as MediaQueryList);
+    }
+
+    it('opens a compact, edge-to-edge dialog at <=600px', () => {
+      stubMatchMedia(true);
+
+      component.openPacketSearch();
+
+      expect(matchMediaSpy).toHaveBeenCalledWith('(max-width: 600px)');
+      expect(dialog.open).toHaveBeenCalledOnceWith(PacketSearchComponent, jasmine.objectContaining({
+        width: '100vw', maxWidth: '100vw', height: '100dvh', maxHeight: '100dvh',
+        panelClass: 'packet-search-dialog--fullscreen',
+      }));
+    });
+
+    it('opens the centered dialog above 600px', () => {
+      stubMatchMedia(false);
+
+      component.openPacketSearch();
+
+      expect(dialog.open).toHaveBeenCalledOnceWith(PacketSearchComponent, jasmine.objectContaining({
+        width: '680px', maxWidth: '96vw',
+      }));
+      expect(dialog.open.calls.mostRecent().args[1]).not.toEqual(jasmine.objectContaining({ panelClass: jasmine.anything() }));
     });
   });
 });
@@ -787,6 +829,22 @@ describe('GameConfigComponent rendered lobby (S3-28)', () => {
     expect(spectateBtn).withContext('Spectate button should render for the proctor seat').toBeTruthy();
     expect(spectateBtn?.hasAttribute('mat-stroked-button')).toBeTrue();
     expect(spectateBtn?.hasAttribute('mat-raised-button')).toBeFalse();
+  });
+
+  it('puts each team\'s Join button in its header, beside the count (S3-27)', () => {
+    gameStateService.isSelfProctor.and.returnValue(false);
+    session$.next(sessionWith({ teamList: [{ teamId: 't1', teamName: 'Team A', teamPlayers: [] } as any] }));
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const header = el.querySelector('.team__header');
+    const joinBtn = header?.querySelector('.team__join') as HTMLButtonElement | null;
+
+    expect(header?.querySelector('.team__count')).withContext('the count stays in the header').toBeTruthy();
+    expect(joinBtn).withContext('Join should render inside the team header').toBeTruthy();
+    expect(joinBtn?.hasAttribute('mat-stroked-button')).toBeTrue();
+    expect(joinBtn?.getAttribute('aria-label')).toBe('Join Team A');
+    expect(el.querySelector('.team__actions')).withContext('the old actions row is gone').toBeNull();
   });
 });
 

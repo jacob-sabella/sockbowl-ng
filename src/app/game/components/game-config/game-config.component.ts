@@ -1,6 +1,6 @@
 import { Component, DestroyRef, inject, OnInit, TemplateRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   GameSession,
@@ -362,10 +362,18 @@ export class GameConfigComponent implements OnInit {
   }
 
   openPacketSearch(): void {
-    const dialogRef = this.dialog.open(PacketSearchComponent, {
-      width: '680px',
-      maxWidth: '96vw'
-    });
+    // S3-10 (r3): below 600px (the same breakpoint packet-search's own SCSS
+    // uses for its full-screen rule) the picker opens edge-to-edge so its
+    // three tabs and the sticky footer all fit without fighting a centered
+    // panel for room. `packet-search-dialog--fullscreen` is read there via
+    // `:host-context` — no dialog-config change needed above 600px.
+    const isCompact = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(max-width: 600px)').matches;
+    const config: MatDialogConfig = isCompact
+      ? { width: '100vw', maxWidth: '100vw', height: '100dvh', maxHeight: '100dvh', panelClass: 'packet-search-dialog--fullscreen' }
+      : { width: '680px', maxWidth: '96vw' };
+    const dialogRef = this.dialog.open(PacketSearchComponent, config);
 
     dialogRef.afterClosed().subscribe((result: Packet) => {
       if (result) {

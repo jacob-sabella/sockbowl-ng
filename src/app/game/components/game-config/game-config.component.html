@@ -311,6 +311,23 @@
                       {{ team.teamName }}
                       <span class="team__count">{{ team.teamPlayers.length || 0 }} {{ team.teamPlayers.length === 1 ? 'player' : 'players' }}</span>
                     </h3>
+                    <!-- S3-27: Join lives in the header, beside the count, so a
+                         player never has to scroll past a full (12+) roster to
+                         reach it. The proctor never gets a seat to join
+                         (S3-09): they aren't "on" any team either, so
+                         !isSelfOnTeam alone used to offer it. -->
+                    @if (!gameStateService.isSelfOnTeam(team.teamId) && !gameStateService.isSelfProctor()) {
+                      <button
+                        mat-stroked-button
+                        color="primary"
+                        class="team__join"
+                        [attr.aria-label]="'Join ' + team.teamName"
+                        (click)="joinTeam(team)"
+                        >
+                        <mat-icon>login</mat-icon>
+                        Join
+                      </button>
+                    }
                   </div>
                   <div class="team__players">
                     @for (player of team.teamPlayers; track trackByPlayerId($index, player)) {
@@ -323,20 +340,6 @@
                           <span class="you-chip">You</span>
                         }
                       </div>
-                    }
-                  </div>
-                  <div class="team__actions">
-                    <!-- The proctor never gets a seat to join (S3-09): they aren't
-                         "on" any team either, so !isSelfOnTeam alone used to offer it. -->
-                    @if (!gameStateService.isSelfOnTeam(team.teamId) && !gameStateService.isSelfProctor()) {
-                      <button
-                        mat-stroked-button
-                        color="primary"
-                        (click)="joinTeam(team)"
-                        >
-                        <mat-icon>login</mat-icon>
-                        Join {{ team.teamName }}
-                      </button>
                     }
                   </div>
                 </div>
