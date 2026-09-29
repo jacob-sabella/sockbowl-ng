@@ -26,6 +26,30 @@
   let questionWaitRoundNumber = null;
   let questionNeverArrived = false;
 
+  // M5 FF5 (fix 1 + regressions 1/2): the `cqh`-based CSS coefficients in
+  // cast-receiver.css get the question/answer text *close* to filling their
+  // row, but "close" isn't good enough on a frame that can't scroll — any
+  // fixed coefficient that's tuned to fill one state (a lone question) either
+  // under-fills another (short base text) or clips a third (the last line at
+  // 1080p, or either card once the answer appears and splits the row in
+  // half). Four rounds of re-tuning the coefficients (FF1-FF4) chased that
+  // without ever closing it. This is the fit-to-row step the FF4 verdict
+  // names as the alternative: after every render, shrink each visible
+  // card's text from the CSS tier's own size only as far as it has to, so
+  // `#question-text`/`#answer-text` always fits inside its own container
+  // (`scrollHeight` within `clientHeight`) no matter how tall that
+  // container's actual share of the row turns out to be.
+  //
+  // Never below this floor: a last-resort backstop for a pathological case
+  // (an extremely long answer in a very short row), not a size we expect to
+  // hit for real reading text at 10 feet.
+  const CONTENT_TEXT_MIN_FONT_PX = 18;
+  // A small buffer below the exact measured wrap boundary, so the fitted
+  // size doesn't land flush with the card's inner edge — the same margin the
+  // FF4 verdict asks for either way (fit-to-row step, or a margin below each
+  // measured boundary).
+  const CONTENT_TEXT_FIT_MARGIN_PX = 3;
+
   // Cache DOM elements
   const elements = {
     app: document.getElementById('app'),
@@ -237,6 +261,11 @@
 
     // Update scoreboard
     updateScoreboard(state.teamScores);
+
+    // M5 FF5: whichever of question/answer are now visible must actually
+    // fit the row they just got — including a row that's half the height it
+    // was a moment ago, because the other card just appeared alongside it.
+    fitVisibleContentText();
   }
 
   /**
@@ -401,6 +430,10 @@
       questionNeverArrived = true;
       questionWaitTimer = null;
       elements.questionText.textContent = 'Waiting for the proctor…';
+      // Clears whatever fit-to-row shrink the previous (possibly long)
+      // question left behind — this copy is short and fits at the tier's
+      // own size, but only `fitTextToContainer` resets the inline override.
+      fitTextToContainer(elements.questionContainer, elements.questionText);
     }, QUESTION_WAIT_TIMEOUT_MS);
   }
 
@@ -442,6 +475,140 @@
     } else if (plain.length > CONTENT_LENGTH_MEDIUM) {
       el.classList.add('q-len-medium');
     }
+  }
+
+  /**
+   * Shrinks `textEl`'s font-size, starting from whatever the CSS length-tier
+   * clamp (`.content-text`/`.q-len-medium`/`.q-len-long`) already resolved
+   * to, only as far as it takes for `textEl` to actually fit inside
+   * `container` (M5 FF5, fix 1 + regressions 1/2). A `cqh`/`vh` coefficient
+   * can only ever guess at the row's real height — it's tuned to one state
+   * (a lone question filling the whole row) and either under-fills a
+   * shorter one or overflows a taller one, and there's no single coefficient
+   * that's simultaneously right for a lone question, an 8-team board, and a
+   * question sharing its row with the answer card. Measuring the actual
+   * rendered box and shrinking only when it doesn't fit is the fix that
+   * generalizes across all of them instead of chasing one more state.
+   *
+   * This measures `textEl` itself, not `container`: `container` (the card)
+   * never reports overflow via `scrollHeight` here, no matter how much
+   * `textEl` clips, because `textEl` isn't rigid — it's a flex item with no
+   * `flex-shrink: 0` and its own `overflow: hidden`, which per the flexbox
+   * spec gives it an *automatic minimum size of 0*. So when the card doesn't
+   * have room, the flexbox algorithm shrinks `textEl`'s own box down to
+   * whatever fits (absorbing 100% of the "overflow" itself) instead of
+   * growing the card's scrollable region — the clipping happens *inside*
+   * `textEl`, invisible to a check on `container`. `textEl.scrollHeight`
+   * (the height its content actually needs) vs `textEl.clientHeight` (the
+   * height the flex algorithm actually gave it) is what exposes that.
+   * @param {HTMLElement} container The card (`#question-container` /
+   *   `#answer-container`) whose fixed, flex-allotted height text must fit;
+   *   only consulted here to skip a hidden card.
+   * @param {HTMLElement} textEl The `.content-text` element inside it.
+   */
+  function fitTextToContainer(container, textEl) {
+    if (!container || !textEl || container.classList.contains('hidden')) {
+      return;
+    }
+    if (!textEl.textContent) {
+      return;
+    }
+
+    // Clear any earlier fit's inline override first, so this measures fresh
+    // against the tier's own CSS value (which already tracks the container's
+    // current real size via `cqh` — see cast-receiver.css) rather than
+    // ratcheting down from whatever the last, possibly smaller, row left
+    // behind.
+    textEl.style.fontSize = '';
+    const cssFontPx = parseFloat(getComputedStyle(textEl).fontSize);
+    if (!(cssFontPx > 0)) {
+      return;
+    }
+
+    // The exact no-clipping check: does `textEl`'s own rendered box
+    // (`clientHeight`) actually hold all of its content (`scrollHeight`)? A
+    // box that isn't clipping always has `scrollHeight === clientHeight`
+    // exactly (never less) — there's no such thing as "negative overflow" —
+    // so a margin can't be baked into *this* comparison without making even
+    // a comfortably-fitting size read as "doesn't fit". The margin is
+    // applied afterward instead, as a small backoff from whatever exact
+    // boundary the search below finds.
+    const fitsAt = (px) => {
+      textEl.style.fontSize = px + 'px';
+      return textEl.scrollHeight <= textEl.clientHeight;
+    };
+
+    if (fitsAt(cssFontPx)) {
+      // Already fits at the tier's own size — leave no inline override, so
+      // a later resize keeps tracking the CSS clamp live instead of being
+      // frozen at today's pixel value.
+      textEl.style.fontSize = '';
+      return;
+    }
+
+    // Binary search the largest whole pixel size in
+    // [CONTENT_TEXT_MIN_FONT_PX, cssFontPx) that fits exactly. The floor is
+    // a last-resort backstop, not a size this is expected to reach for real
+    // reading text — if even the floor still overflows (a pathological
+    // amount of text in a tiny row), it's the smallest, least-clipped
+    // option available and is what's left in place.
+    let low = CONTENT_TEXT_MIN_FONT_PX;
+    let high = Math.floor(cssFontPx);
+    let best = low;
+    fitsAt(low);
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (fitsAt(mid)) {
+        best = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    // Back off a couple more pixels below the exact measured boundary the
+    // search just found — headless capture and a real display can round
+    // sub-pixel font/line-height metrics a hair differently, so a size that
+    // "just barely" fits in one render could clip by a hair in another.
+    const finalPx = Math.max(CONTENT_TEXT_MIN_FONT_PX, best - CONTENT_TEXT_FIT_MARGIN_PX);
+    textEl.style.fontSize = finalPx + 'px';
+  }
+
+  /**
+   * Runs the fit-to-row step (above) for whichever of question/answer are
+   * currently visible. Called after every render (`showMatchView`), and on
+   * resize / font-load below, so it re-checks whenever the row's real
+   * height could have changed — including the answer card appearing
+   * alongside the question and splitting the row in half.
+   */
+  function fitVisibleContentText() {
+    fitTextToContainer(elements.questionContainer, elements.questionText);
+    fitTextToContainer(elements.answerContainer, elements.answerText);
+  }
+
+  // A resize can change every row's real height (the `cqh` container, the
+  // header/buzz/scoreboard rows around it, or the 720p/1080p breakpoint
+  // itself), so the fit has to re-run — throttled to one pass per animation
+  // frame rather than once per resize event.
+  let resizeFitScheduled = false;
+  window.addEventListener('resize', () => {
+    if (resizeFitScheduled) {
+      return;
+    }
+    resizeFitScheduled = true;
+    requestAnimationFrame(() => {
+      resizeFitScheduled = false;
+      fitVisibleContentText();
+    });
+  });
+
+  // The reading faces (Newsreader for question/answer text) load from Google
+  // Fonts; a fit computed against the fallback font's metrics before they've
+  // finished loading can be wrong once the real face swaps in (a serif face
+  // commonly wraps differently than its fallback). Re-fit once every face is
+  // ready. `document.fonts` doesn't exist in every test environment, so this
+  // is best-effort.
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(fitVisibleContentText).catch(() => {});
   }
 
   /**

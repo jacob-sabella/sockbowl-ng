@@ -292,6 +292,45 @@ const TV_FIT_STATES: Array<[string, unknown]> = [
   ['8-teams', EIGHT_TEAM_STATE],
 ];
 
+// M5 FF5 (regression 3): the page-scroll check above only proves the outer
+// frame doesn't scroll — it can't see text clipped *inside* the question or
+// answer card, which is exactly the failure the FF4 verdict found (the last
+// line cut off at the card's own bottom edge while the page itself never
+// scrolled). Checking the *card's* scrollHeight/clientHeight can't see it
+// either: `#question-text`/`#answer-text` are flex items with `overflow:
+// hidden` and no `flex-shrink: 0`, so per the flexbox spec their automatic
+// minimum size is 0 — when the card doesn't have room, the flex algorithm
+// shrinks the text element's own box to fit, absorbing all the "overflow"
+// itself rather than growing the card's scrollable region. The clipping
+// happens *inside* the text element, invisible to a check on its container.
+// So this checks `#question-text`/`#answer-text` directly: their content
+// (`scrollHeight`, the height it actually needs) must fit within their own
+// rendered box (`clientHeight`) — the same check the fit-to-row step in
+// cast-receiver.js uses to decide whether to shrink.
+async function assertNoCardClipping(page: import('@playwright/test').Page) {
+  const clipping = await page.evaluate(() => {
+    const results: Array<{ id: string; scrollHeight: number; clientHeight: number }> = [];
+    for (const [containerId, textId] of [
+      ['question-container', 'question-text'],
+      ['answer-container', 'answer-text'],
+    ]) {
+      const container = document.getElementById(containerId);
+      const text = document.getElementById(textId);
+      if (container && text && !container.classList.contains('hidden')) {
+        results.push({ id: textId, scrollHeight: text.scrollHeight, clientHeight: text.clientHeight });
+      }
+    }
+    return results;
+  });
+  for (const card of clipping) {
+    expect(
+      card.scrollHeight,
+      `#${card.id} content (scrollHeight ${card.scrollHeight}px) is clipped by its own ` +
+        `rendered height (clientHeight ${card.clientHeight}px) — a line is being cut off.`
+    ).toBeLessThanOrEqual(card.clientHeight);
+  }
+}
+
 for (const viewport of TV_VIEWPORTS) {
   for (const [name, state] of TV_FIT_STATES) {
     test(`cast receiver never overflows the ${viewport.width}x${viewport.height} frame (${name})`, async ({ browser }) => {
@@ -309,6 +348,10 @@ for (const viewport of TV_VIEWPORTS) {
       const innerWidth = await page.evaluate(() => window.innerWidth);
       expect(scrollHeight).toBeLessThanOrEqual(innerHeight);
       expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+
+      // M5 FF5 (regression 3): the question/answer text itself must fit
+      // inside its own card, not just the page inside the viewport.
+      await assertNoCardClipping(page);
 
       await page.screenshot({ path: `${ART}/cast-fit-${viewport.width}x${viewport.height}-${name}.png` });
       await ctx.close();
