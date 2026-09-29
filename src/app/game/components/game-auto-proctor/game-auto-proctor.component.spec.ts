@@ -1,5 +1,5 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
 import { GameAutoProctorComponent } from './game-auto-proctor.component';
@@ -243,4 +243,81 @@ describe('GameAutoProctorComponent global Space/Enter buzz (M5 S1-07)', () => {
     dispatchKey(' ');
     expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
   });
+});
+
+/**
+ * Every wait in auto-judged play is the server's clock: the countdowns render
+ * TimerUpdate-fed round fields, and no client (not even the host's) runs its
+ * own timer or advances the game when one reaches zero.
+ */
+describe('GameAutoProctorComponent server-driven countdowns', () => {
+  let fixture: ComponentFixture<GameAutoProctorComponent>;
+  let gameSession$: Subject<GameSession>;
+  let gameStateService: any;
+
+  beforeEach(() => {
+    gameSession$ = new Subject<GameSession>();
+    localStorage.removeItem('ap_reader_mode');
+    gameStateService = {
+      gameSession$,
+      playerSessionId: 'p1',
+      isSelfOnAnyTeam: () => true,
+      hasCurrentPlayerTeamBuzzed: () => true,
+      isCurrentPlayerGameOwner: () => true,
+      isFreeForAll: () => false,
+      getPlayerNameById: () => 'Bea',
+      getTeamNameById: () => undefined,
+      sendAdvanceRound: jasmine.createSpy('sendAdvanceRound'),
+    };
+    TestBed.configureTestingModule({
+      declarations: [GameAutoProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: SpeechService, useValue: { available: false, speak: jasmine.createSpy('speak'), cancel: jasmine.createSpy('cancel') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameAutoProctorComponent);
+  });
+
+  function emit(round: any): void {
+    gameSession$.next({
+      currentMatch: { currentRound: { roundNumber: 1, question: 'q', buzzList: [], ...round }, previousRounds: [], packet: { tossups: [] } },
+      teamList: [],
+      playerList: [],
+    } as unknown as GameSession);
+    fixture.detectChanges();
+  }
+
+  const text = () => (fixture.nativeElement as HTMLElement).textContent || '';
+
+  it('shows the answer window to the room while someone else is answering', () => {
+    fixture.detectChanges();
+    emit({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p2', teamId: 't2' }, remainingAnswerTimerSeconds: 7 });
+    expect(text()).toContain('7 seconds left to answer');
+  });
+
+  it('shows the answer window to the player who buzzed', () => {
+    fixture.detectChanges();
+    emit({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' }, remainingAnswerTimerSeconds: 4 });
+    expect(text()).toContain('4 seconds left to answer');
+  });
+
+  it('shows the bonus part countdown', () => {
+    fixture.detectChanges();
+    emit({ roundState: RoundState.BONUS_AWAITING_ANSWER, bonusEligibleTeamId: 't9', currentBonusPartIndex: 0,
+      currentBonus: { preamble: '', bonusParts: [] }, remainingBonusTimerSeconds: 5 });
+    expect(text()).toContain('5 seconds left on this part');
+  });
+
+  it('renders the server advance countdown and never advances on its own, even for the host', fakeAsync(() => {
+    fixture.detectChanges();
+    emit({ roundState: RoundState.COMPLETED, remainingAdvanceSeconds: 3 });
+    expect(text()).toContain('Next tossup in 3s');
+
+    tick(10_000);
+    emit({ roundState: RoundState.COMPLETED, remainingAdvanceSeconds: 0 });
+    tick(10_000);
+    expect(gameStateService.sendAdvanceRound).not.toHaveBeenCalled();
+  }));
 });

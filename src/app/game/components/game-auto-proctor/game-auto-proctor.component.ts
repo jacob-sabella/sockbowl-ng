@@ -41,16 +41,11 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
    */
   readerMode = false;
 
-  /** Seconds shown on the "next tossup in" pause after a round completes. */
-  private static readonly ADVANCE_DELAY = 6;
-  advanceSecondsLeft: number | null = null;
 
   /** Server-driven tossup buzz countdown, sourced from remainingTossupTimerSeconds. */
   buzzSecondsLeft: number | null = null;
 
   private sub?: Subscription;
-  private advanceTimer: any = null;
-  private lastCompletedKey = '';
   private lastAnswerKey = '';
   private lastSpokenBonusKey = '';
 
@@ -81,7 +76,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.clearAdvanceTimer();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -106,6 +100,26 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   get isCompleted(): boolean {
     return this.roundState === RoundState.COMPLETED;
+  }
+
+  /*
+   * The countdowns below are the server's clock (TimerUpdate ticks), identical for
+   * every player; nothing here runs a local timer or advances the game itself.
+   */
+
+  /** Seconds the buzzed-in player has left to answer; the server marks it wrong at 0. */
+  get answerSecondsLeft(): number | null {
+    return this.someoneBuzzed ? (this.round?.remainingAnswerTimerSeconds ?? null) : null;
+  }
+
+  /** Seconds left on the current bonus part; the server marks it wrong at 0. */
+  get bonusSecondsLeft(): number | null {
+    return this.isBonus ? (this.round?.remainingBonusTimerSeconds ?? null) : null;
+  }
+
+  /** Seconds until the server starts the next tossup on its own. */
+  get advanceSecondsLeft(): number | null {
+    return this.isCompleted ? (this.round?.remainingAdvanceSeconds ?? null) : null;
   }
 
   /** Tossup won, bonus set up but not yet started — the pause requiring an explicit Start bonus press. */
@@ -286,7 +300,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   next(): void {
-    this.clearAdvanceTimer();
     this.gameStateService.sendAdvanceRound();
   }
 
@@ -376,11 +389,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     }
     this.lastAnswerKey = answerKey;
 
-    // Any active round cancels a pending "next tossup" pause.
-    if (!this.isCompleted) {
-      this.clearAdvanceTimer();
-    }
-
     if (this.isBuzzable) {
       // Server-driven reveal: speak only the newly-arrived increment.
       this.speakNewRevealIfReaderMode();
@@ -394,14 +402,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
       this.speech.cancel();
       this.lastSpokenBonusKey = '';
       this.lastSpokenRevealedText = '';
-      if (this.isCompleted) {
-        // Pause on the result (answer + who got it) before moving on.
-        const ckey = String(r.roundNumber);
-        if (ckey !== this.lastCompletedKey) {
-          this.lastCompletedKey = ckey;
-          this.startAdvanceCountdown();
-        }
-      }
     }
   }
 
@@ -419,31 +419,6 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     if (delta) {
       this.speech.speak(delta, GameAutoProctorComponent.READER_SPEECH_RATE);
     }
-  }
-
-  /** Show a short countdown on the completed round, then the host advances automatically. */
-  private startAdvanceCountdown(): void {
-    this.clearAdvanceTimer();
-    this.advanceSecondsLeft = GameAutoProctorComponent.ADVANCE_DELAY;
-    this.advanceTimer = setInterval(() => {
-      if (this.advanceSecondsLeft !== null) {
-        this.advanceSecondsLeft--;
-      }
-      if (this.advanceSecondsLeft !== null && this.advanceSecondsLeft <= 0) {
-        this.clearAdvanceTimer();
-        if (this.isOwner) {
-          this.next();                 // only the host drives the actual advance
-        }
-      }
-    }, 1000);
-  }
-
-  private clearAdvanceTimer(): void {
-    if (this.advanceTimer) {
-      clearInterval(this.advanceTimer);
-      this.advanceTimer = null;
-    }
-    this.advanceSecondsLeft = null;
   }
 
   private tokenize(html: string): string[] {

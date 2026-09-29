@@ -350,6 +350,10 @@ export class GameStateService {
               nextRound.remainingTossupTimerSeconds = msg.remainingSeconds;
             } else if (msg.timerType === 'BONUS') {
               nextRound.remainingBonusTimerSeconds = msg.remainingSeconds;
+            } else if (msg.timerType === 'ANSWER') {
+              nextRound.remainingAnswerTimerSeconds = msg.remainingSeconds;
+            } else if (msg.timerType === 'ADVANCE') {
+              nextRound.remainingAdvanceSeconds = msg.remainingSeconds;
             }
           });
         })

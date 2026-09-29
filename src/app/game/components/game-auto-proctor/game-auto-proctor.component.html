@@ -78,6 +78,12 @@
           <div class="active-buzz-info" role="status" aria-live="polite">
             <mat-icon aria-hidden="true">notifications_active</mat-icon>
             <p><strong>{{ buzzerName }}</strong>@if (buzzerTeam && !gameStateService.isFreeForAll()) { ({{ buzzerTeam }}) } is answering.</p>
+            @if (answerSecondsLeft !== null) {
+              <div class="countdown" [class.countdown--urgent]="answerSecondsLeft <= 3"
+                   role="status" aria-live="assertive">
+                <strong>{{ answerSecondsLeft }}</strong> seconds left to answer
+              </div>
+            }
           </div>
         }
 
@@ -113,6 +119,13 @@
             </div>
           }
 
+          @if (iAmBuzzer && answerSecondsLeft !== null) {
+            <div class="countdown" [class.countdown--urgent]="answerSecondsLeft <= 3"
+                 role="status" aria-live="assertive">
+              <strong>{{ answerSecondsLeft }}</strong> seconds left to answer
+            </div>
+          }
+
           @if (iAmBuzzer || bonusEligible) {
             <form class="answer-form" (ngSubmit)="submit()">
               <input #answerInput class="answer-input" name="answer" [(ngModel)]="answerText"
@@ -122,6 +135,13 @@
               <button mat-raised-button color="primary" type="submit" [disabled]="!canSubmit"
                       aria-label="Submit answer">Submit</button>
             </form>
+          }
+
+          @if (bonusSecondsLeft !== null) {
+            <div class="countdown" [class.countdown--urgent]="bonusSecondsLeft <= 3"
+                 role="status" aria-live="assertive">
+              <strong>{{ bonusSecondsLeft }}</strong> seconds left on this part
+            </div>
           }
 
           @if (isBonus && !bonusEligible) {
@@ -142,7 +162,7 @@
                   Next now <span class="key-hint" aria-hidden="true">Enter</span>
                 </button>
               } @else {
-                <span class="waiting-hint">Host will advance.</span>
+                <span class="waiting-hint">The next tossup starts automatically.</span>
               }
             </div>
           }
