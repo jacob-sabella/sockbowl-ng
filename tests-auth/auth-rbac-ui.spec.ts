@@ -56,9 +56,11 @@ test.describe('RBAC-gated navigation and routes', () => {
     await page.waitForURL('**/game;**', { timeout: 25_000 });
     await page.getByRole('button', { name: /Find a Packet/ }).click();
     const dialog = page.locator('.packet-search-dialog');
-    await expect(dialog.getByRole('tab', { name: 'Search Existing' })).toBeVisible();
-    await expect(dialog.getByRole('tab', { name: 'Generate', exact: true })).toBeVisible();
-    await expect(dialog.getByRole('tab', { name: 'Generate with AI' })).toBeHidden();
+    // M5 renamed these tabs: "Search Existing" -> "Library",
+    // "Generate" (qbreader bank) -> "Question bank", "Generate with AI" -> "AI".
+    await expect(dialog.getByRole('tab', { name: 'Library' })).toBeVisible();
+    await expect(dialog.getByRole('tab', { name: 'Question bank', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('tab', { name: 'AI', exact: true })).toBeHidden();
   });
 
   test('moderator: Moderation visible and reachable; /admin still redirects', async ({ page }) => {

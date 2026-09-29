@@ -92,8 +92,8 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
   expect(hostJoinBody.userId).toBeTruthy();
   await page.waitForURL('**/game;**', { timeout: 25_000 });
 
-  const code = (await page.locator('.code-value').innerText()).trim();
-  await page.locator('.team__actions button').first().click();
+  const code = (await page.locator('.hero__code-value').innerText()).trim();
+  await page.locator('.team__join').first().click();
 
   // Player: a second, independent browser context signs in as the player
   // demo user and joins by code, over the authenticated join endpoint.
@@ -117,7 +117,7 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
   expect(joinBody.userId).toBeTruthy();
 
   await playerPage.waitForURL('**/game;**', { timeout: 25_000 });
-  await playerPage.locator('.team__actions button').last().click();
+  await playerPage.locator('.team__join').last().click();
 
   // Host: use the imported packet bank via Search Existing, picking the
   // smallest published packet in this stack's seed data (13 tossups; no
@@ -139,7 +139,7 @@ test('A demo author hosts, a demo player joins by code, and they play an auto-ju
   const result = dialog.locator('.result-item').filter({ has: page.getByText(PACKET_NAME, { exact: true }) }).first();
   await expect(result).toBeVisible({ timeout: 20_000 });
   await result.click();
-  await dialog.getByRole('button', { name: 'Use Packet' }).click();
+  await dialog.locator('.select-btn').click(); // M5V1-03: the footer button's label is dynamic (S3-19, e.g. Use "Packet Name"), not the literal text 'Use Packet'
   await expect(dialog).toBeHidden({ timeout: 30_000 });
 
   const graphqlUrl = await page.evaluate(() => ((window as any).__env?.sockbowlQuestionsApiUrl || 'http://localhost:7009/') + 'graphql');

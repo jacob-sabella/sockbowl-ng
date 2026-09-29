@@ -45,8 +45,8 @@ async function hostAutoJudgedGame(page: Page): Promise<string> {
   await page.getByRole('button', { name: /New game/ }).click();
   await page.getByRole('button', { name: /Auto-judged match/ }).click();
   await page.waitForURL('**/game;**', { timeout: 25_000 });
-  const code = (await page.locator('.code-value').innerText()).trim();
-  await page.locator('.team__actions button').first().click();
+  const code = (await page.locator('.hero__code-value').innerText()).trim();
+  await page.locator('.team__join').first().click();
   return code;
 }
 
@@ -59,7 +59,7 @@ async function joinByCode(page: Page, code: string, guestName?: string): Promise
   }
   await page.getByRole('button', { name: 'Join', exact: true }).click();
   await page.waitForURL('**/game;**', { timeout: 25_000 });
-  await page.locator('.team__actions button').last().click();
+  await page.locator('.team__join').last().click();
 }
 
 /** Uses the Generate tab and returns import-random's response body. */
@@ -67,7 +67,8 @@ async function generatePacket(page: Page): Promise<GeneratedPacket> {
   await page.getByRole('button', { name: /Find a Packet/ }).click();
   const dialog = page.locator('.packet-search-dialog');
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('tab', { name: 'Generate', exact: true }).click();
+  // M5 renamed the qbreader-backed tab "Generate" -> "Question bank".
+  await dialog.getByRole('tab', { name: 'Question bank', exact: true }).click();
   await expect(dialog.getByText(/tossups/).first()).toBeVisible({ timeout: 20_000 });
   const nums = dialog.locator('.qb-num-field input');
   await nums.nth(0).fill(String(TOSSUPS));
@@ -106,9 +107,9 @@ async function expectUnreadableFromQuestions(page: Page, packetId: string): Prom
 
 /** The joining non-proctor sees name and bonus count, never the id. */
 async function expectNonProctorPacketView(page: Page, frames: string[], packet: GeneratedPacket): Promise<void> {
-  await expect(page.locator('.kv__row', { hasText: 'Name:' })).toContainText(packet.name, { timeout: 15_000 });
+  await expect(page.locator('.packet-summary__name')).toContainText(packet.name, { timeout: 15_000 });
   await expect(page.getByText(new RegExp(`contains\\s+${BONUSES}\\s+bonus questions`))).toBeVisible();
-  await expect(page.getByText('Packet ID:')).toHaveCount(0);
+  await expect(page.locator('.packet-summary__id')).toHaveCount(0);
   expect(frames.length).toBeGreaterThan(0);
   expect(frames.filter(f => f.includes(packet.id)), 'a non-proctor frame carried the packet id').toEqual([]);
 }
@@ -164,7 +165,7 @@ test('A guest generates a bank packet, a signed-in player joins, and the match s
   const packet = await generatePacket(page);
   await expectUnreadableFromQuestions(page, packet.id);
   // The owner of a proctorless game is the one sent the id.
-  await expect(page.locator('.kv__row', { hasText: 'Name:' })).toContainText(packet.name);
+  await expect(page.locator('.packet-summary__name')).toContainText(packet.name);
   await expect(page.getByText(new RegExp(`contains\\s+${BONUSES}\\s+bonus questions`))).toBeVisible();
 
   await expectNonProctorPacketView(player.page, playerFrames, packet);

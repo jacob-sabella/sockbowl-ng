@@ -61,7 +61,14 @@ test('A moderator bans a player mid-lobby; the ban is enforced and then lifted',
     if (banned) {
       const banRow = page.locator('.admin-bans__item', { hasText: targetSub });
       if (await banRow.isVisible().catch(() => false)) {
-        await banRow.getByRole('button', { name: 'Remove ban' }).click();
+        // M5 S5-02: the icon button's accessible name now names the target
+        // ("Remove ban on <sub>", not the bare "Remove ban"), and the click
+        // only opens a confirmation dialog (ConfirmDialogService) rather
+        // than removing the ban immediately.
+        await banRow.getByRole('button', { name: /^Remove ban on/ }).click();
+        const confirmDialog = page.locator('mat-dialog-container');
+        await expect(confirmDialog).toBeVisible();
+        await confirmDialog.getByRole('button', { name: 'Remove ban' }).click();
         await expect(banRow).toBeHidden({ timeout: 10_000 });
       }
     }

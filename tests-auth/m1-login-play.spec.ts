@@ -45,7 +45,7 @@ test('Demo user logs in via Keycloak and plays a solo tossup', async ({ page }) 
   const result = dialog.locator('.result-item').first();
   await expect(result).toBeVisible({ timeout: 20_000 });
   await result.click();
-  await dialog.getByRole('button', { name: 'Use Packet' }).click();
+  await dialog.locator('.select-btn').click(); // M5V1-03: the footer button's label is dynamic (S3-19, e.g. Use "Packet Name"), not the literal text 'Use Packet'
   await expect(dialog).toBeHidden({ timeout: 30_000 });
 
   await page.getByRole('button', { name: /Start Match/ }).click();

@@ -34,12 +34,15 @@ export async function loginAs(page: Page, username: string, password: string = D
 }
 
 /**
- * Logs the current page out (revokes tokens, ends the Keycloak session) via
- * the navbar's "Logout" button. Resolves once the browser has landed back on
- * `postLogoutRedirectUri` (`/game-session` in the app, not a Keycloak page).
+ * Logs the current page out (revokes tokens, ends the Keycloak session).
+ * M5 S6-03 folded "Logout" into the account menu as "Sign out": open the
+ * account trigger, then click the "Sign out" menu item. Resolves once the
+ * browser has landed back on `postLogoutRedirectUri` (`/game-session` in the
+ * app, not a Keycloak page).
  */
 export async function logout(page: Page): Promise<void> {
-  await page.getByRole('button', { name: /Logout/ }).click();
+  await page.locator('.navbar__account-trigger').click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await page.waitForURL('**/game-session**', { timeout: 20_000 });
 }
 
