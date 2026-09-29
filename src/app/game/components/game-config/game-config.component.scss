@@ -581,7 +581,8 @@ mat-card-actions {
    here instead of stacking every team in one narrow list. */
 .teams {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  // min(100%, …): at 280px the card is narrower than one 240px track
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 1.5rem;
 }
 

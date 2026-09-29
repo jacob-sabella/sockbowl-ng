@@ -127,7 +127,7 @@
 
     &.has-more-below::after {
       // decorative: the content itself is all in the DOM for assistive tech
-      content: 'More below \2193' / '';
+      content: 'More below' / '';
       display: flex;
       align-items: flex-end;
       justify-content: center;
@@ -144,8 +144,8 @@
       pointer-events: none;
       background: linear-gradient(to bottom, transparent, var(--bg-elevated) 70%);
       color: var(--text-secondary);
-      font-size: 0.8125rem;
-      font-weight: 600;
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
       letter-spacing: 0.01em;
     }
   }
