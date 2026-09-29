@@ -175,7 +175,7 @@
       }
 
       .mat-expansion-indicator::after {
-        color: var(--accent-primary);
+        color: var(--accent-primary-text);
       }
 
       .mat-expansion-panel-body {
@@ -387,7 +387,7 @@
     font-weight: 500;
 
     mat-icon {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       font-size: 1.5rem;
       width: 1.5rem;
       height: 1.5rem;
@@ -449,14 +449,14 @@
       }
 
       .mat-expansion-indicator::after {
-        color: var(--accent-primary);
+        color: var(--accent-primary-text);
       }
     }
   }
 
   .tossup-number {
     font-weight: 600;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     margin-right: 1rem;
   }
 
@@ -570,14 +570,14 @@
       }
 
       .mat-expansion-indicator::after {
-        color: var(--accent-primary);
+        color: var(--accent-primary-text);
       }
     }
   }
 
   .bonus-number {
     font-weight: 600;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     margin-right: 1rem;
   }
 

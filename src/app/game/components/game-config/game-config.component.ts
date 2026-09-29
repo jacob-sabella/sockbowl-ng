@@ -221,8 +221,17 @@ export class GameConfigComponent implements OnInit {
 
   /* ─── Teams ─────────────────────────────────────────────────────────────── */
 
+  /**
+   * S3-13: a polite live region names the seat just taken (contract STORY
+   * step 2, "announces 'Joined Team N' politely"), separate from the
+   * non-manager status line above (S3-20), which narrates the ongoing state
+   * rather than the moment of the action.
+   */
+  joinAnnouncement = '';
+
   joinTeam(team: Team): void {
     this.joinTeamWithId(team.teamId);
+    this.joinAnnouncement = `Joined ${team.teamName}`;
   }
 
   joinTeamWithId(teamId: string) {
@@ -231,6 +240,7 @@ export class GameConfigComponent implements OnInit {
 
   switchToSpectate() {
     this.joinTeamWithId('SPECTATE');
+    this.joinAnnouncement = 'Now spectating';
   }
 
   /* ─── Proctor ──────────────────────────────────────────────────────────── */

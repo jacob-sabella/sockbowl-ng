@@ -92,7 +92,7 @@
     .team-score {
       flex-shrink: 0;
       font-size: 1.25rem;
-      color: var(--accent-primary) !important;
+      color: var(--accent-primary-text) !important;
     }
 
     .team-meta {
@@ -113,7 +113,7 @@
     .you-badge {
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
@@ -211,7 +211,7 @@
       }
 
       .current-player-icon {
-        color: var(--accent-primary) !important;
+        color: var(--accent-primary-text) !important;
         font-size: 1.1rem !important;
         width: 1.1rem !important;
         height: 1.1rem !important;

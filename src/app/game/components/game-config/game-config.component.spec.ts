@@ -14,7 +14,7 @@ import { PresentationConnectionService } from '../../services/presentation-conne
 import { CastStateService } from '../../services/cast-state.service';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
 import { PacketSearchComponent } from '../packet-search/packet-search.component';
-import { GameSession, MatchState, Packet, PlayerMode } from '../../models/sockbowl/sockbowl-interfaces';
+import { GameSession, MatchState, Packet, PlayerMode, Team } from '../../models/sockbowl/sockbowl-interfaces';
 import { PresentationConnectionState } from '../../models/cast-interfaces';
 
 describe('GameConfigComponent proctor preview', () => {
@@ -793,7 +793,7 @@ describe('GameConfigComponent rendered lobby (S3-28)', () => {
       'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
       'isProctorless', 'isAutoProctor', 'isFreeForAll', 'getProctor', 'requestGameSession',
       'setMatchPacket', 'updateGameSettings', 'getCurrentPlayer', 'startMatch', 'isSelfSpectator',
-      'getCurrentPlayerTeam', 'isSelfOnTeam', 'isSelfOnAnyTeam',
+      'getCurrentPlayerTeam', 'isSelfOnTeam', 'isSelfOnAnyTeam', 'updateTeamSelf',
     ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
     gameStateService.isSelfProctor.and.returnValue(true);
     gameStateService.isProctorless.and.returnValue(false);
@@ -845,6 +845,32 @@ describe('GameConfigComponent rendered lobby (S3-28)', () => {
     expect(joinBtn?.hasAttribute('mat-stroked-button')).toBeTrue();
     expect(joinBtn?.getAttribute('aria-label')).toBe('Join Team A');
     expect(el.querySelector('.team__actions')).withContext('the old actions row is gone').toBeNull();
+  });
+
+  it('announces the seat just taken via a polite live region (S3-13)', () => {
+    const team = { teamId: 't1', teamName: 'Team A', teamPlayers: [] } as unknown as Team;
+
+    fixture.componentInstance.joinTeam(team);
+
+    expect(gameStateService.updateTeamSelf).toHaveBeenCalledWith('t1');
+    expect(fixture.componentInstance.joinAnnouncement).toBe('Joined Team A');
+  });
+
+  it('announces spectating via the same polite live region (S3-13)', () => {
+    fixture.componentInstance.switchToSpectate();
+
+    expect(gameStateService.updateTeamSelf).toHaveBeenCalledWith('SPECTATE');
+    expect(fixture.componentInstance.joinAnnouncement).toBe('Now spectating');
+  });
+
+  it('uses real heading tags for card titles so the lobby has no heading-level skip (S3-13)', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    // Every card title used to be a bare `<mat-card-title>` (no native
+    // heading semantics); it's now `<h2 mat-card-title>`, a sibling level of
+    // team-list's own `<h3 mat-subheader>` team names — no h1->h3 skip.
+    const cardTitles = Array.from(el.querySelectorAll('[mat-card-title]'));
+    expect(cardTitles.length).toBeGreaterThan(0);
+    cardTitles.forEach(title => expect(title.tagName).toBe('H2'));
   });
 });
 

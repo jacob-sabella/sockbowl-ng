@@ -36,7 +36,17 @@
                   [attr.aria-label]="castButtonLabel(castState)"
                   (click)="onCastButtonClick(castState)">
                   @if (castState === PresentationConnectionState.CONNECTING) {
-                    <mat-spinner diameter="18" aria-hidden="true" class="hero__cast-spinner"></mat-spinner>
+                    <!-- S3-13: mat-spinner's host always carries its own
+                         role="progressbar"/tabindex="-1", and axe's
+                         nested-interactive check flags that combination
+                         inside an interactive control regardless of
+                         aria-hidden/aria-label on it — it isn't a "hidden
+                         content" nuance, it fires on the focusable-ish host
+                         attributes alone. A plain decorative span has no
+                         implicit role or tabindex, so it can't trip that
+                         check; the button's own [attr.aria-label] above is
+                         still the accessible name. -->
+                    <span class="hero__cast-spinner" aria-hidden="true"></span>
                   } @else if (castState === PresentationConnectionState.CONNECTED) {
                     <mat-icon aria-hidden="true">cast_connected</mat-icon>
                   } @else {
@@ -126,17 +136,39 @@
       </div>
     </section>
 
-    <!-- GRID. For non-managers the Teams/Players card is reordered (CSS
-         `order` only, nothing removed) to sit right after the launch bar,
-         above the read-only config cards (S3-11 STORY step 2). -->
-    <section class="grid" [class.grid--player-view]="!canManageConfig()">
+    <!-- S3-13: names the seat just taken (contract STORY step 2), visually
+         hidden but reachable by a screen reader's polite live region. -->
+    <span class="visually-hidden-announce" aria-live="polite">{{ joinAnnouncement }}</span>
+
+    <!-- GRID. For non-managers the Teams/Players card comes first in the
+         template itself (S3-13/contract r2: DOM order, tab order and
+         reading order all match what's seen — an `@if` split, not the old
+         CSS `order: -1`, which left DOM/tab order pointing at Packet first
+         regardless — WCAG 1.3.2/2.4.3). Spectators keeps its own place
+         after the config cards in both views, exactly as the old `order`
+         rule left it (it never carried `.card--teams`). -->
+    @if (!canManageConfig()) {
+      <section class="grid grid--player-view">
+        <ng-container [ngTemplateOutlet]="teamsAndPlayersCard"></ng-container>
+        <ng-container [ngTemplateOutlet]="packetAndTimerCards"></ng-container>
+        <ng-container [ngTemplateOutlet]="spectatorsCard"></ng-container>
+      </section>
+    } @else {
+      <section class="grid">
+        <ng-container [ngTemplateOutlet]="packetAndTimerCards"></ng-container>
+        <ng-container [ngTemplateOutlet]="teamsAndPlayersCard"></ng-container>
+        <ng-container [ngTemplateOutlet]="spectatorsCard"></ng-container>
+      </section>
+    }
+
+    <ng-template #packetAndTimerCards>
       <!-- Packet -->
       <mat-card class="card">
         <mat-card-header>
-          <mat-card-title>
+          <h2 mat-card-title>
             <mat-icon>inventory_2</mat-icon>
             Packet
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle>Choose a packet to use for this match.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
@@ -224,10 +256,10 @@
       <!-- Timer Settings -->
       <mat-card class="card">
         <mat-card-header>
-          <mat-card-title>
+          <h2 mat-card-title>
             <mat-icon>timer</mat-icon>
             Timer Settings
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle>
             @if (canEditTimerSettings()) {
               Configure timer durations and behavior.
@@ -290,14 +322,17 @@
           </div>
         </mat-card-content>
       </mat-card>
+    </ng-template>
+
+    <ng-template #teamsAndPlayersCard>
       <!-- Teams -->
       @if (!gameStateService.isFreeForAll()) {
         <mat-card class="card card--span2 card--teams">
           <mat-card-header>
-            <mat-card-title>
+            <h2 mat-card-title>
               <mat-icon>groups</mat-icon>
               Teams
-            </mat-card-title>
+            </h2>
             <mat-card-subtitle>Join a team or switch to spectating.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -352,10 +387,10 @@
       @if (gameStateService.isFreeForAll()) {
         <mat-card class="card card--span2 card--teams">
           <mat-card-header>
-            <mat-card-title>
+            <h2 mat-card-title>
               <mat-icon>person_off</mat-icon>
               Players
-            </mat-card-title>
+            </h2>
             <mat-card-subtitle>Everyone plays for themselves.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -373,13 +408,16 @@
           </mat-card-content>
         </mat-card>
       }
+    </ng-template>
+
+    <ng-template #spectatorsCard>
       <!-- Spectators -->
       <mat-card class="card card--span2">
         <mat-card-header>
-          <mat-card-title>
+          <h2 mat-card-title>
             <mat-icon>visibility</mat-icon>
             Spectators
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle>People watching the match.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
@@ -425,6 +463,6 @@
           </mat-card-actions>
         }
       </mat-card>
-    </section>
+    </ng-template>
   </div>
 }

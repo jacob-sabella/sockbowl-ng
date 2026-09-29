@@ -92,6 +92,35 @@ describe('PacketSearchComponent', () => {
     expect(bankTab).not.toBeNull();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Build a packet from the question bank');
   });
+  describe('accessible names and states (S3-13)', () => {
+    it('gives every loading mat-spinner an accessible name (aria-progressbar-name)', () => {
+      configure(['question:generate']);
+      component.qbImporting = true;
+      component.isGenerating = true;
+      component.selectionLoading = true;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.qb-import-btn mat-spinner')?.getAttribute('aria-label')).toBe('Generating packet');
+      expect(el.querySelector('.generating-state mat-spinner')?.getAttribute('aria-label')).toBe('Generating packet with AI');
+      expect(el.querySelector('.select-btn mat-spinner')?.getAttribute('aria-label')).toBe('Confirming packet');
+    });
+
+    it('reflects the Question bank category filter via aria-pressed on its chip', () => {
+      configure([]);
+      const category = component.qbCategories[0];
+      const chip = () => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.qb-chip'))
+        .find(b => b.textContent?.trim().startsWith(category)) as HTMLButtonElement;
+
+      expect(chip().getAttribute('aria-pressed')).toBe('false');
+
+      component.toggleQbCategory(category);
+      fixture.detectChanges();
+
+      expect(chip().getAttribute('aria-pressed')).toBe('true');
+    });
+  });
+
   describe('Generate from the bank (NG-R3-01)', () => {
     it('closes with the import-random metadata and never re-reads the packet (EPHEMERAL reads are null)', () => {
       configure([], { id: 'eph-1', name: 'Random Packet', usedRemoteIds: [], tossupCount: 5, bonusCount: 3 });
@@ -363,9 +392,15 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
     configure(true, [unplayablePacket]);
     fixture.detectChanges();
 
+    // S3-13: the row's select control is a real <button> (a sibling of "Edit
+    // in builder", not wrapping it — axe nested-interactive), so an
+    // unplayable packet is conveyed with the button's own native `disabled`
+    // rather than an `aria-disabled` on the row `<div>`.
     const row = (fixture.nativeElement as HTMLElement).querySelector('.result-item.unplayable');
     expect(row).not.toBeNull();
-    expect(row?.getAttribute('aria-disabled')).toBe('true');
+    const select = row?.querySelector('.result-item__select') as HTMLButtonElement | null;
+    expect(select).not.toBeNull();
+    expect(select?.disabled).toBeTrue();
   });
 
   it('does not select an unplayable row on click', () => {
@@ -375,6 +410,21 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
     // selectPacket itself doesn't gate on playable — the template does, via
     // `packet.playable && selectPacket(packet)` — so exercise that contract directly.
     expect(unplayablePacket.playable).toBeFalse();
+  });
+
+  it('reflects My packets selection via aria-pressed on the select button (S3-13)', () => {
+    configure(true, [somePacket]);
+    fixture.detectChanges();
+    const select = (fixture.nativeElement as HTMLElement)
+      .querySelector('.result-item__select') as HTMLButtonElement;
+
+    expect(select.getAttribute('aria-pressed')).toBe('false');
+
+    select.click();
+    fixture.detectChanges();
+
+    expect(component.selectedPacketId).toBe(somePacket.id);
+    expect(select.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('search uses listPackets instead of searchPacketsByName', fakeAsync(() => {

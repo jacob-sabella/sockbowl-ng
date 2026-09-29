@@ -48,7 +48,7 @@
     background: transparent !important;
 
     mat-icon {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       font-size: 1.75rem;
       width: 1.75rem;
       height: 1.75rem;
@@ -73,36 +73,27 @@
     overflow-y: auto;
   }
 
-  /* Fix tab label colors. The header is sticky within `mat-dialog-content`'s
-     single scroll container (S3-10 r3) so it, like the dialog's title and
-     footer, stays visible while only the body scrolls. */
-  ::ng-deep {
-    .mat-mdc-tab-header {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      background: var(--bg-elevated);
-    }
-
-    .mat-mdc-tab-labels {
-      background: transparent !important;
-    }
-
-    .mat-mdc-tab {
-      color: var(--text-muted) !important;
-
-      &.mdc-tab--active {
-        color: var(--accent-primary) !important;
-      }
-
-      .mdc-tab__text-label {
-        color: inherit !important;
-      }
-
-      .mdc-tab-indicator__content--underline {
-        border-color: var(--accent-primary) !important;
-      }
-    }
+  /* The header is sticky within `mat-dialog-content`'s single scroll
+     container (S3-10 r3) so it, like the dialog's title and footer, stays
+     visible while only the body scrolls.
+     S3-05 (r4): this block used to also re-set the tab label/underline
+     colors, exactly duplicating src/styles/vendors/_material-overrides.scss's
+     shared `.mdc-tab--active`/`.mdc-tab-indicator__content--underline`
+     rules (F1-owned, frozen) with one difference — swapping the active
+     label from `--text-primary` to `--accent-primary-text`. That swap is
+     what failed AA (axe: 3.66:1, needs 4.5:1): the active tab's own M3
+     state-layer tint (an opaque fill Material paints on the selected tab,
+     independent of our tokens) isn't `--bg-elevated`, so
+     `--accent-primary-text` was never actually being checked against the
+     background it was tuned for. Removed the duplicate override entirely —
+     the shared rule's `--text-primary` already has the contrast headroom to
+     clear any of Material's own surface tints, and every other tab group in
+     the app already relies on it. */
+  ::ng-deep .mat-mdc-tab-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bg-elevated);
   }
 
   mat-dialog-actions {
@@ -221,7 +212,7 @@
   }
 
   .search-icon {
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     margin-right: 0.5rem;
   }
 }
@@ -288,7 +279,6 @@
   background: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
 
@@ -301,7 +291,6 @@
   }
 
   &.unplayable {
-    cursor: not-allowed;
     opacity: 0.6;
 
     &:hover {
@@ -316,7 +305,7 @@
     box-shadow: var(--shadow-md) var(--shadow-color);
 
     .result-name {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       font-weight: 600;
     }
   }
@@ -356,12 +345,34 @@
 
 .edit-link {
   font-size: 0.85rem;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   text-decoration: none;
   white-space: nowrap;
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+// S3-13: the "My packets" row's select control — a real <button> so it's a
+// sibling of `.result-actions` (which holds "Edit in builder") instead of
+// wrapping it. Reset to look like the plain row it replaces.
+.result-item__select {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
   }
 }
 
@@ -407,7 +418,7 @@
 
 .check-icon {
   flex-shrink: 0;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   font-size: 1.5rem;
   width: 1.5rem;
   height: 1.5rem;

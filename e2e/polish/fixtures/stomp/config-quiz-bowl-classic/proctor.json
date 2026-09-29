@@ -8,7 +8,7 @@
     "derivedFrom": [
       "e2e/polish/fixtures/stomp/quiz-bowl-classic/proctor.json frame 3 (real, IN_GAME) for gameSettings/playerList/teamList/proctor and the one real full packet object with an id+tossups+bonuses (only ever sent to the real proctor seat)."
     ],
-    "note": "s3.ts's own header (M5 H0 follow-up, pre-dating this file) found that no record-stomp.ts recording contains a CONFIG-phase frame for the seats it checked (quiz-bowl-classic proctor/buzzer). That turned out to be true for quiz-bowl-classic/proctor.json specifically (its earliest GameSessionUpdate, frame 3, is already IN_GAME) but NOT true fleet-wide: quiz-bowl-classic/spectator.json frame 0, auto-proctor/buzzer.json frame 1 and free-for-all/buzzer.json frames 0+2 are all genuinely-real, unsynthesized CONFIG frames (see config-quiz-bowl-classic/{player,spectator}.json and s3.ts's use of auto-proctor/buzzer.json directly for config-owner-view). This file exists only because the *proctor* seat specifically (id+tossups+bonuses packet visibility, one-team/many-team roster shapes) has no real CONFIG frame at all -- every frame below patches matchState back to CONFIG on top of quiz-bowl-classic/proctor.json's real frame 3, changing only the field(s) each frame's own comment in this script names (see build_config_fixtures.py in the M5 session scratchpad, or this note) -- gameSettings, playerList identities, proctor-claim state and the packet's own tossup/bonus content (where kept) are the real recording's, not invented."
+    "note": "s3.ts's own header (M5 H0 follow-up, pre-dating this file) found that no record-stomp.ts recording contains a CONFIG-phase frame for the seats it checked (quiz-bowl-classic proctor/buzzer). That turned out to be true for quiz-bowl-classic/proctor.json specifically (its earliest GameSessionUpdate, frame 3, is already IN_GAME) but NOT true fleet-wide: quiz-bowl-classic/spectator.json frame 0, auto-proctor/buzzer.json frame 1 and free-for-all/buzzer.json frames 0+2 are all genuinely-real, unsynthesized CONFIG frames (see config-quiz-bowl-classic/{player,spectator}.json and s3.ts's use of auto-proctor/buzzer.json directly for config-owner-view). This file exists only because the *proctor* seat specifically (id+tossups+bonuses packet visibility, one-team/many-team roster shapes) has no real CONFIG frame at all -- every frame below patches matchState back to CONFIG on top of quiz-bowl-classic/proctor.json's real frame 3, changing only the field(s) each frame's own comment in this script names (see build_config_fixtures.py in the M5 session scratchpad, or this note) -- gameSettings, playerList identities, proctor-claim state and the packet's own tossup/bonus content (where kept) are the real recording's, not invented. S3-18 r3 follow-up (AY): frame 5 (config-many-teams-12-players) originally split its 12 real players 5/4/2/1 across 4 teams, which never actually exercised a 12+-player single roster (S3-27's own concern). Team 1 now holds all 12 original players verbatim (same ids/names, just regrouped); three new filler players (Morgan/Noor/Oscar, h0-config-filler-08..10) were added so Teams 2-4 still each seat one player, keeping >=2 teams populated. Nothing about the other 5 frames changed."
   },
   "gameSessionId": "01M3MV2203452HWQ345XNGCVY7",
   "playerSessionId": "2efb828e-198a-42dc-bf36-4a62f3ec11b0",
@@ -2082,6 +2082,39 @@
               "gameOwner": false,
               "guest": true,
               "keycloakId": null,
+              "name": "Morgan",
+              "playerId": "h0-config-filler-08",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Noor",
+              "playerId": "h0-config-filler-09",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
+              "name": "Oscar",
+              "playerId": "h0-config-filler-10",
+              "playerMode": "BUZZER",
+              "playerSecret": "",
+              "playerStatus": "DISCONNECTED",
+              "userId": null
+            },
+            {
+              "gameOwner": false,
+              "guest": true,
+              "keycloakId": null,
               "name": "Sam Spectator",
               "playerId": "53713b57-4e75-4816-b962-5a696a3659c9",
               "playerMode": "SPECTATOR",
@@ -2149,13 +2182,7 @@
                   "playerSecret": "",
                   "playerStatus": "DISCONNECTED",
                   "userId": null
-                }
-              ]
-            },
-            {
-              "teamId": "h0-config-team-2",
-              "teamName": "Team 2",
-              "teamPlayers": [
+                },
                 {
                   "gameOwner": false,
                   "guest": true,
@@ -2199,13 +2226,7 @@
                   "playerSecret": "",
                   "playerStatus": "DISCONNECTED",
                   "userId": null
-                }
-              ]
-            },
-            {
-              "teamId": "h0-config-team-3",
-              "teamName": "Team 3",
-              "teamPlayers": [
+                },
                 {
                   "gameOwner": false,
                   "guest": true,
@@ -2227,6 +2248,51 @@
                   "playerSecret": "",
                   "playerStatus": "DISCONNECTED",
                   "userId": null
+                },
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Leo",
+                  "playerId": "h0-config-filler-07",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "h0-config-team-2",
+              "teamName": "Team 2",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Morgan",
+                  "playerId": "h0-config-filler-08",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
+                }
+              ]
+            },
+            {
+              "teamId": "h0-config-team-3",
+              "teamName": "Team 3",
+              "teamPlayers": [
+                {
+                  "gameOwner": false,
+                  "guest": true,
+                  "keycloakId": null,
+                  "name": "Noor",
+                  "playerId": "h0-config-filler-09",
+                  "playerMode": "BUZZER",
+                  "playerSecret": "",
+                  "playerStatus": "DISCONNECTED",
+                  "userId": null
                 }
               ]
             },
@@ -2238,8 +2304,8 @@
                   "gameOwner": false,
                   "guest": true,
                   "keycloakId": null,
-                  "name": "Leo",
-                  "playerId": "h0-config-filler-07",
+                  "name": "Oscar",
+                  "playerId": "h0-config-filler-10",
                   "playerMode": "BUZZER",
                   "playerSecret": "",
                   "playerStatus": "DISCONNECTED",
