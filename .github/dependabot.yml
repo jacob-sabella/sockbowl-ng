@@ -9,3 +9,46 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # M6 ledger decision: Angular 22.2's peer range requires TypeScript
+      # <6.1, so a root TS major/minor bump above 6.0.x must wait for the
+      # matching Angular peer-range update.
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+  - package-ecosystem: "npm"
+    directory: "/e2e"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # M6 ledger decision: e2e's TypeScript is kept aligned with the root
+      # package's Angular-compatible 6.0.x pin (see the root entry above).
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
