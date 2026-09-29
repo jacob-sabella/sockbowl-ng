@@ -3,7 +3,7 @@
 # release as of this upgrade (1.31.x is the mainline branch, not stable); the
 # Debian-based (non-alpine) tag is used deliberately so `apt-get`/gettext-base
 # below keeps working without switching to apk).
-FROM nginx:1.30.5
+FROM nginx:1.31.0
 
 # Install envsubst (part of gettext-base package)
 RUN apt-get update && apt-get install -y gettext-base && rm -rf /var/lib/apt/lists/*
