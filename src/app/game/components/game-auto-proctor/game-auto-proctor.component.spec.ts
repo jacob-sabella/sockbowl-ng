@@ -92,3 +92,74 @@ describe('GameAutoProctorComponent reading placeholder (M5 S1-17)', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.game-proctor')).toBeNull();
   });
 });
+
+/**
+ * M5 S1-32: the buzz control used to sit under the streaming question text
+ * and drift down the page as it grew. `.button-container` (which the
+ * buzz-btn is always inside, whichever control is currently showing) is now
+ * an anchored, sticky footer instead.
+ */
+describe('GameAutoProctorComponent anchored buzz footer (M5 S1-32)', () => {
+  let fixture: ComponentFixture<GameAutoProctorComponent>;
+  let gameSession$: Subject<GameSession>;
+
+  beforeEach(() => {
+    gameSession$ = new Subject<GameSession>();
+    localStorage.removeItem('ap_reader_mode');
+
+    TestBed.configureTestingModule({
+      declarations: [GameAutoProctorComponent],
+      providers: [
+        {
+          provide: GameStateService,
+          useValue: {
+            gameSession$,
+            playerSessionId: 'p1',
+            isSelfOnAnyTeam: () => true,
+            hasCurrentPlayerTeamBuzzed: () => false,
+            isCurrentPlayerGameOwner: () => false,
+            isFreeForAll: () => false,
+            getPlayerNameById: () => undefined,
+            getTeamNameById: () => undefined,
+          },
+        },
+        { provide: SpeechService, useValue: { available: false, speak: jasmine.createSpy('speak'), cancel: jasmine.createSpy('cancel') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameAutoProctorComponent);
+
+    fixture.detectChanges();
+    gameSession$.next({
+      currentMatch: {
+        currentRound: {
+          roundState: RoundState.AWAITING_BUZZ,
+          roundNumber: 1,
+          question: 'A long streaming question that keeps growing as it is read aloud.',
+          buzzList: [],
+        },
+        previousRounds: [],
+        packet: { tossups: [] },
+      },
+      teamList: [],
+    } as unknown as GameSession);
+    fixture.detectChanges();
+  });
+
+  it('keeps the buzz-btn inside the anchored .button-container', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    const footer = root.querySelector('.button-container');
+    expect(footer?.querySelector('.buzz-btn')).not.toBeNull();
+  });
+
+  it('anchors .button-container to the bottom of the card instead of the natural document flow', () => {
+    const footer = (fixture.nativeElement as HTMLElement).querySelector('.button-container') as HTMLElement;
+    expect(getComputedStyle(footer).position).toBe('sticky');
+    expect(getComputedStyle(footer).bottom).toBe('0px');
+  });
+
+  it('gives the buzz-btn at least a 56px tap target', () => {
+    const buzzBtn = (fixture.nativeElement as HTMLElement).querySelector('.buzz-btn') as HTMLElement;
+    expect(parseFloat(getComputedStyle(buzzBtn).minHeight)).toBeGreaterThanOrEqual(56);
+  });
+});

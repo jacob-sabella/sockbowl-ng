@@ -1,3 +1,29 @@
 // Solo plays in the classic proctored card layout; the shared partial carries the
 // look so this surface matches game-proctor.
 @use '../qb-play-card' as *;
+
+// Anchor the buzz control at the bottom of the card (M5 S1-32). Same
+// treatment as game-auto-proctor (see its scss for the full rationale):
+// solo has no dedicated dome (N-1, declined) and keeps a compact control
+// set, but it's anchored the same way so the buzz-btn never drifts as the
+// question streams in.
+.button-container {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.6rem;
+  padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+}
+
+.buzz-btn {
+  // Was 48px (frozen partial); the contract's anchored-footer floor is 56px.
+  min-height: 56px;
+}
+
+@media (max-width: 760px) {
+  .ap-controls .buzz-btn {
+    flex: 1 1 100%;
+  }
+}

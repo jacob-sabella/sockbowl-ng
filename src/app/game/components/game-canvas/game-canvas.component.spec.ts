@@ -376,4 +376,36 @@ describe('GameCanvasComponent', () => {
       expect(root.textContent).not.toContain('Still connecting');
     });
   });
+
+  /**
+   * M5 S1-34: both "Back to lobby" links (the pre-emission connecting state
+   * and the reconnect strip's escalated state) were bare text links with no
+   * reserved tap-target height. Both now reserve at least 44px.
+   */
+  describe('44px back-to-lobby tap targets (M5 S1-34)', () => {
+    it('.canvas-connecting__back reserves at least 44px', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      const back = (fixture.nativeElement as HTMLElement).querySelector('.canvas-connecting__back') as HTMLElement;
+      expect(back).not.toBeNull();
+      expect(parseFloat(getComputedStyle(back).minHeight)).toBeGreaterThanOrEqual(44);
+    });
+
+    it('.reconnect-strip__back reserves at least 44px', () => {
+      jasmine.clock().install();
+      try {
+        const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+        connectionState$.next('reconnecting');
+        fixture.detectChanges();
+        jasmine.clock().tick(15000);
+        fixture.detectChanges();
+
+        const back = (fixture.nativeElement as HTMLElement).querySelector('.reconnect-strip__back') as HTMLElement;
+        expect(back).not.toBeNull();
+        expect(parseFloat(getComputedStyle(back).minHeight)).toBeGreaterThanOrEqual(44);
+      } finally {
+        jasmine.clock().uninstall();
+      }
+    });
+  });
 });

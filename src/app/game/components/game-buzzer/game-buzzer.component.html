@@ -1,23 +1,18 @@
 <!-- Main container for the game buzzer interface -->
-<div class="game-buzzer-container">
-
-  <!-- Player info card: Shown only if there is an active game session -->
-  @if (gameSessionObs | async; as gameSession) {
-    <mat-card class="player-info-card">
-      <mat-card-content class="player-info-content">
-        <!-- Display the current player's name -->
-        <div class="player-name">{{ gameStateService.getCurrentPlayer()?.name }}</div>
-        <!-- Display the name of the team to which the current player belongs -->
-        <div class="player-team">{{ gameStateService.getCurrentPlayerTeam()?.teamName }}</div>
-      </mat-card-content>
-    </mat-card>
-  }
+<div class="game-buzzer-container" [class.game-buzzer-container--reconnecting]="isDisconnected()">
 
   <!-- Buzzer card: Allows players to buzz in during a game -->
   <mat-card class="game-buzzer">
     <mat-card-title>
+      <!-- Seat and team (M5 S1-29): the navbar shows the account name, not the
+           seat name, so this is the only place a player can check which seat
+           and team they're in. One line, truncated (never wrapped), so a long
+           name can't push "Tossup N of M" or grow the reserved title slot. -->
+      <div class="seat-line">{{ gameStateService.getCurrentPlayer()?.name }} · {{ gameStateService.getCurrentPlayerTeam()?.teamName }}</div>
       <!-- "Tossup N of M" (M omitted until the packet size is known), matching solo/auto-proctor -->
-      Tossup {{ gameSession.currentMatch.currentRound.roundNumber }}@if (totalTossups) { <span class="of-total"> of {{ totalTossups }}</span> }
+      <div class="round-line">
+        Tossup {{ gameSession.currentMatch.currentRound.roundNumber }}@if (totalTossups) { <span class="of-total"> of {{ totalTossups }}</span> }
+      </div>
     </mat-card-title>
     <mat-card-content>
       <!-- Timer: part of the top status strip alongside the "Tossup N of M"

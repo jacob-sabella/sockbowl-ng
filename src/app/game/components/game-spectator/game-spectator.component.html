@@ -15,116 +15,122 @@
         </button>
       }
     </header>
-    <!-- Teams Section -->
-    <section class="teams-section" aria-labelledby="teams-heading">
-      <h2 id="teams-heading">
-        <mat-icon aria-hidden="true">groups</mat-icon>
-        Teams
-      </h2>
-      <div class="teams-grid">
-        @for (team of teams; track team) {
-          <mat-card class="team-card">
+    <!-- Round + Teams: Current Round leads (M5 S1-27 — this is the room's
+         projector view, so the live round should be visible first/above the
+         fold, not the roster). `.spectator-main` also carries the >=1024px
+         side-by-side layout, with the round in the wider column. -->
+    <div class="spectator-main">
+      <!-- Current Round Section -->
+      @if (currentRound) {
+        <section class="current-round-section" aria-labelledby="current-round-heading">
+          <h2 id="current-round-heading">
+            <mat-icon aria-hidden="true">article</mat-icon>
+            Current Round ({{ currentRound.roundNumber }})
+          </h2>
+          <mat-card class="current-round-card">
             <mat-card-header>
-              <mat-card-title>{{ team.teamName }}</mat-card-title>
-              <mat-card-subtitle aria-live="polite">Score: {{ getTeamScore(team) }}</mat-card-subtitle>
+              <mat-card-title>{{ currentRound.category }}</mat-card-title>
+              @if (currentRound.subcategory) {
+                <mat-card-subtitle>{{ currentRound.subcategory }}</mat-card-subtitle>
+              }
             </mat-card-header>
             <mat-card-content>
-              <mat-list class="player-list">
-                @for (player of team.teamPlayers; track player) {
-                  <mat-list-item>
-                    <mat-icon matListItemIcon aria-hidden="true">person</mat-icon>
-                    <div matListItemTitle>{{ player.name }}</div>
-                  </mat-list-item>
+              <!-- Question Text: bonus when in the bonus phase, else the tossup (revealing while read) -->
+              <div class="question-text" aria-live="polite" aria-atomic="true" aria-label="Current question">
+                @if (isBonus) {
+                  <div class="bonus-block">
+                    <div class="bonus-head">Bonus for {{ bonusTeamName }} · part {{ bonusPartIndex + 1 }} of {{ bonusPartCount }}</div>
+                    @if (bonusPreamble) { <p class="font-serif bonus-preamble" [innerHTML]="bonusPreamble"></p> }
+                    <p class="font-serif" [innerHTML]="bonusPartQuestion"></p>
+                  </div>
+                } @else if (isReadingPhase) {
+                  <p class="font-serif"><span>{{ revealedText }}</span>@if (!readingComplete) { <span class="reveal-cursor" aria-hidden="true">▍</span> }</p>
+                } @else if (currentRound.question) {
+                  <p class="font-serif" [innerHTML]="currentRound.question"></p>
+                } @else if (currentRound.roundState === RoundState.AWAITING_ANSWER) {
+                  <!-- The question text isn't sent to spectators once a player is
+                       answering; say so instead of a generic empty-state line
+                       that reads as still-loading (M5 S1-28f). -->
+                  <p><em>Question hidden while a player answers.</em></p>
+                } @else {
+                  <p>Waiting for the question.</p>
                 }
-              </mat-list>
+              </div>
+              <!-- Answer status (announced when it changes) -->
+              <div class="answer-region" aria-live="polite" aria-atomic="true">
+                <!-- Answer (only shown when revealed) -->
+                @if (isAnswerVisible()) {
+                  <div class="answer-section">
+                    <div class="answer-revealed">
+                      <mat-icon aria-hidden="true">check_circle</mat-icon>
+                      <span><strong>Answer:</strong> {{ currentRound.answer }}</span>
+                    </div>
+                  </div>
+                }
+                <!-- Answer Hidden Message -->
+                @if (!isAnswerVisible()) {
+                  <div class="answer-hidden">
+                    <mat-icon aria-hidden="true">visibility_off</mat-icon>
+                    <em>Answer hidden until revealed</em>
+                  </div>
+                }
+              </div>
+              <!-- Buzz Status -->
+              @if (hasBuzzes(currentRound)) {
+                <div class="buzz-status" aria-live="polite" aria-atomic="true" aria-label="Buzz activity">
+                  <mat-chip-set>
+                    @for (buzz of currentRound.buzzList; track buzz) {
+                      <mat-chip>
+                        <mat-icon aria-hidden="true">notifications</mat-icon>
+                        {{ getTeamName(buzz.teamId) }} buzzed
+                      </mat-chip>
+                    }
+                  </mat-chip-set>
+                </div>
+              }
+              <!-- Round State Indicator: a plain status label (a dot + text), not a button-styled
+                   chip, so it doesn't visually contradict a plain-text line beside it (M5 S1-19). -->
+              <div class="round-state" aria-live="polite" aria-atomic="true">
+                <span class="round-state-label"
+                  [class.reading]="currentRound.roundState === RoundState.PROCTOR_READING"
+                  [class.awaiting-buzz]="currentRound.roundState === RoundState.AWAITING_BUZZ"
+                  [class.awaiting-answer]="currentRound.roundState === RoundState.AWAITING_ANSWER"
+                  [attr.aria-label]="'Round state: ' + getRoundStateLabel(currentRound.roundState)">
+                  {{ getRoundStateLabel(currentRound.roundState) }}
+                </span>
+              </div>
             </mat-card-content>
           </mat-card>
-        }
-      </div>
-    </section>
-    <!-- Current Round Section -->
-    @if (currentRound) {
-      <section class="current-round-section" aria-labelledby="current-round-heading">
-        <h2 id="current-round-heading">
-          <mat-icon aria-hidden="true">article</mat-icon>
-          Current Round ({{ currentRound.roundNumber }})
+        </section>
+      }
+      <!-- Teams Section -->
+      <section class="teams-section" aria-labelledby="teams-heading">
+        <h2 id="teams-heading">
+          <mat-icon aria-hidden="true">groups</mat-icon>
+          Teams
         </h2>
-        <mat-card class="current-round-card">
-          <mat-card-header>
-            <mat-card-title>{{ currentRound.category }}</mat-card-title>
-            @if (currentRound.subcategory) {
-              <mat-card-subtitle>{{ currentRound.subcategory }}</mat-card-subtitle>
-            }
-          </mat-card-header>
-          <mat-card-content>
-            <!-- Question Text: bonus when in the bonus phase, else the tossup (revealing while read) -->
-            <div class="question-text" aria-live="polite" aria-atomic="true" aria-label="Current question">
-              @if (isBonus) {
-                <div class="bonus-block">
-                  <div class="bonus-head">Bonus for {{ bonusTeamName }} · part {{ bonusPartIndex + 1 }} of {{ bonusPartCount }}</div>
-                  @if (bonusPreamble) { <p class="font-serif bonus-preamble" [innerHTML]="bonusPreamble"></p> }
-                  <p class="font-serif" [innerHTML]="bonusPartQuestion"></p>
-                </div>
-              } @else if (isReadingPhase) {
-                <p class="font-serif"><span>{{ revealedText }}</span>@if (!readingComplete) { <span class="reveal-cursor" aria-hidden="true">▍</span> }</p>
-              } @else if (currentRound.question) {
-                <p class="font-serif" [innerHTML]="currentRound.question"></p>
-              } @else if (currentRound.roundState === RoundState.AWAITING_ANSWER) {
-                <!-- The question text isn't sent to spectators once a player is
-                     answering; say so instead of a generic empty-state line
-                     that reads as still-loading (M5 S1-28f). -->
-                <p><em>Question hidden while a player answers.</em></p>
-              } @else {
-                <p>Waiting for the question.</p>
-              }
-            </div>
-            <!-- Answer status (announced when it changes) -->
-            <div class="answer-region" aria-live="polite" aria-atomic="true">
-              <!-- Answer (only shown when revealed) -->
-              @if (isAnswerVisible()) {
-                <div class="answer-section">
-                  <div class="answer-revealed">
-                    <mat-icon aria-hidden="true">check_circle</mat-icon>
-                    <span><strong>Answer:</strong> {{ currentRound.answer }}</span>
-                  </div>
-                </div>
-              }
-              <!-- Answer Hidden Message -->
-              @if (!isAnswerVisible()) {
-                <div class="answer-hidden">
-                  <mat-icon aria-hidden="true">visibility_off</mat-icon>
-                  <em>Answer hidden until revealed</em>
-                </div>
-              }
-            </div>
-            <!-- Buzz Status -->
-            @if (hasBuzzes(currentRound)) {
-              <div class="buzz-status" aria-live="polite" aria-atomic="true" aria-label="Buzz activity">
-                <mat-chip-set>
-                  @for (buzz of currentRound.buzzList; track buzz) {
-                    <mat-chip>
-                      <mat-icon aria-hidden="true">notifications</mat-icon>
-                      {{ getTeamName(buzz.teamId) }} buzzed
-                    </mat-chip>
+        <div class="teams-grid">
+          @for (team of teams; track team) {
+            <mat-card class="team-card">
+              <mat-card-header>
+                <mat-card-title>{{ team.teamName }}</mat-card-title>
+                <mat-card-subtitle aria-live="polite">Score: {{ getTeamScore(team) }}</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <mat-list class="player-list">
+                  @for (player of team.teamPlayers; track player) {
+                    <mat-list-item>
+                      <mat-icon matListItemIcon aria-hidden="true">person</mat-icon>
+                      <div matListItemTitle>{{ player.name }}</div>
+                    </mat-list-item>
                   }
-                </mat-chip-set>
-              </div>
-            }
-            <!-- Round State Indicator: a plain status label (a dot + text), not a button-styled
-                 chip, so it doesn't visually contradict a plain-text line beside it (M5 S1-19). -->
-            <div class="round-state" aria-live="polite" aria-atomic="true">
-              <span class="round-state-label"
-                [class.reading]="currentRound.roundState === RoundState.PROCTOR_READING"
-                [class.awaiting-buzz]="currentRound.roundState === RoundState.AWAITING_BUZZ"
-                [class.awaiting-answer]="currentRound.roundState === RoundState.AWAITING_ANSWER"
-                [attr.aria-label]="'Round state: ' + getRoundStateLabel(currentRound.roundState)">
-                {{ getRoundStateLabel(currentRound.roundState) }}
-              </span>
-            </div>
-          </mat-card-content>
-        </mat-card>
+                </mat-list>
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
       </section>
-    }
+    </div>
     <!-- Previous Rounds Section -->
     @if (previousRounds && previousRounds.length > 0) {
       <section class="previous-rounds-section" aria-labelledby="previous-rounds-heading">

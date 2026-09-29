@@ -10,11 +10,13 @@
   left: 0;
   right: 0;
   z-index: 80;
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  row-gap: 0.15rem;
+  column-gap: 0.75rem;
   text-align: center;
   font-size: var(--text-sm, 0.875rem);
   font-weight: 600;
@@ -26,8 +28,16 @@
     top: 64px;
   }
 
-  /* A reconnect past 15s gets a way out alongside the escalated wording (M5 S1-31). */
+  /* A reconnect past 15s gets a way out alongside the escalated wording
+     (M5 S1-31). `min-height: 44px` (M5 S1-34: was a bare 24px text link)
+     grows the whole strip to fit it, which is fine here — a taller strip
+     just means more reserved space, never overlap (see the buzzer's own
+     `--reconnecting` reserve). */
   &__back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: var(--spacing-sm, 0.5rem);
     color: inherit;
     text-decoration: underline;
     font-weight: 700;
@@ -49,7 +59,12 @@
   gap: var(--spacing-md, 1rem);
   padding: var(--spacing-md, 1rem);
 
+  /* M5 S1-34: was a bare text link with no reserved tap-target height. */
   &__back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: var(--spacing-sm, 0.5rem);
     color: var(--accent-primary-text, var(--accent-primary));
     font-weight: 600;
     text-decoration: none;

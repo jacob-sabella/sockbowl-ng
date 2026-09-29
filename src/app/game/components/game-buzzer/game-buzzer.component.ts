@@ -315,6 +315,15 @@ export class GameBuzzerComponent implements OnInit {
     }
   }
 
+  /**
+   * True while the socket is down (dropped or reconnecting), so the
+   * container can reserve space for `game-canvas`'s `.reconnect-strip`
+   * instead of letting it float over the card title (M5 S1-04).
+   */
+  isDisconnected(): boolean {
+    return !this.connected();
+  }
+
   /** The name of the player behind the current buzz, if any. */
   private buzzerName(): string | undefined {
     const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;

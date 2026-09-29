@@ -1,3 +1,38 @@
 // Auto-proctor plays in the classic proctored card layout; the shared partial
 // carries the look so this surface matches game-proctor.
 @use '../qb-play-card' as *;
+
+// Anchor the buzz control at the bottom of the card (M5 S1-32). Auto-proctor
+// and solo have no dedicated dome (N-1, declined), so the buzz-btn/
+// answer-form/next-tossup control here is the only buzz cue, and it must
+// never drift as the tossup's question text streams in above it.
+// `.button-container` (frozen partial) already wraps every one of those
+// mutually-exclusive controls, so anchoring the container anchors whichever
+// one is showing. `position: sticky` (not `fixed`) keeps it inside the
+// card's own flow instead of floating a fixed box over other surfaces;
+// `.game-proctor-container`'s `overflow-y: auto` (also the frozen partial)
+// is the nearest scroll container it resolves its offset against, so on a
+// tall/overflowing question this stays pinned to the bottom of the
+// viewport-filling area exactly like a footer bar.
+.button-container {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.6rem;
+  padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+}
+
+.buzz-btn {
+  // Was 48px (frozen partial); the contract's anchored-footer floor is 56px.
+  min-height: 56px;
+}
+
+@media (max-width: 760px) {
+  // Full column width so the anchored footer reads as a fixed target, not a
+  // pill that can still be missed to either side of it.
+  .ap-controls .buzz-btn {
+    flex: 1 1 100%;
+  }
+}

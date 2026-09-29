@@ -452,6 +452,84 @@ describe('GameBuzzerComponent disconnected state (M5 S1-03)', () => {
     expect(component.getBuzzState()).toBe('open');
     expect(buzzButton()?.disabled).toBeFalse();
   });
+
+  /**
+   * M5 S1-04: `game-canvas`'s `.reconnect-strip` is a fixed overlay that sits
+   * above this component. `isDisconnected()` drives a container class that
+   * reserves space for it instead of letting it cover the card title.
+   */
+  it('adds --reconnecting only while the socket is down', () => {
+    fixture.detectChanges();
+    const container = () => (fixture.nativeElement as HTMLElement).querySelector('.game-buzzer-container');
+
+    expect(component.isDisconnected()).toBeFalse();
+    expect(container()?.classList).not.toContain('game-buzzer-container--reconnecting');
+
+    connectionState$.next('reconnecting');
+    fixture.detectChanges();
+    expect(component.isDisconnected()).toBeTrue();
+    expect(container()?.classList).toContain('game-buzzer-container--reconnecting');
+
+    connectionState$.next('connected');
+    fixture.detectChanges();
+    expect(component.isDisconnected()).toBeFalse();
+    expect(container()?.classList).not.toContain('game-buzzer-container--reconnecting');
+  });
+});
+
+/**
+ * M5 S1-29: the navbar shows the account name, not the seat name, so the
+ * buzzer's own top strip is the only place a player can check their seat and
+ * team. The old `.player-info-card` carried this but was hidden
+ * (`display: none`) and dead; it's been replaced with a live seat line.
+ */
+describe('GameBuzzerComponent seat line (M5 S1-29)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+    gameStateService.getCurrentPlayer.and.returnValue({ name: 'Ada' } as any);
+    gameStateService.getCurrentPlayerTeam.and.returnValue({ teamName: 'Team Alpha' } as any);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: GameWebSocketService,
+          useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: new Subject<GameConnectionState>().asObservable() },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1 } },
+    } as unknown as GameSession);
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+  });
+
+  it('shows the current seat and team in the title strip', () => {
+    fixture.detectChanges();
+
+    const seatLine = (fixture.nativeElement as HTMLElement).querySelector('.seat-line');
+    expect(seatLine?.textContent).toContain('Ada');
+    expect(seatLine?.textContent).toContain('Team Alpha');
+  });
+
+  it('no longer renders the dead, hidden .player-info-card', () => {
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.player-info-card')).toBeNull();
+  });
 });
 
 /** M5 S1-22: the dome's rate-limit label ticks down, matching the banner's own countdown. */

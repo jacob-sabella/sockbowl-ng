@@ -3,11 +3,17 @@
 
 .game-buzzer-container {
   box-sizing: border-box;
-  // Fill the viewport but let content scroll on short phones instead of clipping
-  // (buzzer + bonus + timer + team list can exceed the height).
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow-y: auto;
+  // Fixed to exactly the viewport minus the navbar (M5 S1-04 round 3): a
+  // `min-height` let the container grow past one screen and the whole page
+  // scroll — the fx evidence measured 900-1021px pages against an 844px
+  // viewport, with the dome's own bottom edge past the fold. There's no
+  // shared `--navbar-height` token yet (H-09), so this repeats the same
+  // 56/64px break the navbar (`navbar.component.scss`), the stomp banner and
+  // the reconnect strip already use (`game-canvas.component.scss`). No outer
+  // scroll: `.game-buzzer`'s own `min-height: 0` chain (below) lets the team
+  // list absorb whatever the fixed slots don't use instead.
+  height: calc(100dvh - 56px);
+  overflow: hidden;
   background: var(--bg-primary);
   padding: 1rem;
   // Clears the home-indicator / gesture-bar area so the dome (anchored at
@@ -27,6 +33,7 @@
   justify-content: flex-start;
 
   @media (min-width: 600px) {
+    height: calc(100dvh - 64px);
     padding: 2rem;
     padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   }
@@ -38,10 +45,29 @@
     padding: 0.5rem;
     padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
   }
-}
 
-.player-info-card {
-  display: none;
+  // A dropped/reconnecting socket (M5 S1-03) makes `game-canvas`'s own
+  // `.reconnect-strip` appear above this component, fixed under the navbar.
+  // Reserve that strip's own height here instead of letting it float over
+  // the card title (M5 S1-04 round 3 residual: "the reconnecting strip
+  // covers the card title 'Tossup 1'"). `isDisconnected()` mirrors the same
+  // `connectionState$` the strip itself reacts to, so the two always agree
+  // on whether it's showing. 4.5rem clears the strip's worst case — its
+  // escalated copy plus the 44px "Back to lobby" link (M5 S1-34) wrapping to
+  // a second line at narrow widths — with the plain one-line "Reconnecting…"
+  // case well inside it; a real `--reconnect-strip-height` custom property
+  // is F2/H-09 territory.
+  &--reconnecting {
+    padding-top: calc(1rem + 4.5rem);
+
+    @media (min-width: 600px) {
+      padding-top: calc(2rem + 4.5rem);
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      padding-top: calc(0.5rem + 4.5rem);
+    }
+  }
 }
 
 .game-buzzer {
@@ -65,11 +91,12 @@
   box-shadow: var(--shadow-md) var(--shadow-color);
   padding: 1rem;
   // Fixed-slot layout (M5 S1-04): the card fills the height the container
-  // gives it (the container's `min-height: 100dvh` minus its own padding)
-  // instead of sizing to its content, so its children can be arranged as
-  // top status strip / middle team list / bottom-anchored dome. `min-height:
-  // 0` lets a flex child (`mat-card-content`) actually shrink/scroll inside
-  // it rather than being forced to its content's intrinsic height.
+  // gives it (the container's fixed `calc(100dvh - navbar)` minus its own
+  // padding) instead of sizing to its content, so its children can be
+  // arranged as top status strip / middle team list / bottom-anchored dome.
+  // `min-height: 0` lets a flex child (`mat-card-content`) actually
+  // shrink/scroll inside it rather than being forced to its content's
+  // intrinsic height.
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -86,23 +113,53 @@
 
   mat-card-title {
     flex: 0 0 auto;
-    font-size: var(--text-xl) !important;
-    font-weight: 700 !important;
-    color: var(--text-primary) !important;
+    // Two lines (M5 S1-29): the seat/team line above "Tossup N of M", each
+    // sized on its own instead of the whole title block sharing one size.
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
     margin-bottom: 1rem !important;
     padding-bottom: 0.75rem !important;
     border-bottom: 1px solid var(--border-subtle);
-    text-align: center;
     overflow-wrap: break-word;
 
-    @media (min-width: 600px) {
-      font-size: var(--text-2xl) !important;
-    }
-
     @media (orientation: landscape) and (max-height: 500px) {
-      font-size: var(--text-base) !important;
       margin-bottom: 0.5rem !important;
       padding-bottom: 0.4rem !important;
+    }
+
+    .seat-line {
+      // `align-self: stretch` (the parent centers its other children by
+      // shrink-wrapping them) gives this line the card's actual width to
+      // truncate against, so a long seat/team name ellipsizes instead of
+      // widening the card at 280px (M5 S1-04 FIRST VIEWPORT).
+      align-self: stretch;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .round-line {
+      max-width: 100%;
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: center;
+
+      @media (min-width: 600px) {
+        font-size: var(--text-2xl);
+      }
+
+      @media (orientation: landscape) and (max-height: 500px) {
+        font-size: var(--text-base);
+      }
     }
 
     .of-total {
