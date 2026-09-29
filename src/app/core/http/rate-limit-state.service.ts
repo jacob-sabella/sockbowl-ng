@@ -36,7 +36,14 @@ export class RateLimitStateService {
       return;
     }
     const until = this.untilSignal(policy);
-    const target = Date.now() + seconds * 1000;
+    // Refresh `now` before computing the target: it's only otherwise
+    // updated once a second by the ticking interval (or not at all, before
+    // the first cooldown ever starts it), so a stale `now()` read right
+    // after this call can make `cooldown()` overreport by up to a second
+    // (the intermittent "Expected 6 to be 5" flake).
+    const nowMs = Date.now();
+    this.now.set(nowMs);
+    const target = nowMs + seconds * 1000;
     // Never shorten an existing cooldown (e.g. a stale, slower response
     // arriving after a fresher, shorter one already started the clock).
     if (target > until()) {
