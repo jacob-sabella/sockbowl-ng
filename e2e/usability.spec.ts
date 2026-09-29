@@ -154,13 +154,25 @@ const STATIC_SCREENS: Screen[] = [
     name: 'landing',
     go: async (p) => { await p.goto(APP_URL, { waitUntil: 'domcontentloaded' }); await settle(p); },
     controls: (p) => [
-      { label: 'host', loc: p.getByRole('button', { name: /Host a match/i }) },
+      { label: 'host', loc: p.getByRole('button', { name: /New game/i }) },
       { label: 'join', loc: p.getByRole('button', { name: /Join with a code/i }) },
     ],
   },
   {
     name: 'create-form',
-    go: async (p) => { await p.goto(APP_URL, { waitUntil: 'domcontentloaded' }); await settle(p); await p.getByRole('button', { name: /Host a match/i }).click(); await settle(p); },
+    // M5V1-05: "Host a match" was replaced by a two-step flow — "New game"
+    // opens a mode picker, and only "Proctored match" reaches the form with
+    // the Game Mode select, name field and Create button this screen checks
+    // (Solo/Auto-judged/Free for all quick-launch straight into a match with
+    // no form at all).
+    go: async (p) => {
+      await p.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+      await settle(p);
+      await p.getByRole('button', { name: /New game/i }).click();
+      await settle(p);
+      await p.getByRole('button', { name: /Proctored match/i }).click();
+      await settle(p);
+    },
     controls: (p) => [
       // Measure the whole form field (the real tap area), not the inner trigger.
       { label: 'game-mode', loc: p.locator('mat-form-field').first() },
@@ -224,8 +236,12 @@ const STATIC_SCREENS: Screen[] = [
       errs.push(...(await checkOverflow(page)));
       for (const c of [
         { label: 'find-packet', loc: page.getByRole('button', { name: /Find a Packet/i }) },
-        { label: 'start-game', loc: page.getByRole('button', { name: /Start Game/i }) },
-        { label: 'join-team-1', loc: page.getByRole('button', { name: /Join Team 1/i }) },
+        // M5V1-05: renamed "Start Game" -> "Start Match". The old "join-team-1"
+        // check is dropped: S3-09 means a proctor is never offered a seat to
+        // join on either team (!isSelfOnTeam alone used to gate it), so this
+        // is the same page proving that control genuinely isn't there, not a
+        // stale selector to chase.
+        { label: 'start-game', loc: page.getByRole('button', { name: /Start Match/i }) },
       ]) errs.push(...(await checkControl(page, c.loc, c.label, mobile)));
       errs.push(...(await checkReadableText(page)));
       await ctx.close();
@@ -295,7 +311,7 @@ const STATIC_SCREENS: Screen[] = [
   test('primary control is focusable and :focus-visible styling ships', async ({ page }) => {
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await settle(page);
-    const btn = page.getByRole('button', { name: /Host a match/i });
+    const btn = page.getByRole('button', { name: /New game/i });
     await btn.focus();
     await expect(btn).toBeFocused();
     const hasFocusVisible = await page.evaluate(() => {
