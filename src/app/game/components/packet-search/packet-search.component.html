@@ -399,25 +399,20 @@
             <!-- Form - hidden when generating -->
             @if (!isGenerating) {
               <div class="generate-form">
-                <!-- FF3 fix 2 (finish review #3): a visible, always-shown
-                     scroll affordance at the top of the tab, where it's seen
-                     without having to scroll first (a `position: sticky`
-                     cue at the fold turned out to sit inside Material's own
-                     `.mat-mdc-tab-body-content`, which is `overflow:
-                     hidden` — a non-visible-but-still-clipping ancestor
-                     that breaks sticky's containing-block chain up to the
-                     dialog's real scroll container; overriding Material's
-                     internals here risked the tab-switch animation). This
-                     tab still doesn't fit inside the dialog's one scroll
-                     container at 1440x900 even after S3-30/S3-37's and this
-                     round's own shrinking (contract FIRST VIEWPORT r3:
-                     "nothing ... is cut off at any viewport" — reachable by
-                     the one scroll, but nothing was showing that it needed
-                     to be). -->
-                <p class="generate-form__scroll-cue">
-                  <mat-icon aria-hidden="true">unfold_more</mat-icon>
-                  This tab scrolls — Generate and Advanced options are further down.
-                </p>
+                <!-- FF4 fix 2 (finish review #4, S3-37): the FF3 top-of-tab
+                     scroll-cue line is gone — the finish review's own
+                     regression note on it ("shows even on a taller viewport
+                     where nothing scrolls") was correct, and a `position:
+                     sticky` cue was already ruled out (it sits inside
+                     Material's own `overflow: hidden` `.mat-mdc-tab-body-content`,
+                     a non-visible-but-still-clipping ancestor that breaks
+                     sticky's containing-block chain up to the dialog's real
+                     scroll container). Instead the Context field is now kept
+                     off the 1440x900 fold by actually tightening the rhythm
+                     above it (dynamic subscript sizing on Topic/Context so
+                     each field's unused hint gutter collapses to 0, plus
+                     tighter gaps in this form and the banner below) rather
+                     than describing the clip with a caption. -->
 
                 <!-- Fail-closed (D12) / quota (D10) banner (S3-02): persistent,
                      names the reason and the reset time when known, and points
@@ -457,7 +452,7 @@
                   (modelChange)="onGenerateModelChange($event)"
                   ></app-ai-key-picker>
 
-                <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
+                <mat-form-field class="topic-field" appearance="outline" floatLabel="always" subscriptSizing="dynamic">
                   <mat-label>Topic</mat-label>
                   <input
                     matInput
@@ -472,10 +467,12 @@
                      largest single contributor to this field landing at the
                      dialog's fold at 1440x900 (finish review r2/r3). One
                      shorter example and one fewer row keeps the field just
-                     as usable while shrinking its own footprint; the
-                     scroll cue at the top of this tab (`.generate-form__scroll-cue`
-                     above) covers whatever the freed room still doesn't. -->
-                <mat-form-field class="context-field" appearance="outline" floatLabel="always">
+                     as usable while shrinking its own footprint.
+                     FF4 fix 2 (finish review #4): `subscriptSizing="dynamic"`
+                     here and on Topic above collapses each field's reserved
+                     hint gutter to 0 since neither ever shows a hint or
+                     error, which is most of what still moved the fold. -->
+                <mat-form-field class="context-field" appearance="outline" floatLabel="always" subscriptSizing="dynamic">
                   <mat-label>Context (Optional)</mat-label>
                   <textarea
                     matInput

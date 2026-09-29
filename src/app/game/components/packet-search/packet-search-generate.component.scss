@@ -15,7 +15,9 @@
   // FF1 fix 2: was 1rem — one of three candidates tightened so the AI tab's
   // Context field isn't sliced at the scroll edge at 1440x900 (contract
   // FIRST VIEWPORT r3: "not cut off at any viewport").
-  gap: 0.75rem;
+  // FF4 fix 2 (finish review #4): tightened again, 0.75rem -> 0.5rem, as
+  // part of clearing the fold entirely rather than just narrowing it.
+  gap: 0.5rem;
 
   // Validation error banner
   .validation-error {
@@ -56,8 +58,11 @@
     grid-template-columns: auto 1fr;
     align-items: start;
     column-gap: 0.6rem;
-    row-gap: 0.6rem;
-    padding: 0.75rem 1rem;
+    // FF4 fix 2 (finish review #4): row-gap and padding both trimmed
+    // slightly (0.6rem/0.75rem 1rem -> 0.5rem/0.6rem 0.9rem) as part of the
+    // same fold-clearing pass as the form's own gaps below.
+    row-gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
     background: color-mix(in srgb, var(--warning) 12%, var(--surface));
     border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
     border-radius: var(--radius-md);
@@ -101,25 +106,14 @@
   // `app-ai-key-picker`'s own internal layout (including its Remember row)
   // is frozen (F1/Must keep), so this is the space this component controls
   // around it.
+  // FF4 fix 2 (finish review #4): tightened again, 0.75rem -> 0.5rem, as
+  // part of clearing the Context field of the 1440x900 fold entirely
+  // (together with the dynamic subscript sizing on Topic/Context in the
+  // HTML, which is most of the rest).
   &__fields {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  // FF3 fix 2 (finish review #3): see the HTML's own comment on this
-  // element for why it's a plain top-of-tab caption rather than a
-  // scroll-tracked cue.
-  &__scroll-cue {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 0 0 0.25rem;
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-    font-weight: 500;
-
-    mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; flex-shrink: 0; }
+    gap: 0.5rem;
   }
 
   // Everything the banner above locks out while it's showing (S3-02).
