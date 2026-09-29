@@ -83,6 +83,25 @@
       padding-top: calc(0.5rem + 4.5rem);
     }
   }
+
+  // `app-stomp-error-banner` (M5 FF1 material_fixes #3): a fixed overlay one
+  // level up in `game-canvas`, under the same navbar, with a shorter worst
+  // case than the reconnect strip (icon + one line of text + a "Try again in
+  // Ns" clause + a close button, no wrapping back-link) — 3.5rem clears it
+  // with room to spare. `bannerActive` mirrors the banner's own auto-hide
+  // window (see the `@Input` doc), so this reserves space for exactly as
+  // long as the banner would normally be up.
+  &--banner {
+    padding-top: calc(1rem + 3.5rem);
+
+    @media (min-width: 600px) {
+      padding-top: calc(2rem + 3.5rem);
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      padding-top: calc(0.5rem + 3.5rem);
+    }
+  }
 }
 
 .game-buzzer {
@@ -105,6 +124,16 @@
   // (M5 S1-28a); `--shadow-md` keeps the depth without that mismatch.
   box-shadow: var(--shadow-md) var(--shadow-color);
   padding: 1rem;
+
+  // Trims the card's own inline padding at the 280px floor (M5 FF1
+  // material_fixes #1): freeing that 1rem per side back up is what lets a
+  // 200px+ dome (`min(72vw, 240px)` = 201.6px at 280px) actually clear the
+  // card's own content box with room to spare, on top of the flex-shrink
+  // fix above.
+  @media (max-width: 320px) {
+    padding: 0.5rem;
+  }
+
   // Fixed-slot layout (M5 S1-04): the card fills the height the container
   // gives it (the container's fixed `calc(100dvh - navbar)` minus its own
   // padding) instead of sizing to its content, so its children can be
@@ -222,16 +251,20 @@
     color: var(--text-primary);
     overflow-wrap: break-word;
 
+    // `--text-primary`, not `--success-text`/`--info-text` (M5 FF1
+    // material_fixes #4, S1-08/S1-23): a `*-text` token measured under AA on
+    // its own 10% tint (H-08, still open at F2), so the stripe and tint
+    // alone carry the tone here, same as the bonus info block below.
     &--self {
       box-shadow: inset 4px 0 0 0 var(--success);
       background: color-mix(in srgb, var(--success) 10%, var(--surface));
-      color: var(--success-text);
+      color: var(--text-primary);
     }
 
     &--other {
       box-shadow: inset 4px 0 0 0 var(--info);
       background: color-mix(in srgb, var(--info) 10%, var(--surface));
-      color: var(--info-text);
+      color: var(--text-primary);
     }
 
     &--team-locked {
@@ -250,6 +283,16 @@
       // Large, round, unmissable touch target that still fits a 360px phone.
       width: min(72vw, 240px);
       height: min(72vw, 240px);
+      // Locks width and height together (M5 FF1 material_fixes #1): at
+      // 280px this flex item (row-direction `.buzz-button-container`) used
+      // to flex-shrink its width below the `min(72vw, 240px)` above while
+      // its height (the cross axis, never shrunk by `flex-shrink`) held —
+      // measured 182x202, an ellipse under the 200px floor. `flex-shrink: 0`
+      // stops the shrink outright; `aspect-ratio: 1` is a second, redundant
+      // guarantee that width and height move together even if some other
+      // container ever constrains one axis again.
+      flex-shrink: 0;
+      aspect-ratio: 1;
       min-width: 44px;
       min-height: 44px;
       padding: 1rem;
@@ -449,13 +492,16 @@
   // ---- Bonus section ---------------------------------------------------------
   // One heading + one info block (who/part/phase) + a plain score line,
   // instead of four nested bordered boxes (M5 S1-12).
+  // Flattened into the play card (M5 FF1 material_fixes #6): this used to
+  // also carry its own `background`/`border`/`border-radius`/`padding`
+  // panel around the stripe info block below, which is a card inside a
+  // card (the detector's `nested-cards` floor rule). Only the stripe info
+  // block, the timer and the score line carry any visual weight now; this
+  // wrapper is layout-only (the anchoring/spacing that made it `flex: 0 0
+  // auto` in the first place).
   .bonus-section {
     flex: 0 0 auto;
     margin: 1.5rem 0;
-    padding: 1.25rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
 
     @media (orientation: landscape) and (max-height: 500px) {
       flex: 1 1 55%;
@@ -587,5 +633,25 @@
     flex: 1 1 45%;
     min-width: 0;
     margin: 0;
+  }
+
+  // Tablet and desktop (M5 FF1 material_fixes #7, ceiling #2): this box
+  // already grows via `flex: 1 1 auto` above to fill whatever height the
+  // top strip and the buzzer/bonus/round-complete slot leave over, but the
+  // roster it wraps stays top-aligned inside that taller box — on a short
+  // roster at >=760px that read as a ~300px dead band between the last team
+  // row and the outcome strip (the self state, mainly, since its extra
+  // outcome-strip line makes the buzzer slot taller and the team-list box
+  // shorter still without this). Centering the roster's own content within
+  // its box closes that band without moving the dome out of its fixed
+  // bottom-third slot. Scoped to >=760px and >=501px tall (never the
+  // cramped landscape-phone row layout just above, which caps at 500px
+  // tall): at mobile portrait widths the roster's real content routinely
+  // exceeds the box (the point of `overflow-y: auto` above), so centering
+  // has no visible effect there.
+  @media (min-width: 760px) and (min-height: 501px) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 }

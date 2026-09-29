@@ -1,5 +1,7 @@
 <!-- Main container for the game buzzer interface -->
-<div class="game-buzzer-container" [class.game-buzzer-container--reconnecting]="isDisconnected()">
+<div class="game-buzzer-container"
+  [class.game-buzzer-container--reconnecting]="isDisconnected()"
+  [class.game-buzzer-container--banner]="bannerActive">
 
   <!-- Buzzer card: Allows players to buzz in during a game -->
   <mat-card class="game-buzzer">

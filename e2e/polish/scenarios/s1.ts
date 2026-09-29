@@ -102,7 +102,12 @@ function withEscalatedClock(base: CaptureState, forwardMs = 16_000): CaptureStat
     },
     afterGoto: async (page: Page) => {
       await baseAfter?.(page);
-      await page.clock.fastForward(forwardMs);
+      // `runFor` (not `fastForward`, which "fires due timers at most once"
+      // per Playwright's own doc — leaving a recurring `setInterval`-driven
+      // reveal, like single-player's word-by-word text, only a handful of
+      // ticks in) walks the clock forward and fires every due callback along
+      // the way, so a repeating interval actually completes.
+      await page.clock.runFor(forwardMs);
       await page.waitForTimeout(50); // let the resulting change detection paint
     },
   };
@@ -143,8 +148,13 @@ const states: CaptureState[] = [
   // window, so the banner — not a live, unaffected dome — is what's on
   // screen; the dome underneath stays fully live (`errors` never touches
   // `currentBuzz`), which is exactly the point being shown.
+  // `policy: 'stomp-buzz'` (M5 FF1 material_fixes #2): without it, `errors$`'s
+  // RATE_LIMITED handler (`game-buzzer.component.ts`'s `errors$` subscription
+  // checks `error.policy === 'stomp-buzz'`) never locks the dome, so this
+  // capture used to show a live "BUZZ!" dome directly under a banner that
+  // says "Try again in 4s" — the dome contradicting the banner it sits below.
   stompStateWithExtra('buzzer-rate-limited-soft-drop', 'quiz-bowl-classic', 'buzzer', 3,
-    { target: 'errors', body: { code: 'RATE_LIMITED', message: 'Buzzes are coming in too fast — try again in a few seconds.', retryAfterSeconds: 4 }, delayMs: 300 }),
+    { target: 'errors', body: { code: 'RATE_LIMITED', policy: 'stomp-buzz', message: 'Buzzes are coming in too fast — try again in a few seconds.', retryAfterSeconds: 4 }, delayMs: 300 }),
   // Fatal: a real STOMP ERROR frame (kind: 'error') — FATAL_STOMP_CODES.has('BANNED') in stomp-errors.ts.
   stompStateWithExtra('buzzer-fatal-error-banned', 'quiz-bowl-classic', 'buzzer', 3,
     { target: 'self', kind: 'error', body: { code: 'BANNED', message: 'Your account is banned from playing.' }, delayMs: 300 }),
@@ -158,6 +168,42 @@ const states: CaptureState[] = [
   // AUTO_PROCTOR's BONUS_PENDING moment is the more distinctive of the two
   // to showcase (the one wire state real QUIZ_BOWL_CLASSIC never reaches).
   stompState('auto-proctor-free-for-all', 'auto-proctor', 'buzzer', 12),
+
+  // S1-32 (P1) evidence gap (M5 FF1 material_fixes #5): neither proctorless
+  // capture above actually shows the FIRST VIEWPORT case — question fully
+  // revealed, anchored buzz control on screen, nobody buzzed yet.
+  // `auto-proctor-free-for-all` never reaches AWAITING_BUZZ in the real
+  // recording at all (this fixture's bot buzzes 4/19 words in, every round,
+  // straight from PROCTOR_READING to AWAITING_ANSWER); `single-player-in-game`
+  // stops on a later GameSessionUpdate that wholesale-replaces `currentRound`
+  // with an empty `question` (an unrelated get-game reply), before its own
+  // earlier RoundUpdate's full text ever gets a chance to render.
+  //
+  // Auto-proctor: patches the one PROCTOR_READING frame's `revealedWordCount`
+  // up to its own real `totalWordCount`, and `question` to the exact full
+  // text the SAME real round's own later COMPLETED frame sends (frame 60 of
+  // this fixture) — nothing invented, just that round's own already-recorded
+  // full text, shown at the moment before the bot's near-instant buzz
+  // instead of after it.
+  stompStateWithPatch('auto-proctor-question-revealed', 'auto-proctor', 'buzzer', 6, body => {
+    const gs = body['gameSession'] as Record<string, unknown> | undefined;
+    const match = gs?.['currentMatch'] as Record<string, unknown> | undefined;
+    const round = match?.['currentRound'] as Record<string, unknown> | undefined;
+    if (round) {
+      round['revealedWordCount'] = round['totalWordCount'];
+      round['question'] = 'Placeholder tossup 1 (M5 H0 AUTO_PROCTOR), for the M5 H0 STOMP recorder; for 10 points, name this synthetic thing.';
+    }
+  }, { viewports: ['mobile'] }),
+  // Solo: the real RoundUpdate at index 5 already carries the round's full
+  // question text (solo reveals it client-side, word by word, from that
+  // full text — the server never withholds it, unlike auto-proctor above).
+  // A faked page clock just fast-forwards past the ~6s client reveal timer
+  // (19 words at the default reading speed) instead of a real wait per
+  // viewport x theme run.
+  withEscalatedClock(
+    stompState('single-player-question-revealed', 'single-player', 'buzzer', 5, { viewports: ['mobile'] }),
+    6_500,
+  ),
 
   // Match summary: only the *proctor* fixture ever issued its own get-game
   // refresh (driveFullMatch polls through the proctor bot), so it's the only

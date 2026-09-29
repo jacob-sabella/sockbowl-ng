@@ -11,6 +11,7 @@ import { GameConnectionState, GameWebSocketService } from '../../services/game-w
 import { AuthService } from '../../../core/auth/auth.service';
 import { gameJoinStorageKey, saveGameJoin } from '../../services/game-join-storage';
 import { StompError } from '../../models/sockbowl/sockbowl-interfaces';
+import { NON_FATAL_BANNER_MS } from '../stomp-error-banner/stomp-error-banner.component';
 
 describe('GameCanvasComponent', () => {
   let params$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
@@ -182,6 +183,55 @@ describe('GameCanvasComponent', () => {
     expect(component.latestStompError?.code).toBe('RATE_LIMITED');
     expect(router.navigate).not.toHaveBeenCalled();
     expect(snackBar.open).not.toHaveBeenCalled();
+  });
+
+  /**
+   * M5 FF1 material_fixes #3: `bannerActive` reserves the stomp-error-
+   * banner's slot in `app-game-buzzer` (an additive input on that
+   * component, not a change to the banner's own frozen API), for as long as
+   * the banner's own `NON_FATAL_BANNER_MS` auto-hide window.
+   */
+  describe('bannerActive (M5 FF1 material_fixes #3)', () => {
+    beforeEach(() => jasmine.clock().install());
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('is set on a non-fatal error and clears after the banner\'s own auto-hide window', () => {
+      const component = start({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      expect(component.bannerActive).toBeFalse();
+
+      errors$.next({ code: 'RATE_LIMITED', message: 'slow down', fatal: false });
+      expect(component.bannerActive).toBeTrue();
+
+      jasmine.clock().tick(NON_FATAL_BANNER_MS - 1);
+      expect(component.bannerActive).toBeTrue();
+
+      jasmine.clock().tick(1);
+      expect(component.bannerActive).toBeFalse();
+    });
+
+    it('restarts the window on a second non-fatal error', () => {
+      const component = start({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      errors$.next({ code: 'RATE_LIMITED', message: 'slow down', fatal: false });
+      jasmine.clock().tick(NON_FATAL_BANNER_MS - 1000);
+      errors$.next({ code: 'RATE_LIMITED', message: 'slow down again', fatal: false });
+      jasmine.clock().tick(NON_FATAL_BANNER_MS - 1000);
+
+      expect(component.bannerActive).toBeTrue();
+
+      jasmine.clock().tick(1000);
+      expect(component.bannerActive).toBeFalse();
+    });
+
+    it('stays set (no auto-hide) for a fatal error', () => {
+      const component = start({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      errors$.next({ code: 'INTERNAL', message: 'boom', fatal: true });
+      jasmine.clock().tick(NON_FATAL_BANNER_MS * 10);
+
+      expect(component.bannerActive).toBeTrue();
+    });
   });
 
   it('leaves the game in GameStateService when the canvas is destroyed (NG-R4-02)', () => {

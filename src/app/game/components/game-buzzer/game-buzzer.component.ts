@@ -1,4 +1,4 @@
-import {Component, DestroyRef, HostListener, inject, OnInit, ChangeDetectionStrategy, signal} from '@angular/core';
+import {Component, DestroyRef, HostListener, inject, Input, OnInit, ChangeDetectionStrategy, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Observable} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
@@ -39,6 +39,16 @@ export type BuzzState = 'open' | 'pending' | 'self' | 'other' | 'teamLocked' | '
 export class GameBuzzerComponent implements OnInit {
   gameStateService = inject(GameStateService);
   private gameWebSocketService = inject(GameWebSocketService);
+
+  /**
+   * True while `game-canvas`'s stomp-error-banner is expected to be on
+   * screen (M5 FF1 material_fixes #3): reserves the banner's own slot in
+   * this container the same way `isDisconnected()` reserves one for the
+   * reconnect strip, so a rate-limit (or other non-fatal) banner never
+   * covers the seat line and "Tossup N of M" title at 390px. Additive input
+   * on this component, not a change to the banner's own frozen API.
+   */
+  @Input() bannerActive = false;
 
   protected readonly RoundState = RoundState;
 

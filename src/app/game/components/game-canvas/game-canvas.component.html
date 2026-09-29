@@ -47,7 +47,11 @@
     <!-- Buzzer component -->
     @if (shouldShowBuzzerComponent()) {
       <div>
-        <app-game-buzzer></app-game-buzzer>
+        <!-- `bannerActive` (M5 FF1 material_fixes #3): an additive input on
+             our own component, not the frozen stomp-error-banner API, so
+             the buzzer can reserve the banner's slot the same way it
+             already reserves one for `.reconnect-strip`. -->
+        <app-game-buzzer [bannerActive]="bannerActive"></app-game-buzzer>
       </div>
     }
     <!-- Spectator component -->

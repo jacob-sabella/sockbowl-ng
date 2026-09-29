@@ -497,6 +497,28 @@ describe('GameBuzzerComponent disconnected state (M5 S1-03)', () => {
     expect(component.isDisconnected()).toBeFalse();
     expect(container()?.classList).not.toContain('game-buzzer-container--reconnecting');
   });
+
+  /**
+   * M5 FF1 material_fixes #3: `game-canvas`'s stomp-error-banner is also a
+   * fixed overlay above this component. `bannerActive` (an additive input,
+   * fed by `game-canvas` from the same `errors$` the banner itself reads)
+   * drives a container class that reserves space for it too, the same way
+   * `--reconnecting` does above.
+   */
+  it('adds --banner only while bannerActive is set', () => {
+    fixture.detectChanges();
+    const container = () => (fixture.nativeElement as HTMLElement).querySelector('.game-buzzer-container');
+
+    expect(container()?.classList).not.toContain('game-buzzer-container--banner');
+
+    component.bannerActive = true;
+    fixture.detectChanges();
+    expect(container()?.classList).toContain('game-buzzer-container--banner');
+
+    component.bannerActive = false;
+    fixture.detectChanges();
+    expect(container()?.classList).not.toContain('game-buzzer-container--banner');
+  });
 });
 
 /**

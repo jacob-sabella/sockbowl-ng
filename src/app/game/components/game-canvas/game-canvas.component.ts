@@ -11,6 +11,7 @@ import {GameConnectionState, GameWebSocketService, SocketCredentials} from "../.
 import {clearGameJoin, loadGameJoin, saveGameJoin} from "../../services/game-join-storage";
 import {describeStompError} from "../../models/stomp-errors";
 import {AuthService} from "../../../core/auth/auth.service";
+import {NON_FATAL_BANNER_MS} from "../stomp-error-banner/stomp-error-banner.component";
 
 /** Route matrix params that must never stay in the address bar. */
 const SECRET_ROUTE_PARAMS = ['playerSecret', 'accessToken'];
@@ -47,6 +48,23 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
 
   /** Latest socket error, shown by the stomp-error-banner. */
   latestStompError: StompError | null = null;
+
+  /**
+   * True while the stomp-error-banner is expected to still be on screen
+   * (M5 FF1 material_fixes #3): mirrors its own `NON_FATAL_BANNER_MS`
+   * auto-hide window so a child like `app-game-buzzer` can reserve the
+   * banner's slot in its own fixed-height layout, the same way it already
+   * reserves one for the `.reconnect-strip` — without adding anything to
+   * the banner's own frozen component API (this is tracked here, from the
+   * same `errors$` the banner input is fed from, not read back from it).
+   * Doesn't mirror the banner's own hover/focus pause (an internal detail
+   * of that component), so on the rare capture or session where a pointer
+   * parks on the banner past 5s, the reserved slot can close a beat before
+   * the banner does; the banner is still an overlay, so nothing gets
+   * covered even then — a minor, disclosed residual.
+   */
+  bannerActive = false;
+  private bannerActiveTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * The socket's connection lifecycle (M5 S1-03), for a non-fatal
@@ -111,7 +129,33 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
 
   /** Leaving the canvas means leaving this game seat (NG-R4-02). */
   ngOnDestroy(): void {
+    this.clearBannerActiveTimer();
     this.gameStateService.leaveGame();
+  }
+
+  /**
+   * Marks the banner slot reserved for as long as the banner itself would
+   * be on screen (M5 FF1 material_fixes #3): the banner's own
+   * `NON_FATAL_BANNER_MS` window for a non-fatal error, or indefinitely for
+   * a fatal one (which stays until dismissed — moot in practice, since a
+   * fatal error also navigates away above).
+   */
+  private reserveBannerSlot(fatal: boolean): void {
+    this.clearBannerActiveTimer();
+    this.bannerActive = true;
+    if (!fatal) {
+      this.bannerActiveTimer = setTimeout(() => {
+        this.bannerActiveTimer = null;
+        this.bannerActive = false;
+      }, NON_FATAL_BANNER_MS);
+    }
+  }
+
+  private clearBannerActiveTimer(): void {
+    if (this.bannerActiveTimer) {
+      clearTimeout(this.bannerActiveTimer);
+      this.bannerActiveTimer = null;
+    }
   }
 
   /**
@@ -156,6 +200,7 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
    */
   private onStompError(error: StompError): void {
     this.latestStompError = error;
+    this.reserveBannerSlot(!!error.fatal);
     if (!error.fatal) {
       return;
     }
