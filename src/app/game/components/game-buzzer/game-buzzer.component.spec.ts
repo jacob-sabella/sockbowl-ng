@@ -294,15 +294,37 @@ describe('GameBuzzerComponent buzz state (M5 S1-01)', () => {
     expect(outcomeStrip()).toBeNull();
   });
 
-  it('is self when this seat holds the buzz: dome stays mounted and disabled, distinct label and strip', () => {
+  it('is self when this seat holds the buzz: dome stays mounted, a success dome (not locked), distinct label and strip (M5 S1-24)', () => {
     session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: SELF_ID, teamId: TEAM_SELF }));
     fixture.detectChanges();
 
     expect(component.getBuzzState()).toBe('self');
     expect(buzzButton()).not.toBeNull(); // mounted through AWAITING_ANSWER, not just AWAITING_BUZZ
-    expect(buzzButton()?.disabled).toBeTrue();
-    expect(buzzButton()?.textContent).toContain("You're in, answer!");
+    // Not natively disabled (stays focusable and announced), but not
+    // clickable again either: `aria-disabled` carries the state instead.
+    expect(buzzButton()?.disabled).toBeFalse();
+    expect(buzzButton()?.getAttribute('aria-disabled')).toBe('true');
+    expect(buzzButton()?.classList).toContain('is-self');
+    expect(buzzButton()?.classList).not.toContain('is-locked');
+    expect(buzzButton()?.textContent).toContain('Answer!');
     expect(outcomeStrip()?.textContent).toContain('You buzzed. Answer out loud.');
+  });
+
+  it('does not send a second buzz from clicking the already-won self dome (M5 S1-24)', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: SELF_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+
+    component.onBuzzClick();
+
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+
+  it('marks other/teamLocked/rateLimited domes .is-locked, but not open, pending or self', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_OTHER }));
+    fixture.detectChanges();
+
+    expect(buzzButton()?.classList).toContain('is-locked');
+    expect(buzzButton()?.classList).not.toContain('is-self');
   });
 
   it('is teamLocked when a teammate holds the buzz: dome muted, strip names the teammate', () => {
@@ -724,5 +746,205 @@ describe('GameBuzzerComponent pending buzz (M5 S1-25)', () => {
     component.onBuzzClick();
 
     expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * M5 S1-07: Space or Enter buzzes from anywhere on the page while the dome
+ * is open, matching PRODUCT.md ("Space or Enter to buzz").
+ */
+describe('GameBuzzerComponent global Space/Enter buzz (M5 S1-07)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function sessionIn(roundState: RoundState): GameSession {
+    return {
+      currentMatch: { currentRound: { roundState, roundNumber: 1 } },
+    } as unknown as GameSession;
+  }
+
+  function dispatchKey(key: string, target: EventTarget = document.body, extra: Partial<KeyboardEventInit> = {}): void {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra });
+    target.dispatchEvent(event);
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date());
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+  });
+
+  it('buzzes once on a document-level Space press', () => {
+    dispatchKey(' ');
+    expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+
+  it('buzzes once on a document-level Enter press', () => {
+    dispatchKey('Enter');
+    expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores Space typed into a text input', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    try {
+      dispatchKey(' ', input);
+      expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+    } finally {
+      input.remove();
+    }
+  });
+
+  it('ignores a repeated (held-down) key', () => {
+    dispatchKey(' ', document.body, { repeat: true });
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+
+  it('ignores Space while locked out by a rate limit', () => {
+    component.buzzLocked.set(true);
+    dispatchKey(' ');
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+
+  it('ignores Space on another button (its own native activation already fires)', () => {
+    const otherButton = document.createElement('button');
+    document.body.appendChild(otherButton);
+    try {
+      dispatchKey(' ', otherButton);
+      expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+    } finally {
+      otherButton.remove();
+    }
+  });
+
+  it('shows the visible "Space to buzz" hint only while open', () => {
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Space to buzz');
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_ANSWER, roundNumber: 1, currentBuzz: { playerId: 'p-self', teamId: 't1' } } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Space to buzz');
+  });
+});
+
+/**
+ * M5 S1-10: the visible per-second timers stay `role="timer"` with no
+ * `aria-live` (so they don't chatter every tick); a separate, once-per-
+ * threshold region announces the 5s warning, and the round-completed live
+ * region is a one-line summary instead of the whole question/answer HTML.
+ */
+describe('GameBuzzerComponent live announcements (M5 S1-10)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function statusRegions(): HTMLElement[] {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[role="status"]'));
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+    gameStateService.getTeamNameById.and.returnValue('Team One');
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('the tossup timer is role=timer with no aria-live', () => {
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 12 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+
+    const timer = (fixture.nativeElement as HTMLElement).querySelector('[role="timer"]');
+    expect(timer).not.toBeNull();
+    expect(timer?.getAttribute('aria-live')).toBeNull();
+  });
+
+  it('announces the 5s urgency threshold once, not every tick', () => {
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 6 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+    expect(component.getUrgencyAnnouncement()).toBeNull();
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 5 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+    expect(component.getUrgencyAnnouncement()).toBe('Time is almost up.');
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 4 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+    // Same constant text on every tick under the threshold: a screen reader
+    // only announces it once, on the crossing, not once a second.
+    expect(component.getUrgencyAnnouncement()).toBe('Time is almost up.');
+  });
+
+  it('round-completed announces a one-line summary, not the whole question/answer HTML', () => {
+    session$.next({
+      currentMatch: {
+        currentRound: {
+          roundState: 'COMPLETED', roundNumber: 3,
+          question: 'A very long question that should not be read aloud in full',
+          answer: 'The answer',
+          buzzList: [{ playerId: 'p-self', teamId: 't1', correct: true }],
+        },
+      },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+
+    const regions = statusRegions();
+    const summaryRegion = regions.find(r => r.textContent?.includes('Tossup 3 complete'));
+    expect(summaryRegion).toBeTruthy();
+    expect(summaryRegion?.textContent).toContain('Team One +10');
+    expect(summaryRegion?.textContent).not.toContain('A very long question');
   });
 });

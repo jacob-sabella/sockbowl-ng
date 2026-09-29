@@ -17,11 +17,19 @@
     <mat-card-content>
       <!-- Timer: part of the top status strip alongside the "Tossup N of M"
            title (M5 S1-04 FIRST VIEWPORT), placed ahead of the team list so
-           it never lands in the dome's anchored slot. -->
+           it never lands in the dome's anchored slot. `role="timer"` only,
+           with no `aria-live` (M5 S1-10): a live region here would announce
+           every tick. The 5s warning is announced once, separately, below. -->
       @if (gameSession.currentMatch.currentRound.roundState === RoundState.AWAITING_BUZZ && getTossupTimerDisplay(); as tossupSeconds) {
-        <div class="timer-display" [class.timer-display--urgent]="tossupSeconds <= 5" role="timer" aria-live="polite">
+        <div class="timer-display" [class.timer-display--urgent]="tossupSeconds <= 5" role="timer">
           <p>Time remaining: {{ tossupSeconds }}s</p>
         </div>
+      }
+      <!-- Once-per-threshold urgency announcement (M5 S1-10): the text is
+           constant while either timer is at or under 5s, so it's announced
+           on the crossing and not again every second. -->
+      @if (getUrgencyAnnouncement(); as urgencyText) {
+        <div class="visually-hidden" role="status" aria-live="polite">{{ urgencyText }}</div>
       }
 
       <!-- Team list component: the middle, scrollable slot (M5 S1-04). Moved
@@ -30,7 +38,14 @@
            `flex: 1 1 auto` child, so document order alone puts it between
            the top strip and whichever bottom slot is showing, with no
            `order` overrides needed. -->
-      <app-team-list [teams]="gameSession.teamList"
+      <!-- tabindex="0" (M5 S1-09 axe sweep): this component's own
+           `:host ::ng-deep app-team-list { overflow-y: auto }` below makes
+           the host element itself the scrollable region once its rostered
+           teams overrun the flex slot (a mobile-width tossup round, with
+           the outcome strip and keyboard hint both showing, is enough to
+           tip it into scrolling) — axe's scrollable-region-focusable needs
+           that element keyboard-reachable, not just mouse/touch-scrollable. -->
+      <app-team-list tabindex="0" [teams]="gameSession.teamList"
         [currentBuzz]="gameSession.currentMatch.currentRound.currentBuzz"
         [currentRound]="gameSession.currentMatch.currentRound"
         [previousRoundList]="gameSession.currentMatch.previousRounds">
@@ -61,16 +76,27 @@
               id="buzz-button"
               type="button"
               (click)="onBuzzClick()"
-              [disabled]="getBuzzState() !== 'open'"
-              [class.is-locked]="getBuzzState() !== 'open' && getBuzzState() !== 'pending'"
+              [disabled]="isBuzzButtonDisabled()"
+              [attr.aria-disabled]="getBuzzState() === 'self' ? 'true' : null"
+              [class.is-locked]="getBuzzState() !== 'open' && getBuzzState() !== 'pending' && getBuzzState() !== 'self'"
               [class.is-pending]="getBuzzState() === 'pending'"
+              [class.is-self]="getBuzzState() === 'self'"
               [attr.aria-label]="getBuzzButtonAriaLabel()"
               [attr.aria-busy]="getBuzzState() === 'pending' ? 'true' : null"
               class="buzz-button">
-              <!-- Display appropriate text on the buzz button -->
-              {{ getBuzzButtonText() }}
+              <!-- Wrapped in its own span so a long "<name> has it" label can
+                   clamp to 2 lines with an ellipsis instead of overflowing
+                   the circle (M5 S1-24). -->
+              <span class="buzz-button__label">{{ getBuzzButtonText() }}</span>
             </button>
           </div>
+
+          <!-- Keyboard affordance (M5 S1-07): only shown while the dome is
+               actually actionable, and only on fine pointers with real hover
+               (a touch phone doesn't have a space bar to hint at). -->
+          @if (getBuzzState() === 'open') {
+            <p class="keyboard-hint">Space to buzz</p>
+          }
         </div>
       }
 
@@ -102,7 +128,8 @@
             </div>
             <!-- Timer Display during answer phase -->
             @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_AWAITING_ANSWER && getBonusTimerDisplay(); as bonusSeconds) {
-              <div class="timer-display" [class.timer-display--urgent]="bonusSeconds <= 5" role="timer" aria-live="polite">
+              <!-- role="timer" only (M5 S1-10): see the tossup timer above. -->
+              <div class="timer-display" [class.timer-display--urgent]="bonusSeconds <= 5" role="timer">
                 <p class="bonus-timer">Time remaining: {{ bonusSeconds }}s</p>
               </div>
             }
@@ -116,7 +143,7 @@
       <!-- Round completed. Show question and answer as left-stripe info blocks in the reading voice
            (Newsreader), matching the Three-Voice Rule (M5 S1-13). -->
       @if (gameSession.currentMatch.currentRound.roundState === 'COMPLETED') {
-        <div class="round-completed-info" role="status" aria-live="polite">
+        <div class="round-completed-info">
           <h3>Round Completed</h3>
           <div class="info-block">
             <span class="info-label">Question</span>
@@ -127,6 +154,9 @@
             <span class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.answer"></span>
           </div>
         </div>
+        <!-- One-line summary instead of the whole question/answer HTML
+             (M5 S1-10): the previous live region wrapped this entire block. -->
+        <div class="visually-hidden" role="status" aria-live="polite">{{ getRoundCompletedSummary() }}</div>
       }
     </mat-card-content>
   </mat-card>

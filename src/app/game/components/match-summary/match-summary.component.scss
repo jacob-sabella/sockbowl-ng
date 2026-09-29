@@ -482,11 +482,14 @@
         font-weight: 600;
       }
 
+      // `--accent-secondary` as text on its own 15% tint measured 2.55:1
+      // (M5 S1-23, H-08): the tint and border already carry the tone, so
+      // the text sits in `--text-primary` instead of the raw accent.
       &.bonus-info {
         display: inline-block;
         background: color-mix(in srgb, var(--accent-secondary) 15%, transparent);
         border-color: color-mix(in srgb, var(--accent-secondary) 40%, transparent);
-        color: var(--accent-secondary);
+        color: var(--text-primary);
         font-weight: 600;
       }
     }

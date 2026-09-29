@@ -4,7 +4,7 @@
     <!-- Back button -->
     @if (showCreateForm || showJoinForm || showModeSelect) {
       <div class="header-container">
-        <button mat-icon-button (click)="onGoBack()"><mat-icon>arrow_back</mat-icon></button>
+        <button mat-icon-button aria-label="Back" (click)="onGoBack()"><mat-icon aria-hidden="true">arrow_back</mat-icon></button>
         <span class="centered-title">
           @if (showJoinForm) { Join Game } @else if (showCreateForm) { New Game } @else { Choose a mode }
         </span>
@@ -134,17 +134,19 @@
       <form class="form-container" (ngSubmit)="submitJoinGame()">
         <!-- Join Code -->
         <mat-form-field>
-          <mat-label>Join Code</mat-label>
+          <mat-label>Join code</mat-label>
           <input matInput name="joinCode" [(ngModel)]="joinGameRequest.joinCode"
                  autocapitalize="characters" autocomplete="off" spellcheck="false">
         </mat-form-field>
         @if (codeError) {
           <p class="field-error" role="alert">{{ codeError }}</p>
         }
-        <!-- Player Name (only for guests) -->
+        <!-- Player Name (only for guests). "Your name" on both create and
+             join (M5 S1-30): it was "Name" here, the only difference between
+             two otherwise-identical fields. -->
         @if (!isAuthenticated) {
           <mat-form-field>
-            <mat-label>Name</mat-label>
+            <mat-label>Your name</mat-label>
             <input matInput name="name" [(ngModel)]="joinGameRequest.name" required>
           </mat-form-field>
           @if (nameError) {

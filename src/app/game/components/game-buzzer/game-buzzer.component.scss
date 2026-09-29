@@ -1,6 +1,21 @@
 // Game buzzer: player buzz-in interface.
 // Mobile-first, theme-token driven (works in light and dark), accessible.
 
+// Sighted-hidden, not removed from the accessibility tree: the sr-only
+// announcement regions (M5 S1-10). Component-local since `styles/**` is
+// frozen for S1 (same pattern as `theme-selector.component.scss`).
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .game-buzzer-container {
   box-sizing: border-box;
   // Fixed to exactly the viewport minus the navbar (M5 S1-04 round 3): a
@@ -280,34 +295,64 @@
         outline-offset: 5px;
       }
 
-      // Locked: your team has already buzzed. Clearly de-emphasised.
-      &:disabled,
+      // Locked: other/teamLocked/rateLimited/disconnected. Clearly
+      // de-emphasised, but still readable (M5 S1-24): `--text-muted` on
+      // `--surface-active` measured 3.35:1 in dark, below AA; `--text-primary`
+      // clears >=4.4:1 in every theme (the dome's bold uppercase label is
+      // large text, where 3:1 is the floor). `.is-locked` alone, not
+      // `:disabled` too — `.is-pending` is also natively disabled but is a
+      // separate, mutually exclusive class, so the two states never have to
+      // out-specify each other (M5 S1-24 removed the old `!important` pile
+      // this caused; see `.is-pending` below).
       &.is-locked {
         background: var(--surface-active) !important;
-        color: var(--text-muted) !important;
+        color: var(--text-primary) !important;
         cursor: not-allowed;
-        filter: none;
-        transform: none !important;
         box-shadow:
           0 4px 0 -2px var(--shadow-color),
           inset 0 -6px 14px rgba(0, 0, 0, 0.25) !important;
       }
 
-      // Sent, waiting for the server echo (M5 S1-25): a compound selector so
-      // it outranks the plain `:disabled` rule above (the button is disabled
-      // while pending too). Stays in the pressed-down position instead of the
-      // muted "locked" look, since it isn't locked out — the dome is just
-      // mid-press until the echo (or the 1.5s timeout) lands.
-      &:disabled.is-pending {
-        background: var(--error) !important;
-        color: var(--on-error) !important;
+      // Sent, waiting for the server echo (M5 S1-25): held at the
+      // pressed-down position instead of the muted "locked" look, since it
+      // isn't locked out. Background/color already match the base (open)
+      // state, so only the pressed geometry needs restating — `.is-pending`
+      // and `.is-locked` are mutually exclusive classes, never both applied
+      // to the same button, so this doesn't need extra specificity or
+      // `!important` beyond the box-shadow override itself (M5 S1-24).
+      &.is-pending {
         cursor: wait;
-        filter: none;
-        transform: translateY(8px) !important;
+        transform: translateY(8px);
         box-shadow:
           0 2px 0 -2px var(--shadow-color),
           0 5px 14px var(--shadow-color),
           inset 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+      }
+
+      // Winning the buzz looks like winning, not like losing it (M5 S1-24):
+      // a success fill instead of the same grey as every locked-out state.
+      // Not natively `disabled` (the template uses `aria-disabled` so the
+      // dome stays focusable and announced), so the pressed travel is
+      // stated explicitly here rather than left to `:active`.
+      &.is-self {
+        background: var(--success) !important;
+        color: var(--on-success) !important;
+        cursor: default;
+        transform: translateY(8px);
+        box-shadow:
+          0 2px 0 -2px var(--shadow-color),
+          0 5px 14px var(--shadow-color),
+          inset 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+      }
+
+      .buzz-button__label {
+        // Clamp a long "<name> has it" / "<name> has the buzz" label to 2
+        // lines with an ellipsis instead of overflowing the 240px circle
+        // (M5 S1-24).
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
       }
 
       @media (min-width: 600px) {
@@ -386,6 +431,21 @@
     }
   }
 
+  // "Space to buzz" (M5 S1-07): a fine-pointer affordance only — a touch
+  // phone has no space bar, so it stays hidden there rather than taking up
+  // room under the dome for nothing.
+  .keyboard-hint {
+    display: none;
+    margin: 0.5rem 0 0;
+    text-align: center;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+
+    @media (hover: hover) and (pointer: fine) {
+      display: block;
+    }
+  }
+
   // ---- Bonus section ---------------------------------------------------------
   // One heading + one info block (who/part/phase) + a plain score line,
   // instead of four nested bordered boxes (M5 S1-12).
@@ -441,8 +501,12 @@
           overflow-wrap: break-word;
         }
 
+        // `--accent-secondary-text` measured 4.1:1 on this tint (M5 S1-08,
+        // H-08): the stripe and tint already carry the tone, so the name
+        // itself sits in `--text-primary` instead of trusting a `*-text`
+        // token on its own tint.
         strong {
-          color: var(--accent-secondary-text);
+          color: var(--text-primary);
           font-weight: 700;
         }
       }

@@ -163,3 +163,84 @@ describe('GameAutoProctorComponent anchored buzz footer (M5 S1-32)', () => {
     expect(parseFloat(getComputedStyle(buzzBtn).minHeight)).toBeGreaterThanOrEqual(56);
   });
 });
+
+/**
+ * M5 S1-07: Space or Enter buzzes from anywhere on the page while buzzing is
+ * possible, matching the classic buzzer and solo.
+ */
+describe('GameAutoProctorComponent global Space/Enter buzz (M5 S1-07)', () => {
+  let fixture: ComponentFixture<GameAutoProctorComponent>;
+  let gameSession$: Subject<GameSession>;
+  let gameStateService: any;
+
+  function dispatchKey(key: string, target: EventTarget = document.body, extra: Partial<KeyboardEventInit> = {}): void {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra });
+    target.dispatchEvent(event);
+  }
+
+  beforeEach(() => {
+    gameSession$ = new Subject<GameSession>();
+    localStorage.removeItem('ap_reader_mode');
+
+    gameStateService = {
+      gameSession$,
+      playerSessionId: 'p1',
+      isSelfOnAnyTeam: () => true,
+      hasCurrentPlayerTeamBuzzed: () => false,
+      isCurrentPlayerGameOwner: () => false,
+      isFreeForAll: () => false,
+      getPlayerNameById: () => undefined,
+      getTeamNameById: () => undefined,
+      sendPlayerIncomingBuzz: jasmine.createSpy('sendPlayerIncomingBuzz'),
+    };
+
+    TestBed.configureTestingModule({
+      declarations: [GameAutoProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: SpeechService, useValue: { available: false, speak: jasmine.createSpy('speak'), cancel: jasmine.createSpy('cancel') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameAutoProctorComponent);
+    fixture.detectChanges();
+    gameSession$.next({
+      currentMatch: {
+        currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, question: 'Reading…', buzzList: [] },
+        previousRounds: [],
+        packet: { tossups: [] },
+      },
+      teamList: [],
+    } as unknown as GameSession);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => fixture.destroy());
+
+  it('buzzes once on a document-level Space press', () => {
+    dispatchKey(' ');
+    expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores Space typed into a text input', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    try {
+      dispatchKey(' ', input);
+      expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+    } finally {
+      input.remove();
+    }
+  });
+
+  it('ignores a repeated (held-down) key', () => {
+    dispatchKey(' ', document.body, { repeat: true });
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+
+  it('ignores Space once the team has already buzzed', () => {
+    gameStateService.hasCurrentPlayerTeamBuzzed = () => true;
+    dispatchKey(' ');
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+});

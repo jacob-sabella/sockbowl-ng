@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, OnInit, ChangeDetectionStrategy, signal} from '@angular/core';
+import {Component, DestroyRef, HostListener, inject, OnInit, ChangeDetectionStrategy, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Observable} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
@@ -117,10 +117,17 @@ export class GameBuzzerComponent implements OnInit {
    * Click handler for the buzz button: swallows presses within
    * {@link BUZZ_PRESS_DEBOUNCE_MS} of the last accepted one, and any press
    * while locked out by a rate limit, so at most one buzz message per
-   * genuine press reaches the server.
+   * genuine press reaches the server. `pending` deliberately isn't blocked
+   * here beyond the debounce/lockout: it's a cosmetic "sent, no echo yet"
+   * overlay (M5 S1-25), not a third gate on top of the real M4 N2 debounce
+   * and rate-limit lockout (contract FORM: "Keep ... the M4 N2 300ms
+   * debounce and the rate-limit lockout"). `self` is excluded explicitly
+   * (M5 S1-24): it's no longer natively `disabled` (it stays focusable via
+   * `aria-disabled` so the win is announced), so a real click could reach
+   * this method again after already winning the buzz.
    */
   onBuzzClick(): void {
-    if (this.buzzLocked()) {
+    if (this.buzzLocked() || this.getBuzzState() === 'self') {
       return;
     }
     const now = Date.now();
@@ -130,6 +137,52 @@ export class GameBuzzerComponent implements OnInit {
     this.lastBuzzAtMs = now;
     this.startPendingBuzz();
     this.gameStateService.sendPlayerIncomingBuzz();
+  }
+
+  /**
+   * Space or Enter buzzes from anywhere on the page while the dome is open
+   * (M5 S1-07, PRODUCT.md: "Space or Enter to buzz"), routed through
+   * {@link onBuzzClick} so the debounce and rate-limit lockout apply
+   * identically to a keyboard buzz. Ignored while typing, on another
+   * button (whose own native activation already fires), inside an open
+   * dialog, or on a repeated (held-down) key.
+   */
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (event.repeat) {
+      return;
+    }
+    if (event.key !== ' ' && event.key !== 'Spacebar' && event.key !== 'Enter') {
+      return;
+    }
+    if (this.isKeyboardBuzzExcluded(event.target as HTMLElement | null)) {
+      return;
+    }
+    if (this.getBuzzState() !== 'open') {
+      return;
+    }
+    event.preventDefault();
+    this.onBuzzClick();
+  }
+
+  /**
+   * True when a global Space/Enter shouldn't act as a buzz: typing in a
+   * field, activating some other button (its own native Enter/Space
+   * activation already fires a click), or a dialog (for example the "Start
+   * New Match" confirm) is open and should own the keyboard instead (M5
+   * S1-07).
+   */
+  private isKeyboardBuzzExcluded(target: HTMLElement | null): boolean {
+    if (target) {
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+        return true;
+      }
+      if (tag === 'BUTTON') {
+        return true;
+      }
+    }
+    return !!document.querySelector('mat-dialog-container');
   }
 
   /** Starts (or restarts) the transient pending window after a sent buzz (M5 S1-25). */
@@ -202,6 +255,46 @@ export class GameBuzzerComponent implements OnInit {
   }
 
   /**
+   * A single, once-per-threshold live announcement for a timer running low
+   * (M5 S1-10). The visible per-second timers stay `role="timer"` with no
+   * `aria-live`, so they don't chatter every tick; this text is constant
+   * for the whole time either timer sits at or under 5 seconds, so a screen
+   * reader announces it once on the crossing, not once a second.
+   */
+  getUrgencyAnnouncement(): string | null {
+    return (this.isTossupTimerUrgent() || this.isBonusTimerUrgent()) ? 'Time is almost up.' : null;
+  }
+
+  private isTossupTimerUrgent(): boolean {
+    if (this.gameSession?.currentMatch?.currentRound?.roundState !== RoundState.AWAITING_BUZZ) {
+      return false;
+    }
+    const seconds = this.getTossupTimerDisplay();
+    return seconds != null && seconds <= 5;
+  }
+
+  private isBonusTimerUrgent(): boolean {
+    if (this.gameSession?.currentMatch?.currentRound?.roundState !== RoundState.BONUS_AWAITING_ANSWER) {
+      return false;
+    }
+    const seconds = this.getBonusTimerDisplay();
+    return seconds != null && seconds <= 5;
+  }
+
+  /**
+   * One-line live-region summary for a completed round (M5 S1-10), in place
+   * of a live region that used to wrap the whole question/answer HTML and
+   * so read the entire packet text aloud every time a round finished.
+   */
+  getRoundCompletedSummary(): string {
+    const round = this.gameSession?.currentMatch?.currentRound;
+    const correctBuzz = round?.buzzList?.find(buzz => buzz.correct);
+    const teamName = correctBuzz ? this.gameStateService.getTeamNameById(correctBuzz.teamId) : undefined;
+    const outcome = teamName ? `${teamName} +10` : 'no correct answer';
+    return `Tossup ${round?.roundNumber ?? ''} complete: ${outcome}`;
+  }
+
+  /**
    * True for every round state the dome should stay mounted in (open,
    * answered by someone, locked out). Kept as one slot across these states
    * so switching between them never unmounts the button (M5 S1-01).
@@ -249,7 +342,11 @@ export class GameBuzzerComponent implements OnInit {
       case 'pending':
         return 'Buzzing…';
       case 'self':
-        return "You're in, answer!";
+        // Short (M5 S1-24): the outcome strip above the dome already says
+        // "You buzzed. Answer out loud.", so the dome's own label doesn't
+        // need to repeat the sentence, and the shorter word fits the
+        // 2-line clamp with room to spare.
+        return 'Answer!';
       case 'teamLocked':
         return 'Team locked';
       case 'other': {
@@ -311,8 +408,22 @@ export class GameBuzzerComponent implements OnInit {
       case 'other':
         return this.getBuzzOutcomeText() ?? 'Buzzer locked. Another team has the buzz.';
       default:
-        return 'Buzz in to answer the tossup';
+        // "(or press the space bar)" matches solo's aria-label (M5 S1-07),
+        // and only the `open` case gets it since Space only does anything then.
+        return 'Buzz in to answer the tossup (or press the space bar)';
     }
+  }
+
+  /**
+   * True for every state that should render the dome as natively
+   * `disabled`. `self` is excluded (M5 S1-24): it stays enabled and
+   * focusable, marked `aria-disabled` instead, so winning the buzz is still
+   * announced and reachable by keyboard rather than dropped from the tab
+   * order the instant it's won.
+   */
+  isBuzzButtonDisabled(): boolean {
+    const state = this.getBuzzState();
+    return state !== 'open' && state !== 'self';
   }
 
   /**

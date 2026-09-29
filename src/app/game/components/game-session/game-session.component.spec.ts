@@ -644,3 +644,61 @@ describe('GameSessionComponent create form defaults and join name guard (M5 S1-3
     expect(component.nameError).toBeNull();
   });
 });
+
+/**
+ * M5 S1-30: the icon-only back button had no accessible name, and the guest
+ * name field read "Your name" on create but "Name" on join.
+ */
+describe('GameSessionComponent back button and field labels (M5 S1-30)', () => {
+  let fixture: ComponentFixture<GameSessionComponent>;
+  let component: GameSessionComponent;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [GameSessionComponent],
+      providers: [
+        { provide: GameSessionService, useValue: jasmine.createSpyObj('GameSessionService', ['createNewGame', 'joinGame', 'joinGameAuthenticated']) },
+        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+        { provide: AuthService, useValue: { isAuthenticated: () => false, getUserProfile: () => null } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameSessionComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('gives the icon-only back button an accessible name', () => {
+    component.showJoinForm = true;
+    fixture.detectChanges();
+
+    const back = (fixture.nativeElement as HTMLElement).querySelector('button[mat-icon-button]');
+    expect(back?.getAttribute('aria-label')).toBe('Back');
+  });
+
+  it('labels the guest name field "Your name" on both create and join', () => {
+    component.showJoinForm = true;
+    fixture.detectChanges();
+    let labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-label'))
+      .map(el => el.textContent?.trim());
+    expect(labels).toContain('Your name');
+    expect(labels).not.toContain('Name');
+
+    component.showJoinForm = false;
+    component.showCreateForm = true;
+    fixture.detectChanges();
+    labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-label'))
+      .map(el => el.textContent?.trim());
+    expect(labels).toContain('Your name');
+  });
+
+  it('reads "Join code" in sentence case', () => {
+    component.showJoinForm = true;
+    fixture.detectChanges();
+
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-label'))
+      .map(el => el.textContent?.trim());
+    expect(labels).toContain('Join code');
+    expect(labels).not.toContain('Join Code');
+  });
+});
