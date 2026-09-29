@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, HostListener, computed, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, DestroyRef, ElementRef, HostListener, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -44,6 +44,35 @@ export class PacketSearchComponent implements OnInit {
   readonly generateLocked = computed(() => this.rateLimitState.cooldown('ai-generate')() > 0);
   /** True while the `import`/`import-ip` policy is cooling down after a 429 (M4-UI-01). */
   readonly importLocked = computed(() => this.rateLimitState.cooldown('import')() > 0);
+
+  /**
+   * S3-37: true while the dialog body (the one scroll container, S3-10 r3)
+   * has content below its fold. Drives the bottom fade cue so a form cut off
+   * at the fold (the AI tab with a quota/fail-closed banner at 1440x900 and
+   * 390px) never reads as complete. Recomputed on scroll and whenever the
+   * body or its tab group resizes (tab switch, banner, async content).
+   */
+  readonly moreBelow = signal(false);
+  private readonly scrollBody = viewChild('scrollBody', { read: ElementRef<HTMLElement> });
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    afterNextRender(() => {
+      const el = this.scrollBody()?.nativeElement;
+      if (!el || typeof ResizeObserver === 'undefined') return;
+      const ro = new ResizeObserver(() => this.updateScrollCue());
+      ro.observe(el);
+      if (el.firstElementChild) ro.observe(el.firstElementChild);
+      this.destroyRef.onDestroy(() => ro.disconnect());
+      this.updateScrollCue();
+    });
+  }
+
+  updateScrollCue(): void {
+    const el = this.scrollBody()?.nativeElement;
+    if (!el) return;
+    this.moreBelow.set(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
+  }
 
   // Search tab properties. Both lists are the answer-free, policy-filtered
   // PacketSummary projection (`listPackets`, PB-19), not full Packet objects;

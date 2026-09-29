@@ -111,30 +111,43 @@
     padding: 0 !important;
     overflow-y: auto;
 
-    // FF8 fix (reopens S3-37): a tab taller than the dialog's fold — the AI
-    // tab with the fail-closed/quota banner showing, at both 1440x900 and
-    // 390px — used to end at this container's own bottom edge with nothing
-    // to say more was there (the verdict's own repro: Context or Number of
-    // Questions cut mid-field, no border, no cue; contract FIRST VIEWPORT
-    // r3, "nothing in the picker is cut off at any viewport"). This is the
-    // ONE true scroll container (S3-10 r3), so the cue belongs here rather
-    // than in any one tab. A CSS-only scroll shadow: the `local`-attached
-    // layer scrolls WITH the content and paints over the `scroll`-attached
-    // shadow once there's nothing left to reveal in that direction, so the
-    // cue appears only where there's actually more to see and needs no JS
-    // scroll listener. The sticky tab header (below) already paints its own
-    // opaque background over the top pair, which is intentional — the cue
-    // that matters here is "more below the fold", not above it.
-    background-color: var(--bg-elevated);
-    background-repeat: no-repeat;
-    background-image:
-      linear-gradient(to bottom, var(--bg-elevated) 60%, transparent),
-      linear-gradient(to top, var(--bg-elevated) 60%, transparent),
-      linear-gradient(to bottom, var(--shadow-color), transparent),
-      linear-gradient(to top, var(--shadow-color), transparent);
-    background-position: top, bottom, top, bottom;
-    background-size: 100% 2rem, 100% 2rem, 100% 0.85rem, 100% 0.85rem;
-    background-attachment: local, local, scroll, scroll;
+    // S3-37 (orchestrator fix after FV8): a tab taller than the dialog's
+    // fold (the AI tab with the fail-closed/quota banner, at 1440x900 and
+    // 390px) ended mid-field with no cue. FF8's background-attachment scroll
+    // shadow painted *behind* the opaque form-field fills, so it never showed
+    // over the field it flagged. The cue is now a sticky overlay painted
+    // *over* the content: the last 3.5rem fade into the surface under a
+    // "More below" label. The component sets `.has-more-below` from the
+    // scroll position (see PacketSearchComponent.moreBelow), so the cue shows
+    // only while there is content past the fold.
+    &::after {
+      content: '';
+      display: none;
+    }
+
+    &.has-more-below::after {
+      // decorative: the content itself is all in the DOM for assistive tech
+      content: 'More below \2193' / '';
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 0.4rem;
+      position: sticky;
+      bottom: 0;
+      flex: 0 0 3.5rem;
+      // pull back over the column gap plus its own height so it overlays
+      // the last visible content instead of adding scroll length
+      margin-top: -5.5rem;
+      // Material stacks the form-field outlines and labels with their own
+      // z-index; the cue has to paint over them
+      z-index: 2;
+      pointer-events: none;
+      background: linear-gradient(to bottom, transparent, var(--bg-elevated) 70%);
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
   }
 
   /* The header is sticky within `mat-dialog-content`'s single scroll
@@ -502,3 +515,4 @@
     opacity: 1;
   }
 }
+

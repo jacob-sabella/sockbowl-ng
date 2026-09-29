@@ -4,7 +4,7 @@
     Find or Generate Packet
   </h2>
 
-  <mat-dialog-content>
+  <mat-dialog-content #scrollBody (scroll)="updateScrollCue()" [class.has-more-below]="moreBelow()">
     <!-- dynamicHeight (S3-02): without it MatTabGroup fixes the body's height to
          its first render, so opening the Advanced panel (or a long AI banner)
          clips instead of growing the scroll area. -->
