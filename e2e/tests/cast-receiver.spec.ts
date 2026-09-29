@@ -254,6 +254,18 @@ const LONG_QUESTION_STATE = {
     'who was defeated by a coalition of Greek city-states at the Battle of Marathon.',
 };
 
+// M5 FF6 (fix 1 + regression 2): the base (untiered) question class clips
+// right alongside the long tier at 1080p (FV5 verdict) — the shorter
+// `INGAME_STATE` question above stays under the wrap-boundary this needs to
+// exercise, so this uses the same base-tier text the polish capture harness
+// renders for `cast-ingame-<theme>` (e2e/polish/scenarios/s2.ts).
+const BASE_QUESTION_STATE = {
+  ...INGAME_STATE,
+  questionText: 'This author wrote that “If I were the Head of the Church or the State, / ' +
+    'I’d powder my nose and go to bed” in a poem; for 10 points, name this ' +
+    'British-American poet of The Age of Anxiety.',
+};
+
 const ANSWER_SHOWN_STATE = {
   ...INGAME_STATE,
   roundState: 'COMPLETED',
@@ -287,6 +299,10 @@ const TV_VIEWPORTS = [
 const TV_FIT_STATES: Array<[string, unknown]> = [
   ['config', CONFIG_STATE],
   ['config-8-teams', EIGHT_TEAM_CONFIG_STATE],
+  // M5 FF6 (fix 1 + regression 2): the base (untiered) question length clips
+  // right alongside the long tier at 1080p — added so this sweep covers both
+  // states the FV5 verdict named, not just the long one.
+  ['base-question', BASE_QUESTION_STATE],
   ['long-question', LONG_QUESTION_STATE],
   ['answer-shown', ANSWER_SHOWN_STATE],
   ['8-teams', EIGHT_TEAM_STATE],
@@ -301,13 +317,38 @@ const TV_FIT_STATES: Array<[string, unknown]> = [
 // hidden` and no `flex-shrink: 0`, so per the flexbox spec their automatic
 // minimum size is 0 — when the card doesn't have room, the flex algorithm
 // shrinks the text element's own box to fit, absorbing all the "overflow"
-// itself rather than growing the card's scrollable region. The clipping
-// happens *inside* the text element, invisible to a check on its container.
-// So this checks `#question-text`/`#answer-text` directly: their content
+// itself rather than growing the card's scrollable region. That also means
+// a *bounding-rect* check of the text element against its card can't see it
+// either: the shrunk box's own edges land flush with the card regardless of
+// whether its content is clipping (confirmed directly by probing a clipped
+// render: the text element's own `getBoundingClientRect().bottom` sat
+// within half a pixel of the card's content-box edge while its
+// `scrollHeight` exceeded `clientHeight` by dozens of pixels). So this
+// checks `#question-text`/`#answer-text` directly: their content
 // (`scrollHeight`, the height it actually needs) must fit within their own
 // rendered box (`clientHeight`) — the same check the fit-to-row step in
 // cast-receiver.js uses to decide whether to shrink.
+//
+// M5 FF6 (regression 3, still open after FF5): that check is sound only once
+// the element has actually laid out against its *final* font metrics — the
+// FF5 verdict found it passing 17/17 while the capture harness still showed
+// the 1080p text cut off, because the capture path renders, waits 350ms,
+// and *then* waits for fonts before it screenshots, so Newsreader (the
+// reading face) can swap in and wrap differently after this check would
+// otherwise have run. Waiting for fonts first, matching that path, is what
+// makes the assertion see the same laid-out state the screenshot does.
+async function waitForFontsReady(page: import('@playwright/test').Page) {
+  await page.evaluate(async () => {
+    try {
+      await (document as unknown as { fonts: { ready: Promise<unknown> } }).fonts.ready;
+    } catch {
+      // `document.fonts` isn't guaranteed everywhere; best-effort.
+    }
+  });
+}
+
 async function assertNoCardClipping(page: import('@playwright/test').Page) {
+  await waitForFontsReady(page);
   const clipping = await page.evaluate(() => {
     const results: Array<{ id: string; scrollHeight: number; clientHeight: number }> = [];
     for (const [containerId, textId] of [
@@ -336,7 +377,19 @@ for (const viewport of TV_VIEWPORTS) {
     test(`cast receiver never overflows the ${viewport.width}x${viewport.height} frame (${name})`, async ({ browser }) => {
       const ctx = await browser.newContext({ viewport });
       const page = await ctx.newPage();
-      await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+      // M5 FF6: `networkidle`, not `domcontentloaded` — matching the polish
+      // capture harness's own navigation for these non-loading cast states
+      // (e2e/polish/capture.spec.ts). The chrome fonts (Inter/Space Grotesk,
+      // used by the "Connecting…" toast on first paint) finish loading
+      // during that wait, so the reading face's own load - triggered only
+      // once `__castRender` sets question/answer text below - starts and
+      // finishes on its own, after this navigation's wait is long over.
+      // Under `domcontentloaded`, that chrome-font load can still be
+      // in-flight when `__castRender` runs, and Newsreader's load rides
+      // along on the same already-pending `document.fonts.ready`
+      // (cast-receiver.js) - which hides exactly the timing gap this test
+      // exists to catch.
+      await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
 
       await page.evaluate((s) => (window as any).__castRender(s), state);

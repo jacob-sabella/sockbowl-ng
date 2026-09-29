@@ -40,6 +40,17 @@
   // (`scrollHeight` within `clientHeight`) no matter how tall that
   // container's actual share of the row turns out to be.
   //
+  // M5 FF6 (fix 1 + regression 2): FF5's version of this step still clipped
+  // the last line at 1080p, in every theme, with the fit's own code showing
+  // no change (no inline override applied) — meaning it judged "fits" and
+  // left the CSS tier's size alone. Root cause: the fit runs synchronously
+  // right when the state renders, which can be before Newsreader (the
+  // reading face) has finished loading, so the check above can measure
+  // against the fallback font's (narrower) wrap and decide "fits" — then
+  // Newsreader swaps in, wraps to more lines, and clips with no further fit
+  // ever run against it. See `refitAfterSerifLoads` (below `fitVisibleContentText`)
+  // for the re-check this added.
+  //
   // Never below this floor: a last-resort backstop for a pathological case
   // (an extremely long answer in a very short row), not a size we expect to
   // hit for real reading text at 10 feet.
@@ -266,6 +277,7 @@
     // fit the row they just got — including a row that's half the height it
     // was a moment ago, because the other card just appeared alongside it.
     fitVisibleContentText();
+    refitAfterSerifLoads();
   }
 
   /**
@@ -601,14 +613,45 @@
     });
   });
 
-  // The reading faces (Newsreader for question/answer text) load from Google
-  // Fonts; a fit computed against the fallback font's metrics before they've
-  // finished loading can be wrong once the real face swaps in (a serif face
-  // commonly wraps differently than its fallback). Re-fit once every face is
-  // ready. `document.fonts` doesn't exist in every test environment, so this
-  // is best-effort.
+  // Startup fallback: catches whatever fonts are already loading (or about
+  // to be requested by early, non-reading chrome) at script-load time.
+  // `document.fonts` doesn't exist in every test environment, so this is
+  // best-effort. This alone isn't enough for the reading text, though — see
+  // `refitAfterSerifLoads` below.
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(fitVisibleContentText).catch(() => {});
+  }
+
+  /**
+   * M5 FF6 (fix 1 + regression 2): a fit computed against the fallback
+   * font's metrics before Newsreader (`.content-text`'s reading face) has
+   * finished loading can be wrong once the real, differently-shaped face
+   * swaps in — and the swap can invalidate an *already-decided* "fits",
+   * not just one already-decided "doesn't fit": `fitTextToContainer` only
+   * shrinks a card's text as far as it has to, so a question that wraps to
+   * fewer lines in the fallback font can measure as comfortably fitting,
+   * leave no inline override, and then clip once Newsreader (commonly
+   * wider per character, so it wraps to *more* lines at the same width)
+   * swaps in with no further fit ever run against it.
+   *
+   * `document.fonts.ready` above resolves once, at script-load time —
+   * before the question or answer has ever been rendered, so before
+   * Newsreader has even been requested (nothing on screen needs it yet).
+   * A `.then` attached that early can't fire again for the *later*, real
+   * load that starts once reading text actually appears. So this instead
+   * asks for the specific face right after content that needs it was just
+   * rendered, and re-fits once that resolves. Safe to call on every
+   * render: `document.fonts.load` on an already-loaded face resolves
+   * immediately, and `fitVisibleContentText` is idempotent (a card that
+   * already fits is a no-op).
+   */
+  function refitAfterSerifLoads() {
+    if (!document.fonts || typeof document.fonts.load !== 'function') {
+      return;
+    }
+    Promise.resolve(document.fonts.load('400 1em Newsreader'))
+      .then(fitVisibleContentText)
+      .catch(() => {});
   }
 
   /**
