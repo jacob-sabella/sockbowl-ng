@@ -12,11 +12,19 @@
 </head>
 <body class="theme-dark">
   <div id="app">
+    <!-- Connection status: an edge toast, never covering the board (M5
+         S2-08). M5 FF1: lives in #app's own flex flow, ahead of both views,
+         so a visible toast takes its own row instead of floating fixed over
+         the scoreboard - see cast-receiver.css. -->
+    <div id="status" class="connecting" role="status" aria-live="polite">
+      <div class="status-icon" aria-hidden="true">⏳</div>
+      <div class="status-text">Connecting…</div>
+    </div>
+
     <!-- CONFIG VIEW (shown when match is in config stage) -->
     <div id="config-view">
       <div class="config-header">
         <h1 class="app-title">Sockbowl</h1>
-        <div class="subtitle">Quiz Bowl Match</div>
       </div>
 
       <div class="join-code-section">
@@ -40,7 +48,6 @@
       </div>
 
       <div class="teams-section">
-        <div class="section-label">Teams</div>
         <div id="config-teams" class="teams-grid"></div>
       </div>
 
@@ -51,33 +58,34 @@
     <div id="match-view" class="hidden">
       <!-- Round and Category Header -->
       <div id="header">
-        <div id="round-info">Round 1</div>
+        <div id="round-info">Tossup 1</div>
         <div id="category-info">Category</div>
       </div>
 
-      <!-- Question Container (hidden during PROCTOR_READING) -->
-      <div id="question-container" class="hidden">
-        <div class="section-label">Question</div>
-        <div id="question-text" class="content-text"></div>
+      <!-- M5 S2-23: question + answer share the grid's flexible 1fr row (see
+           cast-receiver.css), so together they never push the fixed-height
+           board past the frame - each one's own length class steps its
+           type down instead. -->
+      <div id="content-area">
+        <!-- Question Container (hidden during PROCTOR_READING). M5 FF1: no
+             "Question" kicker above it - it's the only text on the board,
+             the reading itself carries that meaning (floor eyebrow ban). -->
+        <div id="question-container" class="hidden">
+          <div id="question-text" class="content-text"></div>
+        </div>
+
+        <!-- Answer Container (shown when round COMPLETED) -->
+        <div id="answer-container" class="hidden">
+          <div class="section-label">Answer</div>
+          <div id="answer-text" class="content-text"></div>
+        </div>
       </div>
 
       <!-- Buzz Status (shows who buzzed and correctness) -->
       <div id="buzz-status"></div>
 
-      <!-- Answer Container (shown when round COMPLETED) -->
-      <div id="answer-container" class="hidden">
-        <div class="section-label">Answer</div>
-        <div id="answer-text" class="content-text"></div>
-      </div>
-
       <!-- Team Scoreboard -->
       <div id="scoreboard"></div>
-    </div>
-
-    <!-- Connection Status Indicator -->
-    <div id="status" class="connecting">
-      <div class="status-icon">⏳</div>
-      <div class="status-text">Waiting for connection...</div>
     </div>
   </div>
 

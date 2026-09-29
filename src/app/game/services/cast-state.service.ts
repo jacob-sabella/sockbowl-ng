@@ -140,6 +140,7 @@ export class CastStateService implements OnDestroy {
         proctorName: this.gameStateService.getProctor()?.name || 'No proctor yet',
         // Required fields (not used in config stage but needed for type compatibility)
         roundNumber: 0,
+        totalTossups: null,
         category: '',
         subcategory: '',
         roundState: RoundState.PROCTOR_READING,
@@ -153,6 +154,12 @@ export class CastStateService implements OnDestroy {
     } else {
       // Active match: show round info, question, answer, buzzes, scores
       const currentRound = gameSession.currentMatch.currentRound;
+
+      // M5 S2-32: the same source the proctor header reads
+      // (getTotalTossupCount) - a length-only tossups array (anti-spoiler),
+      // null before the packet is set or in modes that never send it.
+      const totalTossupCount = gameSession.currentMatch.packet?.tossups?.length;
+      const totalTossups = totalTossupCount && totalTossupCount > 0 ? totalTossupCount : null;
 
       // Question visibility: hide during PROCTOR_READING
       const questionVisible = currentRound.roundState !== RoundState.PROCTOR_READING;
@@ -181,6 +188,7 @@ export class CastStateService implements OnDestroy {
         timestamp: Date.now(),
         isConfigStage: false,
         roundNumber: currentRound.roundNumber,
+        totalTossups,
         category: currentRound.category || '',
         subcategory: currentRound.subcategory || '',
         roundState: currentRound.roundState,

@@ -11,20 +11,62 @@
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
   font-family: var(--font-body);
   background: var(--bg-primary);
   color: var(--text-primary);
-  padding: 40px;
-  min-height: 100vh;
-  overflow-y: auto;
+  /* 10-foot overscan-safe inset (M5 S2-14): 5% of each axis independently,
+     so both 1920x1080 and 1280x720 clear the >=5% floor on width and
+     height rather than one axis borrowing headroom from the other. */
+  padding: 5vh 5vw;
+  /* M5 S2-23: a TV can't scroll. The board is a fixed 100vh frame and every
+     view inside it (config or match) has to fit that budget by shrinking,
+     never by growing past it and relying on scroll. */
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 #app {
   max-width: 1600px;
+  width: 100%;
   margin: 0 auto;
+  height: 100%;
+  min-height: 0;
   opacity: 1;
   transition: opacity 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+/* M5 S2-23: whichever view is showing (config or match; the other carries
+   `.hidden`) fills the fixed-height shell above so its own vh-scaled
+   children can budget against a real, known height instead of the page's
+   natural (unbounded) content height. */
+#config-view:not(.hidden),
+#match-view:not(.hidden) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* M5 S2-23: the match view is a fixed grid inside the 100vh shell -
+   header / content (question+answer, flexible) / buzz / scoreboard - with
+   `overflow: hidden` as the backstop. Every row but the middle one sizes to
+   its own content; the middle row absorbs whatever height is left, and its
+   own children shrink to it (see #content-area and the length classes
+   below) rather than pushing the grid taller than the frame. */
+#match-view:not(.hidden) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  row-gap: clamp(10px, 2vh, 24px);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Header - Round and Category */
@@ -32,128 +74,254 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
+  padding-bottom: clamp(8px, 1.5vh, 20px);
   border-bottom: 3px solid var(--border-subtle);
 }
 
 #round-info {
-  font-size: 2rem;
+  font-size: clamp(1.2rem, 3.2vh, 2rem);
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 #category-info {
-  font-size: 1.6rem;
+  font-size: clamp(1rem, 2.4vh, 1.6rem);
   font-weight: 500;
   color: var(--text-secondary);
   text-align: right;
 }
 
-/* Section Labels */
-.section-label {
-  font-size: 1.4rem;
-  font-weight: 600;
-  margin-bottom: 15px;
-  opacity: 0.8;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent-primary);
+/* M5 S2-23: question and answer share this row's flexible height (its
+   `minmax(0, 1fr)` track on #match-view above). A flex column with
+   `min-height: 0` is what lets the two cards shrink below their content's
+   natural height instead of forcing the row - and the whole grid - taller
+   than the frame. */
+#content-area {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(10px, 1.8vh, 25px);
+  min-height: 0;
+  overflow: hidden;
+  /* M5 FF2 (fix 1): a size query container so the reading text below is
+     sized from THIS row's own real height (cqh), not the page's vh. A vh
+     clamp can only ever guess at how much of the viewport the header, buzz
+     row and scoreboard leave for this row; cqh reads the row's actual
+     computed height directly, so the type grows to use it on both a
+     content-light board (mostly header/scoreboard) and a content-heavy one. */
+  container-type: size;
+  container-name: reading;
 }
 
-/* Content Containers */
+/* Section Labels */
+.section-label {
+  font-size: clamp(0.85rem, 1.8vh, 1.4rem);
+  font-weight: 600;
+  margin-bottom: clamp(6px, 1vh, 15px);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-primary-text);
+}
+
+/* Content Containers. M5 FF1: tone-only depth (border + surface contrast),
+   no drop shadow - the match grid's own `overflow: hidden` backstop (M5
+   S2-23) was clipping this box's shadow into a hard band wherever it met a
+   row edge, worst in the light theme.
+   M5 FF2 (fix 1): `flex: 1` divides #content-area's height between
+   whichever of question/answer are visible, and this card centers its own
+   text vertically inside that full share, instead of the card only ever
+   being as tall as its own content and floating centered in a mostly-empty
+   row (the FF1 capture measured the question box at ~255px of a ~700px
+   row). */
 #question-container,
 #answer-container {
   background: var(--surface);
   border-radius: 16px;
-  padding: 30px;
-  margin-bottom: 25px;
+  padding: clamp(14px, 2.2vh, 30px) clamp(16px, 2.5vw, 30px);
   border: 2px solid var(--surface-hover);
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-#question-container:hover,
-#answer-container:hover {
-  border-color: var(--border-medium);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+/* The board is read, not pointed at (M5 S2-14): a TV has no cursor, and a
+   test runner's stray (0,0) mouse position shouldn't leave a hover state
+   painted on the receiver, so hover styling is gated to real pointing
+   devices. */
+@media (hover: hover) and (pointer: fine) {
+  #question-container:hover,
+  #answer-container:hover {
+    border-color: var(--border-medium);
+  }
 }
 
-/* Content Text */
+/* Content Text. M5 S2-23: scaled by viewport height so it's naturally
+   smaller on a 720p board than a 1080p one, plus two step-down classes
+   (`showMatchView`'s length-based class, cast-receiver.js) for text long
+   enough that even the vh-scaled default would push the fixed-height frame
+   taller than it is.
+   M5 FF1: the old coefficients (2.6vh / 2.1vh / 1.7vh) capped out well
+   short of the `1fr` row's actual height, leaving a typical tossup at
+   ~28px with a wide empty band above and below it, and a long question at
+   720p down at ~13px - unreadable at 10 feet. Rebased to grow into that
+   row instead of floating small inside it; the long tier now holds a floor
+   at or above 3vh at 720p (3.1vh = ~22px there) rather than falling to a
+   fixed rem floor well under it.
+   M5 FF2 (fix 1): a `vh` coefficient can only size off the whole viewport,
+   so it stayed small even after the rebase above - the review measured the
+   box at ~255px of a ~700px row at 1080p. `cqh` reads #content-area's own
+   height (see its `container-type: size` above), which is what "the height
+   of the flexible row" actually means, so the preferred value now tracks
+   the row itself. `max(_, Nvh)` keeps each tier's 10-foot floor (the 3vh
+   long-question floor from FF1) as an absolute backstop, since a very
+   short row (e.g. a small TV with a tall header) could otherwise still
+   under-size against `cqh` alone.
+   M5 FF3 (fix 1): the medium/long tiers' own rem ceiling was the actual
+   cap in practice, not the vh floor or `cqh` itself - a real tossup's
+   content-area row measures ~540-610px at 1080p (2 vs 8 teams), so 7cqh/
+   6cqh there (~38-43px / ~32-37px) already clears the old 2.6rem/2.1rem
+   ceilings, and the review's measured ~32px at 1080p was exactly the
+   2.1rem=33.6px ceiling, not a `cqh`-derived value. Raised each tier's
+   ceiling just past that observed row-height range (2.75rem/2.4rem) so
+   `cqh` is the term that actually governs there, while still bounding an
+   unusually tall row - the base (untiered) tier's 3.2rem ceiling was
+   already clear of its own 8cqh value at these heights, so it needed no
+   change.
+   M5 FF4 (fix 1): `cqh` was the governing term after FF3, but its
+   coefficients were sized for a worst case, not this row - the review
+   measured the long tier filling only ~45-52% of the row's height at both
+   TV sizes (still true of the other two tiers, which share the same
+   under-sizing) against a ~75-85% target. Text wrapping makes the
+   text-block-height-to-row ratio a step function of the coefficient (each
+   extra wrapped line is a jump, not a slope), so the coefficients below are
+   picked from a measured sweep (`__castRender` + `getBoundingClientRect`
+   against `#content-area`/`#question-text`, both TV sizes, the harness's
+   own long/medium fixture text) rather than a single scaling factor off
+   the old values - the review's own "9-10cqh" estimate for the long tier,
+   made from screenshots with no way to measure the live box, overshoots to
+   ~92% once actually measured. Landed on 13/11.5/8cqh (base/medium/long):
+   long is 84.0% at 720p and 91.8% at 1080p (the two TV sizes cross a
+   wrap-line boundary at different coefficients, so one pair can't both sit
+   inside the band without a JS fit-to-row step - the alternative this
+   fix's own note names); medium (measured on the 8-team fixture the review
+   flagged) is 86.2%/86.2%; base (the short, untiered fixture) is
+   58.5%/78.0%, still under-filled at 720p but roughly double its pre-fix
+   share and not part of the review's named cases. Base > medium > long
+   stays true (13 > 11.5 > 8), so a question doesn't grow when it crosses a
+   length tier. Each ceiling is raised past its own coefficient's measured
+   max across the established 540-610px 1080p row range, so `cqh` is what's
+   measured above, not the rem cap re-engaging. */
 .content-text {
-  font-size: 2.2rem;
-  line-height: 1.5;
+  font-size: clamp(1.3rem, max(4.2vh, 13cqh), 5rem);
+  line-height: 1.4;
   color: var(--text-primary);
   font-weight: 400;
+  overflow: hidden;
+}
+
+.content-text.q-len-medium {
+  font-size: clamp(1.15rem, max(3.6vh, 11.5cqh), 4.4rem);
+  line-height: 1.35;
+}
+
+.content-text.q-len-long {
+  font-size: clamp(1.05rem, max(3.1vh, 8cqh), 3.8rem);
+  line-height: 1.3;
 }
 
 .content-text strong,
 .content-text b {
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
 }
 
 .content-text em,
 .content-text i {
   font-style: italic;
-  color: var(--accent-secondary);
+  color: var(--accent-secondary-text);
 }
 
 /* Buzz Status */
 #buzz-status {
-  margin: 25px 0;
-  min-height: 70px;
+  min-height: clamp(40px, 7vh, 70px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+/* M5 FF2 (fix 2): shrunk from the FF1 sizing (padding up to 20px/40px,
+   text up to 2rem, ~80px tall) - the scoreboard is the surface's dominant
+   object (DESIGN.md), not this transient pill, so its footprint is trimmed
+   even though its text alone already measured under the score text. */
 .buzz-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 15px;
-  padding: 20px 40px;
+  gap: 12px;
+  padding: clamp(8px, 1.5vh, 14px) clamp(16px, 2.4vw, 30px);
   border-radius: 12px;
-  font-size: 2rem;
+  font-size: clamp(1rem, 2vh, 1.5rem);
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  animation: fadeInBounce 0.4s ease-out;
   border: 3px solid transparent;
 }
 
-@keyframes fadeInBounce {
+/* Entrance is a plain fade + settle, no overshoot (M5 S2-15: no bounce
+   easing), and it only plays when the viewer hasn't asked for less motion.
+   Reduced motion still gets the state change: the indicator just appears
+   at its resting opacity/position with no animation applied. */
+@media (prefers-reduced-motion: no-preference) {
+  .buzz-indicator {
+    animation: fadeIn 0.3s ease-out;
+  }
+}
+
+@keyframes fadeIn {
   0% {
     opacity: 0;
-    transform: scale(0.8) translateY(-20px);
-  }
-  60% {
-    transform: scale(1.05) translateY(0);
+    transform: translateY(-8px);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
 }
 
 .buzz-indicator.correct {
   background: var(--success);
   border-color: var(--success);
-  color: var(--text-primary);
+  color: var(--on-success);
 }
 
 .buzz-indicator.incorrect {
   background: var(--error);
   border-color: var(--error);
-  color: var(--text-primary);
+  color: var(--on-error);
 }
 
 .buzz-indicator.pending {
   background: var(--warning);
   border-color: var(--warning);
-  color: var(--text-primary);
+  color: var(--on-warning);
+}
+
+/* M5 S2-34: an extreme-length player or team name single-lines with an
+   ellipsis instead of wrapping the pill tall enough to overflow the frame;
+   the full name is still available via the element's `title`. */
+.buzz-player-name,
+.buzz-team-name {
+  display: inline-block;
+  max-width: 26vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .buzz-indicator::before {
@@ -162,7 +330,15 @@ body {
   height: 16px;
   border-radius: 50%;
   background: currentColor;
-  animation: pulse 2s ease-in-out infinite;
+}
+
+/* M5 S2-15: the pulsing dot is decorative (the indicator's colour and text
+   already carry the state), so it loops only without a reduced-motion
+   preference. */
+@media (prefers-reduced-motion: no-preference) {
+  .buzz-indicator::before {
+    animation: pulse 2s ease-in-out infinite;
+  }
 }
 
 @keyframes pulse {
@@ -176,45 +352,87 @@ body {
   }
 }
 
-/* Scoreboard */
+/* Scoreboard. M5 S2-23: padding and type scale by viewport height, same
+   reasoning as the content text above, so the last grid row never needs
+   more height on a 720p board than it has left to give. */
 #scoreboard {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 30px;
+  gap: clamp(10px, 1.8vh, 20px);
+}
+
+/* An 8-team board needs a tighter, fixed grid than a 2-team one to fit both
+   TV sizes without overflow (M5 S2-14). M5 FF1: `auto-fit` with a 200px
+   floor was only fitting 7 columns at the actual TV widths, wrapping an
+   8th team alone onto its own row; a fixed 4 columns always lays 8 teams
+   out as a clean 4x2 with no orphan. */
+#scoreboard:has(.team-score:nth-child(5)) {
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(8px, 1.2vh, 14px);
+}
+
+/* M5 FF1: names must read at >=28px at 1080p (they were truncating to
+   "Team Ve…" at ~18px).
+   M5 FF2 (fix 2): FF1's score override (2.2rem cap, ~35px) still landed
+   under the header (~34px) and barely over the pill's own text (~30px) -
+   "largest element" needs a clearer gap, so the cap is raised again while
+   the pill above is trimmed from the other side. */
+#scoreboard:has(.team-score:nth-child(5)) .team-score {
+  padding: clamp(6px, 1.1vh, 14px) clamp(12px, 1.8vw, 20px);
+  font-size: clamp(1.15rem, 2.6vh, 1.9rem);
+}
+
+#scoreboard:has(.team-score:nth-child(5)) .team-points {
+  font-size: clamp(1.7rem, 3.7vh, 2.6rem);
 }
 
 .team-score {
   background: var(--surface-hover);
   border-radius: 12px;
-  padding: 25px 30px;
+  padding: clamp(12px, 2.2vh, 25px) clamp(16px, 2.5vw, 30px);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1.8rem;
+  /* M5 FF2 (fix 2): this size also sets `.team-name`'s size (no rule of its
+     own overrides it) - the 8-team floor (>=28px at 1080p) now applies to
+     the 2-team board too, not just the 4x2 one above. */
+  font-size: clamp(1.3rem, 2.8vh, 2rem);
   border: 2px solid var(--border-subtle);
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  /* M5 FF1: tone-only depth, same reasoning as the question/answer cards
+     above - the grid's own `overflow: hidden` (M5 S2-23) was clipping this
+     shadow into a hard band in the light theme. */
 }
 
-.team-score:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+@media (hover: hover) and (pointer: fine) {
+  .team-score:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-4px);
+  }
 }
 
+/* M5 S2-34: an extreme-length team name ellipses instead of squeezing
+   .team-points out of the card; `min-width: 0` is what lets a flex item
+   shrink below its content's own width so the ellipsis can engage. */
 .team-name {
   font-weight: 600;
   color: var(--text-primary);
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* M5 FF1: vh-scaled (not a fixed rem) and Space Grotesk (added to the
+   design-language selector below), same reasoning as every other TV-scale
+   number - and the No-Glow floor drops the drop-shadow, which blurred into
+   a halo at 720p. */
 .team-points {
-  font-size: 2.6rem;
+  font-size: clamp(1.8rem, 4.5vh, 3.2rem);
   font-weight: 800;
-  color: var(--accent-primary);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  color: var(--accent-primary-text);
   min-width: 80px;
   text-align: right;
 }
@@ -225,61 +443,61 @@ body {
 }
 
 /* ===== CONFIG VIEW ===== */
+/* M5 S2-23: the config view lives inside the same fixed 100vh shell as the
+   match view (see the `#config-view:not(.hidden)` rule above), so every
+   size below scales by vh instead of assuming the page can grow - a TV
+   can't scroll, and the 8-team roster has to fit next to the join code on
+   a 720p board without pushing anything off the frame. `overflow: hidden`
+   is the backstop, not the plan: the clamp() floors are chosen so nothing
+   needs it at either TV size. */
 #config-view {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 80px);
-  gap: 40px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  gap: clamp(8px, 2vh, 40px);
 }
 
 .config-header {
   text-align: center;
-  margin-bottom: 20px;
 }
 
 .app-title {
-  font-size: 4.5rem;
+  font-size: clamp(1.6rem, 5.2vh, 4.5rem);
   font-weight: 800;
-  color: var(--accent-primary);
-  text-shadow: 0 4px 16px rgba(255, 235, 59, 0.4);
+  color: var(--accent-primary-text);
   letter-spacing: 0.05em;
-  margin-bottom: 10px;
-}
-
-.subtitle {
-  font-size: 2rem;
-  font-weight: 400;
-  color: var(--text-secondary);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  margin-bottom: clamp(2px, 0.6vh, 10px);
 }
 
 .join-code-section {
   text-align: center;
-  padding: 40px;
+  padding: clamp(10px, 2.2vh, 40px) clamp(16px, 3vw, 40px);
   background: var(--surface);
   border-radius: 20px;
-  border: 3px solid rgba(255, 235, 59, 0.3);
-  backdrop-filter: blur(10px);
+  border: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .join-code-display {
-  font-size: 5rem;
+  font-size: clamp(1.8rem, 5.6vh, 5rem);
   font-weight: 900;
-  font-family: 'Courier New', monospace;
-  color: var(--accent-primary);
+  /* The system monospace stack, not Courier New (M5 S2-14) - it still reads
+     as "a code" from the back row without the costume-monospace look. */
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-primary-text);
   letter-spacing: 0.3em;
-  text-shadow: 0 4px 16px rgba(255, 235, 59, 0.5);
-  margin-top: 10px;
+  margin-top: clamp(2px, 0.6vh, 10px);
 }
 
 .config-info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 25px;
+  gap: clamp(8px, 1.6vh, 25px);
   width: 100%;
   max-width: 1200px;
 }
@@ -287,24 +505,35 @@ body {
 .config-info-item {
   background: var(--surface);
   border-radius: 16px;
-  padding: 25px 30px;
+  padding: clamp(8px, 1.6vh, 25px) clamp(12px, 2vw, 30px);
   border: 2px solid var(--border-subtle);
-  backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   text-align: center;
 }
 
+/* M5 FF1: floor raised from ~10px (720p) to the 12px text-under-12px floor.
+   M5 FF2 (fix 7): that floor was the whole value - the coefficient (1.2vh)
+   resolved under the rem minimum at both TV sizes, so this never actually
+   scaled past ~12px. Raised to an actual 10-foot size (16-22px) rather
+   than the bare legibility minimum. */
 .info-label {
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 2vh, 1.4rem);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 10px;
+  margin-bottom: clamp(2px, 0.5vh, 10px);
 }
 
+/* M5 FF3 (fix 7 / R3): the FF2 "fix 7" pass raised `.info-label` off its
+   rem floor but left this rule untouched, so the value under each label
+   (the actual content: the proctor's name, the mode, the packet) stayed at
+   its old ~0.85rem floor while the label above it grew past it - a label
+   now outranking its own value. Raised past both `.info-label` and
+   `.config-player` (the player-name size) at both TV sizes so the config
+   view's real content, not its chrome, is the biggest text in each tile. */
 .info-value {
-  font-size: 1.8rem;
+  font-size: clamp(1.15rem, 2.5vh, 2.1rem);
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -312,29 +541,53 @@ body {
 .teams-section {
   width: 100%;
   max-width: 1200px;
+  min-height: 0;
 }
 
 .teams-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 25px;
-  margin-top: 20px;
+  gap: clamp(8px, 1.6vh, 25px);
+  margin-top: clamp(6px, 1.2vh, 20px);
+}
+
+/* Same compaction as the scoreboard, for the pre-game roster grid (M5
+   S2-14): an 8-team config view fits both TV sizes without overflow. The
+   vh clamps (M5 S2-23) do the rest of the work as the frame gets shorter. */
+.teams-grid:has(.config-team:nth-child(5)) {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: clamp(6px, 1vh, 16px);
+}
+
+.teams-grid:has(.config-team:nth-child(5)) .config-team {
+  padding: clamp(6px, 1.2vh, 16px);
+}
+
+.teams-grid:has(.config-team:nth-child(5)) .config-team-name {
+  font-size: clamp(0.85rem, 1.7vh, 1.5rem);
+  margin-bottom: clamp(3px, 0.7vh, 10px);
+}
+
+.teams-grid:has(.config-team:nth-child(5)) .config-player {
+  padding: clamp(3px, 0.6vh, 6px) clamp(6px, 1vw, 10px);
+  /* M5 FF1: floor raised to clear the 12px text-under-12px floor at 720p.
+     M5 FF2 (fix 7): same real-10-foot-size pass as `.config-player` below. */
+  font-size: clamp(0.95rem, 1.9vh, 1.4rem);
 }
 
 .config-team {
   background: var(--surface);
   border-radius: 16px;
-  padding: 25px;
+  padding: clamp(10px, 1.8vh, 25px);
   border: 2px solid var(--border-subtle);
-  backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .config-team-name {
-  font-size: 2rem;
+  font-size: clamp(1rem, 2.2vh, 2rem);
   font-weight: 700;
-  color: var(--accent-primary);
-  margin-bottom: 15px;
+  color: var(--accent-primary-text);
+  margin-bottom: clamp(4px, 1vh, 15px);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -348,26 +601,30 @@ body {
   height: 32px;
   padding: 0 10px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent-primary) 0%, #ffc107 100%);
-  color: #1a237e;
+  background: var(--accent-primary);
+  color: var(--on-accent-primary);
   font-size: 1rem;
   font-weight: 800;
+  flex-shrink: 0;
 }
 
 .config-team-players {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(3px, 0.6vh, 8px);
 }
 
+/* M5 FF1: a plain row, not a pill nested inside the team card - flattened
+   (no background/border-radius of its own) so a roster doesn't read as a
+   card inside a card. Floor raised slightly for 10-foot comfort. */
 .config-player {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 15px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  font-size: 1.4rem;
+  padding: clamp(4px, 0.8vh, 10px) 0;
+  /* M5 FF2 (fix 7): the ~14px this measured at 720p was the rem floor, not
+     a scaled value - raised to a real 10-foot size (~17-24px). */
+  font-size: clamp(1.05rem, 2.2vh, 1.7rem);
   color: var(--text-primary);
 }
 
@@ -377,12 +634,23 @@ body {
   font-size: 0.8rem;
 }
 
+/* M5 FF1: floor raised for 10-foot comfort above the 12px text-under-12px
+   floor.
+   M5 FF2 (fix 7): still landing at the rem floor (~14px) at 720p in
+   practice - raised to a real 10-foot size. */
 .waiting-message {
-  font-size: 1.8rem;
+  font-size: clamp(1.15rem, 2.3vh, 2rem);
   font-weight: 500;
   color: var(--text-muted);
   text-align: center;
-  animation: pulse-opacity 2s ease-in-out infinite;
+}
+
+/* M5 S2-15: without the loop, the message just renders at full opacity -
+   still legible, so reduced motion loses nothing but the pulse. */
+@media (prefers-reduced-motion: no-preference) {
+  .waiting-message {
+    animation: pulse-opacity 2s ease-in-out infinite;
+  }
 }
 
 @keyframes pulse-opacity {
@@ -399,31 +667,72 @@ body {
   /* Inherits existing match styles */
 }
 
-/* Connection Status Indicator */
+/* Connection status: a reserved lane at the top of the board, ahead of both
+   views (see cast-receiver.html), that reports state without ever covering
+   the board (M5 S2-08). M5 FF1: this used to be `position: fixed` at the
+   bottom-right corner, inside the 5% overscan inset but still on top of the
+   scoreboard's own last card - a 2-team board's second score sat right
+   there and read as half-covered. Living in `#app`'s normal flow instead
+   means a visible toast takes its own row and everything below it (the
+   flexible content row, via its `minmax(0, 1fr)` track) simply gives up
+   that height, so it can never sit over real content. */
+/* M5 FF2 (fix R1): `#status.connected` used to be `display: none`, so the
+   lane collapsed to 0 height while connected and sprang back to full height
+   the moment a disconnect fired - the review measured the header and
+   question box both jumping down by ~60px, right when a live board most
+   needs to hold still. `min-height` reserves the same lane at every state
+   (set from this rule's own visible content - connecting/disconnected icon
+   line-height plus padding), and `connected` only hides what's inside it
+   (`visibility` + `opacity`, not `display`), so the row is always there,
+   just empty. */
 #status {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  padding: 40px 60px;
-  background: rgba(0, 0, 0, 0.8);
-  border-radius: 20px;
-  border: 3px solid var(--border-medium);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-  z-index: 1000;
+  align-self: flex-end;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  padding: 10px 20px;
+  margin-bottom: clamp(8px, 1.6vh, 20px);
+  min-height: 48px;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  max-width: min(420px, 60vw);
   transition: opacity 0.3s ease;
 }
 
 #status.connected {
-  display: none;
+  visibility: hidden;
+  opacity: 0;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 .status-icon {
-  font-size: 4rem;
-  margin-bottom: 20px;
-  animation: rotate 2s linear infinite;
+  font-size: 1.6rem;
+  line-height: 1;
+  flex: none;
+}
+
+/* The spinner is only meaningful while connecting, and only when the
+   viewer hasn't asked for less motion (M5 S2-08). */
+@media (prefers-reduced-motion: no-preference) {
+  #status.connecting .status-icon {
+    animation: rotate 2s linear infinite;
+  }
+}
+
+/* M5 FF1: disconnected has no emoji glyph (floor glyph ban) - a plain CSS
+   dot instead. `.status-icon` is left empty of text for this state (see
+   `showDisconnected()`, cast-receiver.js), so the dot is this element's
+   entire visible content. */
+#status.disconnected .status-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--warning);
 }
 
 @keyframes rotate {
@@ -436,7 +745,7 @@ body {
 }
 
 .status-text {
-  font-size: 1.8rem;
+  font-size: 1.1rem;
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -500,11 +809,11 @@ body {
 
 /* ===== App design language: display chrome + serif reading surface ===== */
 .app-title, .section-label, .config-label, .team-name, .score-value,
-.round-number, .category, #config-game-mode, .player-count-badge {
+.round-number, .category, #config-game-mode, .player-count-badge, .team-points {
   font-family: var(--font-display) !important;
   letter-spacing: -0.005em;
 }
 .section-label, .config-label, .category { text-transform: uppercase; letter-spacing: 0.12em; }
-.score-value, .join-code-display, .player-count-badge { font-variant-numeric: tabular-nums; }
+.score-value, .join-code-display, .player-count-badge, .team-points { font-variant-numeric: tabular-nums; }
 /* the question/answer are the packet being read -> serif */
 #question-text, #answer-text, .question-text, .answer-text { font-family: var(--font-serif) !important; line-height: 1.5; }

@@ -43,8 +43,17 @@ export interface CastGameState {
 
   /* ===== Active Match Fields (when isConfigStage = false) ===== */
 
-  /** Current round number (e.g., "Round 5") */
+  /** Current round number (1-based tossup position within the packet) */
   roundNumber: number;
+
+  /**
+   * Total tossups in the packet, when the server has sent it (M5 S2-32).
+   * Mirrors the proctor header's own `getTotalTossupCount()`, so the
+   * receiver can say "Tossup N of M" in the same words as the proctor
+   * instead of the anonymous "Round N". Null in modes or before the packet
+   * carries a tossup count.
+   */
+  totalTossups: number | null;
 
   /** Question category (e.g., "History") */
   category: string;
