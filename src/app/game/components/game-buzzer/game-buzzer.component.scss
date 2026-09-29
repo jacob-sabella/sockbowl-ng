@@ -528,6 +528,18 @@
     display: flex;
     flex-direction: column;
 
+    // M5 FF4 remaining R1: the team list above is now fixed-height at this
+    // breakpoint (see the `:host ::ng-deep app-team-list` override) instead
+    // of stretching to fill `mat-card-content`'s leftover space, so nothing
+    // else would push this slot down to the card's own bottom edge without
+    // this. `margin-top: auto` in a flex column takes exactly that leftover
+    // space above itself, so the dome stays bottom-anchored (the M5 S1-04
+    // story) with a blank gap above it rather than the roster stretching to
+    // fill that gap and slicing its own last visible row.
+    @media (max-width: 320px) {
+      margin-top: auto;
+    }
+
     @media (orientation: landscape) and (max-height: 500px) {
       flex: 1 1 55%;
       min-width: 0;
@@ -744,11 +756,24 @@
   // this breakpoint) plus a header showing the meta pills on their own wrapped
   // line (measured 116.25px, taller than the plain 84.6875px header) plus
   // one row (`mat-list-item`'s frozen `min-height: 48px` = 3rem) = 184.25px;
-  // 11.625rem (186px) clears it with a small rounding buffer. As a
-  // `min-height`, a shorter header (the common case) still yields a
-  // taller-than-strictly-needed but never a sliced box.
+  // 11.625rem (186px) clears it with a small rounding buffer.
+  //
+  // M5 FF4 remaining R1: a `min-height` floor only raises a box that would
+  // otherwise render *shorter* than 186px — it did that for the self state
+  // (outcome strip above ate flex space, so the box naturally landed under
+  // the floor). In the open awaiting-buzz state there's no outcome strip, so
+  // this box, the only `flex: 1 1 auto` sibling in `mat-card-content`,
+  // absorbed that freed space instead and naturally landed at ~207px —
+  // above the floor, so the floor never applied, and 207px lands mid-way
+  // through the second row (164.25px header+row, plus ~43px of the next
+  // row) instead of at its boundary. A `flex` shorthand with 0 grow/shrink
+  // fixes the box at exactly this height regardless of how much space
+  // `mat-card-content` has left over, in every state alike; `.buzzer-active-
+  // slot` below (`margin-top: auto` at this breakpoint) takes whatever that
+  // leaves, which is what keeps the dome bottom-anchored instead of leaving
+  // a gap.
   @media (max-width: 320px) {
-    min-height: 11.625rem;
+    flex: 0 0 11.625rem;
     margin-top: 0.25rem;
     margin-bottom: 0.25rem;
   }
