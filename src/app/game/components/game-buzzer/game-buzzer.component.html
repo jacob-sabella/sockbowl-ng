@@ -88,8 +88,25 @@
               class="buzz-button">
               <!-- Wrapped in its own span so a long "<name> has it" label can
                    clamp to 2 lines with an ellipsis instead of overflowing
-                   the circle (M5 S1-24). -->
-              <span class="buzz-button__label">{{ getBuzzButtonText() }}</span>
+                   the circle (M5 S1-24). The rate-limited case is split out
+                   (M5 FF2 remaining R3) so the seconds unit can sit in its
+                   own `.buzz-button__unit` span: `.buzz-button`'s
+                   `text-transform: uppercase` turned "Slow down (4s)" into
+                   "SLOW DOWN (4S)", reading as a code rather than a duration.
+                   `getBuzzButtonText()` still carries this copy for every
+                   other state and for `textContent`-based specs, which see
+                   the same concatenated string either way. -->
+              <span class="buzz-button__label">
+                @if (getBuzzState() === 'rateLimited') {
+                  @if (rateLimitRemainingSeconds() !== null) {
+                    Slow down ({{ rateLimitRemainingSeconds() }}<span class="buzz-button__unit">s</span>)
+                  } @else {
+                    Slow down
+                  }
+                } @else {
+                  {{ getBuzzButtonText() }}
+                }
+              </span>
             </button>
           </div>
 

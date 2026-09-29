@@ -85,14 +85,25 @@
   }
 
   // `app-stomp-error-banner` (M5 FF1 material_fixes #3): a fixed overlay one
-  // level up in `game-canvas`, under the same navbar, with a shorter worst
-  // case than the reconnect strip (icon + one line of text + a "Try again in
-  // Ns" clause + a close button, no wrapping back-link) — 3.5rem clears it
-  // with room to spare. `bannerActive` mirrors the banner's own auto-hide
-  // window (see the `@Input` doc), so this reserves space for exactly as
-  // long as the banner would normally be up.
+  // level up in `game-canvas`, under the same navbar. `bannerActive` mirrors
+  // the banner's own auto-hide window (see the `@Input` doc), so this
+  // reserves space for exactly as long as the banner would normally be up.
+  //
+  // M5 FF2 remaining #3: 3.5rem (56px) assumed a one-line banner, but the
+  // banner's own text is server-supplied and wraps at narrow widths — the
+  // S1-22 rate-limited fixture ("Buzzes are coming in too fast — try again
+  // in a few seconds." + its "Try again in Ns." clause) wraps to 2 lines at
+  // 390px and measured 88px tall (pixel-sampled from the FF1 final capture:
+  // the banner's own bottom border lands at y=144, 56px navbar + 88px
+  // banner). That's 32px past the old 56px reserve, so the card's top edge
+  // and rounded corner rendered underneath the banner instead of below it.
+  // 6rem (96px) clears the measured 88px with a buffer for minor
+  // font-metric/browser variance; ≥600px keeps its old value (the banner
+  // has the width there to stay on one line — "Desktop is clean" per the
+  // finish review) and landscape phone is unchanged for the same reason
+  // (844px is plenty wide for one line).
   &--banner {
-    padding-top: calc(1rem + 3.5rem);
+    padding-top: calc(1rem + 6rem);
 
     @media (min-width: 600px) {
       padding-top: calc(2rem + 3.5rem);
@@ -129,9 +140,11 @@
   // material_fixes #1): freeing that 1rem per side back up is what lets a
   // 200px+ dome (`min(72vw, 240px)` = 201.6px at 280px) actually clear the
   // card's own content box with room to spare, on top of the flex-shrink
-  // fix above.
+  // fix above. M5 FF2 remaining R1: trimmed further (0.5rem -> 0.375rem),
+  // part of freeing the roster's height back (see the team-list host
+  // override further down).
   @media (max-width: 320px) {
-    padding: 0.5rem;
+    padding: 0.375rem;
   }
 
   // Fixed-slot layout (M5 S1-04): the card fills the height the container
@@ -163,14 +176,29 @@
     flex-direction: column;
     align-items: center;
     gap: 0.2rem;
-    margin-bottom: 1rem !important;
-    padding-bottom: 0.75rem !important;
+    // `!important` fights Material's own specificity on this property (see
+    // the comment above this card's rules). Routed through custom properties
+    // (M5 FF2) so each breakpoint below can retune the value without adding
+    // another `!important`: the declaration itself is the same one always,
+    // just reading a different `--gb-title-*` value at each width/height.
+    margin-bottom: var(--gb-title-mb, 1rem) !important;
+    padding-bottom: var(--gb-title-pb, 0.75rem) !important;
     border-bottom: 1px solid var(--border-subtle);
     overflow-wrap: break-word;
 
     @media (orientation: landscape) and (max-height: 500px) {
-      margin-bottom: 0.5rem !important;
-      padding-bottom: 0.4rem !important;
+      --gb-title-mb: 0.5rem;
+      --gb-title-pb: 0.4rem;
+    }
+
+    // M5 FF2 remaining R1: part of "shrink the space around the dome before
+    // shrinking the list" at the 280px floor — trims the title's own chrome
+    // too, alongside the outcome-strip/dome spacing below, so the roster
+    // gets its height back instead of clipping mid-row (see the team-list
+    // host override further down for the other half of this fix).
+    @media (max-width: 320px) {
+      --gb-title-mb: 0.375rem;
+      --gb-title-pb: 0.3rem;
     }
 
     .seat-line {
@@ -251,6 +279,14 @@
     color: var(--text-primary);
     overflow-wrap: break-word;
 
+    // M5 FF2 remaining R1: "shrink the space around the dome before
+    // shrinking the list" — this strip's own margin/padding is part of the
+    // dome unit's footprint at the 280px floor.
+    @media (max-width: 320px) {
+      margin: 0.25rem 0;
+      padding: 0.35rem 0.5rem;
+    }
+
     // `--text-primary`, not `--success-text`/`--info-text` (M5 FF1
     // material_fixes #4, S1-08/S1-23): a `*-text` token measured under AA on
     // its own 10% tint (H-08, still open at F2), so the stripe and tint
@@ -277,6 +313,14 @@
     display: flex;
     justify-content: center;
     margin: 1.25rem 0;
+
+    // M5 FF2 remaining R1: the other half of "shrink the space around the
+    // dome before shrinking the list" at the 280px floor — the dome itself
+    // stays at its `min(72vw, 240px)` contract floor (>=200px at 280px;
+    // M5-04 FIRST VIEWPORT), only the margin around it shrinks.
+    @media (max-width: 320px) {
+      margin: 0.25rem 0;
+    }
 
     .buzz-button {
       box-sizing: border-box;
@@ -396,6 +440,15 @@
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
         overflow: hidden;
+
+        // The dome's own `text-transform: uppercase` (above) turned the
+        // rate-limit countdown's "Slow down (4s)" into "SLOW DOWN (4S)" —
+        // the unit read as a code, not a duration (M5 FF2 remaining R3).
+        // `text-transform: lowercase` on just this child wins over the
+        // inherited `uppercase` for the "s" alone, leaving "SLOW DOWN (4s)".
+        .buzz-button__unit {
+          text-transform: lowercase;
+        }
       }
 
       @media (min-width: 600px) {
@@ -472,6 +525,16 @@
       justify-content: center;
       overflow-y: auto;
     }
+
+    // M5 FF2 remaining #7: with the roster above no longer stretched to
+    // fill the card (see `:host ::ng-deep app-team-list` below), equal
+    // `auto` margins split whatever height is left over between this unit's
+    // top and bottom, centering it in that space instead of leaving it
+    // glued to the roster with a dead band underneath.
+    @media (min-width: 760px) and (min-height: 501px) {
+      margin-top: auto;
+      margin-bottom: auto;
+    }
   }
 
   // "Space to buzz" (M5 S1-07): a fine-pointer affordance only — a touch
@@ -508,6 +571,13 @@
       min-width: 0;
       margin: 0;
       overflow-y: auto;
+    }
+
+    // M5 FF2 remaining #7: same centring-in-the-leftover-space fix as
+    // `.buzzer-active-slot` above, for the bonus state.
+    @media (min-width: 760px) and (min-height: 501px) {
+      margin-top: auto;
+      margin-bottom: auto;
     }
 
     .bonus-info {
@@ -575,6 +645,13 @@
       overflow-y: auto;
     }
 
+    // M5 FF2 remaining #7: same centring-in-the-leftover-space fix as
+    // `.buzzer-active-slot` above, for the round-complete state.
+    @media (min-width: 760px) and (min-height: 501px) {
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
     h3 {
       color: var(--text-primary);
       font-size: var(--text-xl);
@@ -635,23 +712,41 @@
     margin: 0;
   }
 
-  // Tablet and desktop (M5 FF1 material_fixes #7, ceiling #2): this box
-  // already grows via `flex: 1 1 auto` above to fill whatever height the
-  // top strip and the buzzer/bonus/round-complete slot leave over, but the
-  // roster it wraps stays top-aligned inside that taller box — on a short
-  // roster at >=760px that read as a ~300px dead band between the last team
-  // row and the outcome strip (the self state, mainly, since its extra
-  // outcome-strip line makes the buzzer slot taller and the team-list box
-  // shorter still without this). Centering the roster's own content within
-  // its box closes that band without moving the dome out of its fixed
-  // bottom-third slot. Scoped to >=760px and >=501px tall (never the
-  // cramped landscape-phone row layout just above, which caps at 500px
-  // tall): at mobile portrait widths the roster's real content routinely
-  // exceeds the box (the point of `overflow-y: auto` above), so centering
-  // has no visible effect there.
+  // M5 FF2 remaining R1: at the 280px floor, the finish review found the
+  // roster squeezed to a ~55px slit — the generic `min-height: 3rem` (one
+  // player row, `mat-list-item`'s own `min-height: 48px`) doesn't cover
+  // team-list's own header (`h3[mat-subheader]`) above that row, so what
+  // little height it got showed half the header and none of the roster.
+  // Freeing real pixels from the dome unit's own margins/padding above
+  // (`.buzz-outcome-strip`, `.buzz-button-container`, `mat-card-title`) is
+  // what actually buys this room back — shrinking the space around the dome
+  // before shrinking the list, per the review — and this raised floor snaps
+  // what's guaranteed to a whole header-plus-row boundary instead of an
+  // arbitrary fraction of one, so the current player's own row (typically
+  // the first rendered) is reachable without scrolling on first view. Own
+  // margins trimmed too, same rationale as the dome unit's.
+  @media (max-width: 320px) {
+    min-height: 7.5rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  // Tablet and desktop (M5 FF1 material_fixes #7): FF1 tried closing the
+  // dead band below a short roster by growing this box via `flex: 1 1 auto`
+  // and centering the roster's own rows inside it. The FF2 finish review
+  // found that split the one dead band into two (~200px above the teams,
+  // ~180px below), with the roster now floating mid-card, cut off from the
+  // header above it — worse, not better. M5 FF2 remaining #7: let this box
+  // take its own natural (content) height instead of stretching to fill the
+  // leftover space, and centre the leftover space around the buzzer/bonus/
+  // round-complete unit below it instead (`.buzzer-active-slot` etc., this
+  // file, same breakpoint) — the roster stays whole and anchored to the
+  // header, and the "centred" unit is the one actually named in the
+  // contract's STORY, not the roster. Scoped to >=760px and >=501px tall
+  // (never the cramped landscape-phone row layout just above, which caps at
+  // 500px tall, or mobile portrait, where the roster's real content
+  // routinely exceeds the box — the point of `overflow-y: auto` above).
   @media (min-width: 760px) and (min-height: 501px) {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    flex: 0 1 auto;
   }
 }
