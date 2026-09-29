@@ -626,10 +626,20 @@
     color: var(--text-primary);
   }
 
+  // M5 FF4 (R2): the container itself, not just `.part-header` inside it,
+  // needs the 56rem cap. `:first-of-type` below never actually matches -
+  // `.bonus-preamble-section` is also a sibling `<div>`, so it (not this
+  // element) is the true first-of-type, and this rule's border-top always
+  // renders. That pre-existing bug is out of this fix's scope; capping the
+  // box it's drawn on is enough to line the divider (and, since
+  // `.part-actions`' pinned background lives inside this same box, its
+  // sticky backing band too) up with the reading column instead of running
+  // the full card width past it.
   .bonus-part {
     padding: var(--spacing-md) 0;
     margin: 0;
     border-top: 1px solid var(--border-subtle);
+    max-width: 56rem;
 
     &:first-of-type { border-top: none; }
 

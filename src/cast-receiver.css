@@ -193,9 +193,33 @@ body {
    `cqh` is the term that actually governs there, while still bounding an
    unusually tall row - the base (untiered) tier's 3.2rem ceiling was
    already clear of its own 8cqh value at these heights, so it needed no
-   change. */
+   change.
+   M5 FF4 (fix 1): `cqh` was the governing term after FF3, but its
+   coefficients were sized for a worst case, not this row - the review
+   measured the long tier filling only ~45-52% of the row's height at both
+   TV sizes (still true of the other two tiers, which share the same
+   under-sizing) against a ~75-85% target. Text wrapping makes the
+   text-block-height-to-row ratio a step function of the coefficient (each
+   extra wrapped line is a jump, not a slope), so the coefficients below are
+   picked from a measured sweep (`__castRender` + `getBoundingClientRect`
+   against `#content-area`/`#question-text`, both TV sizes, the harness's
+   own long/medium fixture text) rather than a single scaling factor off
+   the old values - the review's own "9-10cqh" estimate for the long tier,
+   made from screenshots with no way to measure the live box, overshoots to
+   ~92% once actually measured. Landed on 13/11.5/8cqh (base/medium/long):
+   long is 84.0% at 720p and 91.8% at 1080p (the two TV sizes cross a
+   wrap-line boundary at different coefficients, so one pair can't both sit
+   inside the band without a JS fit-to-row step - the alternative this
+   fix's own note names); medium (measured on the 8-team fixture the review
+   flagged) is 86.2%/86.2%; base (the short, untiered fixture) is
+   58.5%/78.0%, still under-filled at 720p but roughly double its pre-fix
+   share and not part of the review's named cases. Base > medium > long
+   stays true (13 > 11.5 > 8), so a question doesn't grow when it crosses a
+   length tier. Each ceiling is raised past its own coefficient's measured
+   max across the established 540-610px 1080p row range, so `cqh` is what's
+   measured above, not the rem cap re-engaging. */
 .content-text {
-  font-size: clamp(1.3rem, max(4.2vh, 8cqh), 3.2rem);
+  font-size: clamp(1.3rem, max(4.2vh, 13cqh), 5rem);
   line-height: 1.4;
   color: var(--text-primary);
   font-weight: 400;
@@ -203,12 +227,12 @@ body {
 }
 
 .content-text.q-len-medium {
-  font-size: clamp(1.15rem, max(3.6vh, 7cqh), 2.75rem);
+  font-size: clamp(1.15rem, max(3.6vh, 11.5cqh), 4.4rem);
   line-height: 1.35;
 }
 
 .content-text.q-len-long {
-  font-size: clamp(1.05rem, max(3.1vh, 6cqh), 2.4rem);
+  font-size: clamp(1.05rem, max(3.1vh, 8cqh), 3.8rem);
   line-height: 1.3;
 }
 
