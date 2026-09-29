@@ -39,25 +39,38 @@
 
   // Fail-closed (D12) / quota (D10) banner (S3-02): a warning tone, since
   // this isn't a broken request, just AI unavailable right now.
+  //
+  // FF2 fix 2: was a single flex ROW (icon, body, button all side by side).
+  // At the dialog's ~616px content width that squeezed `&__body` down to
+  // ~282px, so a title with a trailing count ("...limit (5)") wrapped and
+  // orphaned the "(5)" on its own line (finish review r2). Switched to a
+  // 2-column GRID instead: icon + body share row 1 (body gets the full
+  // remaining ~550px+, plenty for the title on one line), and the action
+  // button drops to its own full-width row 2 below. This also removes the
+  // extra vertical room the button's inline presence used to force onto the
+  // narrower `&__body` column, and it's the same shape at every width now,
+  // so the old `@media (max-width: 560px)` column fallback (needed only
+  // because the row layout didn't fit at any width) is gone.
   .ai-limit-banner {
-    display: flex;
-    align-items: flex-start;
-    // FF1 fix 2: tightened alongside .generate-form's gap and the Remember
-    // row below (candidates named in the finish review) so the AI tab fits
-    // at 1440x900 without slicing the Context field.
-    gap: 0.6rem;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    column-gap: 0.6rem;
+    row-gap: 0.6rem;
     padding: 0.75rem 1rem;
     background: color-mix(in srgb, var(--warning) 12%, var(--surface));
     border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
     border-radius: var(--radius-md);
 
     mat-icon {
-      flex-shrink: 0;
+      grid-column: 1;
+      grid-row: 1;
       color: var(--warning-text);
     }
 
     &__body {
-      flex: 1 1 auto;
+      grid-column: 2;
+      grid-row: 1;
       min-width: 0;
     }
 
@@ -75,16 +88,10 @@
     }
 
     button {
-      flex-shrink: 0;
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: start;
       white-space: nowrap;
-    }
-
-    @media (max-width: 560px) {
-      flex-direction: column;
-
-      button {
-        align-self: flex-start;
-      }
     }
   }
 

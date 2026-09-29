@@ -929,7 +929,18 @@ describe('GameConfigComponent rendered lobby (S3-28)', () => {
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.launch__label')).withContext('the stacked MODE/PROCTOR eyebrow is gone').toBeNull();
-    expect(el.querySelector('.launch__name')?.textContent?.trim()).toBe('Proctor Alice');
+    // FF2 R1: was "Proctor Alice" via "Proctor " + name; the sentence is now
+    // "Proctored by <name>" so it can never stutter into "Proctor Proctor"
+    // for a proctor actually named "Proctor" (see the next spec).
+    expect(el.querySelector('.launch__name')?.textContent?.trim()).toBe('Proctored by Alice');
+  });
+
+  it('never stutters "Proctor Proctor" when the proctor is named "Proctor" (FF2 R1 regression)', () => {
+    gameStateService.getProctor.and.returnValue({ name: 'Proctor' } as unknown as ReturnType<GameStateService['getProctor']>);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.launch__name')?.textContent?.trim()).toBe('Proctored by Proctor');
   });
 
   it('every team header reserves the same 44px Join row whether or not Join renders there (r3 regression, FF1 fix 6)', () => {
@@ -1126,5 +1137,51 @@ describe('GameConfigComponent pending packet (PB-15)', () => {
 
       expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
     });
+  });
+});
+
+describe('GameConfigComponent cast control (FF2 fix 4)', () => {
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let fixture: ReturnType<typeof TestBed.createComponent<GameConfigComponent>>;
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
+      'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
+      'isProctorless', 'isAutoProctor', 'isFreeForAll', 'getProctor', 'requestGameSession',
+      'setMatchPacket', 'updateGameSettings', 'getCurrentPlayer', 'startMatch', 'isSelfSpectator',
+      'getCurrentPlayerTeam', 'isSelfOnTeam', 'isSelfOnAnyTeam', 'updateTeamSelf',
+    ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
+    gameStateService.isSelfProctor.and.returnValue(true);
+    gameStateService.isProctorless.and.returnValue(false);
+    gameStateService.isFreeForAll.and.returnValue(false);
+
+    TestBed.configureTestingModule({
+      declarations: [GameConfigComponent],
+      imports: [CommonModule],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: of(null) } } },
+        { provide: SockbowlQuestionsService, useValue: jasmine.createSpyObj<SockbowlQuestionsService>('SockbowlQuestionsService', ['getPacketById']) },
+        { provide: MatDialog, useValue: jasmine.createSpyObj<MatDialog>('MatDialog', ['open']) },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']) },
+        // Available and CONNECTING, so `.hero__cast-btn` actually renders.
+        { provide: PresentationConnectionService, useValue: { isAvailable$: of(true), connectionState$: of(PresentationConnectionState.CONNECTING) } },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameConfigComponent);
+    fixture.componentInstance.ngOnInit();
+    session$.next({ gameSettings: {}, currentMatch: { packet: null }, teamList: [], playerList: [] } as unknown as GameSession);
+    fixture.detectChanges();
+  });
+
+  it('disables the ripple so a lingering click ripple can never look like a fill that stops short of the pill\'s cap', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const castBtn = el.querySelector('.hero__cast-btn');
+    expect(castBtn).withContext('the cast button should render while CONNECTING').toBeTruthy();
+    expect(castBtn?.hasAttribute('disableRipple')).toBeTrue();
   });
 });

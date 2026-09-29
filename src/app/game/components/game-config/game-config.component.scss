@@ -185,6 +185,17 @@
 // `!important` can beat it (the same pre-existing constraint `.team__join`
 // below lives with); the compound selector's higher specificity is the
 // non-`!important` half of that fix.
+//
+// FF2 fix 8: confirmed by reading that F1 rule directly
+// (src/styles/vendors/_material-overrides.scss: `.mat-mdc-outlined-button {
+// border-color: var(--border-medium) !important; }`) — it is frozen (§2),
+// and it sets `border-color` as a plain property, not through a custom
+// token, so no non-`!important` component rule of any specificity can beat
+// it. Removing this `!important` would silently stop the CONNECTED state
+// from ever showing its accent border (it would just fall back to F1's
+// default `--border-medium` on every click), which is worse than the
+// `!important` itself. Handed off as H-10 instead of edited here (frozen
+// file, §5.3) rather than dropped silently.
 .hero__cast-btn.hero__cast-btn--connected {
   --mat-button-outlined-label-text-color: var(--accent-primary-text);
   border-color: var(--accent-primary) !important;
@@ -1033,8 +1044,20 @@ mat-card-actions {
   // card's "Find a Packet" (a `mat-card-actions` child, sized by the
   // `flex: 1 1 100%` fix above) went full-width beside it. Stretching the
   // column, not just the row, matches them.
-  .launch__proctor-cta,
-  .launch__start-cta {
+  //
+  // FF2 fix 7: that FF1 rule never actually won. The base rule it's meant
+  // to override lives inside `.launch { }` (line ~977), which SCSS compiles
+  // to `.launch .launch__proctor-cta, .launch .launch__start-cta` — two
+  // classes, specificity (0,2,0). This override was a bare, unnested
+  // `.launch__proctor-cta, .launch__start-cta` — one class, (0,1,0) — so
+  // despite coming later in the file, the lower-specificity rule always
+  // lost and `align-items` stayed `flex-start` at every width. Start Match
+  // rendered ~157px wide and left-aligned under the right-aligned status
+  // chips at 390px regardless of this block (finish review r2). Prefixing
+  // with `.launch` matches the base rule's specificity so source order
+  // (this rule is later) decides it, as the fix always intended.
+  .launch .launch__proctor-cta,
+  .launch .launch__start-cta {
     align-items: stretch;
   }
 }

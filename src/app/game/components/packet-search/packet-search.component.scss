@@ -25,7 +25,16 @@
 .packet-search-dialog {
   display: flex;
   flex-direction: column;
-  max-height: 85vh;
+  // FF2 fix 2: was 85vh, which centered the panel with ~67px of the
+  // viewport left empty below it at 1440x900 (900 - 0.85*900) while the AI
+  // tab's Context field was still sliced by the content scroller's fold
+  // right above that unused margin (finish review r2). Claiming that free
+  // space narrows the gap between the fold and the field without fighting
+  // the viewport for room the centered dialog never had a reason to leave
+  // idle; it still stays a centered panel (not edge-to-edge) at every width
+  // this rule applies to (>600px — the S3-10 full-screen breakpoint below
+  // overrides it beneath that).
+  max-height: 93vh;
   // Fill the dialog panel (sized by MatDialog); never cause horizontal overflow on phones.
   width: 100%;
   max-width: 100%;

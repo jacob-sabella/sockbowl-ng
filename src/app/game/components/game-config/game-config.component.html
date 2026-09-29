@@ -26,12 +26,27 @@
                  for CONNECTING (the device picker open), so it looked like it
                  vanished mid-handshake. Never icon-only on touch: the label
                  is always the button's accessible name, and shows as visible
-                 text from 600px up. -->
+                 text from 600px up.
+
+                 FF2 fix 4: `disableRipple` — the click that starts casting
+                 launches Material's own circular ripple on `mousedown`
+                 (before this button's own [disabled] binding flips true on
+                 CONNECTING), and that ripple's fade-out timer keeps running
+                 on its own schedule after the click, independent of the
+                 button becoming disabled. A capture taken while it's still
+                 fading showed as a lighter circular tint that doesn't reach
+                 the pill's rounded right cap — "the fill stops short of the
+                 right edge" (finish review r2). This control's three states
+                 are already carried by its icon, label and border color
+                 (S3-26/S3-32), so the ripple was decorative, not load-bearing
+                 for any state; removing it removes the artifact at its
+                 source instead of chasing capture timing. -->
             @if ((castAvailable$ | async) && gameStateService.isSelfProctor()) {
               @if (castConnectionState$ | async; as castState) {
                 <button
                   type="button"
                   mat-stroked-button
+                  disableRipple
                   class="hero__cast-btn"
                   [class.hero__cast-btn--connected]="castState === PresentationConnectionState.CONNECTED"
                   [disabled]="castState === PresentationConnectionState.CONNECTING"
@@ -105,7 +120,14 @@
         <div class="launch__proctor">
           <mat-icon class="launch__icon">supervisor_account</mat-icon>
           <div class="launch__meta">
-            <span class="launch__name">{{ gameStateService.getProctor()?.name ? ('Proctor ' + gameStateService.getProctor()?.name) : 'No proctor yet' }}</span>
+            <!-- FF2 R1: was `'Proctor ' + name`, which read "Proctor Proctor"
+                 for anyone actually named "Proctor" (the fixture, and any
+                 real account with that as a display name) once FF1 dropped
+                 the old stacked "PROCTOR" eyebrow that used to make the
+                 repetition read as label-then-value instead of a stutter.
+                 "Proctored by <name>" can't duplicate the role word twice in
+                 a row regardless of what the name is. -->
+            <span class="launch__name">{{ gameStateService.getProctor()?.name ? ('Proctored by ' + gameStateService.getProctor()?.name) : 'No proctor yet' }}</span>
           </div>
         </div>
       }
