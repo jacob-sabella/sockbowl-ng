@@ -176,6 +176,10 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((_msg: GameStartedMessage) => {
+          // No GameSessionUpdate yet (fresh instance after a mid-game reload,
+          // racing the get-game reply): drop it, the reply carries full state.
+          // A throw here would end this subscription for the tab's lifetime.
+          if (!this.gameSessionState?.currentMatch) return;
           this.gameSessionState.currentMatch.matchState = MatchState.IN_GAME;
           this.gameSessionSubject.next(this.gameSessionState);
         })
@@ -229,6 +233,10 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: AnswerUpdate) => {
+          // No GameSessionUpdate yet (fresh instance after a mid-game reload,
+          // racing the get-game reply): drop it, the reply carries full state.
+          // A throw here would end this subscription for the tab's lifetime.
+          if (!this.gameSessionState?.currentMatch) return;
 
           // Update the current round to the new round
           this.gameSessionState.currentMatch.currentRound = msg.currentRound;
@@ -244,6 +252,10 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: RoundUpdate) => {
+          // No GameSessionUpdate yet (fresh instance after a mid-game reload,
+          // racing the get-game reply): drop it, the reply carries full state.
+          // A throw here would end this subscription for the tab's lifetime.
+          if (!this.gameSessionState?.currentMatch) return;
 
           // Update the current round to the new round
           this.gameSessionState.currentMatch.currentRound = msg.round;
@@ -260,6 +272,10 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: PlayerBuzzed) => {
+          // No GameSessionUpdate yet (fresh instance after a mid-game reload,
+          // racing the get-game reply): drop it, the reply carries full state.
+          // A throw here would end this subscription for the tab's lifetime.
+          if (!this.gameSessionState?.currentMatch) return;
           this.gameSessionState.currentMatch.currentRound = msg.round;
           this.gameSessionSubject.next(this.gameSessionState);
         })
@@ -271,6 +287,10 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: BonusUpdate) => {
+          // No GameSessionUpdate yet (fresh instance after a mid-game reload,
+          // racing the get-game reply): drop it, the reply carries full state.
+          // A throw here would end this subscription for the tab's lifetime.
+          if (!this.gameSessionState?.currentMatch) return;
           // Update the current round with bonus information
           this.gameSessionState.currentMatch.currentRound = msg.currentRound;
           this.gameSessionState.currentMatch.previousRounds = msg.previousRounds;

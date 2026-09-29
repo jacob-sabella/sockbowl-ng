@@ -389,3 +389,71 @@ describe('GameStateService packet updates (WP-FIXN4)', () => {
     expect(snackBar.open).toHaveBeenCalledOnceWith('StartMatch: Permission Denied', 'Dismiss', jasmine.anything());
   });
 });
+
+/**
+ * H0 note (audit/m5/h0-gamestate-note.md): after a mid-game page reload a
+ * fresh GameStateService can receive a broadcast progression message before
+ * the get-game reply. Those handlers used to throw on the empty `{}` state,
+ * which tore down that subscription for the rest of the tab.
+ */
+describe('GameStateService progression before the first GameSessionUpdate (H0)', () => {
+  let service: GameStateService;
+  let eventSubjects: Record<string, Subject<any>>;
+
+  const EVENT_KEYS = [
+    'GameSessionUpdate', 'PlayerRosterUpdate', 'GameStartedMessage', 'MatchPacketUpdate',
+    'ProcessError', 'AnswerUpdate', 'RoundUpdate', 'PlayerBuzzed', 'BonusUpdate', 'TimerUpdate',
+    'ReadingUpdate',
+  ];
+  const PROGRESSION = ['GameStartedMessage', 'AnswerUpdate', 'RoundUpdate', 'PlayerBuzzed', 'BonusUpdate'];
+
+  function session(): GameSession {
+    let s!: GameSession;
+    service.gameSession$.subscribe(gs => (s = gs)).unsubscribe();
+    return s;
+  }
+
+  beforeEach(() => {
+    eventSubjects = {};
+    const gameEventObservables: Record<string, any> = {};
+    for (const key of EVENT_KEYS) {
+      eventSubjects[key] = new Subject<any>();
+      gameEventObservables[key] = eventSubjects[key].asObservable();
+    }
+    TestBed.configureTestingModule({
+      providers: [
+        GameStateService,
+        {
+          provide: GameMessageService,
+          useValue: {
+            gameEventObservables,
+            sendMessage: jasmine.createSpy('sendMessage'),
+            initialize: jasmine.createSpy('initialize'),
+            errors$: new Subject<any>().asObservable(),
+          },
+        },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+      ],
+    });
+    service = TestBed.inject(GameStateService);
+    service.initialize('g1', 'p1', {});
+  });
+
+  for (const key of PROGRESSION) {
+    it(`drops an early ${key} without throwing, and keeps applying later ones`, () => {
+      const round = { roundState: RoundState.AWAITING_BUZZ } as any;
+      expect(() => eventSubjects[key].next({ round, currentRound: round, previousRounds: [] })).not.toThrow();
+
+      eventSubjects['GameSessionUpdate'].next({
+        gameSession: { currentMatch: { packet: { id: null, name: null } } } as unknown as GameSession,
+      });
+      eventSubjects[key].next({ round, currentRound: round, previousRounds: [] });
+
+      if (key === 'GameStartedMessage') {
+        expect(session().currentMatch.matchState).toBeDefined();
+      } else {
+        expect(session().currentMatch.currentRound).toBe(round);
+      }
+    });
+  }
+});
