@@ -1,10 +1,10 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReplaySubject, Subject } from 'rxjs';
+import { of, ReplaySubject, Subject } from 'rxjs';
 
 import { GameBuzzerComponent } from './game-buzzer.component';
 import { GameStateService } from '../../services/game-state.service';
-import { GameWebSocketService } from '../../services/game-web-socket.service';
+import { GameConnectionState, GameWebSocketService } from '../../services/game-web-socket.service';
 import { GameSession, RoundState, StompError } from '../../models/sockbowl/sockbowl-interfaces';
 
 describe('GameBuzzerComponent (M4-UI-02)', () => {
@@ -29,7 +29,7 @@ describe('GameBuzzerComponent (M4-UI-02)', () => {
       declarations: [GameBuzzerComponent],
       providers: [
         { provide: GameStateService, useValue: gameStateService },
-        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable() } },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });
@@ -171,7 +171,13 @@ describe('GameBuzzerComponent bonus display (NG-R2-06)', () => {
       providers: [
         { provide: GameStateService, useValue: gameStateService },
         // M4-UI-02: the buzzer listens for stomp-buzz RATE_LIMITED errors.
-        { provide: GameWebSocketService, useValue: { errors$: new Subject<StompError>().asObservable() } },
+        {
+          provide: GameWebSocketService,
+          useValue: {
+            errors$: new Subject<StompError>().asObservable(),
+            connectionState$: of<GameConnectionState>('connected'),
+          },
+        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     });
@@ -211,5 +217,756 @@ describe('GameBuzzerComponent bonus display (NG-R2-06)', () => {
     gameStateService.getCurrentRoundBonusPoints.and.returnValue(10);
     fixture.detectChanges();
     expect(bonusScoreText()).toContain('10 / 20');
+  });
+});
+
+/**
+ * M5 S1-01: self / other / team-locked used to render identically ("<name>
+ * (<team>) has buzzed in" for everyone) and the dome unmounted outside
+ * AWAITING_BUZZ/PROCTOR_READING. `getBuzzState()` now derives a distinct
+ * state from `currentBuzz`, and the dome stays mounted (one slot) across
+ * every tossup round state.
+ */
+describe('GameBuzzerComponent buzz state (M5 S1-01)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let errors$: Subject<StompError>;
+
+  const SELF_ID = 'p-self';
+  const OTHER_ID = 'p-other';
+  const TEAM_SELF = 't-self';
+  const TEAM_OTHER = 't-other';
+
+  function sessionIn(roundState: RoundState, currentBuzz?: { playerId: string; teamId: string }): GameSession {
+    return {
+      currentMatch: {
+        currentRound: { roundState, roundNumber: 3, currentBuzz },
+        packet: { tossups: [{}, {}, {}, {}, {}, {}, {}, {}, {}] }, // 9 tossups
+      },
+    } as unknown as GameSession;
+  }
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  function outcomeStrip(): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('.buzz-outcome-strip');
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    errors$ = new Subject<StompError>();
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      [
+        'getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam',
+      ],
+      { gameSession$: session$.asObservable(), playerSessionId: SELF_ID },
+    );
+    gameStateService.getPlayerNameById.and.callFake((id: string) => (id === SELF_ID ? 'Ada' : 'Blaise'));
+    gameStateService.getTeamNameById.and.callFake((id: string) => (id === TEAM_SELF ? 'Team One' : 'Team Two'));
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(false);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('is open with no current buzz: dome enabled, no outcome strip', () => {
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.disabled).toBeFalse();
+    expect(buzzButton()?.textContent).toContain('Buzz!');
+    expect(outcomeStrip()).toBeNull();
+  });
+
+  it('is self when this seat holds the buzz: dome stays mounted, a success dome (not locked), distinct label and strip (M5 S1-24)', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: SELF_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('self');
+    expect(buzzButton()).not.toBeNull(); // mounted through AWAITING_ANSWER, not just AWAITING_BUZZ
+    // Not natively disabled (stays focusable and announced), but not
+    // clickable again either: `aria-disabled` carries the state instead.
+    expect(buzzButton()?.disabled).toBeFalse();
+    expect(buzzButton()?.getAttribute('aria-disabled')).toBe('true');
+    expect(buzzButton()?.classList).toContain('is-self');
+    expect(buzzButton()?.classList).not.toContain('is-locked');
+    expect(buzzButton()?.textContent).toContain('Answer!');
+    expect(outcomeStrip()?.textContent).toContain('You buzzed. Answer out loud.');
+  });
+
+  it('does not send a second buzz from clicking the already-won self dome (M5 S1-24)', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: SELF_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+
+    component.onBuzzClick();
+
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+
+  it('marks other/teamLocked/rateLimited domes .is-locked, but not open, pending or self', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_OTHER }));
+    fixture.detectChanges();
+
+    expect(buzzButton()?.classList).toContain('is-locked');
+    expect(buzzButton()?.classList).not.toContain('is-self');
+  });
+
+  it('is teamLocked when a teammate holds the buzz: dome muted, strip names the teammate', () => {
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(true);
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('teamLocked');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Team locked');
+    expect(outcomeStrip()?.textContent).toContain('Blaise has the buzz');
+  });
+
+  it('is other when the opposing team holds the buzz: distinct label and strip naming player and team', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_OTHER }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('other');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Blaise has it');
+    expect(outcomeStrip()?.textContent).toContain('Blaise (Team Two) has the buzz');
+  });
+
+  it('self, other and teamLocked no longer render the same outcome text', () => {
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: SELF_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+    const selfText = outcomeStrip()?.textContent?.trim();
+
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(true);
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_SELF }));
+    fixture.detectChanges();
+    const teamLockedText = outcomeStrip()?.textContent?.trim();
+
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(false);
+    session$.next(sessionIn(RoundState.AWAITING_ANSWER, { playerId: OTHER_ID, teamId: TEAM_OTHER }));
+    fixture.detectChanges();
+    const otherText = outcomeStrip()?.textContent?.trim();
+
+    expect(selfText).not.toBe(teamLockedText);
+    expect(teamLockedText).not.toBe(otherText);
+    expect(selfText).not.toBe(otherText);
+  });
+
+  it('is rateLimited while the stomp-buzz lockout is active, regardless of currentBuzz', () => {
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture.detectChanges();
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz', retryAfterMs: 5000 } as StompError);
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('rateLimited');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Slow down');
+  });
+
+  it('renders "Tossup N of M" from the packet size, matching solo/auto-proctor', () => {
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Tossup 3 of 9');
+  });
+
+  it('falls back to "Tossup N" with no "of M" when the packet size is unknown', () => {
+    const session = {
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 3 } },
+    } as unknown as GameSession;
+    session$.next(session);
+    fixture.detectChanges();
+
+    const title = (fixture.nativeElement as HTMLElement).querySelector('mat-card-title')?.textContent ?? '';
+    expect(title).toContain('Tossup 3');
+    expect(title).not.toContain('of');
+  });
+});
+
+/**
+ * M5 S1-03: a dropped/reconnecting socket disables the dome with a distinct
+ * label and aria reason, so a buzz is never silently swallowed by a socket
+ * the player can't see is down.
+ */
+describe('GameBuzzerComponent disconnected state (M5 S1-03)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let connectionState$: Subject<GameConnectionState>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    connectionState$ = new Subject<GameConnectionState>();
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: GameWebSocketService,
+          useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: connectionState$.asObservable() },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1 } },
+    } as unknown as GameSession);
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('starts open (the socket connected before the buzzer ever mounts)', () => {
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.disabled).toBeFalse();
+  });
+
+  it('disables the dome with a distinct label and aria reason while reconnecting', () => {
+    fixture.detectChanges();
+
+    connectionState$.next('reconnecting');
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('disconnected');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Reconnecting');
+    expect(buzzButton()?.getAttribute('aria-label')).toContain('reconnecting');
+  });
+
+  it('re-enables the dome once the socket reports connected again', () => {
+    fixture.detectChanges();
+    connectionState$.next('reconnecting');
+    fixture.detectChanges();
+
+    connectionState$.next('connected');
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.disabled).toBeFalse();
+  });
+
+  /**
+   * M5 S1-04: `game-canvas`'s `.reconnect-strip` is a fixed overlay that sits
+   * above this component. `isDisconnected()` drives a container class that
+   * reserves space for it instead of letting it cover the card title.
+   */
+  it('adds --reconnecting only while the socket is down', () => {
+    fixture.detectChanges();
+    const container = () => (fixture.nativeElement as HTMLElement).querySelector('.game-buzzer-container');
+
+    expect(component.isDisconnected()).toBeFalse();
+    expect(container()?.classList).not.toContain('game-buzzer-container--reconnecting');
+
+    connectionState$.next('reconnecting');
+    fixture.detectChanges();
+    expect(component.isDisconnected()).toBeTrue();
+    expect(container()?.classList).toContain('game-buzzer-container--reconnecting');
+
+    connectionState$.next('connected');
+    fixture.detectChanges();
+    expect(component.isDisconnected()).toBeFalse();
+    expect(container()?.classList).not.toContain('game-buzzer-container--reconnecting');
+  });
+
+  /**
+   * M5 FF1 material_fixes #3: `game-canvas`'s stomp-error-banner is also a
+   * fixed overlay above this component. `bannerActive` (an additive input,
+   * fed by `game-canvas` from the same `errors$` the banner itself reads)
+   * drives a container class that reserves space for it too, the same way
+   * `--reconnecting` does above.
+   */
+  it('adds --banner only while bannerActive is set', () => {
+    fixture.detectChanges();
+    const container = () => (fixture.nativeElement as HTMLElement).querySelector('.game-buzzer-container');
+
+    expect(container()?.classList).not.toContain('game-buzzer-container--banner');
+
+    component.bannerActive = true;
+    fixture.detectChanges();
+    expect(container()?.classList).toContain('game-buzzer-container--banner');
+
+    component.bannerActive = false;
+    fixture.detectChanges();
+    expect(container()?.classList).not.toContain('game-buzzer-container--banner');
+  });
+});
+
+/**
+ * M5 S1-29: the navbar shows the account name, not the seat name, so the
+ * buzzer's own top strip is the only place a player can check their seat and
+ * team. The old `.player-info-card` carried this but was hidden
+ * (`display: none`) and dead; it's been replaced with a live seat line.
+ */
+describe('GameBuzzerComponent seat line (M5 S1-29)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+    gameStateService.getCurrentPlayer.and.returnValue({ name: 'Ada' } as any);
+    gameStateService.getCurrentPlayerTeam.and.returnValue({ teamName: 'Team Alpha' } as any);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: GameWebSocketService,
+          useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: new Subject<GameConnectionState>().asObservable() },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1 } },
+    } as unknown as GameSession);
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+  });
+
+  it('shows the current seat and team in the title strip', () => {
+    fixture.detectChanges();
+
+    const seatLine = (fixture.nativeElement as HTMLElement).querySelector('.seat-line');
+    expect(seatLine?.textContent).toContain('Ada');
+    expect(seatLine?.textContent).toContain('Team Alpha');
+  });
+
+  it('no longer renders the dead, hidden .player-info-card', () => {
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.player-info-card')).toBeNull();
+  });
+});
+
+/** M5 S1-22: the dome's rate-limit label ticks down, matching the banner's own countdown. */
+describe('GameBuzzerComponent rate-limit countdown (M5 S1-22)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let errors$: Subject<StompError>;
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date());
+
+    errors$ = new Subject<StompError>();
+    const gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['sendPlayerIncomingBuzz', 'hasCurrentPlayerTeamBuzzed', 'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: new ReplaySubject<GameSession>(1) },
+    );
+    (gameStateService.gameSession$ as ReplaySubject<GameSession>).next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1 } },
+    } as unknown as GameSession);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('shows a ticking countdown that matches the real lockout window', () => {
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz', retryAfterSeconds: 3 } as StompError);
+    fixture.detectChanges();
+
+    expect(buzzButton()?.textContent).toContain('Slow down (3s)');
+
+    jasmine.clock().tick(1000);
+    fixture.detectChanges();
+    expect(buzzButton()?.textContent).toContain('Slow down (2s)');
+
+    jasmine.clock().tick(1000);
+    fixture.detectChanges();
+    expect(buzzButton()?.textContent).toContain('Slow down (1s)');
+
+    jasmine.clock().tick(1000);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.textContent).toContain('Buzz!');
+  });
+
+  it('counts down from the 1s fallback lockout when neither retryAfterMs nor retryAfterSeconds is present', () => {
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz' } as StompError);
+    fixture.detectChanges();
+
+    expect(buzzButton()?.textContent).toContain('Slow down (1s)'); // BUZZ_LOCKOUT_FALLBACK_MS = 1000ms
+  });
+});
+
+/**
+ * M5 S1-25: an accepted press shows a transient "sent" state instead of
+ * looking identical to a fully idle dome until the server echo lands, so a
+ * player in a noisy room doesn't tap again or look up late.
+ */
+describe('GameBuzzerComponent pending buzz (M5 S1-25)', () => {
+  const SELF_ID = 'p-self';
+  const OTHER_ID = 'p-other';
+
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let errors$: Subject<StompError>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  function sessionIn(currentBuzz?: { playerId: string; teamId: string }): GameSession {
+    return {
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, currentBuzz } },
+    } as unknown as GameSession;
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date());
+
+    session$ = new ReplaySubject<GameSession>(1);
+    errors$ = new Subject<StompError>();
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['sendPlayerIncomingBuzz', 'hasCurrentPlayerTeamBuzzed', 'getPlayerNameById', 'getTeamNameById',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: SELF_ID },
+    );
+    gameStateService.getPlayerNameById.and.returnValue('Blaise');
+    gameStateService.getTeamNameById.and.returnValue('Team Two');
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(false);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next(sessionIn());
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('shows a pending, aria-busy dome right after a press, before any echo', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('pending');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Buzzing…');
+    expect(buzzButton()?.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('returns to open after 1500ms with no echo', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    jasmine.clock().tick(1499);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('pending');
+
+    jasmine.clock().tick(1);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.getAttribute('aria-busy')).toBeNull();
+  });
+
+  it('clears as soon as the echo names this seat as the buzz holder', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    session$.next(sessionIn({ playerId: SELF_ID, teamId: 't-self' }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('self');
+    jasmine.clock().tick(1500); // a stale timer must not fire and revert the real state
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('self');
+  });
+
+  it('clears when another player buzzes first', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    session$.next(sessionIn({ playerId: OTHER_ID, teamId: 't-other' }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('other');
+  });
+
+  it('does not leave a stale pending state once a RATE_LIMITED rejection ends', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('pending');
+
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz', retryAfterMs: 500 } as StompError);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('rateLimited');
+
+    jasmine.clock().tick(500);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('open'); // not 'pending' again
+  });
+
+  it('does not send a second message while pending (still inside the debounce window)', () => {
+    component.onBuzzClick();
+    component.onBuzzClick();
+
+    expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * M5 S1-07: Space or Enter buzzes from anywhere on the page while the dome
+ * is open, matching PRODUCT.md ("Space or Enter to buzz").
+ */
+describe('GameBuzzerComponent global Space/Enter buzz (M5 S1-07)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function sessionIn(roundState: RoundState): GameSession {
+    return {
+      currentMatch: { currentRound: { roundState, roundNumber: 1 } },
+    } as unknown as GameSession;
+  }
+
+  function dispatchKey(key: string, target: EventTarget = document.body, extra: Partial<KeyboardEventInit> = {}): void {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra });
+    target.dispatchEvent(event);
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date());
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next(sessionIn(RoundState.AWAITING_BUZZ));
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+    jasmine.clock().uninstall();
+  });
+
+  it('buzzes once on a document-level Space press', () => {
+    dispatchKey(' ');
+    expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+
+  it('buzzes once on a document-level Enter press', () => {
+    dispatchKey('Enter');
+    expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores Space typed into a text input', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    try {
+      dispatchKey(' ', input);
+      expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+    } finally {
+      input.remove();
+    }
+  });
+
+  it('ignores a repeated (held-down) key', () => {
+    dispatchKey(' ', document.body, { repeat: true });
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+
+  it('ignores Space while locked out by a rate limit', () => {
+    component.buzzLocked.set(true);
+    dispatchKey(' ');
+    expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+  });
+
+  it('ignores Space on another button (its own native activation already fires)', () => {
+    const otherButton = document.createElement('button');
+    document.body.appendChild(otherButton);
+    try {
+      dispatchKey(' ', otherButton);
+      expect(gameStateService.sendPlayerIncomingBuzz).not.toHaveBeenCalled();
+    } finally {
+      otherButton.remove();
+    }
+  });
+
+  it('shows the visible "Space to buzz" hint only while open', () => {
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Space to buzz');
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_ANSWER, roundNumber: 1, currentBuzz: { playerId: 'p-self', teamId: 't1' } } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Space to buzz');
+  });
+});
+
+/**
+ * M5 S1-10: the visible per-second timers stay `role="timer"` with no
+ * `aria-live` (so they don't chatter every tick); a separate, once-per-
+ * threshold region announces the 5s warning, and the round-completed live
+ * region is a one-line summary instead of the whole question/answer HTML.
+ */
+describe('GameBuzzerComponent live announcements (M5 S1-10)', () => {
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function statusRegions(): HTMLElement[] {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[role="status"]'));
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getPlayerNameById', 'getTeamNameById', 'hasCurrentPlayerTeamBuzzed', 'sendPlayerIncomingBuzz',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: 'p-self' },
+    );
+    gameStateService.getTeamNameById.and.returnValue('Team One');
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: new Subject<StompError>().asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('the tossup timer is role=timer with no aria-live', () => {
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 12 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+
+    const timer = (fixture.nativeElement as HTMLElement).querySelector('[role="timer"]');
+    expect(timer).not.toBeNull();
+    expect(timer?.getAttribute('aria-live')).toBeNull();
+  });
+
+  it('announces the 5s urgency threshold once, not every tick', () => {
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 6 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+    expect(component.getUrgencyAnnouncement()).toBeNull();
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 5 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+    expect(component.getUrgencyAnnouncement()).toBe('Time is almost up.');
+
+    session$.next({
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, remainingTossupTimerSeconds: 4 } },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+    // Same constant text on every tick under the threshold: a screen reader
+    // only announces it once, on the crossing, not once a second.
+    expect(component.getUrgencyAnnouncement()).toBe('Time is almost up.');
+  });
+
+  it('round-completed announces a one-line summary, not the whole question/answer HTML', () => {
+    session$.next({
+      currentMatch: {
+        currentRound: {
+          roundState: 'COMPLETED', roundNumber: 3,
+          question: 'A very long question that should not be read aloud in full',
+          answer: 'The answer',
+          buzzList: [{ playerId: 'p-self', teamId: 't1', correct: true }],
+        },
+      },
+    } as unknown as GameSession);
+    fixture.detectChanges();
+
+    const regions = statusRegions();
+    const summaryRegion = regions.find(r => r.textContent?.includes('Tossup 3 complete'));
+    expect(summaryRegion).toBeTruthy();
+    expect(summaryRegion?.textContent).toContain('Team One +10');
+    expect(summaryRegion?.textContent).not.toContain('A very long question');
   });
 });

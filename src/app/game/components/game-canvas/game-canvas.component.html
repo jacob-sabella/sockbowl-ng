@@ -1,5 +1,27 @@
-<!-- Socket errors: fatal ones persist until dismissed, non-fatal ones for 5s. -->
-<app-stomp-error-banner [error]="latestStompError"></app-stomp-error-banner>
+<!-- Socket errors: fatal ones persist until dismissed, non-fatal ones for 5s.
+     `#stompBanner` (M5 FF3 remaining #3): lets the canvas measure the
+     banner's own real rendered height (see `stompBannerHeightPx` in the
+     .ts) instead of guessing it, so a consumer like `app-game-buzzer` can
+     reserve exactly that much space at any width, not just the ones a
+     capture happens to cover. -->
+<app-stomp-error-banner #stompBanner [error]="latestStompError"></app-stomp-error-banner>
+
+<!-- Non-fatal "the socket dropped and is coming back" indicator (M5 S1-03): distinct
+     from the stomp-error-banner (which only shows actual ERROR/queue frames), so a
+     silent WebSocket close is never mistaken for a live, working game. -->
+@if ((connectionState$ | async) === 'reconnecting') {
+  <div class="reconnect-strip" role="status" aria-live="polite">
+    <!-- A reconnect that runs past 15s escalates its wording and offers a way
+         out, instead of sitting on "Reconnecting…" indefinitely (M5 S1-31). -->
+    @if (reconnectEscalated$ | async) {
+      <span>Still trying to reconnect…</span>
+      <a class="reconnect-strip__back" routerLink="/game-session">Back to lobby</a>
+    } @else {
+      <span>Reconnecting…</span>
+    }
+  </div>
+}
+
 <!-- Game Session Container -->
 @if (gameSession$ | async) {
   <div>
@@ -30,7 +52,11 @@
     <!-- Buzzer component -->
     @if (shouldShowBuzzerComponent()) {
       <div>
-        <app-game-buzzer></app-game-buzzer>
+        <!-- `bannerActive` (M5 FF1 material_fixes #3): an additive input on
+             our own component, not the frozen stomp-error-banner API, so
+             the buzzer can reserve the banner's slot the same way it
+             already reserves one for `.reconnect-strip`. -->
+        <app-game-buzzer [bannerActive]="bannerActive"></app-game-buzzer>
       </div>
     }
     <!-- Spectator component -->
@@ -45,5 +71,18 @@
         <app-match-summary></app-match-summary>
       </div>
     }
+  </div>
+} @else {
+  <!-- Blank canvas before the first gameSession$ emission (M5 S1-02): a designed
+       connecting state, with a way back out, instead of a black page. Past
+       15s with no emission the copy escalates the same way the reconnect
+       strip does (M5 S1-31). -->
+  <div class="canvas-connecting">
+    @if (connectingEscalated$ | async) {
+      <app-loading-state title="Still connecting…"></app-loading-state>
+    } @else {
+      <app-loading-state title="Connecting to the game…"></app-loading-state>
+    }
+    <a class="canvas-connecting__back" routerLink="/game-session">Back to lobby</a>
   </div>
 }

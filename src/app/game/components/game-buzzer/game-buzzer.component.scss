@@ -1,78 +1,319 @@
 // Game buzzer: player buzz-in interface.
 // Mobile-first, theme-token driven (works in light and dark), accessible.
 
+// Sighted-hidden, not removed from the accessibility tree: the sr-only
+// announcement regions (M5 S1-10). Component-local since `styles/**` is
+// frozen for S1 (same pattern as `theme-selector.component.scss`).
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .game-buzzer-container {
   box-sizing: border-box;
-  // Fill the viewport but let content scroll on short phones instead of clipping
-  // (buzzer + bonus + timer + team list can exceed the height).
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow-y: auto;
+  // Fixed to exactly the viewport minus the navbar (M5 S1-04 round 3): a
+  // `min-height` let the container grow past one screen and the whole page
+  // scroll — the fx evidence measured 900-1021px pages against an 844px
+  // viewport, with the dome's own bottom edge past the fold. There's no
+  // shared `--navbar-height` token yet (H-09), so this repeats the same
+  // 56/64px break the navbar (`navbar.component.scss`), the stomp banner and
+  // the reconnect strip already use (`game-canvas.component.scss`). No outer
+  // scroll: `.game-buzzer`'s own `min-height: 0` chain (below) lets the team
+  // list absorb whatever the fixed slots don't use instead.
+  height: calc(100dvh - 56px);
+  overflow: hidden;
   background: var(--bg-primary);
   padding: 1rem;
+  // Clears the home-indicator / gesture-bar area so the dome (anchored at
+  // the bottom of the card, see `.game-buzzer` below) is never under it
+  // (M5 S1-04 "Bottom third ... clear of env(safe-area-inset-bottom)").
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  // Was `center`: with the card's height fixed to the viewport (see
+  // `.game-buzzer` `flex`), a `center`-justified single-item container
+  // re-blocks (moves) the whole card up/down by half of whatever the card's
+  // content height changed by — that's exactly the S1-04 bug ("card offsets
+  // ... top y~72 -> y~172" when the outcome strip appears). Top-aligning the
+  // card and anchoring the dome *inside* it instead keeps the card itself
+  // from ever moving.
+  justify-content: flex-start;
 
   @media (min-width: 600px) {
+    height: calc(100dvh - 64px);
     padding: 2rem;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   }
-}
 
-.player-info-card {
-  display: none;
+  // Landscape phone (M5 S1-04 FIRST VIEWPORT: 844x390): little vertical
+  // room, so the card gets a tighter frame and its content switches to a
+  // row layout (see `.game-buzzer` below) instead of stacking.
+  @media (orientation: landscape) and (max-height: 500px) {
+    padding: 0.5rem;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  // A dropped/reconnecting socket (M5 S1-03) makes `game-canvas`'s own
+  // `.reconnect-strip` appear above this component, fixed under the navbar.
+  // Reserve that strip's own height here instead of letting it float over
+  // the card title (M5 S1-04 round 3 residual: "the reconnecting strip
+  // covers the card title 'Tossup 1'"). `isDisconnected()` mirrors the same
+  // `connectionState$` the strip itself reacts to, so the two always agree
+  // on whether it's showing. 4.5rem clears the strip's worst case — its
+  // escalated copy plus the 44px "Back to lobby" link (M5 S1-34) wrapping to
+  // a second line at narrow widths — with the plain one-line "Reconnecting…"
+  // case well inside it; a real `--reconnect-strip-height` custom property
+  // is F2/H-09 territory.
+  &--reconnecting {
+    padding-top: calc(1rem + 4.5rem);
+
+    @media (min-width: 600px) {
+      padding-top: calc(2rem + 4.5rem);
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      padding-top: calc(0.5rem + 4.5rem);
+    }
+  }
+
+  // `app-stomp-error-banner` (M5 FF1 material_fixes #3): a fixed overlay one
+  // level up in `game-canvas`, under the same navbar. `bannerActive` mirrors
+  // the banner's own auto-hide window (see the `@Input` doc), so this
+  // reserves space for exactly as long as the banner would normally be up.
+  //
+  // M5 FF2 remaining #3: raised the reserve from a one-line 3.5rem guess to
+  // a hand-measured 6rem after the S1-22 rate-limited fixture wrapped to 2
+  // lines at 390px — which the finish review then marked partial again:
+  // the guess was re-measured, not fixed, and still unproven at 280px,
+  // where this same message wraps to several more lines than either round
+  // budgeted for.
+  //
+  // M5 FF3 remaining #3: replaced the guess entirely. `--stomp-banner-height`
+  // (set on `app-game-canvas`'s own host by a `ResizeObserver` in
+  // `game-canvas.component.ts`, see `stompBannerHeightPx`'s doc) is the
+  // banner's actual rendered height, at whatever width the page happens to
+  // be — so the reserve now follows the banner by construction instead of
+  // by re-measuring one fixture and hoping the next one fits. The `96px`
+  // fallback (the old 6rem value) only matters for the one frame before the
+  // observer's first callback fires, or if `ResizeObserver` is unavailable;
+  // `bannerActive` still gates whether `&--banner` applies at all, so a
+  // hidden banner reserves nothing regardless of this variable's value.
+  // Desktop and landscape phone keep their own base-padding halves (2rem /
+  // 0.5rem, unrelated to the banner) plus the same live variable, since a
+  // real height already reflects however narrow or wide the banner's own
+  // wrap turns out to be at that breakpoint — a per-breakpoint reserve
+  // constant is no longer needed now that the value itself is real.
+  &--banner {
+    padding-top: calc(1rem + var(--stomp-banner-height, 96px));
+
+    @media (min-width: 600px) {
+      padding-top: calc(2rem + var(--stomp-banner-height, 96px));
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      padding-top: calc(0.5rem + var(--stomp-banner-height, 96px));
+    }
+  }
 }
 
 .game-buzzer {
   box-sizing: border-box;
   width: 100%;
   max-width: 1200px;
-  background: var(--surface) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 16px !important;
-  box-shadow: var(--shadow-lg) !important;
-  padding: 1rem !important;
+  // :host-scoped specificity (emulated encapsulation) already wins over the
+  // Material defaults these were overriding, so the blanket !important on
+  // this card's own box model is dropped (M5 S1-11). mat-card-title/-content
+  // below keep theirs: Material sets color/font-size closer to the element
+  // there, so the specificity fight is real.
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  // Shadow size and colour were split (the size half had no colour, so
+  // `currentColor` filled in `--text-primary`, showing as a halo in every
+  // dark theme). Pairing them, as `_material-overrides.scss` does, fixes it.
+  // `--shadow-md`, not `--shadow-lg`: paired with the 1px border above,
+  // the wider blur read as a thin-border-plus-wide-shadow silhouette
+  // (M5 S1-28a); `--shadow-md` keeps the depth without that mismatch.
+  box-shadow: var(--shadow-md) var(--shadow-color);
+  padding: 1rem;
+
+  // Trims the card's own inline padding at the 280px floor (M5 FF1
+  // material_fixes #1): freeing that 1rem per side back up is what lets a
+  // 200px+ dome (`min(72vw, 240px)` = 201.6px at 280px) actually clear the
+  // card's own content box with room to spare, on top of the flex-shrink
+  // fix above. M5 FF2 remaining R1: trimmed further (0.5rem -> 0.375rem),
+  // part of freeing the roster's height back (see the team-list host
+  // override further down).
+  @media (max-width: 320px) {
+    padding: 0.375rem;
+  }
+
+  // Fixed-slot layout (M5 S1-04): the card fills the height the container
+  // gives it (the container's fixed `calc(100dvh - navbar)` minus its own
+  // padding) instead of sizing to its content, so its children can be
+  // arranged as top status strip / middle team list / bottom-anchored dome.
+  // `min-height: 0` lets a flex child (`mat-card-content`) actually
+  // shrink/scroll inside it rather than being forced to its content's
+  // intrinsic height.
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
 
   @media (min-width: 600px) {
-    border-radius: 20px !important;
-    padding: 1.5rem !important;
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    padding: 0.5rem;
   }
 
   mat-card-title {
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
-    color: var(--text-primary) !important;
-    margin-bottom: 1rem !important;
-    padding-bottom: 0.75rem !important;
+    flex: 0 0 auto;
+    // Two lines (M5 S1-29): the seat/team line above "Tossup N of M", each
+    // sized on its own instead of the whole title block sharing one size.
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    // `!important` fights Material's own specificity on this property (see
+    // the comment above this card's rules). Routed through custom properties
+    // (M5 FF2) so each breakpoint below can retune the value without adding
+    // another `!important`: the declaration itself is the same one always,
+    // just reading a different `--gb-title-*` value at each width/height.
+    margin-bottom: var(--gb-title-mb, 1rem) !important;
+    padding-bottom: var(--gb-title-pb, 0.75rem) !important;
     border-bottom: 1px solid var(--border-subtle);
-    text-align: center;
     overflow-wrap: break-word;
 
-    @media (min-width: 600px) {
-      font-size: 1.5rem !important;
+    @media (orientation: landscape) and (max-height: 500px) {
+      --gb-title-mb: 0.5rem;
+      --gb-title-pb: 0.4rem;
+    }
+
+    // M5 FF2 remaining R1: part of "shrink the space around the dome before
+    // shrinking the list" at the 280px floor — trims the title's own chrome
+    // too, alongside the outcome-strip/dome spacing below, so the roster
+    // gets its height back instead of clipping mid-row (see the team-list
+    // host override further down for the other half of this fix).
+    @media (max-width: 320px) {
+      --gb-title-mb: 0.375rem;
+      --gb-title-pb: 0.3rem;
+    }
+
+    .seat-line {
+      // `align-self: stretch` (the parent centers its other children by
+      // shrink-wrapping them) gives this line the card's actual width to
+      // truncate against, so a long seat/team name ellipsizes instead of
+      // widening the card at 280px (M5 S1-04 FIRST VIEWPORT).
+      align-self: stretch;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .round-line {
+      max-width: 100%;
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: center;
+
+      @media (min-width: 600px) {
+        font-size: var(--text-2xl);
+      }
+
+      @media (orientation: landscape) and (max-height: 500px) {
+        font-size: var(--text-base);
+      }
+    }
+
+    .of-total {
+      font-weight: 500;
+      color: var(--text-secondary);
     }
   }
 
   mat-card-content {
     color: var(--text-primary) !important;
+    // Fixed-slot layout (M5 S1-04): a flex column so the team list (the
+    // only child given `flex: 1 1 auto`, below) grows or shrinks to absorb
+    // whatever room the other slots don't use, which is what keeps the
+    // dome's own bottom edge anchored to the same spot regardless of
+    // whether the outcome strip, bonus block or timer is showing.
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      // Team list beside the buzzer/bonus/round-complete slot instead of
+      // stacked above it (FIRST VIEWPORT: "the dome and team list sit side
+      // by side" at 844x390).
+      flex-direction: row;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
   }
 
-  // ---- Active buzz banner -------------------------------------------------
-  .active-buzz-info {
-    text-align: center;
+  // ---- Buzz outcome strip --------------------------------------------------
+  // Left-stripe-on-tint info block (DESIGN's info-block rule): who has the
+  // buzz is carried by this text, never by colour alone (M5 S1-01).
+  .buzz-outcome-strip {
+    text-align: left;
     font-weight: 600;
+    font-size: var(--text-base);
     margin: 1rem 0;
-    padding: 0.85rem 1rem;
-    background: var(--bg-tertiary);
-    border: 2px solid var(--error);
-    border-radius: 12px;
+    padding: 0.65rem 0.9rem;
+    border-radius: var(--radius-sm);
+    // An inset shadow, not `border-left`, follows the box's own rounded
+    // corner instead of squaring off past the curve (M5 S1-19).
+    box-shadow: inset 4px 0 0 0 var(--text-muted);
+    background: color-mix(in srgb, var(--text-muted) 10%, var(--surface));
+    color: var(--text-primary);
+    overflow-wrap: break-word;
 
-    p {
-      font-size: 1.05rem !important;
-      color: var(--text-primary) !important;
-      margin: 0 !important;
-      overflow-wrap: break-word;
+    // M5 FF2 remaining R1: "shrink the space around the dome before
+    // shrinking the list" — this strip's own margin/padding is part of the
+    // dome unit's footprint at the 280px floor.
+    @media (max-width: 320px) {
+      margin: 0.25rem 0;
+      padding: 0.35rem 0.5rem;
+    }
+
+    // `--text-primary`, not `--success-text`/`--info-text` (M5 FF1
+    // material_fixes #4, S1-08/S1-23): a `*-text` token measured under AA on
+    // its own 10% tint (H-08, still open at F2), so the stripe and tint
+    // alone carry the tone here, same as the bonus info block below.
+    &--self {
+      box-shadow: inset 4px 0 0 0 var(--success);
+      background: color-mix(in srgb, var(--success) 10%, var(--surface));
+      color: var(--text-primary);
+    }
+
+    &--other {
+      box-shadow: inset 4px 0 0 0 var(--info);
+      background: color-mix(in srgb, var(--info) 10%, var(--surface));
+      color: var(--text-primary);
+    }
+
+    &--team-locked {
+      color: var(--text-secondary);
     }
   }
 
@@ -82,11 +323,29 @@
     justify-content: center;
     margin: 1.25rem 0;
 
+    // M5 FF2 remaining R1: the other half of "shrink the space around the
+    // dome before shrinking the list" at the 280px floor — the dome itself
+    // stays at its `min(72vw, 240px)` contract floor (>=200px at 280px;
+    // M5-04 FIRST VIEWPORT), only the margin around it shrinks.
+    @media (max-width: 320px) {
+      margin: 0.25rem 0;
+    }
+
     .buzz-button {
       box-sizing: border-box;
       // Large, round, unmissable touch target that still fits a 360px phone.
       width: min(72vw, 240px);
       height: min(72vw, 240px);
+      // Locks width and height together (M5 FF1 material_fixes #1): at
+      // 280px this flex item (row-direction `.buzz-button-container`) used
+      // to flex-shrink its width below the `min(72vw, 240px)` above while
+      // its height (the cross axis, never shrunk by `flex-shrink`) held —
+      // measured 182x202, an ellipse under the 200px floor. `flex-shrink: 0`
+      // stops the shrink outright; `aspect-ratio: 1` is a second, redundant
+      // guarantee that width and height move together even if some other
+      // container ever constrains one axis again.
+      flex-shrink: 0;
+      aspect-ratio: 1;
       min-width: 44px;
       min-height: 44px;
       padding: 1rem;
@@ -98,7 +357,9 @@
       line-height: 1.15;
       border-radius: 50%;
       background: var(--error) !important;
-      color: #ffffff !important;
+      // Token, not a component hex, so themes can tune it (Role-Not-Hue;
+      // M5 S1-18). Verified >= white's contrast on --error in every theme.
+      color: var(--on-error) !important;
       border: none !important;
       // Physical dome: neutral base ring + soft cast shadow, light top / dark
       // bottom insets. No colored glow.
@@ -130,155 +391,409 @@
         outline-offset: 5px;
       }
 
-      // Locked: your team has already buzzed. Clearly de-emphasised.
-      &:disabled,
+      // Locked: other/teamLocked/rateLimited/disconnected. Clearly
+      // de-emphasised, but still readable (M5 S1-24): `--text-muted` on
+      // `--surface-active` measured 3.35:1 in dark, below AA; `--text-primary`
+      // clears >=4.4:1 in every theme (the dome's bold uppercase label is
+      // large text, where 3:1 is the floor). `.is-locked` alone, not
+      // `:disabled` too — `.is-pending` is also natively disabled but is a
+      // separate, mutually exclusive class, so the two states never have to
+      // out-specify each other (M5 S1-24 removed the old `!important` pile
+      // this caused; see `.is-pending` below).
       &.is-locked {
         background: var(--surface-active) !important;
-        color: var(--text-muted) !important;
+        color: var(--text-primary) !important;
         cursor: not-allowed;
-        filter: none;
-        transform: none !important;
         box-shadow:
           0 4px 0 -2px var(--shadow-color),
           inset 0 -6px 14px rgba(0, 0, 0, 0.25) !important;
       }
 
+      // Sent, waiting for the server echo (M5 S1-25): held at the
+      // pressed-down position instead of the muted "locked" look, since it
+      // isn't locked out. Background/color already match the base (open)
+      // state, so only the pressed geometry needs restating — `.is-pending`
+      // and `.is-locked` are mutually exclusive classes, never both applied
+      // to the same button, so this doesn't need extra specificity or
+      // `!important` beyond the box-shadow override itself (M5 S1-24).
+      &.is-pending {
+        cursor: wait;
+        transform: translateY(8px);
+        box-shadow:
+          0 2px 0 -2px var(--shadow-color),
+          0 5px 14px var(--shadow-color),
+          inset 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+      }
+
+      // Winning the buzz looks like winning, not like losing it (M5 S1-24):
+      // a success fill instead of the same grey as every locked-out state.
+      // Not natively `disabled` (the template uses `aria-disabled` so the
+      // dome stays focusable and announced), so the pressed travel is
+      // stated explicitly here rather than left to `:active`.
+      &.is-self {
+        background: var(--success) !important;
+        color: var(--on-success) !important;
+        cursor: default;
+        transform: translateY(8px);
+        box-shadow:
+          0 2px 0 -2px var(--shadow-color),
+          0 5px 14px var(--shadow-color),
+          inset 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+      }
+
+      .buzz-button__label {
+        // Clamp a long "<name> has it" / "<name> has the buzz" label to 2
+        // lines with an ellipsis instead of overflowing the 240px circle
+        // (M5 S1-24).
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+
+        // The dome's own `text-transform: uppercase` (above) turned the
+        // rate-limit countdown's "Slow down (4s)" into "SLOW DOWN (4S)" —
+        // the unit read as a code, not a duration (M5 FF2 remaining R3).
+        // `text-transform: lowercase` on just this child wins over the
+        // inherited `uppercase` for the "s" alone, leaving "SLOW DOWN (4s)".
+        .buzz-button__unit {
+          text-transform: lowercase;
+        }
+      }
+
       @media (min-width: 600px) {
         font-size: 2rem;
+      }
+
+      // Landscape phone (M5 S1-04): the dome shares a ~390px-tall row with
+      // the title bar and team list, so it's capped by height, not just
+      // width — `min(72vw, 240px)` alone would still ask for 240px of
+      // height here and force the page to scroll, which the FIRST VIEWPORT
+      // contract for this breakpoint rules out ("fully visible"). `34vh`
+      // keeps it comfortably inside that row at 390px tall while `min-width`
+      // holds the touch-target floor.
+      @media (orientation: landscape) and (max-height: 500px) {
+        width: min(34vh, 170px);
+        height: min(34vh, 170px);
+        min-width: 96px;
+        min-height: 96px;
+        font-size: 1.1rem;
+        padding: 0.5rem;
       }
     }
   }
 
-  // ---- Timer --------------------------------------------------------------
+  // ---- Timer ----------------------------------------------------------------
+  // Neutral text by default; only turns to --warning-text once time is short
+  // (<=5s), rather than sitting in an amber bordered box the whole time
+  // (M5 S1-12).
   .timer-display {
+    flex: 0 0 auto;
     text-align: center;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     margin-top: 0.75rem;
-    padding: 0.75rem;
-    background: var(--bg-tertiary);
-    border: 2px solid var(--warning);
-    border-radius: 12px;
-    color: var(--text-primary);
+    color: var(--text-secondary);
+    transition: color var(--transition-base, 0.2s ease);
+
+    &--urgent {
+      color: var(--warning-text);
+    }
 
     p {
       margin: 0 !important;
-      font-size: 1.15rem !important;
+      font-size: var(--text-lg) !important;
     }
 
     .bonus-timer {
-      color: var(--text-primary) !important;
+      color: inherit !important;
       font-weight: 700 !important;
+    }
+
+    // Landscape phone: a slim column ahead of the team list rather than a
+    // full-width row eating into the limited vertical space.
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 0 0 auto;
+      margin-top: 0;
+      align-self: center;
     }
   }
 
-  // ---- Bonus section ------------------------------------------------------
+  // ---- Buzzer active slot (M5 S1-04) -----------------------------------------
+  // Wraps the outcome strip + dome as one unit: the block that's anchored at
+  // the bottom of the card in portrait, and becomes the dome's own column
+  // beside the team list in landscape.
+  .buzzer-active-slot {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+
+    // M5 FF4 remaining R1: the team list above is now fixed-height at this
+    // breakpoint (see the `:host ::ng-deep app-team-list` override) instead
+    // of stretching to fill `mat-card-content`'s leftover space, so nothing
+    // else would push this slot down to the card's own bottom edge without
+    // this. `margin-top: auto` in a flex column takes exactly that leftover
+    // space above itself, so the dome stays bottom-anchored (the M5 S1-04
+    // story) with a blank gap above it rather than the roster stretching to
+    // fill that gap and slicing its own last visible row.
+    @media (max-width: 320px) {
+      margin-top: auto;
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 1 1 55%;
+      min-width: 0;
+      justify-content: center;
+      overflow-y: auto;
+    }
+
+    // M5 FF2 remaining #7: with the roster above no longer stretched to
+    // fill the card (see `:host ::ng-deep app-team-list` below), equal
+    // `auto` margins split whatever height is left over between this unit's
+    // top and bottom, centering it in that space instead of leaving it
+    // glued to the roster with a dead band underneath.
+    @media (min-width: 760px) and (min-height: 501px) {
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+  }
+
+  // "Space to buzz" (M5 S1-07): a fine-pointer affordance only — a touch
+  // phone has no space bar, so it stays hidden there rather than taking up
+  // room under the dome for nothing.
+  .keyboard-hint {
+    display: none;
+    margin: 0.5rem 0 0;
+    text-align: center;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+
+    @media (hover: hover) and (pointer: fine) {
+      display: block;
+    }
+  }
+
+  // ---- Bonus section ---------------------------------------------------------
+  // One heading + one info block (who/part/phase) + a plain score line,
+  // instead of four nested bordered boxes (M5 S1-12).
+  // Flattened into the play card (M5 FF1 material_fixes #6): this used to
+  // also carry its own `background`/`border`/`border-radius`/`padding`
+  // panel around the stripe info block below, which is a card inside a
+  // card (the detector's `nested-cards` floor rule). Only the stripe info
+  // block, the timer and the score line carry any visual weight now; this
+  // wrapper is layout-only (the anchoring/spacing that made it `flex: 0 0
+  // auto` in the first place).
   .bonus-section {
+    flex: 0 0 auto;
     margin: 1.5rem 0;
-    padding: 1.25rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-subtle);
-    border-top: 3px solid var(--accent-secondary);
-    border-radius: 14px;
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 1 1 55%;
+      min-width: 0;
+      margin: 0;
+      overflow-y: auto;
+    }
+
+    // M5 FF2 remaining #7: same centring-in-the-leftover-space fix as
+    // `.buzzer-active-slot` above, for the bonus state.
+    @media (min-width: 760px) and (min-height: 501px) {
+      margin-top: auto;
+      margin-bottom: auto;
+    }
 
     .bonus-info {
       text-align: center;
 
       h3 {
-        font-size: 1.3rem;
+        font-size: var(--text-2xl);
         font-weight: 700;
-        color: var(--accent-secondary);
-        margin: 0 0 1rem;
-
-        @media (min-width: 600px) {
-          font-size: 1.5rem;
-        }
-      }
-
-      > p {
-        font-size: 1.05rem;
         color: var(--text-primary);
-        margin: 0.75rem 0;
-        line-height: 1.6;
-        overflow-wrap: break-word;
-
-        strong {
-          color: var(--accent-secondary);
-          font-weight: 700;
-        }
+        margin: 0 0 1rem;
       }
 
       .bonus-score {
-        display: inline-block;
-        margin: 1rem 0;
-        padding: 0.75rem 1.25rem;
-        background: var(--surface);
-        border: 2px solid var(--accent-secondary);
-        border-radius: 12px;
-        font-size: 1.15rem;
+        margin: 1rem 0 0;
+        font-size: var(--text-lg);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
-        color: var(--text-primary);
+        color: var(--text-secondary);
       }
 
-      .bonus-status {
-        margin-top: 1rem;
+      // Left-stripe-on-tint info block (DESIGN's info-block rule), left-aligned.
+      .bonus-status.info-block {
+        text-align: left;
+        margin: 0;
         padding: 0.85rem 1rem;
-        background: var(--surface);
-        border-radius: 10px;
-        border: 1px solid var(--border-subtle);
+        background: color-mix(in srgb, var(--accent-secondary) 10%, var(--surface));
+        // Inset shadow, not `border-left`, follows the rounded corner (M5 S1-19).
+        box-shadow: inset 4px 0 0 0 var(--accent-secondary);
+        border-radius: var(--radius-sm);
 
         p {
-          font-size: 1.05rem;
-          color: var(--text-secondary);
+          font-size: var(--text-base);
+          color: var(--text-primary);
           margin: 0;
           font-weight: 500;
           line-height: 1.5;
           overflow-wrap: break-word;
         }
+
+        // `--accent-secondary-text` measured 4.1:1 on this tint (M5 S1-08,
+        // H-08): the stripe and tint already carry the tone, so the name
+        // itself sits in `--text-primary` instead of trusting a `*-text`
+        // token on its own tint.
+        strong {
+          color: var(--text-primary);
+          font-weight: 700;
+        }
       }
     }
   }
 
-  // ---- Round completed ----------------------------------------------------
+  // ---- Round completed --------------------------------------------------------
+  // Left-stripe info blocks in the reading voice, left-aligned, no accent
+  // top border (M5 S1-13).
   .round-completed-info {
-    text-align: center;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-subtle);
-    border-top: 3px solid var(--accent-primary);
-    border-radius: 12px;
-    padding: 1rem;
+    flex: 0 0 auto;
+    text-align: left;
+    padding: 0.25rem 0;
     margin: 1rem 0;
 
-    h3 {
-      color: var(--accent-primary);
-      font-size: 1.2rem;
-      font-weight: 700;
-      margin: 0 0 0.75rem;
-
-      @media (min-width: 600px) {
-        font-size: 1.3rem;
-      }
+    @media (orientation: landscape) and (max-height: 500px) {
+      flex: 1 1 55%;
+      min-width: 0;
+      margin: 0;
+      overflow-y: auto;
     }
 
-    p {
-      font-size: 1rem;
-      color: var(--text-primary);
-      margin: 0.5rem 0;
-      line-height: 1.5;
-      overflow-wrap: break-word;
+    // M5 FF2 remaining #7: same centring-in-the-leftover-space fix as
+    // `.buzzer-active-slot` above, for the round-complete state.
+    @media (min-width: 760px) and (min-height: 501px) {
+      margin-top: auto;
+      margin-bottom: auto;
+    }
 
-      strong {
-        color: var(--accent-primary);
-        font-weight: 600;
+    h3 {
+      color: var(--text-primary);
+      font-size: var(--text-xl);
+      font-weight: 700;
+      margin: 0 0 0.75rem;
+      text-align: center;
+    }
+
+    .info-block {
+      margin: 0.75rem 0;
+      padding: 0.85rem 1rem;
+      background: color-mix(in srgb, var(--accent-primary) 10%, var(--surface));
+      // Inset shadow, not `border-left`, follows the rounded corner (M5 S1-19).
+      box-shadow: inset 4px 0 0 0 var(--accent-primary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+
+      .info-label {
+        font-family: var(--font-body);
+        font-size: var(--text-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--accent-primary-text);
+      }
+
+      .info-value {
+        font-family: var(--font-serif);
+        font-size: var(--text-base);
+        color: var(--text-primary);
+        line-height: 1.6;
+        overflow-wrap: break-word;
       }
     }
   }
 }
 
-// Team list styling
-::ng-deep app-team-list {
-  margin-top: 1rem;
+// Team list styling. `:host` scopes the descendant selector to this
+// component's own template instead of every `app-team-list` on the page
+// (M5 S1-11). Fixed-slot layout (M5 S1-04): this is `mat-card-content`'s
+// only `flex: 1 1 auto` child, so it grows or shrinks to fill whatever
+// height the top strip and the active/bonus/round-complete slot don't use —
+// the "middle, scrollable" slot, and what keeps the dome's own position
+// stable when the outcome strip appears or disappears above it.
+:host ::ng-deep app-team-list {
   display: block;
+  flex: 1 1 auto;
+  min-height: 3rem;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    flex: 1 1 45%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  // M5 FF2 remaining R1: at the 280px floor, the finish review found the
+  // roster squeezed to a ~55px slit — the generic `min-height: 3rem` (one
+  // player row, `mat-list-item`'s own `min-height: 48px`) doesn't cover
+  // team-list's own header (`h3[mat-subheader]`) above that row, so what
+  // little height it got showed half the header and none of the roster.
+  // Freeing real pixels from the dome unit's own margins/padding above
+  // (`.buzz-outcome-strip`, `.buzz-button-container`, `mat-card-title`) is
+  // what actually buys this room back — shrinking the space around the dome
+  // before shrinking the list, per the review — and this raised floor snaps
+  // what's guaranteed to a whole header-plus-row boundary instead of an
+  // arbitrary fraction of one, so the current player's own row (typically
+  // the first rendered) is reachable without scrolling on first view. Own
+  // margins trimmed too, same rationale as the dome unit's.
+  //
+  // M5 FF3 remaining R1: 7.5rem (120px) was picked to fit, not measured —
+  // the finish review found it still sliced a row (both a plain header and
+  // the taller, two-line `.you-badge` header measured on the real frozen
+  // `team-list.component.scss` markup this component can only read, not
+  // change). Replaced it with the actual worst case: the frozen team-list
+  // component's own `.team-lists-container` (`margin-top: 1.25rem` = 20px at
+  // this breakpoint) plus a header showing the meta pills on their own wrapped
+  // line (measured 116.25px, taller than the plain 84.6875px header) plus
+  // one row (`mat-list-item`'s frozen `min-height: 48px` = 3rem) = 184.25px;
+  // 11.625rem (186px) clears it with a small rounding buffer.
+  //
+  // M5 FF4 remaining R1: a `min-height` floor only raises a box that would
+  // otherwise render *shorter* than 186px — it did that for the self state
+  // (outcome strip above ate flex space, so the box naturally landed under
+  // the floor). In the open awaiting-buzz state there's no outcome strip, so
+  // this box, the only `flex: 1 1 auto` sibling in `mat-card-content`,
+  // absorbed that freed space instead and naturally landed at ~207px —
+  // above the floor, so the floor never applied, and 207px lands mid-way
+  // through the second row (164.25px header+row, plus ~43px of the next
+  // row) instead of at its boundary. A `flex` shorthand with 0 grow/shrink
+  // fixes the box at exactly this height regardless of how much space
+  // `mat-card-content` has left over, in every state alike; `.buzzer-active-
+  // slot` below (`margin-top: auto` at this breakpoint) takes whatever that
+  // leaves, which is what keeps the dome bottom-anchored instead of leaving
+  // a gap.
+  @media (max-width: 320px) {
+    flex: 0 0 11.625rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  // Tablet and desktop (M5 FF1 material_fixes #7): FF1 tried closing the
+  // dead band below a short roster by growing this box via `flex: 1 1 auto`
+  // and centering the roster's own rows inside it. The FF2 finish review
+  // found that split the one dead band into two (~200px above the teams,
+  // ~180px below), with the roster now floating mid-card, cut off from the
+  // header above it — worse, not better. M5 FF2 remaining #7: let this box
+  // take its own natural (content) height instead of stretching to fill the
+  // leftover space, and centre the leftover space around the buzzer/bonus/
+  // round-complete unit below it instead (`.buzzer-active-slot` etc., this
+  // file, same breakpoint) — the roster stays whole and anchored to the
+  // header, and the "centred" unit is the one actually named in the
+  // contract's STORY, not the roster. Scoped to >=760px and >=501px tall
+  // (never the cramped landscape-phone row layout just above, which caps at
+  // 500px tall, or mobile portrait, where the roster's real content
+  // routinely exceeds the box — the point of `overflow-y: auto` above).
+  @media (min-width: 760px) and (min-height: 501px) {
+    flex: 0 1 auto;
+  }
 }

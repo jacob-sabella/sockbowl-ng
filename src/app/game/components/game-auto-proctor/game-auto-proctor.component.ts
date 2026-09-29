@@ -299,6 +299,45 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Space or Enter buzzes from anywhere on the page while buzzing is
+   * possible (M5 S1-07, PRODUCT.md: "Space or Enter to buzz"), matching the
+   * classic buzzer and solo. This never collides with `onEnter` above:
+   * `canBuzz` is false once a round is `COMPLETED`, and `isCompleted` is
+   * false whenever `canBuzz` is true.
+   */
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydownBuzz(event: KeyboardEvent): void {
+    if (event.repeat) {
+      return;
+    }
+    if (event.key !== ' ' && event.key !== 'Spacebar' && event.key !== 'Enter') {
+      return;
+    }
+    if (this.isKeyboardBuzzExcluded(event.target as HTMLElement | null)) {
+      return;
+    }
+    if (!this.canBuzz) {
+      return;
+    }
+    event.preventDefault();
+    this.buzz();
+  }
+
+  /** Same exclusions as the classic buzzer's global handler (M5 S1-07). */
+  private isKeyboardBuzzExcluded(target: HTMLElement | null): boolean {
+    if (target) {
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+        return true;
+      }
+      if (tag === 'BUTTON') {
+        return true;
+      }
+    }
+    return !!document.querySelector('mat-dialog-container');
+  }
+
   /** The reader device reads the current bonus part (with the preamble on part 1), once per part. */
   private maybeSpeakBonus(): void {
     if (!this.readerMode) {

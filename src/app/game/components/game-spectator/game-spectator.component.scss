@@ -10,29 +10,32 @@
   overflow-x: hidden;
 }
 
-// Header
+// Header: a compact label, not a hero banner (M5 S1-27) — this is the
+// room's projector view, so the live round should own the top of the
+// viewport, not the page's own title. Still an h1 (heading order holds),
+// just sized and padded like a strip instead of a full card.
 .spectator-header {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  text-align: center;
+  text-align: left;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
   background: var(--surface);
-  border-radius: 12px;
-  border: 1px solid var(--accent-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
 
   .spectator-icon {
-    font-size: 2.25rem;
-    width: 2.25rem;
-    height: 2.25rem;
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
     color: var(--accent-primary);
   }
 
   .spectator-title {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1rem;
     font-weight: 700;
     line-height: 1.2;
     color: var(--text-primary);
@@ -146,8 +149,10 @@ h2 {
       margin-bottom: 1.25rem;
       padding: 1rem;
       background: var(--bg-secondary);
-      border-left: 4px solid var(--accent-primary);
-      border-radius: 8px;
+      // An inset shadow (not `border-left`) follows the box's own rounded
+      // corner instead of squaring off past the curve (M5 S1-19).
+      box-shadow: inset 4px 0 0 0 var(--accent-primary);
+      border-radius: var(--radius-sm);
       overflow-wrap: anywhere;
 
       p {
@@ -232,28 +237,38 @@ h2 {
       justify-content: center;
       margin-top: 1.25rem;
 
-      mat-chip {
+      // A plain text status label (dot + text), not a filled pill: it sits
+      // next to plain sentences like "Waiting for the question." and
+      // shouldn't read as a separate clickable control (M5 S1-19).
+      .round-state-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
         font-weight: 600;
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
+        font-size: var(--text-sm);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        background: var(--surface);
         color: var(--text-secondary);
 
+        &::before {
+          content: '';
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: currentColor;
+          flex-shrink: 0;
+        }
+
         &.reading {
-          background: var(--surface);
-          color: var(--info);
+          color: var(--info-text);
         }
 
         &.awaiting-buzz {
-          background: var(--surface);
-          color: var(--warning);
+          color: var(--warning-text);
         }
 
         &.awaiting-answer {
-          background: var(--surface);
-          color: var(--accent-secondary);
+          color: var(--accent-secondary-text);
         }
       }
     }
@@ -338,8 +353,9 @@ h2 {
           p {
             padding: 0.75rem;
             background: var(--bg-secondary);
-            border-left: 4px solid var(--success);
-            border-radius: 4px;
+            // Inset shadow, not `border-left`, follows the rounded corner (M5 S1-19).
+            box-shadow: inset 4px 0 0 0 var(--success);
+            border-radius: var(--radius-sm);
           }
         }
 
@@ -392,19 +408,17 @@ h2 {
   }
 
   .spectator-header {
-    flex-direction: row;
-    text-align: left;
-    gap: 1rem;
-    padding: 1.5rem;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
 
     .spectator-icon {
-      font-size: 3rem;
-      width: 3rem;
-      height: 3rem;
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
     }
 
     .spectator-title {
-      font-size: 2rem;
+      font-size: 1.15rem;
     }
   }
 
@@ -430,6 +444,21 @@ h2 {
 @media (min-width: 1024px) {
   .spectator-container {
     padding: 2rem;
+  }
+
+  // Round + teams side by side, round in the wider column (M5 S1-27): a
+  // projector-sized screen has room for both without the round scrolling
+  // out of view below the roster.
+  .spectator-main {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+    gap: 1.5rem;
+  }
+
+  .current-round-section,
+  .teams-section {
+    margin-bottom: 0;
   }
 
   .current-round-section .current-round-card .question-text {

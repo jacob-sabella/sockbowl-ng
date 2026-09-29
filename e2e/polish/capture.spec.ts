@@ -69,7 +69,23 @@ const SURFACES: SurfaceScenario[] = [s1, s2, s3, s4, s5, s6];
               const viewport = VIEWPORTS[vpName];
               if (!viewport) throw new Error(`unknown viewport "${vpName}" in scenario ${surface.id}/${state.id}`);
 
-              const context = await browser.newContext({ viewport, baseURL: BASE_URL });
+              // M5 FF1 material_fixes #8 (S1 evidence honesty): without
+              // `hasTouch`, a "mobile" or "mobile-min" capture is really a
+              // laptop viewport in a phone-sized window — `(hover: hover)
+              // and (pointer: fine)` still matches, so a fine-pointer-only
+              // affordance like the buzzer's "Space to buzz" hint
+              // (`game-buzzer.component.scss`) renders on evidence
+              // presented as a phone's. Emulating touch for these two
+              // viewports only (not `desktop`/`tablet`, real trackpad/mouse
+              // surfaces) makes Chromium's `hover`/`pointer` media evaluate
+              // the way an actual phone's would. This lives here, not in
+              // the frozen `e2e/polish/manifest.ts` (H-04) — `VIEWPORTS`
+              // there only carries width/height, no touch capability.
+              const touchViewport = vpName === 'mobile' || vpName === 'mobile-min';
+              const context = await browser.newContext({
+                viewport, baseURL: BASE_URL,
+                ...(touchViewport ? { hasTouch: true } : {}),
+              });
               const page = await context.newPage();
               try {
                 await presetTheme(page, theme);

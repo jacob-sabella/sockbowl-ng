@@ -20,6 +20,7 @@ class FakeStompClient {
   beforeConnect: (client: any) => void | Promise<void> = () => undefined;
   onConnect: (frame: IFrame) => void = () => undefined;
   onStompError: (frame: IFrame) => void = () => undefined;
+  onWebSocketClose: (evt: CloseEvent) => void = () => undefined;
   active = false;
   handlers: Record<string, (message: any) => void> = {};
 
@@ -537,6 +538,79 @@ describe('GameWebSocketService', () => {
       expect(activations()).toBe(start);
       jasmine.clock().tick(1);
       expect(activations()).toBe(start + 1);
+    });
+  });
+
+  describe('connectionState$ (M5 S1-03)', () => {
+    it('goes connecting -> connected on a normal connect, and closed before any initialize', () => {
+      const states: string[] = [];
+      service.connectionState$.subscribe(s => states.push(s));
+      expect(states).toEqual(['closed']);
+
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      expect(states).toEqual(['closed', 'connecting']);
+
+      client().onConnect({} as IFrame);
+      expect(states).toEqual(['closed', 'connecting', 'connected']);
+    });
+
+    it('reports reconnecting when a connected socket closes on its own', async () => {
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      await client().connect();
+      const states: string[] = [];
+      service.connectionState$.subscribe(s => states.push(s));
+
+      client().onWebSocketClose({} as CloseEvent);
+
+      expect(states).toEqual(['connected', 'reconnecting']);
+
+      client().onConnect({} as IFrame);
+      expect(states).toEqual(['connected', 'reconnecting', 'connected']);
+    });
+
+    it('does not report reconnecting for a close before the first successful connect', () => {
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      const states: string[] = [];
+      service.connectionState$.subscribe(s => states.push(s));
+
+      client().onWebSocketClose({} as CloseEvent);
+
+      expect(states).toEqual(['connecting']);
+    });
+
+    it('reports closed once a fatal error stops the socket', async () => {
+      service.initialize('g1', 'p1', {});
+      await client().connect();
+      const states: string[] = [];
+      service.connectionState$.subscribe(s => states.push(s));
+
+      client().onStompError(client().errorFrame('BANNED'));
+
+      expect(states).toEqual(['connected', 'closed']);
+    });
+
+    it('reports closed on an explicit disconnect', async () => {
+      service.initialize('g1', 'p1', {});
+      await client().connect();
+
+      service.disconnect();
+
+      const states: string[] = [];
+      service.connectionState$.subscribe(s => states.push(s));
+      expect(states).toEqual(['closed']);
+    });
+
+    it('ignores a close from a connection already replaced by re-initialize', async () => {
+      service.initialize('g1', 'p1', { playerSecret: 's' });
+      const first = client();
+      await first.connect();
+      service.initialize('g2', 'p2', { playerSecret: 's' });
+      const states: string[] = [];
+      service.connectionState$.subscribe(s => states.push(s));
+
+      first.onWebSocketClose({} as CloseEvent);
+
+      expect(states).toEqual(['connecting']); // the new client's own state, untouched by the old one
     });
   });
 

@@ -1,18 +1,43 @@
-import {Component, DestroyRef, inject, ChangeDetectionStrategy, OnDestroy, OnInit} from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostBinding,
+  NgZone,
+  inject,
+  ChangeDetectionStrategy,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Location} from '@angular/common';
 import {ActivatedRoute, ParamMap, Router} from "@angular/router";
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {GameStateService} from "../../services/game-state.service";
-import {Observable} from "rxjs";
+import {Observable, of, race, timer} from "rxjs";
+import {filter, map, switchMap, take} from "rxjs/operators";
 import {GameSession, MatchState, StompError} from "../../models/sockbowl/sockbowl-interfaces";
-import {SocketCredentials} from "../../services/game-web-socket.service";
+import {GameConnectionState, GameWebSocketService, SocketCredentials} from "../../services/game-web-socket.service";
 import {clearGameJoin, loadGameJoin, saveGameJoin} from "../../services/game-join-storage";
 import {describeStompError} from "../../models/stomp-errors";
 import {AuthService} from "../../../core/auth/auth.service";
+import {NON_FATAL_BANNER_MS} from "../stomp-error-banner/stomp-error-banner.component";
 
 /** Route matrix params that must never stay in the address bar. */
 const SECRET_ROUTE_PARAMS = ['playerSecret', 'accessToken'];
+
+/** How long a reconnect can run before the strip escalates its wording (M5 S1-31). */
+const RECONNECT_ESCALATION_MS = 15000;
+
+/**
+ * How long the pre-emission "Connecting to the game…" state can run before it
+ * escalates its wording too, so a first connect that never lands doesn't sit
+ * on the same copy as one still starting up (M5 S1-31, same threshold and
+ * copy pattern as the reconnect strip).
+ */
+const CONNECTING_ESCALATION_MS = 15000;
 
 @Component({
     selector: 'app-game-canvas',
@@ -21,13 +46,15 @@ const SECRET_ROUTE_PARAMS = ['playerSecret', 'accessToken'];
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class GameCanvasComponent implements OnInit, OnDestroy {
+export class GameCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private location = inject(Location);
   private snackBar = inject(MatSnackBar);
   private authService = inject(AuthService);
   private gameStateService = inject(GameStateService);
+  private gameWebSocketService = inject(GameWebSocketService);
+  private ngZone = inject(NgZone);
 
 
   gameSession$: Observable<GameSession>;
@@ -35,12 +62,82 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
   /** Latest socket error, shown by the stomp-error-banner. */
   latestStompError: StompError | null = null;
 
+  /**
+   * True while the stomp-error-banner is expected to still be on screen
+   * (M5 FF1 material_fixes #3): mirrors its own `NON_FATAL_BANNER_MS`
+   * auto-hide window so a child like `app-game-buzzer` can reserve the
+   * banner's slot in its own fixed-height layout, the same way it already
+   * reserves one for the `.reconnect-strip` — without adding anything to
+   * the banner's own frozen component API (this is tracked here, from the
+   * same `errors$` the banner input is fed from, not read back from it).
+   * Doesn't mirror the banner's own hover/focus pause (an internal detail
+   * of that component), so on the rare capture or session where a pointer
+   * parks on the banner past 5s, the reserved slot can close a beat before
+   * the banner does; the banner is still an overlay, so nothing gets
+   * covered even then — a minor, disclosed residual.
+   */
+  bannerActive = false;
+  private bannerActiveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * The stomp-error-banner's own real rendered height, in px (M5 FF3
+   * remaining #3): the finish review found the previous fix's reserve
+   * (`game-buzzer.component.scss`'s `&--banner` padding) was a guessed
+   * constant re-measured by hand each round and never proven at every
+   * width. A `ResizeObserver` on the banner's own rendered element (see
+   * `ngAfterViewInit`) replaces the guess with the
+   * banner's actual box, published as a CSS custom property on this
+   * component's own host so any descendant, at any width, can reserve
+   * exactly that much space and no more — the reserve now follows the
+   * banner by construction instead of by estimate. Doesn't change
+   * `bannerActive`'s own boolean/timer semantics above: that still answers
+   * *whether* the slot should be reserved (mirroring the banner's auto-hide
+   * window); this answers *how much*.
+   */
+  @HostBinding('style.--stomp-banner-height.px') stompBannerHeightPx = 0;
+  @ViewChild('stompBanner', {read: ElementRef}) private stompBannerHostRef?: ElementRef<HTMLElement>;
+  private stompBannerResizeObserver?: ResizeObserver;
+  private stompBannerMutationObserver?: MutationObserver;
+
+  /**
+   * The socket's connection lifecycle (M5 S1-03), for a non-fatal
+   * "Reconnecting…" strip so a dropped socket is never silently mistaken for
+   * a live, working game.
+   */
+  connectionState$: Observable<GameConnectionState>;
+
+  /**
+   * True once a reconnect has run for {@link RECONNECT_ESCALATION_MS} without
+   * recovering, so a long drop never sits on "Reconnecting…" forever with no
+   * way out (M5 S1-31). Resets as soon as the connection state changes again.
+   */
+  reconnectEscalated$: Observable<boolean>;
+
+  /**
+   * True once the wait for the very first {@link gameSession$} emission has
+   * run for {@link CONNECTING_ESCALATION_MS} without landing, so a stalled
+   * first connect (not a reconnect) also escalates instead of sitting on
+   * "Connecting to the game…" forever (M5 S1-31). Never emits once the
+   * session has arrived, since the connecting view is gone by then.
+   */
+  connectingEscalated$: Observable<boolean>;
+
   private gameSessionId = '';
 
   private destroyRef = inject(DestroyRef);
 
   constructor() {
     this.gameSession$ = this.gameStateService.gameSession$;
+    this.connectionState$ = this.gameWebSocketService.connectionState$;
+    this.reconnectEscalated$ = this.connectionState$.pipe(
+      switchMap(state => state === 'reconnecting'
+        ? timer(RECONNECT_ESCALATION_MS).pipe(map(() => true))
+        : of(false))
+    );
+    this.connectingEscalated$ = race(
+      timer(CONNECTING_ESCALATION_MS).pipe(map(() => true)),
+      this.gameSession$.pipe(filter(session => !!session), take(1), map(() => false))
+    );
   }
 
   ngOnInit() {
@@ -63,9 +160,93 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Starts measuring the stomp-error-banner's real height (M5 FF3 remaining
+   * #3, see `stompBannerHeightPx`'s doc).
+   *
+   * `#stompBanner` sits on `<app-stomp-error-banner>` itself, but that host
+   * element is never sized by its own content: the banner's template wraps
+   * everything in a `position: fixed` div (by design — see that file's own
+   * comment on why it's an overlay, not in flow), and a fixed-position
+   * descendant contributes nothing to its unstyled, default-`inline` parent's
+   * box. So this reaches one level in, to the `.stomp-error-banner` div
+   * itself, which is what actually has the height this component needs.
+   * That div is also only in the DOM while `visible()` is true (the banner's
+   * own `@if`), appearing and disappearing on its own schedule (dismiss,
+   * the non-fatal auto-hide, a new error) that this component doesn't
+   * otherwise observe — a `MutationObserver` on the stable host element
+   * re-runs `sync()` on every such change, so the live `ResizeObserver`
+   * always ends up attached to the current div, or to nothing (height 0)
+   * when there isn't one, without this file needing to know why it changed.
+   *
+   * Guarded for environments without `ResizeObserver`/`MutationObserver`
+   * (older tooling, e.g. Karma's own iframe in edge cases) so a missing
+   * measurement degrades to the CSS var's fallback rather than throwing.
+   * Both observers' callbacks run outside Angular's zone unless zone.js has
+   * patched them, so the update is wrapped in `NgZone.run` to guarantee the
+   * `@HostBinding` actually flushes to the DOM.
+   */
+  ngAfterViewInit(): void {
+    const host = this.stompBannerHostRef?.nativeElement;
+    if (!host || typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') {
+      return;
+    }
+    const setHeight = (height: number) => {
+      if (height !== this.stompBannerHeightPx) {
+        this.ngZone.run(() => {
+          this.stompBannerHeightPx = height;
+        });
+      }
+    };
+    const sync = () => {
+      const banner = host.querySelector<HTMLElement>('.stomp-error-banner');
+      this.stompBannerResizeObserver?.disconnect();
+      if (!banner) {
+        setHeight(0);
+        return;
+      }
+      setHeight(banner.getBoundingClientRect().height);
+      this.stompBannerResizeObserver = new ResizeObserver(
+        () => setHeight(banner.getBoundingClientRect().height)
+      );
+      this.stompBannerResizeObserver.observe(banner);
+    };
+    sync();
+    this.stompBannerMutationObserver = new MutationObserver(sync);
+    this.stompBannerMutationObserver.observe(host, {childList: true});
+  }
+
   /** Leaving the canvas means leaving this game seat (NG-R4-02). */
   ngOnDestroy(): void {
+    this.clearBannerActiveTimer();
+    this.stompBannerResizeObserver?.disconnect();
+    this.stompBannerMutationObserver?.disconnect();
     this.gameStateService.leaveGame();
+  }
+
+  /**
+   * Marks the banner slot reserved for as long as the banner itself would
+   * be on screen (M5 FF1 material_fixes #3): the banner's own
+   * `NON_FATAL_BANNER_MS` window for a non-fatal error, or indefinitely for
+   * a fatal one (which stays until dismissed — moot in practice, since a
+   * fatal error also navigates away above).
+   */
+  private reserveBannerSlot(fatal: boolean): void {
+    this.clearBannerActiveTimer();
+    this.bannerActive = true;
+    if (!fatal) {
+      this.bannerActiveTimer = setTimeout(() => {
+        this.bannerActiveTimer = null;
+        this.bannerActive = false;
+      }, NON_FATAL_BANNER_MS);
+    }
+  }
+
+  private clearBannerActiveTimer(): void {
+    if (this.bannerActiveTimer) {
+      clearTimeout(this.bannerActiveTimer);
+      this.bannerActiveTimer = null;
+    }
   }
 
   /**
@@ -110,6 +291,7 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
    */
   private onStompError(error: StompError): void {
     this.latestStompError = error;
+    this.reserveBannerSlot(!!error.fatal);
     if (!error.fatal) {
       return;
     }
@@ -118,6 +300,13 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
       // The token could not be refreshed: the session is over. AuthService
       // prompts the user to sign in again.
       this.authService.handleSessionEnded();
+    } else if (error.code === 'BANNED' || error.code === 'IP_BANNED') {
+      // A banned player gets a persistent lobby notice (M5 S1-16), not a
+      // 10s snackbar followed by a generic join failure: navigate with the
+      // reason in the router state, which GameSessionComponent reads to show
+      // shared/state/error-state instead of the transient banner copy.
+      this.router.navigate(['/game-session'], {state: {reason: 'BANNED'}});
+      return;
     } else {
       this.snackBar.open(describeStompError(error), 'Dismiss', {duration: 10000});
     }

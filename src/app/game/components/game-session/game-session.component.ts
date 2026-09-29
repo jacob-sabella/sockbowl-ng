@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, OnInit, computed, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, computed, inject, signal } from '@angular/core';
+import {HttpErrorResponse} from "@angular/common/http";
 import {GameSessionService} from "../../services/game-session.service";
 import {ActivatedRoute, Router} from "@angular/router";
 import {
@@ -14,6 +15,7 @@ import {saveGameJoin} from "../../services/game-join-storage";
 import {PendingPacketService} from "../../services/pending-packet.service";
 import {MatSnackBar} from "@angular/material/snack-bar";
 import {RateLimitStateService} from "../../../core/http/rate-limit-state.service";
+import {limitErrorFrom} from "../../../core/http/limit-errors";
 
 
 @Component({
@@ -43,6 +45,27 @@ export class GameSessionComponent implements OnInit {
    */
   readonly sessionCreateLocked = computed(() => this.rateLimitState.cooldown('session-create')() > 0);
 
+  /** Seconds left in the `session-create` cooldown, for a visible "paused for Ns" hint (M5 S1-05). */
+  readonly sessionCreateCooldownSeconds = computed(() => this.rateLimitState.cooldown('session-create')());
+
+  /** True while a create (and its chained join) or a direct join request is in flight (M5 S1-06). */
+  readonly createInFlight = signal(false);
+  readonly joinInFlight = signal(false);
+
+  /** Inline error for the join-code field (bad/unknown code, a full room) (M5 S1-05). */
+  codeError: string | null = null;
+
+  /** Inline error for the guest name field on Join, when it's left blank (M5 S1-35). */
+  nameError: string | null = null;
+
+  /**
+   * Set when this seat was bounced for being banned (a fatal BANNED/IP_BANNED
+   * stomp error, or a 403 on create/join classified as banned): a persistent
+   * notice instead of a 10s snackbar followed by a generic join failure
+   * (M5 S1-16).
+   */
+  bannedNotice: string | null = null;
+
   /**
    * The builder's "Play test" (PB-15) lands here with `?mode=single&packetId=…`.
    * The packet id is stashed for `GameConfigComponent` to pick up once the
@@ -50,6 +73,11 @@ export class GameSessionComponent implements OnInit {
    * directly, so "Play test" is a single click from the builder into a game.
    */
   ngOnInit(): void {
+    const navState = history.state as { reason?: string } | null;
+    if (navState?.reason === 'BANNED') {
+      this.bannedNotice = 'Your account is banned from playing.';
+    }
+
     const params = this.route.snapshot.queryParamMap;
     const packetId = params.get('packetId');
     if (packetId) {
@@ -58,6 +86,11 @@ export class GameSessionComponent implements OnInit {
     if (params.get('mode') === 'single') {
       this.startSoloGame();
     }
+  }
+
+  /** Dismisses the persistent banned notice (M5 S1-16). */
+  dismissBannedNotice(): void {
+    this.bannedNotice = null;
   }
 
   onNewGame(): void {
@@ -85,6 +118,18 @@ export class GameSessionComponent implements OnInit {
   GameModes = GameMode;
   PlayerModes = PlayerMode;
 
+  /**
+   * Display labels for the Game Mode select (M5 S1-35), reusing the mode
+   * picker's own copy instead of the raw backend enum keys (for example
+   * `QUIZ_BOWL_CLASSIC`).
+   */
+  readonly gameModeLabels: Record<GameMode, string> = {
+    [GameMode.QUIZ_BOWL_CLASSIC]: 'Proctored match',
+    [GameMode.SINGLE_PLAYER]: 'Solo practice',
+    [GameMode.AUTO_PROCTOR]: 'Auto-judged match',
+    [GameMode.FREE_FOR_ALL]: 'Free for all',
+  };
+
   get isAuthenticated(): boolean {
     return environment.authEnabled && this.authService.isAuthenticated();
   }
@@ -99,6 +144,11 @@ export class GameSessionComponent implements OnInit {
   }
 
   onCreateGame(): void {
+    // A previous quick-launch (solo/auto-proctor/free-for-all) may have set
+    // gameMode for its own request, and a failed one leaves it set: reset to
+    // the form's own default so "Proctored match" never quietly opens on a
+    // stale mode (M5 S1-35).
+    this.createGameRequest.gameSettings.gameMode = GameMode.QUIZ_BOWL_CLASSIC;
     this.showCreateForm = true;
     this.showJoinForm = false;
   }
@@ -159,6 +209,10 @@ export class GameSessionComponent implements OnInit {
   }
 
   submitCreateGame(): void {
+    if (this.createInFlight()) {
+      return; // guards against a double submit while the request is in flight (M5 S1-06)
+    }
+    this.createInFlight.set(true);
     this.gameSessionService.createNewGame(this.createGameRequest).subscribe({
       next: response => {
         // Populate the join code from the create game response
@@ -170,15 +224,17 @@ export class GameSessionComponent implements OnInit {
           this.joinGameRequest.name = this.authService.getUserProfile()?.name || 'Host';
         }
 
-        // Join game with new join game request
-        this.submitJoinGame()
+        // Join game with new join game request; createInFlight stays true
+        // through the chained join, and clears when that settles.
+        this.submitJoinGame(true);
       },
       // NG-V1-05: this game never reaches CONFIG, so a packet staged for it
       // (e.g. by "Play test") must not linger to attach itself to a later,
       // unrelated game.
-      error: () => {
+      error: (err: unknown) => {
+        this.createInFlight.set(false);
         this.pendingPacketService.clear();
-        this.snack.open('Could not create the game. Please try again.', 'Dismiss', { duration: 4000 });
+        this.handleGameError(err, 'create');
       },
     });
   }
@@ -190,8 +246,37 @@ export class GameSessionComponent implements OnInit {
    * credentials go to sessionStorage, never the URL: the route carries only
    * the session and seat ids, and the socket authenticates at CONNECT with the
    * guest's playerSecret or a fresh access token.
+   *
+   * @param chained true when called from {@link submitCreateGame}'s own
+   *   create→join chain: the join code already came from the server (no
+   *   normalization/validation needed) and `createInFlight` (not
+   *   `joinInFlight`) tracks the whole chain (M5 S1-06).
    */
-  submitJoinGame(): void {
+  submitJoinGame(chained = false): void {
+    if (!chained) {
+      if (this.joinInFlight()) {
+        return; // guards against a double submit (the submit button is also disabled meanwhile)
+      }
+      this.codeError = null;
+      this.nameError = null;
+      this.joinGameRequest.joinCode = (this.joinGameRequest.joinCode || '').trim().toUpperCase();
+      if (!this.joinGameRequest.joinCode) {
+        this.codeError = 'Enter a join code.';
+        return;
+      }
+      // A blank guest name used to reach the server and come back as the
+      // generic "Could not join the game" snackbar. Catch it inline instead
+      // (M5 S1-35); a signed-in seat has no name field to check.
+      if (!this.isAuthenticated) {
+        this.joinGameRequest.name = (this.joinGameRequest.name || '').trim();
+        if (!this.joinGameRequest.name) {
+          this.nameError = 'Enter your name';
+          return;
+        }
+      }
+      this.joinInFlight.set(true);
+    }
+
     const authenticated = this.isAuthenticated;
     const join$ = authenticated
       ? this.gameSessionService.joinGameAuthenticated(this.joinGameRequest)
@@ -199,6 +284,11 @@ export class GameSessionComponent implements OnInit {
 
     join$.subscribe({
       next: response => {
+        if (chained) {
+          this.createInFlight.set(false);
+        } else {
+          this.joinInFlight.set(false);
+        }
         saveGameJoin(response.gameSessionId, authenticated
           ? {playerSessionId: response.playerSessionId, authenticated: true}
           : {playerSessionId: response.playerSessionId, playerSecret: response.playerSecret, authenticated: false});
@@ -214,10 +304,60 @@ export class GameSessionComponent implements OnInit {
       // packet staged for it (e.g. by "Play test") must not linger to attach
       // itself to a later, unrelated game. Previously unhandled entirely,
       // this rethrew as an uncaught error out of the subscription.
-      error: () => {
+      error: (err: unknown) => {
+        if (chained) {
+          this.createInFlight.set(false);
+        } else {
+          this.joinInFlight.set(false);
+        }
         this.pendingPacketService.clear();
-        this.snack.open('Could not join the game. Please try again.', 'Dismiss', { duration: 4000 });
+        this.handleGameError(err, 'join');
       },
     });
+  }
+
+  /**
+   * Classifies a create/join failure (M5 S1-05):
+   * - a rate-limit/quota/limiter-unavailable body: `RateLimitInterceptor`
+   *   already showed its own specific snackbar, so nothing more is shown
+   *   here (a generic failure snack would otherwise silently replace it).
+   * - a banned/ip-banned body: a persistent notice (S1-16), not a snackbar.
+   * - 404: the join code doesn't match any game, shown inline on the field.
+   * - 409: the room is full, shown inline on the field.
+   * - 403 with no recognized body: `AuthInterceptor` already showed a message.
+   * - anything else (network, 500, an unrecognized body): the previous
+   *   generic copy, per the action that failed.
+   */
+  private handleGameError(error: unknown, action: 'create' | 'join'): void {
+    if (error instanceof HttpErrorResponse) {
+      const body = (error.error && typeof error.error === 'object' ? error.error : {}) as Record<string, unknown>;
+      const classification = typeof body['error'] === 'string' ? (body['error'] as string) : undefined;
+      const limitError = classification ? limitErrorFrom(classification, body) : null;
+      if (limitError) {
+        if (limitError.kind === 'banned' || limitError.kind === 'ip_banned') {
+          this.bannedNotice = limitError.reason || 'Your account is banned from playing.';
+        }
+        // rate_limited / quota_exceeded / limiter_unavailable: RateLimitInterceptor
+        // already notified; showing our own snack here would just replace it.
+        return;
+      }
+      if (error.status === 404) {
+        this.codeError = 'No game with that code. Check it with your host.';
+        return;
+      }
+      if (error.status === 409) {
+        this.codeError = 'That room is full.';
+        return;
+      }
+      if (error.status === 403) {
+        // AuthInterceptor already surfaced a message for this 403.
+        return;
+      }
+    }
+    this.snack.open(
+      action === 'create' ? 'Could not create the game. Please try again.' : 'Could not join the game. Please try again.',
+      'Dismiss',
+      { duration: 4000 },
+    );
   }
 }

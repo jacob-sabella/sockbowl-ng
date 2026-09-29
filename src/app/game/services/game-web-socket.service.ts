@@ -24,6 +24,16 @@ export interface SocketCredentials {
   playerSecret?: string;
 }
 
+/**
+ * The socket's connection lifecycle, additive to {@link GameWebSocketService.errors$}
+ * (M5 S1-03). `connecting` is the initial/first-attempt state; `reconnecting` is a
+ * previously-`connected` socket that dropped and is being brought back (a dropped
+ * Wi-Fi link, a server restart) as opposed to a deliberate stop. Consumers (the
+ * canvas's connection strip, the buzzer's disabled dome) use this so a silent
+ * disconnect is never mistaken for a live, open buzzer.
+ */
+export type GameConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'closed';
+
 /** First reconnect delay after a dropped socket or an INTERNAL error. */
 export const BASE_RECONNECT_DELAY_MS = 2000;
 /** Cap for the exponential reconnect backoff. */
@@ -76,6 +86,10 @@ export class GameWebSocketService {
   private errorsSubject = new Subject<StompError>();
   /** STOMP errors: ERROR frames and `/user/queue/errors` items, flagged `fatal` when the seat is over. */
   public readonly errors$: Observable<StompError> = this.errorsSubject.asObservable();
+
+  private connectionStateSubject = new BehaviorSubject<GameConnectionState>('closed');
+  /** The socket's current lifecycle state (M5 S1-03); see {@link GameConnectionState}. */
+  public readonly connectionState$: Observable<GameConnectionState> = this.connectionStateSubject.asObservable();
 
   private gameSessionId = '';
   private playerSessionId = '';
@@ -130,6 +144,7 @@ export class GameWebSocketService {
     this.latestToken = null;
     this.tokenRetryUsed = false;
     this.rateLimitBackoffMs = null;
+    this.connectionStateSubject.next('connecting');
 
     const client = this.clientFactory({
       brokerURL: environment.wsUrl,
@@ -140,6 +155,7 @@ export class GameWebSocketService {
     client.beforeConnect = () => this.buildConnectHeaders(client);
     client.onConnect = () => this.onConnected(client);
     client.onStompError = (frame: IFrame) => this.onStompError(client, frame);
+    client.onWebSocketClose = () => this.onSocketClosed(client);
     this.stompClient = client;
 
     // Activate the client to initiate the connection
@@ -154,6 +170,7 @@ export class GameWebSocketService {
       client.reconnectDelay = 0;
       client.deactivate();
     }
+    this.connectionStateSubject.next('closed');
   }
 
   public sendMessage(path: string, value: SockbowlInMessage) {
@@ -211,6 +228,7 @@ export class GameWebSocketService {
 
   private onConnected(client: Client): void {
     this.tokenRetryUsed = false;
+    this.connectionStateSubject.next('connected');
 
     // A RATE_LIMITED backoff is still owed until the connection proves it's
     // stable; only then does the next RATE_LIMITED start over from scratch.
@@ -365,6 +383,25 @@ export class GameWebSocketService {
   private stop(client: Client, error: StompError): void {
     client.reconnectDelay = 0;
     client.deactivate();
+    this.connectionStateSubject.next('closed');
     this.errorsSubject.next({...error, fatal: true});
+  }
+
+  /**
+   * The underlying WebSocket closed. If it had been `connected`, this is an
+   * unplanned drop (Wi-Fi, a server restart) and stompjs' own reconnect (or
+   * our RATE_LIMITED backoff) will bring it back, so this reports
+   * `reconnecting`. A close while still `connecting` (the first attempt
+   * hasn't succeeded yet) or after a deliberate `stop`/`disconnect` (already
+   * `closed`) leaves the state as-is, since neither is a new event worth
+   * announcing.
+   */
+  private onSocketClosed(client: Client): void {
+    if (client !== this.stompClient) {
+      return;
+    }
+    if (this.connectionStateSubject.value === 'connected') {
+      this.connectionStateSubject.next('reconnecting');
+    }
   }
 }

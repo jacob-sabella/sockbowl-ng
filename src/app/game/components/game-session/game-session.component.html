@@ -4,11 +4,23 @@
     <!-- Back button -->
     @if (showCreateForm || showJoinForm || showModeSelect) {
       <div class="header-container">
-        <button mat-icon-button (click)="onGoBack()"><mat-icon>arrow_back</mat-icon></button>
+        <button mat-icon-button aria-label="Back" (click)="onGoBack()"><mat-icon aria-hidden="true">arrow_back</mat-icon></button>
         <span class="centered-title">
           @if (showJoinForm) { Join Game } @else if (showCreateForm) { New Game } @else { Choose a mode }
         </span>
       </div>
+    }
+
+    <!-- Persistent banned notice (M5 S1-16): replaces a 10s snackbar plus a
+         generic join failure with a notice that stays until dismissed. -->
+    @if (bannedNotice) {
+      <app-error-state
+        icon="block"
+        title="You're banned"
+        [message]="bannedNotice"
+        actionLabel="Dismiss"
+        (retry)="dismissBannedNotice()">
+      </app-error-state>
     }
 
     <!-- Landing hero -->
@@ -42,8 +54,11 @@
     <!-- Mode picker (after New game) -->
     @if (showModeSelect && !showCreateForm && !showJoinForm) {
       <div class="lobby-hero">
+      @if (sessionCreateLocked()) {
+        <p class="cooldown-hint">New games paused for {{ sessionCreateCooldownSeconds() }}s.</p>
+      }
       <div class="lobby-actions">
-        <button class="lobby-action primary" [disabled]="sessionCreateLocked()" (click)="startSoloGame()">
+        <button class="lobby-action primary" [disabled]="sessionCreateLocked() || createInFlight()" (click)="startSoloGame()">
           <mat-icon>person</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Solo practice</span>
@@ -52,7 +67,7 @@
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
 
-        <button class="lobby-action" [disabled]="sessionCreateLocked()" (click)="startAutoProctorGame()">
+        <button class="lobby-action" [disabled]="sessionCreateLocked() || createInFlight()" (click)="startAutoProctorGame()">
           <mat-icon>groups</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Auto-judged match</span>
@@ -61,7 +76,7 @@
           <mat-icon class="lobby-action-arrow">arrow_forward</mat-icon>
         </button>
 
-        <button class="lobby-action" [disabled]="sessionCreateLocked()" (click)="startFreeForAllGame()">
+        <button class="lobby-action" [disabled]="sessionCreateLocked() || createInFlight()" (click)="startFreeForAllGame()">
           <mat-icon>person_off</mat-icon>
           <span class="lobby-action-text">
             <span class="lobby-action-label">Free for all</span>
@@ -85,12 +100,15 @@
     <!-- Create Game Form -->
     @if (showCreateForm) {
       <div class="form-container">
+        @if (sessionCreateLocked()) {
+          <p class="cooldown-hint">New games paused for {{ sessionCreateCooldownSeconds() }}s.</p>
+        }
         <mat-form-field>
           <mat-label>Game Mode</mat-label>
           <mat-select [(ngModel)]="createGameRequest.gameSettings.gameMode">
             @for (gameMode of GameModes | keyvalue; track gameMode) {
               <mat-option [value]="gameMode.key">
-                {{gameMode.value}}
+                {{ gameModeLabels[gameMode.value] }}
               </mat-option>
             }
           </mat-select>
@@ -107,24 +125,33 @@
             Signed in as <strong>{{ currentUsername }}</strong>
           </p>
         }
-        <button mat-raised-button color="accent" [disabled]="sessionCreateLocked()" (click)="submitCreateGame()">Create</button>
+        <button mat-raised-button [disabled]="sessionCreateLocked() || createInFlight()" (click)="submitCreateGame()">Create</button>
       </div>
     }
 
     <!-- Join Game Form -->
     @if (showJoinForm) {
-      <div class="form-container">
+      <form class="form-container" (ngSubmit)="submitJoinGame()">
         <!-- Join Code -->
         <mat-form-field>
-          <mat-label>Join Code</mat-label>
-          <input matInput [(ngModel)]="joinGameRequest.joinCode">
+          <mat-label>Join code</mat-label>
+          <input matInput name="joinCode" [(ngModel)]="joinGameRequest.joinCode"
+                 autocapitalize="characters" autocomplete="off" spellcheck="false">
         </mat-form-field>
-        <!-- Player Name (only for guests) -->
+        @if (codeError) {
+          <p class="field-error" role="alert">{{ codeError }}</p>
+        }
+        <!-- Player Name (only for guests). "Your name" on both create and
+             join (M5 S1-30): it was "Name" here, the only difference between
+             two otherwise-identical fields. -->
         @if (!isAuthenticated) {
           <mat-form-field>
-            <mat-label>Name</mat-label>
-            <input matInput [(ngModel)]="joinGameRequest.name" required>
+            <mat-label>Your name</mat-label>
+            <input matInput name="name" [(ngModel)]="joinGameRequest.name" required>
           </mat-form-field>
+          @if (nameError) {
+            <p class="field-error" role="alert">{{ nameError }}</p>
+          }
         } @else {
           <p class="signed-in-as">
             <mat-icon>account_circle</mat-icon>
@@ -132,8 +159,8 @@
           </p>
         }
         <!-- Submit Button -->
-        <button mat-raised-button color="accent" (click)="submitJoinGame()">Join</button>
-      </div>
+        <button mat-raised-button type="submit" [disabled]="joinInFlight()">Join</button>
+      </form>
     }
 
   </mat-card>

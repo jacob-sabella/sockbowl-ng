@@ -1,0 +1,77 @@
+/* Non-fatal reconnect indicator (M5 S1-03): a plain status strip, distinct from
+   the stomp-error-banner (fatal/error frames only).
+   M5 S1-04: fixed overlay, matching the stomp-error-banner's own fix, so
+   this strip appearing/disappearing while a round is live never pushes (or
+   covers) the buzzer dome below it. Sits under the banner's z-index so a
+   simultaneous fatal error wins the same slot rather than the two stacking. */
+.reconnect-strip {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  padding: 0.35rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  row-gap: 0.15rem;
+  column-gap: 0.75rem;
+  text-align: center;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--warning-text, var(--text-primary));
+  background: var(--warning-surface, var(--bg-secondary));
+  box-shadow: var(--shadow-sm) var(--shadow-color);
+
+  @media (min-width: 641px) {
+    top: 64px;
+  }
+
+  /* A reconnect past 15s gets a way out alongside the escalated wording
+     (M5 S1-31). `min-height: 44px` (M5 S1-34: was a bare 24px text link)
+     grows the whole strip to fit it, which is fine here — a taller strip
+     just means more reserved space, never overlap (see the buzzer's own
+     `--reconnecting` reserve). */
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: var(--spacing-sm, 0.5rem);
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 700;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration-thickness: 2px;
+    }
+  }
+}
+
+/* Connecting state before the first gameSession$ emission (M5 S1-02). */
+.canvas-connecting {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md, 1rem);
+  padding: var(--spacing-md, 1rem);
+
+  /* M5 S1-34: was a bare text link with no reserved tap-target height. */
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: var(--spacing-sm, 0.5rem);
+    color: var(--accent-primary-text, var(--accent-primary));
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
+}

@@ -1,13 +1,37 @@
+// M5 S1-04: a fixed overlay strip instead of an in-flow block. In flow, this
+// banner's own height pushed every sibling below it down the page whenever
+// it appeared/disappeared — on the buzzer that meant the dome itself moving
+// by however tall the banner was (baseline evidence: a rate-limited soft
+// drop pushed the page to 1057px). Taking it out of flow means it can never
+// shift or cover the dome; it can only ever sit above it.
+//
+// `top` matches the navbar's own height (`navbar.component.scss`: 56px below
+// 641px, 64px at/above it) so the banner sits directly under the nav rather
+// than overlapping it — there's no shared token for this today (frozen
+// component API; only this file may be touched from S1), so the two are
+// coupled by value. A future token (`--navbar-height`) would remove the
+// duplication.
 .stomp-error-banner {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  z-index: 90;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 12px 16px;
+  margin: 0 16px;
   padding: 8px 8px 8px 16px;
-  border-radius: 8px;
+  border-radius: 0 0 8px 8px;
   border: 1px solid var(--warning);
+  border-top: none;
   background: color-mix(in srgb, var(--warning) 12%, var(--surface, transparent));
   color: var(--text-primary);
+  box-shadow: var(--shadow-md) var(--shadow-color);
+
+  @media (min-width: 641px) {
+    top: 64px;
+  }
 
   &.fatal {
     border-color: var(--error);
