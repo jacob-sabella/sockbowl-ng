@@ -328,8 +328,8 @@ export class SockbowlQuestionsService {
    *
    * @param topic Main topic for the packet (server clamps to <=200 chars)
    * @param additionalContext Additional context or constraints (server clamps to <=2000 chars)
-   * @param apiKey User-provided OpenAI API key
-   * @param model User-provided OpenAI model
+   * @param apiKey User-provided OpenAI API key, or '' to use the saved Claude key
+   * @param model User-provided OpenAI model, or '' for the saved key's model
    * @param questionCount Number of tossups/bonuses to generate (1-30, default 5)
    * @param generateBonuses Whether to generate bonuses (default true)
    * @param temperature Controls randomness (0.0-2.0, default 1.0)
@@ -364,11 +364,16 @@ export class SockbowlQuestionsService {
       body.generateBonuses = generateBonuses;
     }
 
-    // Build headers with API key, model, and optional LLM parameters
-    let headers = new HttpHeaders({
-      'X-API-Key': apiKey,
-      'X-Model': model
-    });
+    // Build headers with API key, model, and optional LLM parameters. An
+    // empty key/model sends no header at all, so the server falls back to
+    // the user's saved Claude key and saved model (shared/ai-key).
+    let headers = new HttpHeaders();
+    if (apiKey) {
+      headers = headers.set('X-API-Key', apiKey);
+    }
+    if (model) {
+      headers = headers.set('X-Model', model);
+    }
 
     // Add optional LLM parameters if provided
     if (temperature !== undefined) {

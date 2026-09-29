@@ -481,8 +481,9 @@
               (apiKeyChange)="genDraft.apiKey = $event"
               [model]="genDraft.model"
               (modelChange)="genDraft.model = $event"
+              (useSavedKeyChange)="genUseSavedKey = $event"
               ></app-ai-key-picker>
-            @if (!genDraft.apiKey) {
+            @if (!genDraft.apiKey && !genUseSavedKey) {
               <p class="packet-builder__taxonomy-hint">An OpenAI API key is required to generate a question.</p>
             }
             <mat-form-field appearance="outline" class="packet-builder__field">
@@ -510,7 +511,7 @@
               <span class="packet-builder__spacer"></span>
               <button mat-button (click)="cancelGenerate()">Cancel</button>
               <button mat-raised-button class="packet-builder__save-btn"
-                      [disabled]="genSubmitting || !genDraft.topic.trim() || !genDraft.apiKey"
+                      [disabled]="genSubmitting || !genDraft.topic.trim() || (!genDraft.apiKey && !genUseSavedKey)"
                       (click)="generateTossup()">
                 <mat-icon aria-hidden="true">auto_awesome</mat-icon>
                 Generate

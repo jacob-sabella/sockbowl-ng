@@ -1,0 +1,133 @@
+<mat-card class="ai-key-card" aria-labelledby="ai-key-heading">
+  <mat-card-header>
+    <h2 mat-card-title id="ai-key-heading" class="ai-key-card__title">
+      <mat-icon aria-hidden="true">key</mat-icon>
+      Claude API key
+    </h2>
+    <mat-card-subtitle class="ai-key-card__subtitle">
+      Save a key once and AI generation uses it for you.
+    </mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @switch (state) {
+      @case ('loading') {
+        <div class="ai-key-card__status" role="status" aria-live="polite">
+          <mat-spinner diameter="20" aria-label="Loading your saved key"></mat-spinner>
+          <span>Loading…</span>
+        </div>
+      }
+      @case ('disabled') {
+        <p class="ai-key-card__muted">Saved keys aren't enabled on this server.</p>
+      }
+      @case ('error') {
+        <div class="ai-key-card__status" role="alert">
+          <span class="ai-key-card__error">{{ loadError }}</span>
+          <button mat-stroked-button type="button" (click)="load()">
+            <mat-icon aria-hidden="true">refresh</mat-icon>
+            Retry
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (status?.configured && !replacing) {
+          <div class="ai-key-card__saved">
+            <p class="ai-key-card__saved-key">
+              Saved key <span class="ai-key-card__mask">••••{{ status?.last4 }}</span>
+            </p>
+            <mat-form-field appearance="outline" class="ai-key-card__field">
+              <mat-label>Model</mat-label>
+              <mat-select
+                [ngModel]="status?.model"
+                (ngModelChange)="onModelChange($event)"
+                [disabled]="updatingModel || removing"
+                >
+                @for (m of models; track m) {
+                  <mat-option [value]="m">{{ m }}</mat-option>
+                }
+              </mat-select>
+              @if (updatingModel) {
+                <mat-spinner matSuffix diameter="18" aria-label="Saving model"></mat-spinner>
+              }
+              <mat-hint>Used when you generate without pasting a key.</mat-hint>
+            </mat-form-field>
+            @if (modelError) {
+              <p class="ai-key-card__error" role="alert">{{ modelError }}</p>
+            }
+            <div class="ai-key-card__actions">
+              <button mat-stroked-button type="button" [disabled]="removing" (click)="startReplace()">
+                <mat-icon aria-hidden="true">sync</mat-icon>
+                Replace key
+              </button>
+              <button mat-stroked-button type="button" class="ai-key-card__remove" [disabled]="removing"
+                      [attr.aria-busy]="removing ? 'true' : null" (click)="remove()">
+                @if (removing) {
+                  <mat-spinner diameter="18" aria-hidden="true"></mat-spinner>
+                } @else {
+                  <mat-icon aria-hidden="true">delete</mat-icon>
+                }
+                Remove
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (showForm) {
+          <form class="ai-key-card__form" (ngSubmit)="save()">
+            <mat-form-field appearance="outline" class="ai-key-card__field">
+              <mat-label>API key</mat-label>
+              <input
+                matInput
+                name="apiKey"
+                [type]="showApiKey ? 'text' : 'password'"
+                [(ngModel)]="apiKeyInput"
+                placeholder="sk-ant-…"
+                autocomplete="off"
+                spellcheck="false"
+                [disabled]="saving"
+                >
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="toggleApiKeyVisibility()"
+                [attr.aria-label]="showApiKey ? 'Hide API key' : 'Show API key'"
+                >
+                <mat-icon>{{ showApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-hint>
+                Get one from the
+                <a [href]="consoleUrl" target="_blank" rel="noopener noreferrer">Anthropic console</a>.
+              </mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="ai-key-card__field">
+              <mat-label>Model</mat-label>
+              <mat-select name="model" [(ngModel)]="formModel" [disabled]="saving">
+                @for (m of defaultModels; track m) {
+                  <mat-option [value]="m">{{ m }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            @if (formError) {
+              <p class="ai-key-card__error" role="alert">{{ formError }}</p>
+            }
+            <div class="ai-key-card__actions">
+              @if (replacing) {
+                <button mat-button type="button" [disabled]="saving" (click)="cancelReplace()">Cancel</button>
+              }
+              <button mat-raised-button color="primary" type="submit"
+                      [disabled]="saving || !apiKeyInput.trim()"
+                      [attr.aria-busy]="saving ? 'true' : null">
+                @if (saving) {
+                  <mat-spinner diameter="18" aria-hidden="true"></mat-spinner>
+                } @else {
+                  <mat-icon aria-hidden="true">save</mat-icon>
+                }
+                Save
+              </button>
+            </div>
+          </form>
+        }
+      }
+    }
+  </mat-card-content>
+</mat-card>

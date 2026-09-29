@@ -173,6 +173,16 @@ describe('SockbowlQuestionsService.generatePacket', () => {
     req.flush({ id: 'p1', name: 'Topic', bonuses: [], tossups: [] });
   });
 
+  it('sends no X-API-Key/X-Model for an empty key/model, so the server uses the saved Claude key', () => {
+    service.generatePacket('Topic', '', '', '', 5, true, 1, 1).subscribe();
+
+    const req = httpMock.expectOne(generateUrl);
+    expect(req.request.headers.has('X-API-Key')).toBeFalse();
+    expect(req.request.headers.has('X-Model')).toBeFalse();
+    expect(req.request.headers.has('X-Frequency-Penalty')).toBeFalse();
+    req.flush({ id: 'p1', name: 'Topic', bonuses: [], tossups: [] });
+  });
+
   it('sorts nested bonus parts by relationship order in the response', () => {
     let result: any;
     service.generatePacket('Topic', '', 'sk-test', 'gpt-5').subscribe(p => (result = p));

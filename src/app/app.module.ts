@@ -48,6 +48,7 @@ import {MatAutocompleteModule} from "@angular/material/autocomplete";
 import {MatMenuModule} from "@angular/material/menu";
 import {MatPaginatorModule} from "@angular/material/paginator";
 import { ProfileComponent } from './structure/components/profile/profile.component';
+import { SavedAiKeyCardComponent } from './structure/components/profile/saved-ai-key-card/saved-ai-key-card.component';
 import { ThemeSelectorComponent } from './structure/components/theme-selector/theme-selector.component';
 import { AdminBansComponent } from './structure/components/admin-bans/admin-bans.component';
 import { AdminHomeComponent } from './structure/components/admin-home/admin-home.component';
@@ -80,6 +81,7 @@ import { ErrorStateComponent } from './shared/state/error-state/error-state.comp
         PacketSearchComponent,
         PacketPreviewComponent,
         ProfileComponent,
+        SavedAiKeyCardComponent,
         ThemeSelectorComponent,
         AdminBansComponent,
         AdminHomeComponent,

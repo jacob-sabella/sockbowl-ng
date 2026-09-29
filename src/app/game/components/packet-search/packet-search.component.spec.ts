@@ -281,6 +281,38 @@ describe('PacketSearchComponent', () => {
   // NG-V1-01: a 403 {error:'banned'}/{error:'ip_banned'} is already surfaced
   // by the global RateLimitInterceptor (plan §2.9); these two flows must not
   // show a second, component-level snackbar for the same rejection.
+  describe('saved Claude key', () => {
+    it('allows generating with no pasted key or model, sending neither nor the OpenAI-only penalties', () => {
+      configure(['question:generate']);
+      component.generateTopic = 'Topic';
+      // Simulates AiKeyPickerComponent in saved-key mode.
+      component.useSavedKey = true;
+      component.apiKey = '';
+      component.selectedModel = '';
+      fixture.detectChanges();
+
+      const button = (fixture.nativeElement as HTMLElement).querySelector('.generate-btn') as HTMLButtonElement;
+      expect(button.disabled).toBeFalse();
+
+      component.generateAIPacket();
+
+      expect(questions['generatePacket']).toHaveBeenCalledTimes(1);
+      const args = questions['generatePacket'].calls.mostRecent().args;
+      expect(args[2]).toBe('');
+      expect(args[3]).toBe('');
+      expect(args[8]).toBeUndefined();
+      expect(args[9]).toBeUndefined();
+    });
+
+    it('still requires a key without the saved key', () => {
+      configure(['question:generate']);
+      component.generateTopic = 'Topic';
+
+      expect(component.validateGenerationForm()).toBeFalse();
+      expect(component.validationError).toBe('API key is required');
+    });
+  });
+
   describe('NG-V1-01 banned/ip_banned rejections (no double snackbar)', () => {
     it('opens no snackbar when AI generation 403s with {error: "banned"}', () => {
       configure(['question:generate']);

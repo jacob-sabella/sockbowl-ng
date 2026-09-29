@@ -73,4 +73,39 @@
     min-height: 44px;
     line-height: normal;
   }
+
+  /* Saved-key mode (profile's saved Claude key): one compact line that
+   * wraps on phones, plus the "checking" line shown while the status loads. */
+  &__checking,
+  &__saved {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  &__saved {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-medium);
+    background: var(--bg-secondary);
+
+    mat-icon {
+      color: var(--accent-primary-text);
+    }
+  }
+
+  &__saved-text {
+    flex: 1 1 12rem;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+
+  &__switch-btn {
+    align-self: flex-start;
+    min-height: 44px;
+    color: var(--accent-primary-text);
+  }
 }

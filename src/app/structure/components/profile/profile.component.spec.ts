@@ -79,7 +79,8 @@ describe('ProfileComponent', () => {
 
   beforeEach(() => {
     userServiceSpy = jasmine.createSpyObj('UserService', ['getCurrentUser', 'getUserStats', 'getUserHistory']);
-    authServiceSpy = jasmine.createSpyObj('AuthService', ['login']);
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['login', 'hasPermission']);
+    authServiceSpy.hasPermission.and.returnValue(false);
   });
 
   it('shows a loading state until user data resolves', () => {
@@ -251,6 +252,29 @@ describe('ProfileComponent', () => {
 
       expect(el.querySelector('.history-error')).toBeNull();
       expect(el.querySelectorAll('.history-row').length).toBe(2);
+    });
+  });
+
+  describe('Claude API key card', () => {
+    beforeEach(() => {
+      userServiceSpy.getCurrentUser.and.returnValue(of(user));
+      userServiceSpy.getUserStats.and.returnValue(of(stats));
+      userServiceSpy.getUserHistory.and.returnValue(of(historyPage()));
+    });
+
+    it('is hidden without question:generate', () => {
+      setUp();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-saved-ai-key-card')).toBeNull();
+    });
+
+    it('is shown with question:generate', () => {
+      authServiceSpy.hasPermission.and.callFake((p: string) => p === 'question:generate');
+      setUp();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-saved-ai-key-card')).not.toBeNull();
     });
   });
 });

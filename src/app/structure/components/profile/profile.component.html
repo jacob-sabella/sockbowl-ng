@@ -46,6 +46,10 @@
           </mat-card-content>
         </mat-card>
       }
+      <!-- Saved Claude API key (question:generate only) -->
+      @if (canGenerate) {
+        <app-saved-ai-key-card></app-saved-ai-key-card>
+      }
       <!-- Stats Cards -->
       @if (stats$ | async; as stats) {
         <section class="stats-section" aria-labelledby="stats-heading">

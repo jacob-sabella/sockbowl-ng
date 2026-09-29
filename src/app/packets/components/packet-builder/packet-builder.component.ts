@@ -178,6 +178,8 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   genOpen = false;
   genSubmitting = false;
   genDraft = { topic: '', additionalContext: '', subcategoryId: null as string | null, apiKey: '', model: '' };
+  /** The picker is on the profile's saved Claude key: no key/model is sent and none is required. */
+  genUseSavedKey = false;
 
   // Inline "create new subcategory" affordance, shared by every subcategory picker.
   taxonomyFormOpen = false;
@@ -1011,6 +1013,8 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
   openGenerate(): void {
     this.genOpen = true;
     this.genDraft = { topic: '', additionalContext: '', subcategoryId: null, apiKey: '', model: '' };
+    // The freshly rendered picker re-reports this on init.
+    this.genUseSavedKey = false;
   }
 
   cancelGenerate(): void {
@@ -1022,7 +1026,7 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       this.snackBar.open('A topic is required', 'Dismiss', { duration: 3000 });
       return;
     }
-    if (!this.genDraft.apiKey.trim()) {
+    if (!this.genUseSavedKey && !this.genDraft.apiKey.trim()) {
       this.snackBar.open('An OpenAI API key is required to generate a question', 'Dismiss', { duration: 3000 });
       return;
     }
@@ -1031,8 +1035,9 @@ export class PacketBuilderComponent implements OnInit, HasUnsavedChanges {
       topic: this.genDraft.topic.trim(),
       additionalContext: this.genDraft.additionalContext.trim() || null,
       subcategoryId: this.genDraft.subcategoryId,
-      apiKey: this.genDraft.apiKey.trim(),
-      model: this.genDraft.model || null
+      // null key/model with the saved Claude key: the server uses the saved ones.
+      apiKey: this.genUseSavedKey ? null : this.genDraft.apiKey.trim(),
+      model: this.genUseSavedKey ? null : (this.genDraft.model || null)
     }, null, this.packetVersion).subscribe({
       next: () => {
         this.bumpLocalVersion();

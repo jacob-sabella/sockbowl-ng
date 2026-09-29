@@ -450,6 +450,7 @@
                   (apiKeyChange)="apiKey = $event"
                   [model]="selectedModel"
                   (modelChange)="onGenerateModelChange($event)"
+                  (useSavedKeyChange)="useSavedKey = $event"
                   ></app-ai-key-picker>
 
                 <mat-form-field class="topic-field" appearance="outline" floatLabel="always" subscriptSizing="dynamic">
@@ -548,7 +549,7 @@
                     }
 
                     <!-- Frequency Penalty -->
-                    @if (supportsFrequencyPenalty) {
+                    @if (supportsFrequencyPenalty && !useSavedKey) {
                       <mat-form-field appearance="outline" floatLabel="always">
                         <mat-label>Frequency Penalty</mat-label>
                         <input
@@ -565,7 +566,7 @@
                     }
 
                     <!-- Presence Penalty -->
-                    @if (supportsPresencePenalty) {
+                    @if (supportsPresencePenalty && !useSavedKey) {
                       <mat-form-field appearance="outline" floatLabel="always">
                         <mat-label>Presence Penalty</mat-label>
                         <input
@@ -587,7 +588,7 @@
                 <button
                   mat-raised-button
                   color="primary"
-                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked() || !!aiLimitBanner"
+                  [disabled]="!generateTopic || (!useSavedKey && (!apiKey || !selectedModel)) || generateLocked() || !!aiLimitBanner"
                   (click)="generateAIPacket()"
                   class="generate-btn"
                   >

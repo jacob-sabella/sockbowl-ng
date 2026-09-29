@@ -130,6 +130,11 @@ export class ProfileComponent implements OnInit {
   totalPages = 0;
   totalElements = 0;
 
+  /** The "Claude API key" card needs `question:generate`, like every `/api/me/ai-key` endpoint. */
+  get canGenerate(): boolean {
+    return this.authService.hasPermission('question:generate');
+  }
+
   ngOnInit(): void {
     this.loadUserData();
   }

@@ -625,6 +625,23 @@ describe('PacketBuilderComponent', () => {
       expect(input.model).toBe('gpt-4o');
     });
 
+    it('with the saved Claude key, generates without a pasted key and sends a null key/model', () => {
+      configure(makePacket());
+      authoringSpy.generateAndAddTossup.and.returnValue(of('new-tossup-id'));
+
+      component.openGenerate();
+      component.genDraft.topic = 'Ancient Rome';
+      // Simulates AiKeyPickerComponent's (useSavedKeyChange) in saved-key mode.
+      component.genUseSavedKey = true;
+
+      component.generateTossup();
+
+      expect(authoringSpy.generateAndAddTossup).toHaveBeenCalledTimes(1);
+      const [, input] = authoringSpy.generateAndAddTossup.calls.mostRecent().args;
+      expect(input.apiKey).toBeNull();
+      expect(input.model).toBeNull();
+    });
+
     it('refuses to submit without an API key', () => {
       configure(makePacket());
       component.openGenerate();

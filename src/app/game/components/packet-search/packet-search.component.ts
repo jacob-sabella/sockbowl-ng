@@ -197,6 +197,11 @@ export class PacketSearchComponent implements OnInit {
   // to send on generate and to validate the form.
   apiKey = '';
   selectedModel = '';
+  /**
+   * The picker is on the profile's saved Claude key: no key/model is pasted
+   * or sent, and the OpenAI-only penalty parameters are hidden and omitted.
+   */
+  useSavedKey = false;
   validationError: string | null = null;
 
   // LLM parameter properties with defaults
@@ -445,8 +450,8 @@ export class PacketSearchComponent implements OnInit {
       this.generateBonuses,
       this.temperature,
       this.topP,
-      this.frequencyPenalty,
-      this.presencePenalty
+      this.useSavedKey ? undefined : this.frequencyPenalty,
+      this.useSavedKey ? undefined : this.presencePenalty
     ).subscribe({
       next: (packet) => {
         this.generatedPacket = packet;
@@ -610,13 +615,14 @@ export class PacketSearchComponent implements OnInit {
       return false;
     }
 
-    if (!this.apiKey || this.apiKey.trim().length === 0) {
+    // With the saved Claude key the server supplies both the key and the model.
+    if (!this.useSavedKey && (!this.apiKey || this.apiKey.trim().length === 0)) {
       this.validationError = 'API key is required';
       this.snackBar.open('API key is required', 'Close', { duration: 3000 });
       return false;
     }
 
-    if (!this.selectedModel || this.selectedModel.trim().length === 0) {
+    if (!this.useSavedKey && (!this.selectedModel || this.selectedModel.trim().length === 0)) {
       this.validationError = 'Model selection is required';
       this.snackBar.open('Model selection is required', 'Close', { duration: 3000 });
       return false;

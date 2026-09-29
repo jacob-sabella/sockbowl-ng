@@ -1,0 +1,112 @@
+/* Same button-shape override as the profile page itself (FF2 material fix
+   3): FORM reserves `--radius-full` for the buzzer and status dots. */
+:host {
+  display: block;
+  --mat-button-protected-container-shape: var(--radius-md);
+  --mat-button-outlined-container-shape: var(--radius-md);
+}
+
+.ai-key-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+
+  mat-card-header {
+    margin-bottom: 0.5rem;
+  }
+
+  // Matches the profile's "Statistics"/"Game History" h2s (S6-12).
+  .mat-mdc-card-title.ai-key-card__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .ai-key-card__subtitle {
+    color: var(--text-muted);
+  }
+}
+
+.ai-key-card__status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.ai-key-card__muted {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.ai-key-card__error {
+  margin: 0;
+  color: var(--error-text);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ai-key-card__saved,
+.ai-key-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 32rem;
+}
+
+.ai-key-card__saved-key {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.ai-key-card__mask {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ai-key-card__field {
+  width: 100%;
+
+  a {
+    color: var(--accent-primary-text);
+  }
+}
+
+.ai-key-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+
+  button {
+    min-height: 44px;
+  }
+
+  mat-spinner {
+    display: inline-block;
+    margin-right: 0.5rem;
+  }
+}
+
+.ai-key-card__remove:not(:disabled) {
+  color: var(--error-text);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+// Phones: full-width stacked actions, easy to hit with a thumb.
+@media (max-width: 599px) {
+  .ai-key-card__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
