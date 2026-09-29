@@ -125,6 +125,33 @@ export class GameStateService {
 
 
   /**
+   * Applies `mutate` to a shallow clone of `gameSessionState` (and its
+   * `currentMatch`/`currentRound`, when present) and emits the clone as a
+   * new object reference, rather than mutating and re-emitting the same
+   * `gameSessionState` object every previous handler used.
+   *
+   * Subscribers that diff two emissions by reading a field off each (e.g.
+   * GameProctorComponent's judgment-pending guard, which compares the
+   * `roundState`/buzz id it cached from the last emission against the new
+   * one) need genuinely distinct objects to do that: mutating the shared
+   * instance in place made the "previous" read already reflect the "next"
+   * value by the time the subscriber ran, so a real judgment/round change
+   * looked like a no-op and the pending guard never cleared (M5V1-01).
+   */
+  private updateGameSession(mutate: (next: GameSession) => void): void {
+    const next: GameSession = {...this.gameSessionState};
+    if (next.currentMatch) {
+      next.currentMatch = {...next.currentMatch};
+      if (next.currentMatch.currentRound) {
+        next.currentMatch.currentRound = {...next.currentMatch.currentRound};
+      }
+    }
+    mutate(next);
+    this.gameSessionState = next;
+    this.gameSessionSubject.next(this.gameSessionState);
+  }
+
+  /**
    * Put the last MatchPacketUpdate's counts back on a resent session whose
    * packet has no questions (a non-proctor's sanitized view), when it is
    * still the same packet (same name).
@@ -164,9 +191,10 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: PlayerRosterUpdate) => {
-          this.gameSessionState.playerList = msg.playerList;
-          this.gameSessionState.teamList = msg.teamList;
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            next.playerList = msg.playerList;
+            next.teamList = msg.teamList;
+          });
         })
       )
       .subscribe();
@@ -180,8 +208,9 @@ export class GameStateService {
           // racing the get-game reply): drop it, the reply carries full state.
           // A throw here would end this subscription for the tab's lifetime.
           if (!this.gameSessionState?.currentMatch) return;
-          this.gameSessionState.currentMatch.matchState = MatchState.IN_GAME;
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            next.currentMatch!.matchState = MatchState.IN_GAME;
+          });
         })
       )
       .subscribe();
@@ -191,22 +220,24 @@ export class GameStateService {
       .pipe(
         filter(msg => !!msg),
         tap((msg: MatchPacketUpdate) => {
-          const match = this.gameSessionState.currentMatch;
-          if (!match) return;
-          if (!match.packet) match.packet = {} as Packet;
-          // Only the proctor (or the owner in a proctorless mode) is sent the
-          // packet id (WP-FIXG5); everyone else gets null plus the metadata.
-          match.packet.id = msg.packetId ?? (null as unknown as string);
-          match.packet.name = msg.packetName as string;
-          // Clients aren't sent the questions (anti-spoiler); keep length-only
-          // arrays so "Tossup N of M" progress can read packet.tossups.length
-          // and the config screen can read the bonus count.
-          match.packet.tossups = new Array(msg.tossupCount || 0);
-          match.packet.bonuses = new Array(msg.bonusCount || 0);
+          if (!this.gameSessionState.currentMatch) return;
           this.packetCounts = msg.packetName || msg.tossupCount
             ? { name: msg.packetName, tossupCount: msg.tossupCount || 0, bonusCount: msg.bonusCount || 0 }
             : null;
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            const match = next.currentMatch!;
+            const packet: Packet = {...(match.packet ?? {} as Packet)};
+            // Only the proctor (or the owner in a proctorless mode) is sent the
+            // packet id (WP-FIXG5); everyone else gets null plus the metadata.
+            packet.id = msg.packetId ?? (null as unknown as string);
+            packet.name = msg.packetName as string;
+            // Clients aren't sent the questions (anti-spoiler); keep length-only
+            // arrays so "Tossup N of M" progress can read packet.tossups.length
+            // and the config screen can read the bonus count.
+            packet.tossups = new Array(msg.tossupCount || 0);
+            packet.bonuses = new Array(msg.bonusCount || 0);
+            match.packet = packet;
+          });
         })
       )
       .subscribe();
@@ -239,11 +270,10 @@ export class GameStateService {
           if (!this.gameSessionState?.currentMatch) return;
 
           // Update the current round to the new round
-          this.gameSessionState.currentMatch.currentRound = msg.currentRound;
-          this.gameSessionState.currentMatch.previousRounds = msg.previousRounds;
-
-          // Emit the updated game session state
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            next.currentMatch!.currentRound = msg.currentRound;
+            next.currentMatch!.previousRounds = msg.previousRounds;
+          });
         })
       )
       .subscribe();
@@ -258,11 +288,10 @@ export class GameStateService {
           if (!this.gameSessionState?.currentMatch) return;
 
           // Update the current round to the new round
-          this.gameSessionState.currentMatch.currentRound = msg.round;
-          this.gameSessionState.currentMatch.previousRounds = msg.previousRounds;
-
-          // Emit the updated game session state
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            next.currentMatch!.currentRound = msg.round;
+            next.currentMatch!.previousRounds = msg.previousRounds;
+          });
         })
       )
       .subscribe();
@@ -276,8 +305,9 @@ export class GameStateService {
           // racing the get-game reply): drop it, the reply carries full state.
           // A throw here would end this subscription for the tab's lifetime.
           if (!this.gameSessionState?.currentMatch) return;
-          this.gameSessionState.currentMatch.currentRound = msg.round;
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            next.currentMatch!.currentRound = msg.round;
+          });
         })
       )
       .subscribe();
@@ -292,11 +322,10 @@ export class GameStateService {
           // A throw here would end this subscription for the tab's lifetime.
           if (!this.gameSessionState?.currentMatch) return;
           // Update the current round with bonus information
-          this.gameSessionState.currentMatch.currentRound = msg.currentRound;
-          this.gameSessionState.currentMatch.previousRounds = msg.previousRounds;
-
-          // Emit the updated game session state
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            next.currentMatch!.currentRound = msg.currentRound;
+            next.currentMatch!.previousRounds = msg.previousRounds;
+          });
         })
       )
       .subscribe();
@@ -315,14 +344,14 @@ export class GameStateService {
             return;
           }
           // Update the timer state in the current round
-          if (msg.timerType === 'TOSSUP') {
-            round.remainingTossupTimerSeconds = msg.remainingSeconds;
-          } else if (msg.timerType === 'BONUS') {
-            round.remainingBonusTimerSeconds = msg.remainingSeconds;
-          }
-
-          // Emit updated state
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            const nextRound = next.currentMatch!.currentRound!;
+            if (msg.timerType === 'TOSSUP') {
+              nextRound.remainingTossupTimerSeconds = msg.remainingSeconds;
+            } else if (msg.timerType === 'BONUS') {
+              nextRound.remainingBonusTimerSeconds = msg.remainingSeconds;
+            }
+          });
         })
       )
       .subscribe();
@@ -340,12 +369,12 @@ export class GameStateService {
           }
           // The revealed text IS the round's question for AUTO_PROCTOR, the server
           // never sends unrevealed text, so just replace it directly.
-          round.question = msg.revealedText;
-          round.revealedWordCount = msg.revealedWordCount;
-          round.totalWordCount = msg.totalWordCount;
-
-          // Emit updated state
-          this.gameSessionSubject.next(this.gameSessionState);
+          this.updateGameSession(next => {
+            const nextRound = next.currentMatch!.currentRound!;
+            nextRound.question = msg.revealedText;
+            nextRound.revealedWordCount = msg.revealedWordCount;
+            nextRound.totalWordCount = msg.totalWordCount;
+          });
         })
       )
       .subscribe();

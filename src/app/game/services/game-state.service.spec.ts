@@ -457,3 +457,129 @@ describe('GameStateService progression before the first GameSessionUpdate (H0)',
     });
   }
 });
+
+/**
+ * M5V1-01: every previous message handler mutated the shared
+ * `gameSessionState` object in place and re-emitted that same reference on
+ * `gameSession$`. GameProctorComponent detects "did the round really
+ * change" by comparing a value it cached from the *previous* emission
+ * against the new one (see its `ngOnInit` subscription); with a shared
+ * mutable reference, the "previous" read already reflected the "next"
+ * value by the time the comparison ran, so a real AnswerUpdate (a tossup
+ * judgment landing) looked like a no-op and the judging-pending guard in
+ * the proctor UI never cleared — it only cleared 5s later via the lost-send
+ * timeout, and a judgment inside that window was dropped.
+ *
+ * These specs prove each handler that changes `currentRound` now emits a
+ * genuinely distinct `GameSession` (and `currentMatch`) object on every
+ * update, and that a GameProctorComponent-style "read before, read after"
+ * comparison reliably observes the change.
+ */
+describe('GameStateService.gameSession$ reference identity across updates (M5V1-01)', () => {
+  let service: GameStateService;
+  let eventSubjects: Record<string, Subject<unknown>>;
+
+  const EVENT_KEYS = [
+    'GameSessionUpdate', 'PlayerRosterUpdate', 'GameStartedMessage', 'MatchPacketUpdate',
+    'ProcessError', 'AnswerUpdate', 'RoundUpdate', 'PlayerBuzzed', 'BonusUpdate', 'TimerUpdate',
+    'ReadingUpdate',
+  ];
+
+  beforeEach(() => {
+    eventSubjects = {};
+    const gameEventObservables: Record<string, unknown> = {};
+    for (const key of EVENT_KEYS) {
+      eventSubjects[key] = new Subject<unknown>();
+      gameEventObservables[key] = eventSubjects[key].asObservable();
+    }
+    TestBed.configureTestingModule({
+      providers: [
+        GameStateService,
+        {
+          provide: GameMessageService,
+          useValue: {
+            gameEventObservables,
+            sendMessage: jasmine.createSpy('sendMessage'),
+            initialize: jasmine.createSpy('initialize'),
+            errors$: new Subject<unknown>().asObservable(),
+          },
+        },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+      ],
+    });
+    service = TestBed.inject(GameStateService);
+    service.initialize('g1', 'p1', {});
+    eventSubjects['GameSessionUpdate'].next({
+      gameSession: {
+        currentMatch: {
+          currentRound: { roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'player2' } },
+        },
+      } as unknown as GameSession,
+    });
+  });
+
+  it('emits a new GameSession and currentMatch reference for an AnswerUpdate (the proctor Right/Wrong judgment)', () => {
+    let previous!: GameSession;
+    let next!: GameSession;
+    service.gameSession$.subscribe(gs => (previous = gs)).unsubscribe();
+
+    eventSubjects['AnswerUpdate'].next({
+      currentRound: { roundState: RoundState.COMPLETED, currentBuzz: null },
+      previousRounds: [],
+    });
+
+    service.gameSession$.subscribe(gs => (next = gs)).unsubscribe();
+
+    expect(next).not.toBe(previous);
+    expect(next.currentMatch).not.toBe(previous.currentMatch);
+  });
+
+  it('lets a GameProctorComponent-style before/after read observe an AnswerUpdate round-state change', () => {
+    // Mirrors GameProctorComponent.ngOnInit: cache round/buzz off the
+    // previous emission, apply the new one, then compare. Reassigned (never
+    // OR'd) on every emission, so the seed emission this subscribe replays
+    // synchronously (ReplaySubject(1)) is simply overwritten once the real
+    // AnswerUpdate below runs, with nothing to reset in between.
+    let cachedRoundState: RoundState | undefined;
+    let cachedBuzzId: string | undefined;
+    let changeDetected: boolean | undefined;
+
+    service.gameSession$.subscribe(gameSession => {
+      const previousRoundState = cachedRoundState;
+      const previousBuzzId = cachedBuzzId;
+      const nextRoundState = gameSession?.currentMatch?.currentRound?.roundState;
+      const nextBuzzId = gameSession?.currentMatch?.currentRound?.currentBuzz?.playerId;
+      changeDetected = nextRoundState !== previousRoundState || nextBuzzId !== previousBuzzId;
+      cachedRoundState = nextRoundState;
+      cachedBuzzId = nextBuzzId;
+    });
+
+    eventSubjects['AnswerUpdate'].next({
+      currentRound: { roundState: RoundState.COMPLETED, currentBuzz: null },
+      previousRounds: [],
+    });
+
+    expect(changeDetected).toBeTrue();
+  });
+
+  it('emits a new reference for PlayerBuzzed, RoundUpdate, BonusUpdate and TimerUpdate as well', () => {
+    const cases: [string, Record<string, unknown>][] = [
+      ['PlayerBuzzed', { round: { roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'player3' } } }],
+      ['RoundUpdate', { round: { roundState: RoundState.AWAITING_BUZZ }, previousRounds: [] }],
+      ['BonusUpdate', { currentRound: { roundState: RoundState.BONUS_PENDING }, previousRounds: [] }],
+      ['TimerUpdate', { timerType: 'TOSSUP', remainingSeconds: 5 }],
+    ];
+
+    for (const [key, payload] of cases) {
+      let previous!: GameSession;
+      service.gameSession$.subscribe(gs => (previous = gs)).unsubscribe();
+
+      eventSubjects[key].next(payload);
+
+      let next!: GameSession;
+      service.gameSession$.subscribe(gs => (next = gs)).unsubscribe();
+
+      expect(next).withContext(key).not.toBe(previous);
+    }
+  });
+});
