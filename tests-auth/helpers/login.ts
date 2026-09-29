@@ -1,4 +1,9 @@
 import type { Page } from '@playwright/test';
+// Side-effect only: pins page.request's DNS the way SOCKBOWL_RESOLVE already
+// pins curl/undici elsewhere (see that file's header). A no-op unless
+// SOCKBOWL_RESOLVE is set, and never imports Playwright at runtime, so it
+// doesn't affect the WP-N5 contract below.
+import './resolve-node-dns';
 
 // Only `import type` is used from @playwright/test above (WP-N5 contract):
 // M3 (E1) and M4 (E1) import this file from a *separate* `e2e/` npm package
