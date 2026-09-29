@@ -11,6 +11,8 @@
   display: flex;
   flex-direction: column;
 
+  // Phones: page, card and mat-card-content padding stacked to ~48px a side.
+  @media (max-width: 599px) { padding: 0.5rem; }
   @media (min-width: 768px) { padding: var(--spacing-xl, 2rem); }
 
   *, *::before, *::after { box-sizing: border-box; }
@@ -26,6 +28,7 @@
   box-shadow: var(--shadow-lg) !important;
   padding: var(--spacing-md, 1rem) !important;
 
+  @media (max-width: 599px) { padding: 0.75rem !important; }
   @media (min-width: 768px) { padding: var(--spacing-lg, 1.5rem) !important; }
 
   mat-card-title {
@@ -50,7 +53,10 @@
     }
   }
 
-  mat-card-content { color: var(--text-primary) !important; }
+  mat-card-content {
+    color: var(--text-primary) !important;
+    @media (max-width: 599px) { padding: 0 !important; }
+  }
 }
 
 /* status banner */
@@ -114,14 +120,16 @@
   border-left-color: var(--info);
   background: color-mix(in srgb, var(--info) 10%, transparent);
   .info-label { color: var(--info-text); }
-  display: flex; align-items: baseline; gap: 0.5rem;
+  display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.5rem;
   .info-label { margin-bottom: 0; }
+  .info-value { min-width: 0; }
 }
 .subcategory-section {
   border-left-color: var(--accent-secondary, var(--accent-primary));
   background: color-mix(in srgb, var(--accent-secondary, var(--accent-primary)) 10%, transparent);
   .info-label { color: var(--accent-secondary-text, var(--accent-primary-text)); margin-bottom: 0; }
-  display: flex; align-items: baseline; gap: 0.5rem;
+  display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.5rem;
+  .info-value { min-width: 0; }
 }
 
 .question-section {

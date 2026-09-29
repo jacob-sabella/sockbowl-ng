@@ -23,6 +23,11 @@
   flex-direction: column;
   justify-content: flex-start;
 
+  // Phones: page, card and mat-card-content padding stacked to ~48px a side.
+  @media (max-width: 599px) {
+    padding: 0.5rem;
+  }
+
   @media (min-width: 768px) {
     padding: var(--spacing-xl);
   }
@@ -42,6 +47,10 @@
   box-shadow: var(--shadow-lg) var(--shadow-color);
   position: relative;
   padding: var(--spacing-md) !important;
+
+  @media (max-width: 599px) {
+    padding: 0.75rem !important;
+  }
 
   @media (min-width: 768px) {
     padding: var(--spacing-lg) !important;
@@ -88,6 +97,10 @@
 
   mat-card-content {
     color: var(--text-primary) !important;
+
+    @media (max-width: 599px) {
+      padding: 0 !important;
+    }
 
     .category-row {
       display: flex;
