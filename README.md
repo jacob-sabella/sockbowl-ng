@@ -86,7 +86,8 @@ README for bringing up the full stack from source.
 Three separate suites/harnesses, each with its own config and testDir:
 
 - **`tests/` (`npm run e2e`)** — the guest "clips" gallery: no login, defaults
-  to `https://sockbowl.com` (override with `CLIPS_BASE_URL`). Runs the same
+  to `http://localhost` (override with `CLIPS_BASE_URL`, e.g. to the M7
+  path-mode deployment `https://sockbowl.jacobsabella.com`). Runs the same
   whether the target stack has `AUTH_ENABLED` true or false, since guests can
   still host and play in both modes (D1), including generating a bank packet
   (D15: without `packet:create` this now yields an EPHEMERAL, game-only
@@ -169,11 +170,13 @@ Existing") are seeded. Against an unseeded stack the tab reports 0 matches.
   `spectator.spec.ts`, `solo.spec.ts`, `bonus.spec.ts`) need a seeded bank too
   when pointed at a local stack. `bonus.spec.ts` looks up its answers over
   GraphQL at `SOCKBOWL_QUESTIONS_GRAPHQL_URL`, or at
-  `SOCKBOWL_QUESTIONS_BASE_URL` + `/graphql` (default
-  `https://questions.sockbowl.com`); point it at the local stack, e.g.
-  `SOCKBOWL_QUESTIONS_BASE_URL=http://localhost:7009`. With auth on, a guest's
-  generated packet is EPHEMERAL and that lookup returns null, so run
-  `bonus.spec.ts` against an auth-off stack.
+  `SOCKBOWL_QUESTIONS_BASE_URL` + `/graphql` (default `http://localhost:7009`,
+  or `${SOCKBOWL_BASE_URL}/questions` with `SOCKBOWL_PATH_MODE=1` set); point
+  it at a local stack, e.g. `SOCKBOWL_QUESTIONS_BASE_URL=http://localhost:7009`
+  (already the default), or at the M7 path-mode deployment with
+  `SOCKBOWL_BASE_URL=https://sockbowl.jacobsabella.com SOCKBOWL_PATH_MODE=1`.
+  With auth on, a guest's generated packet is EPHEMERAL and that lookup
+  returns null, so run `bonus.spec.ts` against an auth-off stack.
 
 `e2e/`'s bot harness (`npm run full-match`) plays a seeded PUBLISHED packet:
 `findSeededPacket` (`e2e/harness/rest.ts`) looks it up by name over GraphQL

@@ -1,11 +1,19 @@
 import { test, expect } from '@playwright/test';
 
 // Configurable so this spec can run against a local docker-compose stack
-// (GUEST-SUITE / NG-R2-... follow-up): it used to hardcode the production
-// GraphQL host, which fails TLS (and simply isn't the stack under test)
-// against `CLIPS_BASE_URL=http://localhost`.
+// (GUEST-SUITE / NG-R2-... follow-up) or the M7 path-mode deployment behind
+// one public host: it used to hardcode the production GraphQL host, which
+// fails TLS (and simply isn't the stack under test) against
+// `CLIPS_BASE_URL=http://localhost`. SOCKBOWL_PATH_MODE=1 derives
+// /questions from SOCKBOWL_BASE_URL, matching the prod Caddy routing (M7
+// §3.1 item 4); SOCKBOWL_QUESTIONS_BASE_URL/SOCKBOWL_QUESTIONS_GRAPHQL_URL
+// still override explicitly in either mode.
+const PATH_MODE = process.env.SOCKBOWL_PATH_MODE === '1';
+const QUESTIONS_BASE_DEFAULT = PATH_MODE
+  ? `${process.env.SOCKBOWL_BASE_URL || 'http://localhost'}/questions`
+  : 'http://localhost:7009';
 const QUESTIONS_GRAPHQL_URL = process.env.SOCKBOWL_QUESTIONS_GRAPHQL_URL
-  || `${process.env.SOCKBOWL_QUESTIONS_BASE_URL || 'https://questions.sockbowl.com'}/graphql`;
+  || `${process.env.SOCKBOWL_QUESTIONS_BASE_URL || QUESTIONS_BASE_DEFAULT}/graphql`;
 
 /** The judge-accepted primary answer: the underlined/bold portion of the qbreader HTML. */
 function primary(html: string): string {

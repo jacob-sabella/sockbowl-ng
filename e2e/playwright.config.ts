@@ -1,6 +1,14 @@
 import { defineConfig } from '@playwright/test';
 import { APP_URL } from './harness/config.js';
 
+// M7 §3.1 item 4 / §7 step 7: pins Chromium's own resolver for a throwaway
+// compose stack's public hostname when running in path mode against
+// https://sockbowl.jacobsabella.com resolved to 127.0.0.1 (curl's
+// --resolve, for a browser). harness/resolve.ts (imported by
+// harness/config.ts above) covers the Node-side fetch/WebSocket calls this
+// package's own scripts make; this covers the Playwright-driven browser.
+const hostResolverRules = process.env.PW_HOST_RESOLVER_RULES;
+
 export default defineConfig({
   testDir: '.',
   testMatch: ['tests/**/*.spec.ts', 'usability.spec.ts', 'polish/**/*.spec.ts'],
@@ -28,8 +36,14 @@ export default defineConfig({
     baseURL: APP_URL,
     headless: true,
     viewport: { width: 1400, height: 900 },
+    // Already unconditional before M7 (a self-signed dev cert was already
+    // common); PW_IGNORE_HTTPS_ERRORS is honoured too, but there is nothing
+    // more permissive it could set here.
     ignoreHTTPSErrors: true,
     screenshot: 'off',
+    launchOptions: hostResolverRules
+      ? { args: [`--host-resolver-rules=${hostResolverRules}`] }
+      : undefined,
   },
   // M3 plan WP-E1: `tests/packet-builder.spec.ts` runs once per auth posture,
   // each against its own stack bring-up (AUTH_ENABLED is stack-wide, so the

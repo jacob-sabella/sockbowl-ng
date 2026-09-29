@@ -1,6 +1,7 @@
 import { Client, type IMessage } from '@stomp/stompjs';
 import WebSocket from 'ws';
 import { WS_URL } from './config.js';
+import { resolveLookup } from './resolve.js';
 
 type Listener = () => void;
 
@@ -118,7 +119,9 @@ export class SockbowlBot {
     return new Promise((resolve, reject) => {
       let connected = false;
       this.client = new Client({
-        webSocketFactory: () => new WebSocket(WS_URL) as any,
+        // `lookup` honours SOCKBOWL_RESOLVE (see resolve.ts); it's a no-op
+        // pass-through to the real DNS resolver for every other host.
+        webSocketFactory: () => new WebSocket(WS_URL, { lookup: resolveLookup } as any) as any,
         connectHeaders: this.connectHeaders(),
         reconnectDelay: 0,
         heartbeatIncoming: 0,
