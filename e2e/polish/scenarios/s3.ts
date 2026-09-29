@@ -120,6 +120,18 @@ async function openPacketSearch(page: Page): Promise<void> {
 /** Fills the "AI" tab's key/model/topic, stopping just before Generate. */
 async function fillGenerateForm(page: Page, topic: string): Promise<void> {
   await page.getByRole('tab', { name: 'AI' }).click();
+  // FF7 (finish review #4): `config-generate-bring-your-own-key`'s final
+  // captures landed mid-tab-switch — the Library panel still visible,
+  // the active-tab underline still under "Question bank", and the AI
+  // fields shifted/clipped. `MatTabGroup`'s body swap is a translate3d
+  // animation on `animationDuration` (default 500ms, unset here), and
+  // this tab click's only downstream wait (`gpt-4o` becoming visible) is
+  // about the mocked model fetch, not the tab animation — nothing in this
+  // helper actually waited for that transition to finish before the other
+  // two AI-tab states (fail-closed, quota-exhausted) happen to outrun it
+  // with their own longer generate/banner waits. Wait past it here, once,
+  // for every caller, instead of relying on incidental downstream timing.
+  await page.waitForTimeout(600);
   const apiKeyField = page.getByLabel('OpenAI API Key');
   await apiKeyField.fill('sk-h0-mock-key-not-a-real-secret');
   await apiKeyField.blur(); // AiKeyPickerComponent.onApiKeyBlur -> fetchAvailableModels
