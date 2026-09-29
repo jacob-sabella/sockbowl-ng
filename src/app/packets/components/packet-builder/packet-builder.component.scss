@@ -154,7 +154,26 @@
   &__index {
     font-family: var(--font-display);
     font-weight: 600;
-    color: var(--accent-primary-text);
+    /*
+     * M5 F2b (SA recheck): this was `--accent-primary-text`, whose own
+     * design target is only ">=3:1 against bg-primary/surface" (F1-08 --
+     * built for link-sized text and larger UI, see _variables.scss's
+     * `body { --focus-ring: ... }` comment block). At this badge's actual
+     * size (16px/normal weight, not WCAG "large text"), AA needs 4.5:1,
+     * and axe caught a serious failure against `--surface-hover` (the
+     * header's own hover/keyboard-focus tint, _material-overrides.scss)
+     * in the dark/dracula/solarized-dark themes (3.56/3.79/4.24:1) --
+     * reachable by anyone hovering, or now Tab-focusing (see
+     * _typography.scss's new mat-expansion-panel-header focus-ring rule
+     * above this WP), a collapsed header. `--text-primary` is the token
+     * every other piece of header text already uses
+     * (mat-expansion-panel-header-title in _material-overrides.scss) and
+     * clears every theme's surface/surface-hover/bg-elevated by a wide
+     * margin (>=8.5:1) -- verified for the 3 failing themes, and every
+     * other theme was already passing with more headroom on the old
+     * token, so this only raises the floor.
+     */
+    color: var(--text-primary);
     margin-right: 10px;
     flex: 0 0 auto;
   }

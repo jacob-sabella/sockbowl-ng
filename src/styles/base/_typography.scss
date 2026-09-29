@@ -70,6 +70,83 @@ a {
   }
 }
 
+/*
+ * M5 F2b (SA recheck): --focus-ring was wired to plain <a> only (above).
+ * Native <button>s, every Material button (.mat-mdc-button-base covers
+ * raised/flat/stroked/outlined/icon/fab), anything wired up as
+ * role="button", and mat-expansion-panel-header (a button-like control
+ * that carries role="button" itself, not a real <button>) had no
+ * equivalent rule, so a keyboard user tabbing onto any of them got no
+ * visible ring at all (recheck's focus-ring captures on
+ * S4's "Play test" button, a tossup header, and S5's "Ban user" button
+ * confirmed this — see e2e/polish/scenarios/s4.ts and s5.ts's
+ * `focus-*` states).
+ *
+ * `:where()` so this whole selector list contributes zero specificity of
+ * its own; only the `:focus-visible` pseudo-class does. That keeps this
+ * as easy to override locally as the plain `a:focus-visible` rule above
+ * (e.g. the account-menu trigger's own rule in navbar.component.scss,
+ * two classes deep), and it's declared on `body` is not needed here —
+ * `--focus-ring` itself already resolves correctly from any descendant
+ * (see _variables.scss's `body { --focus-ring: ... }` comment).
+ *
+ * `:focus-visible:focus-visible` (the pseudo-class written twice) is a
+ * real, valid selector, not a typo: repeating it changes nothing about
+ * which elements match, but it counts twice for specificity, so the rule
+ * sits at two classes' worth (0,2,0) instead of one. That's needed
+ * because MDC's own component CSS resets `outline` unconditionally at
+ * one class' worth each -- `.mdc-button { outline: none; }` (button.mjs,
+ * covers every `.mat-mdc-button-base`) and `.mat-expansion-panel-header {
+ * outline: 0; }` (expansion.mjs) -- so a same-specificity `:focus-visible`
+ * rule here won or lost per element only by which stylesheet the build
+ * happened to emit later (verified against the recheck's captures: none
+ * of these showed a ring). Two classes' worth beats those resets on every
+ * element in this list regardless of source order, without `!important`.
+ *
+ * outline (not box-shadow/border) never affects layout regardless of
+ * `outline-offset`'s sign, so this never shifts anything.
+ */
+:where(
+  button,
+  .mat-mdc-button-base,
+  [role='button'],
+  mat-expansion-panel-header
+):focus-visible:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * mat-expansion-panel clips its header flush against its own rounded
+ * corners (Angular Material's own `.mat-expansion-panel { overflow:
+ * hidden; }`, not something this codebase owns), so the outward 2px ring
+ * above would be clipped on every edge — the header has no margin of its
+ * own to draw into. An inset ring stays inside the header's own box,
+ * which never extends past the panel's bounds, so it can't be clipped;
+ * `outline-offset`'s sign still never affects layout.
+ *
+ * Needs the same doubled-pseudo-class treatment as the `:where(...)` rule
+ * above, and for the same reason `.navbar__account-trigger` needed a
+ * third one: `outline-offset` is cascaded per property, independently of
+ * `outline` itself, across *every* matching rule, not just within this
+ * one selector vs. the element's other resets. A single
+ * `mat-expansion-panel-header:focus-visible` (element + one pseudo-class,
+ * (0,1,1)) loses the `outline-offset` property outright to the
+ * `:where(...):focus-visible:focus-visible` rule above ((0,2,0): column B
+ * 2 beats column C 1 outranks a tag name), which would otherwise win with
+ * its own `2px` and silently put the ring back outside the clipped panel
+ * (verified empirically: the recheck's first attempt at this rule, one
+ * `:focus-visible` deep, rendered `outline-offset: 2px` in
+ * `getComputedStyle`, not the `-2px` this rule names — invisible in every
+ * capture). Doubling it here too, to (0,2,1), beats the global rule's
+ * (0,2,0) the same way `.navbar__account-trigger`'s triple beats it for
+ * `outline` -- column B ties at 2, column C (1 vs 0) decides it. This
+ * still only overrides the one property it names.
+ */
+mat-expansion-panel-header:focus-visible:focus-visible {
+  outline-offset: -2px;
+}
+
 // Code
 code, pre {
   font-family: var(--font-mono);

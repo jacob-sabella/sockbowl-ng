@@ -41,12 +41,28 @@
   }
 }
 
-/* Shared visible-focus treatment for all interactive navbar elements.
-   S6-05: destinations are `<a>` now (routerLink), so this covers anchors
-   alongside buttons — focus must look the same regardless of tag. */
-.navbar__brand:focus-visible,
-.navbar__social a:focus-visible,
-.navbar__auth :where(button, a):focus-visible {
+/* M5 F2b: this used to be the only visible-focus rule for every
+   interactive navbar element (S6-05's comment, since dropped: "S6-05:
+   destinations are `<a>` now (routerLink), so this covers anchors
+   alongside buttons"). `_typography.scss`'s global rule now covers plain
+   `<a>` and every `<button>`/Material-button element the same way
+   everywhere else in the app does, so the brand link, the social links
+   and the rest of `.navbar__auth` fall through to that instead. Only the
+   account-menu trigger keeps a rule here, because it alone needs to look
+   exactly as it did before this change (below).
+
+   `:focus-visible:focus-visible`: the global rule in _typography.scss is
+   itself boosted to two classes' worth of specificity (0,2,0), to beat
+   MDC's own unconditional `outline: none`/`outline: 0` resets on the
+   button/select/expansion-header CSS it targets (see that rule's own
+   comment). `.navbar__account-trigger:focus-visible` alone is also
+   (0,2,0) -- one class plus one pseudo-class -- so without this it would
+   only beat the global rule by accident of which stylesheet the build
+   happens to emit later, and a false negative here silently swaps this
+   trigger's ring for the global one. Repeating the pseudo-class a third
+   time pushes this to (0,3,0), which always wins over the global rule's
+   (0,2,0) regardless of source order. */
+.navbar__account-trigger:focus-visible:focus-visible:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   border-radius: 8px;
@@ -113,7 +129,20 @@
   gap: 0.125rem;
 
   a {
-    color: var(--text-secondary);
+    /* M5 F2b (SA recheck): F2's material-overrides fix
+       (`.mat-mdc-icon-button`'s color moved off a literal `!important`
+       `color` onto the `--mat-icon-button-icon-color` token it actually
+       reads without `!important` — see material-theme.scss's H-08
+       comment for the sibling touch-target fix in the same spot) let
+       this rule's own `--text-secondary` idle color take effect for the
+       first time; the old `!important` had always won over it regardless
+       of specificity, so GitHub/Discord rendered at `--text-primary`
+       (the icon-button rule's own color) in every capture anyone has
+       reviewed. That's a real, unrecorded appearance change (dimmer
+       idle icons) this WP didn't intend to make, so it's restored to the
+       brighter, previously-shipped default here instead of left as an
+       accidental side effect of an unrelated fix. */
+    color: var(--text-primary);
     transition: color 0.2s ease, background-color 0.2s ease;
 
     &:hover {

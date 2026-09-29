@@ -24,6 +24,7 @@ export type CapturePhase =
   | 'final'
   | 'merged'
   | 'f2'
+  | 'f2b'
   | 'verdict'
   | 'v1'
   | 'self-check';
