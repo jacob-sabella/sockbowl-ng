@@ -437,6 +437,21 @@ const states: CaptureState[] = [
       await page.waitForTimeout(150);
     },
   },
+  {
+    // M5 merge A (F2b recheck gap): a focused *circular* icon button. The
+    // navbar theme toggle is a `mat-icon-button`, so the ring comes from the
+    // global `:where(...):focus-visible:focus-visible` rule and must follow
+    // the button's own round radius (F2b dropped the flat 2px radius).
+    id: 'focus-theme-toggle',
+    route: '/game-session',
+    role: 'player',
+    viewports: ['mobile', 'tablet'],
+    setupMocks: async () => {},
+    afterGoto: async page => {
+      await focusByKeyboard(page, page.getByRole('button', { name: 'Theme selector' }));
+      await page.waitForTimeout(150);
+    },
+  },
 ];
 
 const s6: SurfaceScenario = { id: 'S6', title: 'Shell, nav, profile, login', tag: 's6', port: 4206, states };
