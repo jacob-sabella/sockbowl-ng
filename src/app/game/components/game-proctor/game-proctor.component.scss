@@ -152,7 +152,8 @@
       border-left: 3px solid var(--warning);
       background: color-mix(in srgb, var(--warning) 10%, transparent);
       .info-label { color: var(--warning-text); }
-      .info-value { font-size: 1.05rem; }
+      // M5 S2-22: the reading-role rule at the bottom of this file sets
+      // font-size/line-height for this text; no size here to compete with it.
     }
 
     // The tossup's one-line summary once the bonus starts (M5 S2-06) - a
@@ -199,7 +200,8 @@
       background: color-mix(in srgb, var(--success) 8%, transparent);
       .info-label { color: var(--success-text); }
       .info-value {
-        font-size: 1.1rem;
+        // M5 S2-22: font-size comes from the reading-role rule below; only
+        // the weight and colour are this section's own.
         font-weight: 700;
         color: var(--text-primary);
       }
@@ -594,11 +596,10 @@
     background: var(--bg-secondary);
     border-left: 3px solid var(--accent-secondary);
     border-radius: var(--radius-sm);
-    // M5 S2-22: matches the tossup reading size below (this selector is more
-    // specific than the shared reading-role rule at the bottom of the file,
-    // so it has to carry the same value rather than rely on that rule).
-    font-size: 1.18rem;
-    line-height: 1.6;
+    // M5 S2-22: font-size/line-height come from the `.game-proctor
+    // .bonus-preamble` reading-role rule at the bottom of this file, which
+    // is written with enough specificity to win outright, so this block
+    // carries no size of its own to fall out of sync with it.
     color: var(--text-primary);
   }
 
@@ -666,17 +667,15 @@
       margin-bottom: 0.75rem;
 
       // The bonus part text is packet copy being read aloud, same as the
-      // top-level question/answer -> serif (M5 S2-10), at the same reading
-      // size (M5 S2-22 - it was 0.95rem here vs 1.18rem for the tossup, so
-      // the read-aloud text didn't read as one consistent voice).
+      // top-level question/answer -> serif (M5 S2-10). Font-size and
+      // line-height come from the `.game-proctor .part-question`/
+      // `.part-answer` reading-role rule at the bottom of this file (M5
+      // S2-22) - no size here to drift out of sync with the tossup text.
       .part-question,
       .part-answer {
         padding: 0.75rem 0.9rem;
         margin: 0.5rem 0;
         border-radius: var(--radius-sm);
-        line-height: 1.6;
-        font-size: 1.18rem;
-        font-family: var(--font-serif);
 
         strong {
           margin-right: 0.5rem;
@@ -757,16 +756,33 @@ app-team-list {
 }
 
 /* ============ Sockbowl type roles: the reading surface vs chrome ============ */
-/* Question / answer / bonus text = the academic packet being read -> serif */
-.question-section .info-value,
-.answer-section .info-value,
-.bonus-preamble {
+/* Question / answer / bonus preamble / bonus part text is the one packet
+   voice being read aloud (M5 S2-22): the DESIGN.md reading token
+   (clamp(1.15rem, 1rem + 1vw, 1.5rem), line-height 1.7, ~70ch measure), set
+   once here for tossup, answer, preamble and parts alike. Specificity, not
+   style, is what used to split them: `.info-section .info-value` above is
+   nested inside `.game-proctor { mat-card-content { … } } }`, so it compiles
+   to `.game-proctor mat-card-content .info-section .info-value` (3 classes +
+   1 element) and also matches `.question-section`/`.answer-section` (both
+   carry `.info-section` too). The first two selectors below repeat that same
+   `mat-card-content` element to tie its specificity exactly, and win because
+   this rule comes later in the file; `.bonus-preamble`/`.part-question`/
+   `.part-answer` live outside `.game-proctor` in the markup's own nesting, so
+   two classes are enough for them. The per-section blocks above no longer
+   declare a competing font-size or line-height, so this is the only rule
+   setting either. */
+.game-proctor mat-card-content .question-section .info-value,
+.game-proctor mat-card-content .answer-section .info-value,
+.game-proctor .bonus-preamble,
+.game-proctor .part-question,
+.game-proctor .part-answer {
   font-family: var(--font-serif);
-  font-size: 1.18rem;
-  line-height: 1.6;
+  font-size: clamp(1.15rem, 1rem + 1vw, 1.5rem);
+  line-height: 1.7;
   letter-spacing: 0.005em;
+  max-width: 70ch;
 }
-.answer-section .info-value { font-weight: 700; }
+.game-proctor mat-card-content .answer-section .info-value { font-weight: 700; }
 
 /* Labels = the controls/body voice, not the display face (M5 S2-18 - only
    Space Grotesk's spread onto labels was the defect, not its use on titles

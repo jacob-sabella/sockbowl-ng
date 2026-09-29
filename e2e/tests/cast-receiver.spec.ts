@@ -33,6 +33,7 @@ const INGAME_STATE = {
   timestamp: 2,
   isConfigStage: false,
   roundNumber: 5,
+  totalTossups: 20,
   category: 'Literature',
   subcategory: 'American Literature',
   roundState: 'AWAITING_ANSWER',
@@ -71,7 +72,24 @@ test('cast receiver renders config + in-game states', async ({ browser }) => {
   await expect(page.locator('#match-view')).toContainText('Anxiety'); // question rendered
   // M5 S2-17: category/subcategory join with a middle dot, not a hyphen.
   await expect(page.locator('#category-info')).toHaveText('Literature · American Literature');
+  // M5 S2-32: the same words as the proctor's own header, not "Round N".
+  await expect(page.locator('#round-info')).toHaveText('Tossup 5 of 20');
   await page.screenshot({ path: `${ART}/cast-02-ingame.png` });
+
+  await ctx.close();
+});
+
+// M5 S2-32: some modes never send a packet tossup count (backend follow-up
+// recorded). The receiver still says "Tossup N", never the bare "Round N".
+test('cast receiver falls back to "Tossup N" when no total is known', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
+
+  await page.evaluate((s) => (window as any).__castRender(s), { ...INGAME_STATE, totalTossups: null });
+  await page.waitForTimeout(200);
+  await expect(page.locator('#round-info')).toHaveText('Tossup 5');
 
   await ctx.close();
 });

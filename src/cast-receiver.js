@@ -181,8 +181,12 @@
     elements.configView.classList.add('hidden');
     elements.matchView.classList.remove('hidden');
 
-    // Update round info
-    elements.roundInfo.textContent = `Round ${state.roundNumber}`;
+    // Update round info. M5 S2-32: the same words as the proctor's own
+    // header ("Tossup N of M"), not the anonymous "Round N" - falls back to
+    // "Tossup N" when the total isn't known yet.
+    elements.roundInfo.textContent = state.totalTossups
+      ? `Tossup ${state.roundNumber} of ${state.totalTossups}`
+      : `Tossup ${state.roundNumber}`;
 
     // Update category info
     if (state.category && state.subcategory) {

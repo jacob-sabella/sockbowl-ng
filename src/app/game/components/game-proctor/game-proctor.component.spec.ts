@@ -361,6 +361,101 @@ describe('GameProctorComponent tossup summary and empty metadata (M5 S2-06)', ()
 });
 
 /**
+ * M5 S2-22: the tossup question/answer and the bonus preamble/part text are
+ * one read-aloud voice - the DESIGN.md reading token - so a per-section CSS
+ * rule (`.question-section .info-value`, `.bonus-preamble`, ...) can't win
+ * on specificity and quietly re-split them into different sizes.
+ */
+describe('GameProctorComponent reading-text type role (M5 S2-22)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+  let session$: BehaviorSubject<GameSession>;
+
+  function sessionWith(roundState: RoundState): GameSession {
+    return {
+      currentMatch: {
+        currentRound: {
+          roundState,
+          roundNumber: 1,
+          category: 'Science',
+          question: 'What is the capital of France?',
+          answer: 'Paris',
+          currentBonus: {
+            preamble: 'This is the bonus preamble.',
+            bonusParts: [{ question: 'Bonus part one?', answer: 'Answer one' }],
+          },
+          currentBonusPartIndex: 0,
+          bonusPartAnswers: [],
+          bonusEligibleTeamId: 't1',
+        },
+      },
+    } as unknown as GameSession;
+  }
+
+  function root(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function styleOf(selector: string): CSSStyleDeclaration {
+    const el = root().querySelector(selector);
+    expect(el).withContext(selector).not.toBeNull();
+    return getComputedStyle(el!);
+  }
+
+  beforeEach(() => {
+    session$ = new BehaviorSubject<GameSession>(sessionWith(RoundState.PROCTOR_READING));
+    const gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getTeamNameById', 'getPlayerNameById', 'getCurrentRoundBonusPoints', 'getCurrentRoundMaxBonusPoints'],
+      { gameSession$: session$.asObservable() },
+    );
+    gameStateService.getTeamNameById.and.returnValue('Team One');
+    gameStateService.getCurrentRoundMaxBonusPoints.and.returnValue(30);
+    gameStateService.getCurrentRoundBonusPoints.and.returnValue(0);
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: PresentationConnectionService,
+          useValue: { isAvailable$: of(false), connectionState$: of(PresentationConnectionState.DISCONNECTED) },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders the tossup question and answer at the same computed font-size and line-height', () => {
+    const question = styleOf('.question-section .info-value');
+    const answer = styleOf('.answer-section .info-value');
+    // Guards against both sides quietly falling back to the browser default
+    // (16px) if a more specific per-section rule ever wins again - equality
+    // alone wouldn't catch that, since 16px would still equal 16px.
+    expect(question.fontSize).not.toBe('16px');
+    expect(answer.fontSize).toBe(question.fontSize);
+    expect(answer.lineHeight).toBe(question.lineHeight);
+  });
+
+  it('renders the bonus preamble and a bonus part at the tossup reading size', () => {
+    const tossupFontSize = styleOf('.question-section .info-value').fontSize;
+    expect(tossupFontSize).not.toBe('16px');
+
+    session$.next(sessionWith(RoundState.BONUS_READING_PREAMBLE));
+    fixture.detectChanges();
+    expect(styleOf('.bonus-preamble').fontSize).toBe(tossupFontSize);
+
+    session$.next(sessionWith(RoundState.BONUS_READING_PART));
+    fixture.detectChanges();
+    expect(styleOf('.bonus-part.current .part-question').fontSize).toBe(tossupFontSize);
+    expect(styleOf('.bonus-part.current .part-answer').fontSize).toBe(tossupFontSize);
+  });
+});
+
+/**
  * M5 S2-20: with the auto-timer off, #timeout-btn and .manual-timeout-btn
  * used to render as two separate, both-pinned buttons on top of each other
  * in AWAITING_BUZZ. There must be exactly one tossup timeout control,

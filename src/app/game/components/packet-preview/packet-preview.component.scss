@@ -20,12 +20,17 @@
     align-items: center;
     gap: 0.4rem;
     font-family: var(--font-display);
-    font-size: 0.66rem;
+    // M5 S2-33: 0.66rem (~10.5px) was under the 12px UI-text floor, and the
+    // colour was a role token used as small text (The Role-Not-Hue Rule
+    // wants `--*-text` for coloured text, not the raw accent).
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    color: var(--accent-primary);
-    mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    color: var(--accent-primary-text);
+    // Sized in em, not a fixed px, so it scales with the eyebrow's own
+    // font-size instead of drifting out of proportion with it.
+    mat-icon { font-size: 1.25em; width: 1.25em; height: 1.25em; }
   }
   .preview__title {
     font-family: var(--font-display);
