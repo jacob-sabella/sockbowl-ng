@@ -170,6 +170,19 @@ body {
   color: var(--on-warning);
 }
 
+/* M5 S2-34: an extreme-length player or team name single-lines with an
+   ellipsis instead of wrapping the pill tall enough to overflow the frame;
+   the full name is still available via the element's `title`. */
+.buzz-player-name,
+.buzz-team-name {
+  display: inline-block;
+  max-width: 26vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
 .buzz-indicator::before {
   content: '';
   width: 16px;
@@ -245,10 +258,17 @@ body {
   }
 }
 
+/* M5 S2-34: an extreme-length team name ellipses instead of squeezing
+   .team-points out of the card; `min-width: 0` is what lets a flex item
+   shrink below its content's own width so the ellipsis can engage. */
 .team-name {
   font-weight: 600;
   color: var(--text-primary);
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .team-points {

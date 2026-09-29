@@ -294,10 +294,15 @@
     // internal whitespace runs too, so a name typed with extra spaces (or
     // one containing a stray newline) doesn't read as a double gap next to
     // the indicator's own flex gap.
+    // M5 S2-34: a 100+ character name is single-lined with an ellipsis (CSS)
+    // instead of wrapping the pill tall enough to overflow the frame; the
+    // full name survives in `title`.
+    const playerName = collapseWhitespace(buzzInfo.playerName);
+    const teamName = collapseWhitespace(buzzInfo.teamName);
     elements.buzzStatus.innerHTML = `
       <div class="buzz-indicator ${statusClass}">
-        <strong>${escapeHtml(collapseWhitespace(buzzInfo.playerName))}</strong>
-        <span>(${escapeHtml(collapseWhitespace(buzzInfo.teamName))})</span>
+        <strong class="buzz-player-name" title="${escapeAttr(playerName)}">${escapeHtml(playerName)}</strong>
+        <span>(<span class="buzz-team-name" title="${escapeAttr(teamName)}">${escapeHtml(teamName)}</span>)</span>
         <span>${statusText}</span>
       </div>
     `;
@@ -316,12 +321,18 @@
     // Sort teams by score (highest first)
     const sortedTeams = [...teamScores].sort((a, b) => b.score - a.score);
 
-    elements.scoreboard.innerHTML = sortedTeams.map(team => `
+    // M5 S2-34: an extreme-length team name is clamped with an ellipsis
+    // (CSS) rather than pushing the score column out of the card; the full
+    // name survives in `title`.
+    elements.scoreboard.innerHTML = sortedTeams.map(team => {
+      const teamName = collapseWhitespace(team.teamName);
+      return `
       <div class="team-score">
-        <span class="team-name">${escapeHtml(team.teamName)}</span>
+        <span class="team-name" title="${escapeAttr(teamName)}">${escapeHtml(teamName)}</span>
         <span class="team-points">${team.score}</span>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   /**
@@ -408,6 +419,19 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  /**
+   * Escapes a value for use inside a double-quoted HTML attribute (M5
+   * S2-34's `title` attrs). `escapeHtml`'s innerHTML round-trip only
+   * escapes `&`/`<`/`>` (correct for text nodes), but leaves `"` alone
+   * since it's harmless there; inside `title="…"` an unescaped `"` in a
+   * player-chosen name would close the attribute early.
+   * @param {string} text
+   * @returns {string}
+   */
+  function escapeAttr(text) {
+    return escapeHtml(text).replace(/"/g, '&quot;');
   }
 
   /**

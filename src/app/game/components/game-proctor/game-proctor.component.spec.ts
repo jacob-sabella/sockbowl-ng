@@ -1,12 +1,12 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, Subject } from 'rxjs';
 
 import { GameProctorComponent } from './game-proctor.component';
 import { GameStateService } from '../../services/game-state.service';
 import { PresentationConnectionService } from '../../services/presentation-connection.service';
 import { CastStateService } from '../../services/cast-state.service';
-import { GameSession, RoundState } from '../../models/sockbowl/sockbowl-interfaces';
+import { GameSession, RoundState, StompError } from '../../models/sockbowl/sockbowl-interfaces';
 import { PresentationConnectionState } from '../../models/cast-interfaces';
 
 /**
@@ -632,6 +632,7 @@ describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
   let fixture: ComponentFixture<GameProctorComponent>;
   let session$: BehaviorSubject<GameSession>;
   let gameStateService: jasmine.SpyObj<GameStateService>;
+  let errors$: Subject<StompError>;
   let dialogEl: HTMLElement | null = null;
 
   function sessionWith(partial: Record<string, unknown>): GameSession {
@@ -661,6 +662,7 @@ describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
 
   beforeEach(() => {
     session$ = new BehaviorSubject<GameSession>(sessionWith({ roundState: RoundState.PROCTOR_READING }));
+    errors$ = new Subject<StompError>();
     gameStateService = jasmine.createSpyObj<GameStateService>(
       'GameStateService',
       [
@@ -668,7 +670,7 @@ describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
         'sendFinishedReading', 'sendTimeoutRound', 'sendAdvanceRound', 'sendAnswerCorrect', 'sendAnswerIncorrect',
         'sendFinishedReadingBonusPreamble', 'sendFinishedReadingBonusPart', 'sendTimeoutBonusPart', 'sendBonusPartOutcome',
       ],
-      { gameSession$: session$.asObservable() },
+      { gameSession$: session$.asObservable(), errors$: errors$.asObservable() },
     );
     gameStateService.getPlayerNameById.and.returnValue('Ada');
     gameStateService.getCurrentRoundMaxBonusPoints.and.returnValue(20);
@@ -836,7 +838,10 @@ describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
     expect(rightBtn.disabled).toBe(true);
     expect(wrongBtn.disabled).toBe(true);
     const banner = (fixture.nativeElement as HTMLElement).querySelector('.proctor-status')!.textContent!;
-    expect(banner).toContain('marked correct');
+    // M5 S2-30: the pending copy is deliberately provisional - the send
+    // hasn't been confirmed by a server frame yet, so it must not claim
+    // "marked correct".
+    expect(banner).toContain('Sending: Ada correct');
   });
 
   it('clears the pending judgment once the RoundState changes, allowing the next judgment', () => {
@@ -865,5 +870,300 @@ describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
 
     dispatchKey('w');
     expect(gameStateService.sendAnswerIncorrect).toHaveBeenCalled();
+  });
+});
+
+/**
+ * M5 S2-30: the judgment latch used to clear only on a real RoundState/buzz
+ * change, so a lost send (a rejected frame, a RATE_LIMITED soft drop, or a
+ * reconnect that never brings a real change) left Right/Wrong/Timeout dead
+ * until a reload. It now also clears on a bounded timeout and on any error
+ * frame, with a plain recovery line shown only for those two paths - a
+ * normal confirming frame stays silent about it.
+ */
+describe('GameProctorComponent judgment pending recovery (M5 S2-30)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+  let session$: BehaviorSubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let errors$: Subject<StompError>;
+
+  function sessionWith(partial: Record<string, unknown>): GameSession {
+    return {
+      currentMatch: {
+        currentRound: {
+          roundNumber: 1,
+          currentBonus: { preamble: 'p', bonusParts: [{}, {}] },
+          currentBonusPartIndex: 0,
+          bonusPartAnswers: [],
+          bonusEligibleTeamId: 't1',
+          ...partial,
+        },
+      },
+    } as unknown as GameSession;
+  }
+
+  function dispatchKey(key: string): void {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  }
+
+  function banner(): string {
+    return (fixture.nativeElement as HTMLElement).querySelector('.proctor-status')!.textContent!.trim();
+  }
+
+  function rightBtn(): HTMLButtonElement {
+    return (fixture.nativeElement as HTMLElement).querySelector('#right-btn') as HTMLButtonElement;
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    session$ = new BehaviorSubject<GameSession>(
+      sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }),
+    );
+    errors$ = new Subject<StompError>();
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      [
+        'getTeamNameById', 'getPlayerNameById', 'getCurrentRoundBonusPoints', 'getCurrentRoundMaxBonusPoints',
+        'sendAnswerCorrect', 'sendAnswerIncorrect', 'sendBonusPartOutcome',
+      ],
+      { gameSession$: session$.asObservable(), errors$: errors$.asObservable() },
+    );
+    gameStateService.getPlayerNameById.and.returnValue('Ada');
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: PresentationConnectionService,
+          useValue: { isAvailable$: of(false), connectionState$: of(PresentationConnectionState.DISCONNECTED) },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('clears after ~5s with no confirming frame, and shows the recovery line', () => {
+    dispatchKey('r');
+    fixture.detectChanges();
+    expect(rightBtn().disabled).toBe(true);
+
+    jasmine.clock().tick(4999);
+    fixture.detectChanges();
+    expect(rightBtn().disabled).toBe(true);
+
+    jasmine.clock().tick(1);
+    fixture.detectChanges();
+    expect(rightBtn().disabled).toBe(false);
+    expect(banner()).toContain("Didn't reach the server. Judge again.");
+  });
+
+  it('clears immediately on any error frame, and shows the recovery line', () => {
+    dispatchKey('r');
+    fixture.detectChanges();
+
+    errors$.next({ code: 'INTERNAL', fatal: false } as StompError);
+    fixture.detectChanges();
+
+    expect(rightBtn().disabled).toBe(false);
+    expect(banner()).toContain("Didn't reach the server. Judge again.");
+  });
+
+  it('clears on a normal confirming frame with no recovery line', () => {
+    dispatchKey('r');
+    fixture.detectChanges();
+    expect(banner()).toContain('Sending: Ada correct');
+
+    session$.next(sessionWith({ roundState: RoundState.COMPLETED }));
+    fixture.detectChanges();
+
+    expect(banner()).not.toContain("Didn't reach the server");
+    expect(banner()).not.toContain('Sending:');
+  });
+
+  it('a judgment retried after a lost-send recovery sends normally', () => {
+    dispatchKey('r');
+    fixture.detectChanges();
+    jasmine.clock().tick(5000);
+    fixture.detectChanges();
+
+    dispatchKey('w');
+    expect(gameStateService.sendAnswerIncorrect).toHaveBeenCalled();
+  });
+});
+
+/**
+ * M5 S2-31: a ~600ms lockout follows every state-changing send (advance,
+ * finished reading, tossup/bonus timeout), so a double Space/Enter/T can't
+ * also fire the *next* round's action once the server frame from the first
+ * send arrives a few hundred ms later.
+ */
+describe('GameProctorComponent action lockout (M5 S2-31)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+  let session$: BehaviorSubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function sessionWith(partial: Record<string, unknown>): GameSession {
+    return {
+      currentMatch: {
+        currentRound: {
+          roundNumber: 1,
+          currentBonus: { preamble: 'p', bonusParts: [{}, {}] },
+          currentBonusPartIndex: 0,
+          bonusPartAnswers: [],
+          bonusEligibleTeamId: 't1',
+          ...partial,
+        },
+      },
+    } as unknown as GameSession;
+  }
+
+  function dispatchKey(key: string): void {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    session$ = new BehaviorSubject<GameSession>(sessionWith({ roundState: RoundState.COMPLETED }));
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      [
+        'getTeamNameById', 'getPlayerNameById', 'getCurrentRoundBonusPoints', 'getCurrentRoundMaxBonusPoints',
+        'sendAdvanceRound', 'sendFinishedReading', 'sendTimeoutRound', 'sendTimeoutBonusPart',
+      ],
+      { gameSession$: session$.asObservable(), errors$: new Subject<StompError>().asObservable() },
+    );
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: PresentationConnectionService,
+          useValue: { isAvailable$: of(false), connectionState$: of(PresentationConnectionState.DISCONNECTED) },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('a second Space 200ms later, once the frame has moved on, sends exactly one advance and no finished-reading', () => {
+    dispatchKey(' ');
+    expect(gameStateService.sendAdvanceRound).toHaveBeenCalledTimes(1);
+
+    // The server frame that follows the advance lands mid-lockout.
+    jasmine.clock().tick(200);
+    session$.next(sessionWith({ roundState: RoundState.PROCTOR_READING }));
+    fixture.detectChanges();
+
+    dispatchKey(' ');
+    expect(gameStateService.sendFinishedReading).not.toHaveBeenCalled();
+    expect(gameStateService.sendAdvanceRound).toHaveBeenCalledTimes(1);
+  });
+
+  it('a Space after the lockout window sends the next action normally', () => {
+    dispatchKey(' ');
+    expect(gameStateService.sendAdvanceRound).toHaveBeenCalledTimes(1);
+
+    jasmine.clock().tick(600);
+    session$.next(sessionWith({ roundState: RoundState.PROCTOR_READING }));
+    fixture.detectChanges();
+
+    dispatchKey(' ');
+    expect(gameStateService.sendFinishedReading).toHaveBeenCalledTimes(1);
+  });
+
+  it('a double T sends one tossup timeout', () => {
+    session$.next(sessionWith({ roundState: RoundState.AWAITING_BUZZ }));
+    fixture.detectChanges();
+
+    dispatchKey('t');
+    dispatchKey('t');
+    expect(gameStateService.sendTimeoutRound).toHaveBeenCalledTimes(1);
+  });
+
+  it('a double T sends one bonus timeout', () => {
+    session$.next(sessionWith({ roundState: RoundState.BONUS_AWAITING_ANSWER }));
+    fixture.detectChanges();
+
+    dispatchKey('t');
+    dispatchKey('t');
+    expect(gameStateService.sendTimeoutBonusPart).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * M5 S2-34: an extreme-length (100+ char) player or team name must not push
+ * the pinned decision row out of view. The CSS clamp (ellipsis) is a visual
+ * property Karma can't measure headlessly, but the `title` attribute
+ * carrying the full, unclamped name is exactly what a screen reader or a
+ * hovering pointer falls back to, and it's assertable here.
+ */
+describe('GameProctorComponent extreme-length buzz names (M5 S2-34)', () => {
+  let fixture: ComponentFixture<GameProctorComponent>;
+
+  const LONG_NAME = 'A'.repeat(120);
+
+  function sessionWith(currentBuzz: unknown): GameSession {
+    return {
+      currentMatch: {
+        currentRound: {
+          roundState: RoundState.AWAITING_ANSWER,
+          roundNumber: 1,
+          currentBuzz,
+          currentBonus: { preamble: 'p', bonusParts: [] },
+          currentBonusPartIndex: 0,
+          bonusPartAnswers: [],
+          bonusEligibleTeamId: 't1',
+        },
+      },
+    } as unknown as GameSession;
+  }
+
+  beforeEach(() => {
+    const session$ = new BehaviorSubject<GameSession>(sessionWith({ playerId: 'p1', teamId: 't1' }));
+    const gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['getTeamNameById', 'getPlayerNameById', 'getCurrentRoundBonusPoints', 'getCurrentRoundMaxBonusPoints'],
+      { gameSession$: session$.asObservable() },
+    );
+    gameStateService.getPlayerNameById.and.returnValue(LONG_NAME);
+    gameStateService.getTeamNameById.and.returnValue(LONG_NAME);
+
+    TestBed.configureTestingModule({
+      declarations: [GameProctorComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        {
+          provide: PresentationConnectionService,
+          useValue: { isAvailable$: of(false), connectionState$: of(PresentationConnectionState.DISCONNECTED) },
+        },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    fixture = TestBed.createComponent(GameProctorComponent);
+    fixture.detectChanges();
+  });
+
+  it('carries the full player and team name in title on the clamped buzz block', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    const nameEl = root.querySelector('.active-buzz-info .buzz-name') as HTMLElement;
+    const teamEl = root.querySelector('.active-buzz-info .buzz-team') as HTMLElement;
+    expect(nameEl.title).toBe(LONG_NAME);
+    expect(teamEl.title).toBe(LONG_NAME);
   });
 });

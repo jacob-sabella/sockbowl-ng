@@ -200,3 +200,40 @@ test('cast receiver admits a question that never arrives after a bounded wait', 
 
   await ctx.close();
 });
+
+// M5 S2-34: a 100+ character name must not push the buzz pill or the
+// scoreboard wide enough to overflow the frame — it single-lines with an
+// ellipsis (CSS), and the full name survives in `title`.
+test('cast receiver clamps an extreme-length name in the buzz pill and scoreboard', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await ctx.newPage();
+  await page.goto(`${APP_URL}/cast-receiver.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof (window as any).__castRender === 'function');
+
+  const longName = 'A'.repeat(120);
+  await page.evaluate((s) => (window as any).__castRender(s), {
+    ...INGAME_STATE,
+    currentBuzz: { playerName: longName, teamName: longName },
+    teamScores: [
+      { teamName: longName, score: 30 },
+      { teamName: 'Team 2', score: 15 },
+    ],
+  });
+  await page.waitForTimeout(300);
+
+  const playerNameEl = page.locator('.buzz-player-name');
+  const teamNameEl = page.locator('#scoreboard .team-name').first();
+  await expect(playerNameEl).toHaveAttribute('title', longName);
+  await expect(teamNameEl).toHaveAttribute('title', longName);
+
+  // Clamped rendered width stays well short of the full unclamped name, and
+  // the frame itself never scrolls (S2-23's contract, still true here).
+  const playerBox = await playerNameEl.boundingBox();
+  expect(playerBox!.width).toBeLessThan(1280 * 0.4);
+  const scrollHeight = await page.evaluate(() => document.scrollingElement?.scrollHeight ?? 0);
+  const innerHeight = await page.evaluate(() => window.innerHeight);
+  expect(scrollHeight).toBeLessThanOrEqual(innerHeight);
+
+  await page.screenshot({ path: `${ART}/cast-06-extreme-name.png` });
+  await ctx.close();
+});

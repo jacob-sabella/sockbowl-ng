@@ -361,9 +361,27 @@
     font-size: 1.1rem !important;
     color: var(--text-primary) !important;
     margin: 0 !important;
+    // `p` is a flex item of `.active-buzz-info`; without this, a flex item's
+    // default auto min-width (based on content) can keep it - and the whole
+    // card - from ever shrinking below an unbroken 100+ character name, even
+    // though the name/team spans below are individually clamped.
+    min-width: 0;
 
     strong { color: var(--error-text); }
   }
+}
+
+// M5 S2-34: a 100+ character player or team name single-lines with an
+// ellipsis instead of wrapping the buzz block tall enough to push the
+// pinned decision row below the fold; the full name survives in `title`.
+.buzz-name,
+.buzz-team {
+  display: inline-block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 /* Shared control button focus treatment */
