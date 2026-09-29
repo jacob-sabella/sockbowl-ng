@@ -236,6 +236,23 @@
           inset 0 -6px 14px rgba(0, 0, 0, 0.25) !important;
       }
 
+      // Sent, waiting for the server echo (M5 S1-25): a compound selector so
+      // it outranks the plain `:disabled` rule above (the button is disabled
+      // while pending too). Stays in the pressed-down position instead of the
+      // muted "locked" look, since it isn't locked out — the dome is just
+      // mid-press until the echo (or the 1.5s timeout) lands.
+      &:disabled.is-pending {
+        background: var(--error) !important;
+        color: var(--on-error) !important;
+        cursor: wait;
+        filter: none;
+        transform: translateY(8px) !important;
+        box-shadow:
+          0 2px 0 -2px var(--shadow-color),
+          0 5px 14px var(--shadow-color),
+          inset 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+      }
+
       @media (min-width: 600px) {
         font-size: 2rem;
       }

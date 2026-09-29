@@ -5,7 +5,16 @@
      from the stomp-error-banner (which only shows actual ERROR/queue frames), so a
      silent WebSocket close is never mistaken for a live, working game. -->
 @if ((connectionState$ | async) === 'reconnecting') {
-  <div class="reconnect-strip" role="status" aria-live="polite">Reconnecting…</div>
+  <div class="reconnect-strip" role="status" aria-live="polite">
+    <!-- A reconnect that runs past 15s escalates its wording and offers a way
+         out, instead of sitting on "Reconnecting…" indefinitely (M5 S1-31). -->
+    @if (reconnectEscalated$ | async) {
+      <span>Still trying to reconnect…</span>
+      <a class="reconnect-strip__back" routerLink="/game-session">Back to lobby</a>
+    } @else {
+      <span>Reconnecting…</span>
+    }
+  </div>
 }
 
 <!-- Game Session Container -->
@@ -56,9 +65,15 @@
   </div>
 } @else {
   <!-- Blank canvas before the first gameSession$ emission (M5 S1-02): a designed
-       connecting state, with a way back out, instead of a black page. -->
+       connecting state, with a way back out, instead of a black page. Past
+       15s with no emission the copy escalates the same way the reconnect
+       strip does (M5 S1-31). -->
   <div class="canvas-connecting">
-    <app-loading-state title="Connecting to the game…"></app-loading-state>
+    @if (connectingEscalated$ | async) {
+      <app-loading-state title="Still connecting…"></app-loading-state>
+    } @else {
+      <app-loading-state title="Connecting to the game…"></app-loading-state>
+    }
     <a class="canvas-connecting__back" routerLink="/game-session">Back to lobby</a>
   </div>
 }

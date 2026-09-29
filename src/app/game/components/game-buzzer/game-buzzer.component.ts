@@ -9,6 +9,13 @@ import {GameWebSocketService} from '../../services/game-web-socket.service';
 export const BUZZ_PRESS_DEBOUNCE_MS = 300;
 /** Lockout used when a stomp-buzz RATE_LIMITED error carries no `retryAfterMs`/`retryAfterSeconds`. */
 export const BUZZ_LOCKOUT_FALLBACK_MS = 1000;
+/**
+ * How long the dome shows a transient "sent, waiting for the server" state
+ * after an accepted press, if no echo (or another player's buzz) arrives
+ * first (M5 S1-25). Purely cosmetic: it never changes the debounce, the
+ * rate-limit lockout or the message sent.
+ */
+export const BUZZ_PENDING_TIMEOUT_MS = 1500;
 
 /**
  * What the dome should show right now, for a tossup round. `open` is the
@@ -20,7 +27,7 @@ export const BUZZ_LOCKOUT_FALLBACK_MS = 1000;
  * `GameWebSocketService.connectionState$` (M5 S1-03), so a buzz is never
  * silently lost to a socket the player can't see is down.
  */
-export type BuzzState = 'open' | 'self' | 'other' | 'teamLocked' | 'rateLimited' | 'disconnected';
+export type BuzzState = 'open' | 'pending' | 'self' | 'other' | 'teamLocked' | 'rateLimited' | 'disconnected';
 
 @Component({
     selector: 'app-game-buzzer',
@@ -57,16 +64,26 @@ export class GameBuzzerComponent implements OnInit {
    */
   private readonly connected = signal(true);
 
+  /**
+   * True from an accepted press until the server echoes the buzz (or someone
+   * else's), or {@link BUZZ_PENDING_TIMEOUT_MS} passes, so a tap in a noisy
+   * room doesn't look identical to a fully idle dome while the message is
+   * still in flight (M5 S1-25).
+   */
+  readonly pendingSelfBuzz = signal(false);
+
   private destroyRef = inject(DestroyRef);
   private lastBuzzAtMs = 0;
   private lockoutTimer: ReturnType<typeof setTimeout> | null = null;
   private rateLimitTickTimer: ReturnType<typeof setInterval> | null = null;
+  private pendingBuzzTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.gameSessionObs = this.gameStateService.gameSession$;
     this.destroyRef.onDestroy(() => {
       this.clearLockoutTimer();
       this.clearRateLimitTick();
+      this.clearPendingBuzzTimer();
     });
   }
 
@@ -76,6 +93,11 @@ export class GameBuzzerComponent implements OnInit {
   ngOnInit(): void {
     this.gameSessionObs.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(gameSession => {
       this.gameSession = gameSession;
+      // The echo (or another player's buzz) landed: the pending window is over (M5 S1-25).
+      if (this.pendingSelfBuzz() && gameSession?.currentMatch?.currentRound?.currentBuzz) {
+        this.clearPendingBuzzTimer();
+        this.pendingSelfBuzz.set(false);
+      }
     });
 
     this.gameWebSocketService.errors$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(error => {
@@ -106,12 +128,34 @@ export class GameBuzzerComponent implements OnInit {
       return;
     }
     this.lastBuzzAtMs = now;
+    this.startPendingBuzz();
     this.gameStateService.sendPlayerIncomingBuzz();
+  }
+
+  /** Starts (or restarts) the transient pending window after a sent buzz (M5 S1-25). */
+  private startPendingBuzz(): void {
+    this.clearPendingBuzzTimer();
+    this.pendingSelfBuzz.set(true);
+    this.pendingBuzzTimer = setTimeout(() => {
+      this.pendingBuzzTimer = null;
+      this.pendingSelfBuzz.set(false);
+    }, BUZZ_PENDING_TIMEOUT_MS);
+  }
+
+  private clearPendingBuzzTimer(): void {
+    if (this.pendingBuzzTimer) {
+      clearTimeout(this.pendingBuzzTimer);
+      this.pendingBuzzTimer = null;
+    }
   }
 
   private lockBuzzer(durationMs: number): void {
     this.clearLockoutTimer();
     this.clearRateLimitTick();
+    // A RATE_LIMITED rejection means the pending press was never accepted:
+    // don't let a stale pending window reappear once the lockout ends.
+    this.clearPendingBuzzTimer();
+    this.pendingSelfBuzz.set(false);
     this.buzzLocked.set(true);
     const clampedMs = Math.max(durationMs, 0);
     const endsAt = Date.now() + clampedMs;
@@ -181,6 +225,9 @@ export class GameBuzzerComponent implements OnInit {
     if (!this.connected()) {
       return 'disconnected';
     }
+    if (this.pendingSelfBuzz()) {
+      return 'pending';
+    }
     const buzz = this.gameSession?.currentMatch?.currentRound?.currentBuzz;
     if (!buzz) {
       return 'open';
@@ -199,6 +246,8 @@ export class GameBuzzerComponent implements OnInit {
       }
       case 'disconnected':
         return 'Reconnecting';
+      case 'pending':
+        return 'Buzzing…';
       case 'self':
         return "You're in, answer!";
       case 'teamLocked':
@@ -253,6 +302,8 @@ export class GameBuzzerComponent implements OnInit {
       }
       case 'disconnected':
         return 'Buzzer disabled while reconnecting to the game.';
+      case 'pending':
+        return 'Buzz sent, waiting for the server to confirm.';
       case 'self':
         return 'You have the buzz. Answer out loud.';
       case 'teamLocked':

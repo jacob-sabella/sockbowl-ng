@@ -245,4 +245,135 @@ describe('GameCanvasComponent', () => {
       expect((fixture.nativeElement as HTMLElement).querySelector('.reconnect-strip')).toBeNull();
     });
   });
+
+  /**
+   * M5 S1-31: a reconnect that never recovers used to sit on "Reconnecting…"
+   * forever with no way out. Past 15s the strip escalates its wording and
+   * offers the same "Back to lobby" link as the initial connecting state.
+   */
+  describe('reconnect escalation past 15s (M5 S1-31)', () => {
+    function strip(fixture: ReturnType<typeof startFixture>): HTMLElement | null {
+      return (fixture.nativeElement as HTMLElement).querySelector('.reconnect-strip');
+    }
+
+    beforeEach(() => {
+      jasmine.clock().install();
+    });
+
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('stays on the plain wording, with no back link, before the threshold', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+      connectionState$.next('reconnecting');
+      fixture.detectChanges();
+
+      jasmine.clock().tick(14999);
+      fixture.detectChanges();
+
+      expect(strip(fixture)?.textContent).toContain('Reconnecting…');
+      expect(strip(fixture)?.textContent).not.toContain('Still trying');
+      expect(strip(fixture)?.querySelector('a')).toBeNull();
+    });
+
+    it('escalates the wording and adds a back-to-lobby link after 15s', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+      connectionState$.next('reconnecting');
+      fixture.detectChanges();
+
+      jasmine.clock().tick(15000);
+      fixture.detectChanges();
+
+      expect(strip(fixture)?.textContent).toContain('Still trying to reconnect…');
+      const back = strip(fixture)?.querySelector('a[routerlink="/game-session"]') as HTMLAnchorElement | null;
+      expect(back).not.toBeNull();
+      expect(back?.textContent).toContain('Back to lobby');
+    });
+
+    it('clears the escalation once the socket reconnects', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+      connectionState$.next('reconnecting');
+      fixture.detectChanges();
+      jasmine.clock().tick(15000);
+      fixture.detectChanges();
+
+      connectionState$.next('connected');
+      fixture.detectChanges();
+
+      expect(strip(fixture)).toBeNull();
+    });
+
+    it('restarts the 15s timer on a fresh reconnect rather than reusing a stale one', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+      connectionState$.next('reconnecting');
+      fixture.detectChanges();
+      jasmine.clock().tick(10000);
+      connectionState$.next('connected');
+      fixture.detectChanges();
+
+      connectionState$.next('reconnecting');
+      fixture.detectChanges();
+      jasmine.clock().tick(10000); // 10s into the new drop; would be past 15s total on the old timer
+      fixture.detectChanges();
+
+      expect(strip(fixture)?.textContent).toContain('Reconnecting…');
+      expect(strip(fixture)?.textContent).not.toContain('Still trying');
+    });
+  });
+
+  /**
+   * M5 S1-31 (remaining half): the pre-emission "Connecting to the game…"
+   * state used to run forever with no escalation if the first gameSession$
+   * emission never arrived. It now escalates on the same 15s threshold and
+   * copy pattern as the reconnect strip, and clears once the session lands.
+   */
+  describe('connecting-state escalation past 15s (M5 S1-31)', () => {
+    function connectingTitle(fixture: ReturnType<typeof startFixture>): string | null {
+      return (fixture.nativeElement as HTMLElement).querySelector('app-loading-state')?.getAttribute('title')
+        ?? (fixture.nativeElement as HTMLElement).querySelector('.canvas-connecting')?.textContent ?? null;
+    }
+
+    beforeEach(() => {
+      jasmine.clock().install();
+    });
+
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('stays on "Connecting to the game…" before the threshold', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      jasmine.clock().tick(14999);
+      fixture.detectChanges();
+
+      expect(connectingTitle(fixture)).toContain('Connecting to the game…');
+      expect(connectingTitle(fixture)).not.toContain('Still connecting');
+    });
+
+    it('escalates to "Still connecting…" after 15s with no gameSession$ emission', () => {
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      jasmine.clock().tick(15000);
+      fixture.detectChanges();
+
+      expect(connectingTitle(fixture)).toContain('Still connecting…');
+      const back = (fixture.nativeElement as HTMLElement)
+        .querySelector('a[routerlink="/game-session"]') as HTMLAnchorElement | null;
+      expect(back).not.toBeNull();
+      expect(back?.textContent).toContain('Back to lobby');
+    });
+
+    it('clears on the first emission instead of escalating', () => {
+      const session$ = new Subject<unknown>();
+      gameStateService.gameSession$ = session$ as unknown as typeof NEVER;
+      const fixture = startFixture({ gameSessionId: 'g1', playerSessionId: 'p1' });
+
+      session$.next({ currentMatch: { currentRound: {} } });
+      fixture.detectChanges();
+      jasmine.clock().tick(15000);
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('.canvas-connecting')).toBeNull();
+      expect(root.textContent).not.toContain('Still connecting');
+    });
+  });
 });

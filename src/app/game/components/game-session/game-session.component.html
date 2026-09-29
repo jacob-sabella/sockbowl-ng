@@ -108,7 +108,7 @@
           <mat-select [(ngModel)]="createGameRequest.gameSettings.gameMode">
             @for (gameMode of GameModes | keyvalue; track gameMode) {
               <mat-option [value]="gameMode.key">
-                {{gameMode.value}}
+                {{ gameModeLabels[gameMode.value] }}
               </mat-option>
             }
           </mat-select>
@@ -147,6 +147,9 @@
             <mat-label>Name</mat-label>
             <input matInput name="name" [(ngModel)]="joinGameRequest.name" required>
           </mat-form-field>
+          @if (nameError) {
+            <p class="field-error" role="alert">{{ nameError }}</p>
+          }
         } @else {
           <p class="signed-in-as">
             <mat-icon>account_circle</mat-icon>

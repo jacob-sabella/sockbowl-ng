@@ -10,7 +10,7 @@ import { GameSessionService } from '../../services/game-session.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { environment } from '../../../../environments/environment';
 import { gameJoinStorageKey } from '../../services/game-join-storage';
-import { JoinGameResponse } from '../../models/sockbowl/sockbowl-interfaces';
+import { GameMode, JoinGameResponse } from '../../models/sockbowl/sockbowl-interfaces';
 import { PendingPacketService } from '../../services/pending-packet.service';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 
@@ -123,6 +123,7 @@ describe('GameSessionComponent join flow', () => {
     environment.authEnabled = false;
     authenticated = true; // AuthService would never say so with auth off; the lobby must not trust it
     component.joinGameRequest.joinCode = 'WXYZ';
+    component.joinGameRequest.name = 'Guest';
 
     component.submitJoinGame();
 
@@ -355,6 +356,10 @@ describe('GameSessionComponent classifies join/create errors (M5 S1-05)', () => 
       schemas: [NO_ERRORS_SCHEMA],
     });
     component = TestBed.createComponent(GameSessionComponent).componentInstance;
+    // These tests exercise error classification, not the M5 S1-35 blank-name
+    // guard: give every guest join a name so it isn't blocked before it can
+    // reach the (mocked) service call under test.
+    component.joinGameRequest.name = 'Guest';
   }
 
   afterEach(() => sessionStorage.removeItem(gameJoinStorageKey('game-1')));
@@ -469,6 +474,9 @@ describe('GameSessionComponent join form submit guard and normalisation (M5 S1-0
     });
     fixture = TestBed.createComponent(GameSessionComponent);
     component = fixture.componentInstance;
+    // This describe covers the code/double-submit guard (M5 S1-06), not the
+    // M5 S1-35 blank-name guard; give every guest join a name by default.
+    component.joinGameRequest.name = 'Guest';
   });
 
   afterEach(() => sessionStorage.removeItem(gameJoinStorageKey('game-1')));
@@ -556,5 +564,83 @@ describe('GameSessionComponent banned notice from router state (M5 S1-16)', () =
     component.ngOnInit();
 
     expect(component.bannedNotice).toBeNull();
+  });
+});
+
+/**
+ * M5 S1-35: the create form's Game Mode select used to leak the raw backend
+ * enum keys (`QUIZ_BOWL_CLASSIC`), a failed quick launch left a stale mode
+ * selected the next time "Proctored match" opened the form, and a blank
+ * guest name reached the server instead of being caught inline.
+ */
+describe('GameSessionComponent create form defaults and join name guard (M5 S1-35)', () => {
+  let fixture: ComponentFixture<GameSessionComponent>;
+  let component: GameSessionComponent;
+  let gameSessionService: jasmine.SpyObj<GameSessionService>;
+
+  beforeEach(() => {
+    gameSessionService = jasmine.createSpyObj<GameSessionService>('GameSessionService',
+      ['createNewGame', 'joinGame', 'joinGameAuthenticated']);
+
+    TestBed.configureTestingModule({
+      declarations: [GameSessionComponent],
+      providers: [
+        { provide: GameSessionService, useValue: gameSessionService },
+        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+        { provide: AuthService, useValue: { isAuthenticated: () => false, getUserProfile: () => null } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameSessionComponent);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => sessionStorage.removeItem(gameJoinStorageKey('game-1')));
+
+  it('resets a stale gameMode from a previous quick launch when "Proctored match" opens the form', () => {
+    component.createGameRequest.gameSettings.gameMode = GameMode.SINGLE_PLAYER;
+
+    component.onCreateGame();
+
+    expect(component.createGameRequest.gameSettings.gameMode).toBe(GameMode.QUIZ_BOWL_CLASSIC);
+  });
+
+  it("shows the mode picker's own labels in the select, not the raw enum keys", () => {
+    component.showCreateForm = true;
+    fixture.detectChanges();
+
+    const options = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-option'))
+      .map(el => el.textContent?.trim());
+
+    expect(options).toContain('Proctored match');
+    expect(options).toContain('Solo practice');
+    expect(options).toContain('Auto-judged match');
+    expect(options).toContain('Free for all');
+    expect(options).not.toContain('QUIZ_BOWL_CLASSIC');
+    expect(options).not.toContain('SINGLE_PLAYER');
+  });
+
+  it('blocks a blank guest name inline instead of sending the join request', () => {
+    component.joinGameRequest.joinCode = 'WXYZ';
+    component.joinGameRequest.name = '   ';
+
+    component.submitJoinGame();
+
+    expect(gameSessionService.joinGame).not.toHaveBeenCalled();
+    expect(component.nameError).toMatch(/enter your name/i);
+    expect(component.joinInFlight()).toBeFalse();
+  });
+
+  it('trims a name with surrounding whitespace and sends it', () => {
+    gameSessionService.joinGame.and.returnValue(of(
+      { gameSessionId: 'game-1', playerSessionId: 'player-1', playerSecret: 'secret-1' } as JoinGameResponse));
+    component.joinGameRequest.joinCode = 'WXYZ';
+    component.joinGameRequest.name = '  Ada  ';
+
+    component.submitJoinGame();
+
+    expect(gameSessionService.joinGame).toHaveBeenCalledWith(jasmine.objectContaining({ name: 'Ada' }));
+    expect(component.nameError).toBeNull();
   });
 });

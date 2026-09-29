@@ -3,6 +3,7 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Observable} from "rxjs";
 import {GameSession, Player, Round, Team} from "../../models/sockbowl/sockbowl-interfaces";
 import {GameStateService} from "../../services/game-state.service";
+import {ConfirmDialogService} from "../../../shared/confirm-dialog/confirm-dialog.service";
 
 @Component({
     selector: 'app-match-summary',
@@ -13,6 +14,7 @@ import {GameStateService} from "../../services/game-state.service";
 })
 export class MatchSummaryComponent implements OnInit {
   gameStateService = inject(GameStateService);
+  private confirmDialogService = inject(ConfirmDialogService);
 
 
   gameSessionObs!: Observable<GameSession>;
@@ -231,7 +233,23 @@ export class MatchSummaryComponent implements OnInit {
     return '';
   }
 
+  /**
+   * "Start New Match" ends the match for the whole room, so every seat
+   * confirms first (M5 S1-26) instead of ending it on a single click.
+   */
   endMatch(): void {
-    this.gameStateService.endMatch();
+    this.confirmDialogService
+      .confirm({
+        title: 'Start a new match?',
+        message: 'This ends the current match for everyone in the room and returns to setup.',
+        confirmText: 'End match',
+        cancelText: 'Keep results'
+      })
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.gameStateService.endMatch();
+      });
   }
 }

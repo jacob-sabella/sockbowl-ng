@@ -67,8 +67,10 @@
               type="button"
               (click)="onBuzzClick()"
               [disabled]="getBuzzState() !== 'open'"
-              [class.is-locked]="getBuzzState() !== 'open'"
+              [class.is-locked]="getBuzzState() !== 'open' && getBuzzState() !== 'pending'"
+              [class.is-pending]="getBuzzState() === 'pending'"
               [attr.aria-label]="getBuzzButtonAriaLabel()"
+              [attr.aria-busy]="getBuzzState() === 'pending' ? 'true' : null"
               class="buzz-button">
               <!-- Display appropriate text on the buzz button -->
               {{ getBuzzButtonText() }}

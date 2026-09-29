@@ -55,6 +55,9 @@ export class GameSessionComponent implements OnInit {
   /** Inline error for the join-code field (bad/unknown code, a full room) (M5 S1-05). */
   codeError: string | null = null;
 
+  /** Inline error for the guest name field on Join, when it's left blank (M5 S1-35). */
+  nameError: string | null = null;
+
   /**
    * Set when this seat was bounced for being banned (a fatal BANNED/IP_BANNED
    * stomp error, or a 403 on create/join classified as banned): a persistent
@@ -115,6 +118,18 @@ export class GameSessionComponent implements OnInit {
   GameModes = GameMode;
   PlayerModes = PlayerMode;
 
+  /**
+   * Display labels for the Game Mode select (M5 S1-35), reusing the mode
+   * picker's own copy instead of the raw backend enum keys (for example
+   * `QUIZ_BOWL_CLASSIC`).
+   */
+  readonly gameModeLabels: Record<GameMode, string> = {
+    [GameMode.QUIZ_BOWL_CLASSIC]: 'Proctored match',
+    [GameMode.SINGLE_PLAYER]: 'Solo practice',
+    [GameMode.AUTO_PROCTOR]: 'Auto-judged match',
+    [GameMode.FREE_FOR_ALL]: 'Free for all',
+  };
+
   get isAuthenticated(): boolean {
     return environment.authEnabled && this.authService.isAuthenticated();
   }
@@ -129,6 +144,11 @@ export class GameSessionComponent implements OnInit {
   }
 
   onCreateGame(): void {
+    // A previous quick-launch (solo/auto-proctor/free-for-all) may have set
+    // gameMode for its own request, and a failed one leaves it set: reset to
+    // the form's own default so "Proctored match" never quietly opens on a
+    // stale mode (M5 S1-35).
+    this.createGameRequest.gameSettings.gameMode = GameMode.QUIZ_BOWL_CLASSIC;
     this.showCreateForm = true;
     this.showJoinForm = false;
   }
@@ -238,10 +258,21 @@ export class GameSessionComponent implements OnInit {
         return; // guards against a double submit (the submit button is also disabled meanwhile)
       }
       this.codeError = null;
+      this.nameError = null;
       this.joinGameRequest.joinCode = (this.joinGameRequest.joinCode || '').trim().toUpperCase();
       if (!this.joinGameRequest.joinCode) {
         this.codeError = 'Enter a join code.';
         return;
+      }
+      // A blank guest name used to reach the server and come back as the
+      // generic "Could not join the game" snackbar. Catch it inline instead
+      // (M5 S1-35); a signed-in seat has no name field to check.
+      if (!this.isAuthenticated) {
+        this.joinGameRequest.name = (this.joinGameRequest.name || '').trim();
+        if (!this.joinGameRequest.name) {
+          this.nameError = 'Enter your name';
+          return;
+        }
       }
       this.joinInFlight.set(true);
     }

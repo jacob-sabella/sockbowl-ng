@@ -4,7 +4,8 @@ import {Location} from '@angular/common';
 import {ActivatedRoute, ParamMap, Router} from "@angular/router";
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {GameStateService} from "../../services/game-state.service";
-import {Observable} from "rxjs";
+import {Observable, of, race, timer} from "rxjs";
+import {filter, map, switchMap, take} from "rxjs/operators";
 import {GameSession, MatchState, StompError} from "../../models/sockbowl/sockbowl-interfaces";
 import {GameConnectionState, GameWebSocketService, SocketCredentials} from "../../services/game-web-socket.service";
 import {clearGameJoin, loadGameJoin, saveGameJoin} from "../../services/game-join-storage";
@@ -13,6 +14,17 @@ import {AuthService} from "../../../core/auth/auth.service";
 
 /** Route matrix params that must never stay in the address bar. */
 const SECRET_ROUTE_PARAMS = ['playerSecret', 'accessToken'];
+
+/** How long a reconnect can run before the strip escalates its wording (M5 S1-31). */
+const RECONNECT_ESCALATION_MS = 15000;
+
+/**
+ * How long the pre-emission "Connecting to the game…" state can run before it
+ * escalates its wording too, so a first connect that never lands doesn't sit
+ * on the same copy as one still starting up (M5 S1-31, same threshold and
+ * copy pattern as the reconnect strip).
+ */
+const CONNECTING_ESCALATION_MS = 15000;
 
 @Component({
     selector: 'app-game-canvas',
@@ -43,6 +55,22 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
    */
   connectionState$: Observable<GameConnectionState>;
 
+  /**
+   * True once a reconnect has run for {@link RECONNECT_ESCALATION_MS} without
+   * recovering, so a long drop never sits on "Reconnecting…" forever with no
+   * way out (M5 S1-31). Resets as soon as the connection state changes again.
+   */
+  reconnectEscalated$: Observable<boolean>;
+
+  /**
+   * True once the wait for the very first {@link gameSession$} emission has
+   * run for {@link CONNECTING_ESCALATION_MS} without landing, so a stalled
+   * first connect (not a reconnect) also escalates instead of sitting on
+   * "Connecting to the game…" forever (M5 S1-31). Never emits once the
+   * session has arrived, since the connecting view is gone by then.
+   */
+  connectingEscalated$: Observable<boolean>;
+
   private gameSessionId = '';
 
   private destroyRef = inject(DestroyRef);
@@ -50,6 +78,15 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
   constructor() {
     this.gameSession$ = this.gameStateService.gameSession$;
     this.connectionState$ = this.gameWebSocketService.connectionState$;
+    this.reconnectEscalated$ = this.connectionState$.pipe(
+      switchMap(state => state === 'reconnecting'
+        ? timer(RECONNECT_ESCALATION_MS).pipe(map(() => true))
+        : of(false))
+    );
+    this.connectingEscalated$ = race(
+      timer(CONNECTING_ESCALATION_MS).pipe(map(() => true)),
+      this.gameSession$.pipe(filter(session => !!session), take(1), map(() => false))
+    );
   }
 
   ngOnInit() {

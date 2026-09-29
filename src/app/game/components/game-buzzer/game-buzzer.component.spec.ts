@@ -521,3 +521,130 @@ describe('GameBuzzerComponent rate-limit countdown (M5 S1-22)', () => {
     expect(buzzButton()?.textContent).toContain('Slow down (1s)'); // BUZZ_LOCKOUT_FALLBACK_MS = 1000ms
   });
 });
+
+/**
+ * M5 S1-25: an accepted press shows a transient "sent" state instead of
+ * looking identical to a fully idle dome until the server echo lands, so a
+ * player in a noisy room doesn't tap again or look up late.
+ */
+describe('GameBuzzerComponent pending buzz (M5 S1-25)', () => {
+  const SELF_ID = 'p-self';
+  const OTHER_ID = 'p-other';
+
+  let fixture: ComponentFixture<GameBuzzerComponent>;
+  let component: GameBuzzerComponent;
+  let session$: ReplaySubject<GameSession>;
+  let errors$: Subject<StompError>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+
+  function buzzButton(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('#buzz-button');
+  }
+
+  function sessionIn(currentBuzz?: { playerId: string; teamId: string }): GameSession {
+    return {
+      currentMatch: { currentRound: { roundState: RoundState.AWAITING_BUZZ, roundNumber: 1, currentBuzz } },
+    } as unknown as GameSession;
+  }
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date());
+
+    session$ = new ReplaySubject<GameSession>(1);
+    errors$ = new Subject<StompError>();
+    gameStateService = jasmine.createSpyObj<GameStateService>(
+      'GameStateService',
+      ['sendPlayerIncomingBuzz', 'hasCurrentPlayerTeamBuzzed', 'getPlayerNameById', 'getTeamNameById',
+        'getCurrentPlayer', 'getCurrentPlayerTeam'],
+      { gameSession$: session$.asObservable(), playerSessionId: SELF_ID },
+    );
+    gameStateService.getPlayerNameById.and.returnValue('Blaise');
+    gameStateService.getTeamNameById.and.returnValue('Team Two');
+    gameStateService.hasCurrentPlayerTeamBuzzed.and.returnValue(false);
+
+    TestBed.configureTestingModule({
+      declarations: [GameBuzzerComponent],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameWebSocketService, useValue: { errors$: errors$.asObservable(), connectionState$: of<GameConnectionState>('connected') } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    session$.next(sessionIn());
+    fixture = TestBed.createComponent(GameBuzzerComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('shows a pending, aria-busy dome right after a press, before any echo', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('pending');
+    expect(buzzButton()?.disabled).toBeTrue();
+    expect(buzzButton()?.textContent).toContain('Buzzing…');
+    expect(buzzButton()?.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('returns to open after 1500ms with no echo', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    jasmine.clock().tick(1499);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('pending');
+
+    jasmine.clock().tick(1);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('open');
+    expect(buzzButton()?.getAttribute('aria-busy')).toBeNull();
+  });
+
+  it('clears as soon as the echo names this seat as the buzz holder', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    session$.next(sessionIn({ playerId: SELF_ID, teamId: 't-self' }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('self');
+    jasmine.clock().tick(1500); // a stale timer must not fire and revert the real state
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('self');
+  });
+
+  it('clears when another player buzzes first', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+
+    session$.next(sessionIn({ playerId: OTHER_ID, teamId: 't-other' }));
+    fixture.detectChanges();
+
+    expect(component.getBuzzState()).toBe('other');
+  });
+
+  it('does not leave a stale pending state once a RATE_LIMITED rejection ends', () => {
+    component.onBuzzClick();
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('pending');
+
+    errors$.next({ code: 'RATE_LIMITED', policy: 'stomp-buzz', retryAfterMs: 500 } as StompError);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('rateLimited');
+
+    jasmine.clock().tick(500);
+    fixture.detectChanges();
+    expect(component.getBuzzState()).toBe('open'); // not 'pending' again
+  });
+
+  it('does not send a second message while pending (still inside the debounce window)', () => {
+    component.onBuzzClick();
+    component.onBuzzClick();
+
+    expect(gameStateService.sendPlayerIncomingBuzz).toHaveBeenCalledTimes(1);
+  });
+});

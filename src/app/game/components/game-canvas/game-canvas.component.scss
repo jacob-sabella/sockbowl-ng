@@ -11,6 +11,10 @@
   right: 0;
   z-index: 80;
   padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
   text-align: center;
   font-size: var(--text-sm, 0.875rem);
   font-weight: 600;
@@ -20,6 +24,18 @@
 
   @media (min-width: 641px) {
     top: 64px;
+  }
+
+  /* A reconnect past 15s gets a way out alongside the escalated wording (M5 S1-31). */
+  &__back {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 700;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration-thickness: 2px;
+    }
   }
 }
 
