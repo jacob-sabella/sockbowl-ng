@@ -800,6 +800,51 @@ describe('GameProctorComponent judge keyboard shortcuts (M5 S2-05)', () => {
     expect(gameStateService.sendFinishedReading).not.toHaveBeenCalled();
   });
 
+  // M5 S2-19: a judge key whose target is already a focused interactive
+  // element must not also fire the judge action behind it (the element's
+  // own native activation is the single path).
+  it('Space on the tossup-recap <summary> does not also finish reading', () => {
+    session$.next(sessionWith({ roundState: RoundState.PROCTOR_READING }));
+    fixture.detectChanges();
+    const summary = document.createElement('summary');
+    document.body.appendChild(summary);
+    try {
+      dispatchKey(' ', {}, summary);
+      expect(gameStateService.sendFinishedReading).not.toHaveBeenCalled();
+    } finally {
+      summary.remove();
+    }
+  });
+
+  it('Enter on a focused button does not also fire the judge action', () => {
+    session$.next(sessionWith({ roundState: RoundState.PROCTOR_READING }));
+    fixture.detectChanges();
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+    try {
+      dispatchKey('Enter', {}, button);
+      expect(gameStateService.sendFinishedReading).not.toHaveBeenCalled();
+    } finally {
+      button.remove();
+    }
+  });
+
+  it("ignores a judge key whose target is inside an open CDK overlay (menu)", () => {
+    session$.next(sessionWith({ roundState: RoundState.BONUS_AWAITING_ANSWER, currentBonusPartIndex: 0 }));
+    fixture.detectChanges();
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const item = document.createElement('div');
+    overlay.appendChild(item);
+    document.body.appendChild(overlay);
+    try {
+      dispatchKey('w', {}, item);
+      expect(gameStateService.sendBonusPartOutcome).not.toHaveBeenCalled();
+    } finally {
+      overlay.remove();
+    }
+  });
+
   it('ignores every judge key while a dialog is open', () => {
     session$.next(sessionWith({ roundState: RoundState.AWAITING_ANSWER, currentBuzz: { playerId: 'p1', teamId: 't1' } }));
     fixture.detectChanges();

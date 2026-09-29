@@ -308,9 +308,14 @@ export class GameProctorComponent implements OnInit {
 
   /**
    * True while a judge key must not act: typing in a field, a repeated
-   * (held-down) keydown, or a dialog open anywhere in the app (a proctor
+   * (held-down) keydown, a dialog open anywhere in the app (a proctor
    * confirming something in a dialog must not also fire a judgment behind
-   * it).
+   * it), or a keydown that's already the browser's native activation of a
+   * focused interactive element (a button, the tossup-recap `<summary>`,
+   * a link, an ARIA button/menuitem/tab/option, or anything inside an open
+   * CDK overlay/menu). Without this, Space/Enter on the cast button or the
+   * recap disclosure double-fires: once as that element's own click, once
+   * as this component's judge action (M5 S2-19).
    */
   private shouldIgnoreKeyboardShortcut(event: Event): boolean {
     if ((event as KeyboardEvent).repeat) {
@@ -319,6 +324,11 @@ export class GameProctorComponent implements OnInit {
     const target = event.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
       target.tagName === 'SELECT' || target.isContentEditable)) {
+      return true;
+    }
+    if (target?.closest?.(
+      'button, summary, a, [role="button"], [role="menuitem"], [role="tab"], [role="option"], .cdk-overlay-container',
+    )) {
       return true;
     }
     return document.querySelector('mat-dialog-container') !== null;

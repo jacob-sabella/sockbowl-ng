@@ -1,7 +1,9 @@
 <div class="game-proctor-container">
-  <!-- M5 S2-05: announces every judgment/timeout/advance keyed or clicked,
-       so a screen-reader proctor hears the outcome without hunting for it. -->
-  <div class="visually-hidden" role="status" aria-live="assertive" aria-atomic="true">{{ liveAnnouncement() }}</div>
+  <!-- M5 S2-05/S2-26: announces every judgment/timeout/advance keyed or
+       clicked, so a screen-reader proctor hears the outcome without hunting
+       for it. `role="alert"` (not "status") so the implicit assertive/atomic
+       semantics match the explicit ones instead of conflicting. -->
+  <div class="visually-hidden" role="alert" aria-live="assertive" aria-atomic="true">{{ liveAnnouncement() }}</div>
   @if (gameSessionObs | async; as gameSession) {
     <mat-card class="game-proctor">
       <!-- Auto-timer setting moved to game configuration -->
@@ -149,7 +151,10 @@
             <div class="info-label">Question</div>
             <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.question"></div>
           </div>
-          <div class="info-section answer-section" aria-live="polite">
+          <!-- M5 S2-26: not a live region — it rendered with the incumbent
+               question/answer pair and would otherwise re-announce the
+               answer to a screen reader on every new tossup. -->
+          <div class="info-section answer-section">
             <div class="info-label">Answer</div>
             <div class="info-value" [innerHTML]="gameSession.currentMatch.currentRound.answer"></div>
           </div>
