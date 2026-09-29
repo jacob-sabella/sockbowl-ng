@@ -5,7 +5,9 @@
 # otherwise inherit from the server block, and several locations in nginx.conf
 # already set their own `add_header Cache-Control ...`. So this snippet is
 # `include`d in EVERY location block (not just the server block) — see
-# nginx.conf and AUTH-21 / plans/m2-auth.md §2.9.
+# nginx.conf, and CLAUDE.md's "Runtime configuration" section for how
+# docker-entrypoint.sh builds CSP_HEADER_VALUE from the same host/port
+# variables as config.js (AUTH-21).
 #
 # `always` makes nginx send these headers on error responses too (4xx/5xx),
 # not just 2xx/3xx.

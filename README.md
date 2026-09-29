@@ -1,26 +1,89 @@
 # SockbowlNg
 
-SockbowlNg is the frontend client for the Sockbowl platform, built with Angular. It provides a modern, responsive interface for players to join and play quizbowl games in real-time, integrating tightly with backend services via WebSockets and REST APIs.
+SockbowlNg is the Angular frontend for the Sockbowl platform: a real-time
+quiz bowl client with phone buzzers, live proctoring and a shared board for
+a TV or projector. It talks to `sockbowl-game` over STOMP-over-WebSocket and
+REST, and to `sockbowl-questions` over GraphQL, with optional Keycloak
+(OIDC) sign-in.
 
-## Features
+## Stack
 
-- **Real-Time Game Play:** Connects to Sockbowl Game backend via WebSockets for live game state updates.
-- **Team & Player Management:** View and manage teams and player rosters.
-- **Match Progression:** Visualizes rounds, scores, and answer outcomes.
-- **Question Integration:** Retrieves quiz packets from Sockbowl Questions API.
-- **Responsive UI:** Built with Angular, SCSS, and Material Design.
+- Angular 22.2, Angular Material 22.2, TypeScript ~6.0.3, RxJS
+- Node `^20.19.0 || ^22.12.0 || >=24.0.0` (CI runs Node 24.x)
+- Karma + Jasmine for unit tests, Playwright for e2e (three separate
+  suites/harnesses — see "End-to-end tests" below)
+- Served in production by nginx (see "Docker image" below); the app itself
+  needs no JDK or Java toolchain
 
 ## Development
 
-- Angular CLI: `ng serve` for local development.
-- Build: `ng build` (output in `dist/`).
-- Unit tests: `ng test`
-- E2E tests: `ng e2e`
-- See [Angular CLI Docs](https://angular.io/cli) for more commands.
+- `npm ci` — install (root package only; `e2e/` has its own `package.json`
+  and needs its own `npm ci`, see below)
+- `npm start` / `ng serve` — dev server at `http://localhost:4200`
+- `npm run watch` — build with watch mode (development config)
+- `npm run build` — development build, output in `dist/sockbowl-ng/browser`
+- `npm run buildprod` — production build. **Run this before building the
+  Docker image or pointing e2e at a locally-built stack.** The Docker image
+  copies a pre-built `dist/`; it does not run `ng build` itself, so a stale
+  or missing build serves stale or missing app code, not a build error.
+- `npm test` / `ng test` — unit tests (Karma). CI uses the `ChromeHeadlessCI`
+  launcher in `karma.conf.js`.
+- `npm run lint` — `ng lint` (ESLint)
+- `npm run test:headers` — `bash scripts/test-headers.sh`, builds the Docker
+  image and checks the rendered security-headers snippet; needs Docker.
+- `npm run codegen` — regenerates the backend-derived TypeScript interfaces
+  in `src/app/game/models/sockbowl/sockbowl-interfaces.ts`; don't hand-edit
+  that file.
+- `npm run gen:cast-tokens` — regenerates `src/cast-theme-tokens.css` for the
+  non-Angular cast receiver (`src/cast-receiver.html`) after changing a theme
+  file under `src/styles/themes/`.
+
+See `CLAUDE.md` for the module layout (`core/`, `game/`, `packets/`,
+`structure/`, `shared/`, including the `shared/state` loading/empty/error
+components) and the runtime-config/security-header env keys.
+
+## Runtime configuration
+
+The production image has no build-time API URLs. `docker-entrypoint.sh`
+renders `src/assets/config.template.js` into `assets/config.js` at container
+start from these environment variables (defaults shown):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `APP_HOST` | `localhost` | Host for the game/questions/Keycloak origins |
+| `APP_PROTOCOL` | `http` | `http`/`https` for those origins |
+| `WS_PROTOCOL` | `ws` | `ws`/`wss` for the game WebSocket |
+| `SOCKBOWL_GAME_PORT` | `7000` | Game REST + WebSocket port |
+| `SOCKBOWL_QUESTIONS_PORT` | `7009` | Questions GraphQL port |
+| `KEYCLOAK_PORT` | `8080` | Keycloak port |
+| `AUTH_ENABLED` | `false` | Enables Keycloak sign-in and permission checks |
+| `CSP_EXTRA_CONNECT_SRC` | `https://api.openai.com` | Extra `Content-Security-Policy` `connect-src` origin (the bring-your-own-key AI path) |
+
+Under plain `ng serve`/`ng test` (no `window.__env`), `src/environments/environment.ts`
+falls back to `localhost` dev defaults with `authEnabled: true`.
+
+## Docker image
+
+`Dockerfile` builds the production image: an nginx base serving the
+pre-built `dist/sockbowl-ng/browser`, plus `docker-entrypoint.sh` (renders
+`config.js` and the CSP/security-headers snippet at container start from the
+table above) and `nginx.conf` (SPA fallback, no-cache on the service worker
+and runtime config, PWA-correct manifest media type). Build it from this
+repo's current branch with:
+
+```sh
+npm ci
+npm run buildprod
+docker build -t sockbowl-ng:local .
+```
+
+It's one image in the `sockbowl-docker` compose stack, which supplies the
+env vars above alongside the other services' configuration; see that repo's
+README for bringing up the full stack from source.
 
 ## End-to-end tests
 
-Two separate Playwright suites, each with its own config and testDir:
+Three separate suites/harnesses, each with its own config and testDir:
 
 - **`tests/` (`npm run e2e`)** — the guest "clips" gallery: no login, defaults
   to `https://sockbowl.com` (override with `CLIPS_BASE_URL`). Runs the same
@@ -39,8 +102,18 @@ Two separate Playwright suites, each with its own config and testDir:
   token refresh + logout, guest posture with auth on, banning, and the CSP
   (WP-N4). Workers are pinned to 1: specs share demo accounts and some mutate
   shared server state (bans, the token lifespan the stack is started with).
+- **`e2e/`** — a separate npm workspace (own `package.json`, own `npm ci`)
+  with a headless STOMP bot harness plus its own Playwright specs:
+  `npm run smoke` / `npm run full-match` (scripted matches, no browser),
+  `npm run ui` (`e2e/tests/*.spec.ts`: admin-usage, cast-receiver,
+  in-game-surfaces, packet-builder, rate-limit), `npm run cast`,
+  `npm run audit` (`AUDIT=1`, `USABILITY.md`), `npm run polish`
+  (`POLISH=1` scenarios plus responsive/STOMP-recording fixtures),
+  `npm run m3:auth-on` / `npm run m3:auth-off` (`tests/packet-builder.spec.ts`
+  against those two Playwright projects) and `npm run m4:limits`
+  (`tests/rate-limit.spec.ts tests/admin-usage.spec.ts`).
 
-Both suites need a running stack. From `sockbowl-docker`, with local images
+All three need a running stack. From `sockbowl-docker`, with local images
 built from each repo's current branch:
 
 ```sh
@@ -69,7 +142,7 @@ requires one yet at that point. Pass the same value to Playwright too
 since the spec also uses it to size its wait and to sanity-check the token's
 own `exp - iat`.
 
-Before pointing either suite at a stack built from a local branch, run
+Before pointing any suite at a stack built from a local branch, run
 `npm run buildprod` first (the compose image copies the prebuilt `dist/`; a
 stale or missing build serves stale or missing app code, not a build error).
 
@@ -120,13 +193,15 @@ Demo accounts and their RBAC tier (`keycloak/rbac-model.json` in
 sockbowl-docker): `player2`/`player3` → player, `testuser` → author,
 `moderator` → moderator, `player1` → admin.
 
-## Deployment
+## Product and design docs
 
-A sample Dockerfile is included for production deployment with Nginx. See `Dockerfile` for details on serving the built frontend.
-
-## Environment
-
-- API URLs and WebSocket endpoints configurable via `src/environments/environment.ts`
+`PRODUCT.md` and `DESIGN.md` (with their `.impeccable/*.json` schema
+counterparts) record the product's user-facing facts and the design system's
+tokens and components — read them before writing UX copy, changing a user
+flow, or touching color/typography/spacing. They're generated/maintained
+through the `impeccable` skill; sections marked **(inferred)** are unconfirmed
+and can be corrected freely, and both files are meant to track the shipped
+code, not the other way around.
 
 ## License
 

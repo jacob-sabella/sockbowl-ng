@@ -638,7 +638,7 @@
       "refersTo": "button-primary",
       "description": "Accent-filled main action (play surfaces, lobby).",
       "html": "<button class=\"ds-btn-primary\">Buzz</button>",
-      "css": ".ds-btn-primary{min-height:48px;padding:0 1.75rem;font:700 1rem/1 var(--font-body);background:var(--accent-primary);color:var(--on-accent, #fff);border:0;border-radius:var(--radius-md);cursor:pointer;transition:filter var(--transition-fast)}.ds-btn-primary:hover{filter:brightness(1.06)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}"
+      "css": ".ds-btn-primary{min-height:48px;padding:0 1.75rem;font:700 1rem/1 var(--font-body);background:var(--accent-primary);color:var(--on-accent-primary, #fff);border:0;border-radius:var(--radius-md);cursor:pointer;transition:filter var(--transition-fast)}.ds-btn-primary:hover{filter:brightness(1.06)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}"
     },
     {
       "name": "Lobby Action",
@@ -695,6 +695,30 @@
       "description": "Top toolbar with accent wordmark and role-gated actions.",
       "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-brand\">SOCKBOWL</span><a class=\"ds-nav-link\" href=\"#\">Packets</a></nav>",
       "css": ".ds-nav{display:flex;align-items:center;gap:1rem;height:64px;padding:0 1.5rem;background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)}.ds-nav-brand{font:700 1.5rem/1 var(--font-display);letter-spacing:.06em;color:var(--accent-primary);margin-right:auto}.ds-nav-link{color:var(--text-primary);text-decoration:none;padding:.5rem .75rem;border-radius:var(--radius-sm)}.ds-nav-link:hover{background:var(--surface-hover)}.ds-nav-link:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}"
+    },
+    {
+      "name": "Empty State",
+      "kind": "state",
+      "refersTo": "shared/state/empty-state",
+      "description": "\"Nothing here yet\", with an optional single call-to-action. Shipped M5 F1/F2 (src/app/shared/state/empty-state). Standalone, OnPush.",
+      "html": "<div class=\"empty-state\"><mat-icon class=\"empty-state__icon\">inbox</mat-icon><p class=\"empty-state__title\">Nothing here yet</p><p class=\"empty-state__message\">Create your first packet to get started.</p><button class=\"empty-state__action\" mat-stroked-button type=\"button\">Create packet</button></div>",
+      "css": ".empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--spacing-sm);padding:var(--spacing-2xl) var(--spacing-lg);text-align:center;color:var(--text-secondary)}.empty-state__icon{font-size:40px;width:40px;height:40px;color:var(--text-muted);margin-bottom:var(--spacing-xs)}.empty-state__title{margin:0;font-size:var(--text-base);font-weight:var(--font-medium);color:var(--text-primary)}.empty-state__message{margin:0;font-size:var(--text-sm);color:var(--text-secondary);max-width:40ch}.empty-state__action{margin-top:var(--spacing-sm)}"
+    },
+    {
+      "name": "Loading State",
+      "kind": "state",
+      "refersTo": "shared/state/loading-state",
+      "description": "A designed placeholder for \"data is on its way\", used instead of a bare spinner while a surface waits on its first REST/GraphQL response. Shipped M5 F1/F2 (src/app/shared/state/loading-state). role=\"status\" aria-live=\"polite\". Standalone, OnPush.",
+      "html": "<div class=\"loading-state\" role=\"status\" aria-live=\"polite\"><mat-spinner class=\"loading-state__spinner\" diameter=\"40\"></mat-spinner><p class=\"loading-state__title\">Loading…</p></div>",
+      "css": ".loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--spacing-md);padding:var(--spacing-2xl) var(--spacing-lg);text-align:center;color:var(--text-secondary)}.loading-state__title{margin:0;font-size:var(--text-base);font-weight:var(--font-medium);color:var(--text-primary)}.loading-state__message{margin:0;font-size:var(--text-sm);color:var(--text-secondary);max-width:32ch}"
+    },
+    {
+      "name": "Error State",
+      "kind": "state",
+      "refersTo": "shared/state/error-state",
+      "description": "A designed \"this failed to load\" panel with one primary action (usually Retry, sometimes Sign In for a 401). Shipped M5 F1/F2 (src/app/shared/state/error-state). role=\"alert\". Standalone, OnPush.",
+      "html": "<div class=\"error-state\" role=\"alert\"><mat-icon class=\"error-state__icon\">error</mat-icon><p class=\"error-state__title\">Something went wrong</p><p class=\"error-state__message\">Check your connection and try again.</p><button class=\"error-state__action\" mat-flat-button type=\"button\">Retry</button></div>",
+      "css": ".error-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--spacing-sm);padding:var(--spacing-2xl) var(--spacing-lg);text-align:center;color:var(--text-secondary)}.error-state__icon{font-size:40px;width:40px;height:40px;color:var(--error);margin-bottom:var(--spacing-xs)}.error-state__title{margin:0;font-size:var(--text-base);font-weight:var(--font-medium);color:var(--text-primary)}.error-state__message{margin:0;font-size:var(--text-sm);color:var(--text-secondary);max-width:40ch}.error-state__action{margin-top:var(--spacing-sm)}"
     }
   ],
   "narrative": {
