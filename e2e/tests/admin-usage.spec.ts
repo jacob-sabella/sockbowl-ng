@@ -166,8 +166,10 @@ test.describe('M4 admin usage view (live)', () => {
     const bannedIpRow = row.locator('xpath=following-sibling::tr[1]')
       .locator('.admin-usage__ip-row', { hasText: bannedIp });
     const banDialog = adminPage.locator('mat-dialog-container');
+    // M5V1-06: the row's icon button now names the IP in its accessible name
+    // ("Ban IP <ip>"), not the generic "Ban this IP".
     if (await bannedIpRow.count()) {
-      await bannedIpRow.getByRole('button', { name: 'Ban this IP' }).click();
+      await bannedIpRow.getByRole('button', { name: /^Ban IP/ }).click();
       await expect(banDialog).toBeVisible();
     } else {
       // 127.0.0.2 didn't land in "Last IPs" in time -- ban it directly by
@@ -175,7 +177,7 @@ test.describe('M4 admin usage view (live)', () => {
       // same dialog; its pre-filled value is simply overwritten below).
       const anyIpRow = row.locator('xpath=following-sibling::tr[1]').locator('.admin-usage__ip-row').first();
       await expect(anyIpRow).toBeVisible({ timeout: 20_000 });
-      await anyIpRow.getByRole('button', { name: 'Ban this IP' }).click();
+      await anyIpRow.getByRole('button', { name: /^Ban IP/ }).click();
       await expect(banDialog).toBeVisible();
     }
     const cidrInput = banDialog.locator('input[name="cidr"]');
@@ -208,7 +210,13 @@ test.describe('M4 admin usage view (live)', () => {
     await adminPage.goto('/admin/bans');
     const banItem = adminPage.locator('.admin-bans__item', { hasText: bannedIp });
     await expect(banItem).toBeVisible({ timeout: 20_000 });
-    await banItem.getByRole('button', { name: 'Remove IP ban' }).click();
+    // M5V1-06: the icon button's accessible name now names the CIDR
+    // ("Remove IP ban on <cidr>"), and the click only opens a confirmation
+    // dialog (ConfirmDialogService, S5-02) rather than removing it directly.
+    await banItem.getByRole('button', { name: /^Remove IP ban on/ }).click();
+    const removeIpBanDialog = adminPage.locator('mat-dialog-container');
+    await expect(removeIpBanDialog).toBeVisible();
+    await removeIpBanDialog.getByRole('button', { name: 'Remove ban' }).click();
     await expect(adminPage.getByText('IP ban removed')).toBeVisible({ timeout: 15_000 });
     await expect(adminPage.locator('.admin-bans__item', { hasText: bannedIp })).toHaveCount(0);
 
@@ -280,9 +288,20 @@ function sessionsCell(row: ReturnType<Page['locator']>) {
   return row.locator('td').nth(4);
 }
 
-/** Clicks a labelled button inside the expanded detail panel's side actions. */
+/**
+ * Clicks a labelled button inside the expanded detail panel's side actions.
+ * M5V1-06: destructive actions here (e.g. "Reset all daily") now go through
+ * the shared ConfirmDialogService (S5-02) instead of acting immediately, so
+ * this also confirms that dialog when one opens.
+ */
 async function clickAction(page: Page, label: string) {
   await page.locator('.admin-usage__actions').getByRole('button', { name: label }).click();
+  const confirmDialog = page.locator('mat-dialog-container');
+  const opened = await confirmDialog.waitFor({ state: 'visible', timeout: 3_000 }).then(() => true).catch(() => false);
+  if (opened) {
+    await confirmDialog.getByRole('button', { name: /^(Reset|Remove ban)$/ }).click();
+    await expect(confirmDialog).toBeHidden({ timeout: 10_000 });
+  }
 }
 
 /**
@@ -292,7 +311,10 @@ async function clickAction(page: Page, label: string) {
 async function editHostedSessionsQuota(page: Page, opts: { limit?: number; resetToDefault?: boolean }) {
   const counter = page.locator('.admin-usage__counter', { hasText: 'hosted session' });
   await expect(counter).toBeVisible({ timeout: 20_000 });
-  await counter.getByRole('button', { name: 'Edit quota' }).click();
+  // M5V1-06: the button's accessible name now names the metric ("Edit hosted
+  // session quota"), from an aria-label that overrides the plain "Edit quota"
+  // visible text.
+  await counter.getByRole('button', { name: /^Edit .*quota$/ }).click();
 
   const dialog = page.locator('mat-dialog-container');
   await expect(dialog).toBeVisible();
