@@ -4,10 +4,37 @@
  * anyComponentStyle budget entry stays under the 20kB warning threshold -
  * this one dialog used to hold all three tabs' CSS as a single 29kB file. */
 
+:host {
+  display: block;
+}
+
+// FF1 fix 7: in the full-screen dialog (`openPacketSearch()`'s
+// `height/maxHeight: '100dvh'`), `.mat-mdc-dialog-surface` (Material's own,
+// height: 100%) is a column flex container whose only child is THIS
+// component's host element — an ordinary element has no intrinsic height,
+// so with no height/flex of its own it sizes to its content instead of
+// filling the surface, leaving the sticky footer floating above a blank
+// strip at the true bottom of the panel whenever the tab's content is
+// shorter than the viewport (the My-packets-empty state, for one). Only the
+// fullscreen surface is stretched to `100dvh` in the first place, so this
+// is scoped to it rather than changed for the centered dialog too.
+:host-context(.packet-search-dialog--fullscreen) {
+  height: 100%;
+}
+
 .packet-search-dialog {
   display: flex;
   flex-direction: column;
-  max-height: 85vh;
+  // FF2 fix 2: was 85vh, which centered the panel with ~67px of the
+  // viewport left empty below it at 1440x900 (900 - 0.85*900) while the AI
+  // tab's Context field was still sliced by the content scroller's fold
+  // right above that unused margin (finish review r2). Claiming that free
+  // space narrows the gap between the fold and the field without fighting
+  // the viewport for room the centered dialog never had a reason to leave
+  // idle; it still stays a centered panel (not edge-to-edge) at every width
+  // this rule applies to (>600px — the S3-10 full-screen breakpoint below
+  // overrides it beneath that).
+  max-height: 93vh;
   // Fill the dialog panel (sized by MatDialog); never cause horizontal overflow on phones.
   width: 100%;
   max-width: 100%;
@@ -19,6 +46,18 @@
 
   @media (max-width: 768px) {
     padding: 1.25rem !important;
+  }
+
+  // S3-10 (r3): below 600px `openPacketSearch()` opens the dialog full-screen
+  // (`width/maxWidth: '100vw'`, `height/maxHeight: '100dvh'`, panelClass
+  // `packet-search-dialog--fullscreen`) so the picker never fights the
+  // viewport for room. `:host-context` reaches that panelClass on an
+  // ancestor of this component's own host without a global selector or
+  // `::ng-deep` on the CDK container.
+  :host-context(.packet-search-dialog--fullscreen) & {
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
   }
 
   *, *::before, *::after { box-sizing: border-box; }
@@ -36,42 +75,102 @@
     background: transparent !important;
 
     mat-icon {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       font-size: 1.75rem;
       width: 1.75rem;
       height: 1.75rem;
     }
   }
 
+  // S3-10 (r3): the ONE scroll container for the whole dialog body. It used
+  // to be `overflow: visible` while `.tab-content` (below) did its own
+  // `overflow-y: auto` nested inside it — two scrollers stacked, and a
+  // fixed `calc(85vh - 250px)` on the inner one clipped the AI tab's
+  // Context field and advanced-options panel regardless of how much room
+  // was actually free (the detector's `clipped-overflow-container` x3).
+  // `flex: 1; min-height: 0` is what lets a flex child actually shrink and
+  // scroll instead of growing to fit its content.
   mat-dialog-content {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    // FF1 fix 7: Material's own `.mat-mdc-dialog-content` ships a
+    // `max-height: 65vh` (see node_modules/@angular/material's dialog
+    // styles) that this rule never cleared. `flex: 1` only decides how much
+    // of the *available* track space this item is willing to claim — the
+    // result is still clamped to `max-height` afterwards, so the surface
+    // (already correctly stretched to `100dvh`/`100%` by the two rules
+    // above) left a blank ~35vh strip below the footer on every capture
+    // shorter than that cap, which is exactly "the sticky footer floating
+    // above a blank strip" this fix batch named. `min-height: 0` above is
+    // what makes it *shrinkable*; `max-height: none` is what makes it
+    // *growable* past Material's own ceiling.
+    max-height: none;
     gap: 2rem;
     padding: 0 !important;
-    overflow: visible;
+    overflow-y: auto;
+
+    // S3-37 (orchestrator fix after FV8): a tab taller than the dialog's
+    // fold (the AI tab with the fail-closed/quota banner, at 1440x900 and
+    // 390px) ended mid-field with no cue. FF8's background-attachment scroll
+    // shadow painted *behind* the opaque form-field fills, so it never showed
+    // over the field it flagged. The cue is now a sticky overlay painted
+    // *over* the content: the last 3.5rem fade into the surface under a
+    // "More below" label. The component sets `.has-more-below` from the
+    // scroll position (see PacketSearchComponent.moreBelow), so the cue shows
+    // only while there is content past the fold.
+    &::after {
+      content: '';
+      display: none;
+    }
+
+    &.has-more-below::after {
+      // decorative: the content itself is all in the DOM for assistive tech
+      content: 'More below' / '';
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 0.4rem;
+      position: sticky;
+      bottom: 0;
+      flex: 0 0 3.5rem;
+      // pull back over the column gap plus its own height so it overlays
+      // the last visible content instead of adding scroll length
+      margin-top: -5.5rem;
+      // Material stacks the form-field outlines and labels with their own
+      // z-index; the cue has to paint over them
+      z-index: 2;
+      pointer-events: none;
+      background: linear-gradient(to bottom, transparent, var(--bg-elevated) 70%);
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      letter-spacing: 0.01em;
+    }
   }
 
-  /* Fix tab label colors */
-  ::ng-deep {
-    .mat-mdc-tab-labels {
-      background: transparent !important;
-    }
-
-    .mat-mdc-tab {
-      color: var(--text-muted) !important;
-
-      &.mdc-tab--active {
-        color: var(--accent-primary) !important;
-      }
-
-      .mdc-tab__text-label {
-        color: inherit !important;
-      }
-
-      .mdc-tab-indicator__content--underline {
-        border-color: var(--accent-primary) !important;
-      }
-    }
+  /* The header is sticky within `mat-dialog-content`'s single scroll
+     container (S3-10 r3) so it, like the dialog's title and footer, stays
+     visible while only the body scrolls.
+     S3-05 (r4): this block used to also re-set the tab label/underline
+     colors, exactly duplicating src/styles/vendors/_material-overrides.scss's
+     shared `.mdc-tab--active`/`.mdc-tab-indicator__content--underline`
+     rules (F1-owned, frozen) with one difference — swapping the active
+     label from `--text-primary` to `--accent-primary-text`. That swap is
+     what failed AA (axe: 3.66:1, needs 4.5:1): the active tab's own M3
+     state-layer tint (an opaque fill Material paints on the selected tab,
+     independent of our tokens) isn't `--bg-elevated`, so
+     `--accent-primary-text` was never actually being checked against the
+     background it was tuned for. Removed the duplicate override entirely —
+     the shared rule's `--text-primary` already has the contrast headroom to
+     clear any of Material's own surface tints, and every other tab group in
+     the app already relies on it. */
+  ::ng-deep .mat-mdc-tab-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bg-elevated);
   }
 
   mat-dialog-actions {
@@ -87,7 +186,7 @@
       min-width: 120px;
 
       @media (max-width: 600px) { min-width: 0; flex: 1 1 auto; }
-      transition: all 0.2s ease;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 
       &.cancel-btn {
         color: var(--text-secondary);
@@ -101,14 +200,12 @@
 
       &.select-btn {
         background: var(--accent-primary) !important;
-        color: white !important;
+        color: var(--on-accent-primary) !important;
         border: none !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--shadow-md) var(--shadow-color);
 
         &:hover:not(:disabled) {
-          transform: translateY(-2px);
           filter: brightness(1.06);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
         }
 
         &:disabled {
@@ -119,32 +216,29 @@
         mat-icon {
           margin-right: 0.5rem;
         }
+
+        .select-btn__label {
+          /* S3-19: names the packet when space allows, but never grows the
+             footer past the dialog width. */
+          max-width: 220px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          vertical-align: middle;
+          display: inline-block;
+
+          @media (max-width: 480px) {
+            max-width: 140px;
+          }
+        }
       }
     }
   }
 
+  // S3-10 (r3): no overflow/max-height of its own — `mat-dialog-content` is
+  // now the one scroll container (above), and this sizes to its content.
   .tab-content {
     padding-top: 1.5rem;
-    overflow-y: auto;
-    max-height: calc(85vh - 250px);
-    padding-right: 0.5rem;
-
-    &::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--surface-hover);
-      border-radius: 4px;
-
-      &:hover {
-        background: var(--surface-active);
-      }
-    }
   }
 }
 
@@ -164,7 +258,7 @@
       background: var(--bg-secondary) !important;
       border-radius: 12px !important;
       border: 1px solid var(--border-medium) !important;
-      transition: all 0.2s ease !important;
+      transition: border-color 0.2s ease !important;
     }
 
     .mat-mdc-form-field-focus-overlay {
@@ -195,7 +289,7 @@
   }
 
   .search-icon {
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     margin-right: 0.5rem;
   }
 }
@@ -215,93 +309,17 @@
 
 /* ===== RESULTS CONTAINER ===== */
 .results-container {
-  min-height: 350px;
+  // S3-10 (r3): sized to its content, not a flat 350px that (combined with
+  // the AI tab's own fields above it) used to force the picker past the
+  // dialog's old fixed max-height and clip. The state primitives below
+  // (loading/empty/error) each carry their own comfortable padding.
   padding: 1rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-}
-
-/* ===== LOADING STATE ===== */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  gap: 1.5rem;
-
-  mat-spinner {
-    ::ng-deep circle {
-      stroke: var(--accent-primary) !important;
-    }
-  }
-
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 1rem;
-  }
-}
-
-/* ===== EMPTY STATE ===== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  text-align: center;
-
-  mat-icon {
-    font-size: 4rem;
-    width: 4rem;
-    height: 4rem;
-    margin-bottom: 1rem;
-    color: var(--accent-primary);
-    opacity: 0.5;
-  }
-
-  p {
-    margin: 0 0 0.5rem;
-    color: var(--text-primary);
-    font-size: 1.1rem;
-    font-weight: 500;
-  }
-
-  .hint {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
-}
-
-/* ===== NO RESULTS STATE ===== */
-.no-results {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  text-align: center;
-
-  mat-icon {
-    font-size: 4rem;
-    width: 4rem;
-    height: 4rem;
-    margin-bottom: 1rem;
-    color: var(--text-muted);
-  }
-
-  p {
-    margin: 0 0 0.5rem;
-    color: var(--text-primary);
-    font-size: 1.1rem;
-  }
-
-  .hint {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
+  // Loading/empty/error inside here are the shared app-loading-state /
+  // app-empty-state / app-error-state primitives now (S3-01/S3-14); no
+  // surface-local state styling needed.
 }
 
 /* ===== MY PACKETS (PB-14) ===== */
@@ -322,16 +340,6 @@
   color: var(--text-muted);
 }
 
-.my-packets-loading {
-  display: flex;
-  justify-content: center;
-  padding: 1rem 0;
-}
-
-.my-packets-empty {
-  padding: 0.25rem 0.5rem;
-}
-
 /* ===== SEARCH RESULTS ===== */
 .search-results {
   display: flex;
@@ -348,58 +356,33 @@
   background: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
-  overflow: hidden;
 
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--accent-primary);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
+  // Selection is already carried by the border/background tint below plus
+  // the .check-icon in the markup, so no side-stripe is needed (S3-15).
   &:hover {
     background: var(--surface-hover);
     border-color: var(--border-medium);
     transform: translateX(4px);
-
-    &::before {
-      opacity: 0.5;
-    }
   }
 
   &.unplayable {
-    cursor: not-allowed;
     opacity: 0.6;
 
     &:hover {
       transform: none;
       background: var(--surface);
-
-      &::before {
-        opacity: 0;
-      }
     }
   }
 
   &.selected {
     background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
     border-color: var(--accent-primary);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-
-    &::before {
-      opacity: 1;
-    }
+    box-shadow: var(--shadow-md) var(--shadow-color);
 
     .result-name {
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       font-weight: 600;
     }
   }
@@ -418,6 +401,14 @@
   font-style: italic;
 }
 
+.not-playable-reason {
+  /* S3-24: forces its own line below the counts/draft-hint in the
+     flex-wrap result-meta row, rather than crowding onto the same line. */
+  flex-basis: 100%;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
 .not-playable-badge {
   font-size: 0.75rem;
   font-weight: 600;
@@ -431,12 +422,34 @@
 
 .edit-link {
   font-size: 0.85rem;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   text-decoration: none;
   white-space: nowrap;
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+// S3-13: the "My packets" row's select control — a real <button> so it's a
+// sibling of `.result-actions` (which holds "Edit in builder") instead of
+// wrapping it. Reset to look like the plain row it replaces.
+.result-item__select {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
   }
 }
 
@@ -482,7 +495,7 @@
 
 .check-icon {
   flex-shrink: 0;
-  color: var(--accent-primary);
+  color: var(--accent-primary-text);
   font-size: 1.5rem;
   width: 1.5rem;
   height: 1.5rem;
@@ -502,3 +515,4 @@
     opacity: 1;
   }
 }
+

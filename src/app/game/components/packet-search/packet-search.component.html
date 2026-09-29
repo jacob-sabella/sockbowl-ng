@@ -4,54 +4,76 @@
     Find or Generate Packet
   </h2>
 
-  <mat-dialog-content>
-    <mat-tab-group>
-      <!-- Search Existing Packets Tab -->
-      <mat-tab label="Search Existing">
+  <mat-dialog-content #scrollBody (scroll)="updateScrollCue()" [class.has-more-below]="moreBelow()">
+    <!-- dynamicHeight (S3-02): without it MatTabGroup fixes the body's height to
+         its first render, so opening the Advanced panel (or a long AI banner)
+         clips instead of growing the scroll area. -->
+    <mat-tab-group [(selectedIndex)]="selectedTabIndex" [dynamicHeight]="true">
+      <!-- Library: search the shared packet library, plus "My packets" -->
+      <mat-tab label="Library">
         <div class="tab-content">
           @if (auth.isAuthenticated()) {
             <div class="my-packets-section">
               <div class="my-packets-header">My packets</div>
               @if (myPacketsLoading) {
-                <div class="my-packets-loading"><mat-spinner diameter="24"></mat-spinner></div>
-              }
-              @if (!myPacketsLoading && myPackets.length === 0) {
-                <div class="hint my-packets-empty">You haven't created any packets yet.</div>
-              }
-              @if (!myPacketsLoading && myPackets.length > 0) {
+                <app-loading-state title="Loading your packets…" [diameter]="24" />
+              } @else if (myPacketsError) {
+                <app-error-state
+                  title="Couldn't load your packets"
+                  message="Check your connection and try again."
+                  actionLabel="Retry"
+                  (retry)="loadMyPackets()"
+                  />
+              } @else if (myPackets.length === 0) {
+                <app-empty-state
+                  icon="inventory_2"
+                  title="You haven't created any packets yet."
+                  [actionLabel]="auth.hasPermission('packet:create') ? 'Open the builder' : null"
+                  (action)="openBuilder()"
+                  />
+              } @else {
                 <div class="search-results">
                   @for (packet of myPackets; track packet.id) {
+                    <!-- S3-13: the row select and "Edit in builder" are sibling
+                         controls, not a link nested inside a role=button div
+                         (axe nested-interactive) — the select control is now a
+                         real <button>, so it needs no manual keydown handling. -->
                     <div
                       class="result-item"
                       [class.unplayable]="!packet.playable"
-                      role="button"
-                      tabindex="0"
-                      [attr.aria-disabled]="!packet.playable"
-                      [attr.title]="!packet.playable ? 'Not playable yet: add tossups and resolve validation issues.' : null"
-                      (click)="packet.playable && selectPacket(packet)"
-                      (keydown.enter)="packet.playable && selectPacket(packet)"
-                      (keydown.space)="$event.preventDefault(); packet.playable && selectPacket(packet)"
                       [class.selected]="packet.id === selectedPacketId"
-                      [attr.aria-pressed]="packet.id === selectedPacketId"
                       >
-                      <div class="result-content">
-                        <mat-icon class="result-icon">description</mat-icon>
-                        <div class="result-details">
-                          <div class="result-name">{{ packet.name }}</div>
-                          <div class="result-meta">
-                            <span>{{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses</span>
-                            @if (packet.visibility === 'DRAFT') {
-                              <span class="draft-hint">Draft (only you can play)</span>
-                            }
+                      <button
+                        type="button"
+                        class="result-item__select"
+                        [disabled]="!packet.playable"
+                        [attr.aria-pressed]="packet.id === selectedPacketId"
+                        (click)="selectPacket(packet)"
+                        >
+                        <div class="result-content">
+                          <mat-icon class="result-icon">description</mat-icon>
+                          <div class="result-details">
+                            <div class="result-name">{{ packet.name }}</div>
+                            <div class="result-meta">
+                              <span>{{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses</span>
+                              @if (packet.visibility === 'DRAFT') {
+                                <span class="draft-hint">Draft (only you can play)</span>
+                              }
+                              @if (!packet.playable) {
+                                <!-- S3-24: the reason used to live only in a hover
+                                     tooltip (title); visible text now, so it reads
+                                     on touch and without a mouse. -->
+                                <span class="not-playable-reason">Not playable yet — add tossups and resolve validation issues.</span>
+                              }
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </button>
                       <div class="result-actions">
                         @if (!packet.playable) {
                           <span class="not-playable-badge">Not playable</span>
                         }
-                        <a class="edit-link" [href]="'/packets/' + packet.id + '/edit'" target="_blank" rel="noopener"
-                           (click)="$event.stopPropagation()">Edit in builder</a>
+                        <a class="edit-link" [href]="'/packets/' + packet.id + '/edit'" target="_blank" rel="noopener">Edit in builder</a>
                         @if (packet.id === selectedPacketId) {
                           <mat-icon class="check-icon">check_circle</mat-icon>
                         }
@@ -110,23 +132,28 @@
           <div class="results-container">
             <!-- Loading state -->
             @if (isSearching) {
-              <div class="loading-state">
-                <mat-spinner diameter="40"></mat-spinner>
-                <p>Searching packets...</p>
-              </div>
-            }
-
-            <!-- Empty state -->
-            @if (!searchQuery && !isSearching) {
-              <div class="empty-state">
-                <mat-icon>inventory_2</mat-icon>
-                <p>Search for quiz bowl packets by name</p>
-                <span class="hint">Try searching for a tournament name, year, or difficulty</span>
-              </div>
-            }
-
-            <!-- Results list -->
-            @if (searchResults.length > 0 && !isSearching) {
+              <app-loading-state title="Searching packets…" />
+            } @else if (searchError) {
+              <!-- The search itself failed (S3-01) — never shown as "no results". -->
+              <app-error-state
+                title="Couldn't search packets"
+                message="Check your connection and try again."
+                actionLabel="Retry"
+                (retry)="searchPackets()"
+                />
+            } @else if (!searchQuery) {
+              <app-empty-state
+                icon="inventory_2"
+                title="Search for quiz bowl packets by name"
+                message="Try searching for a tournament name, year, or difficulty"
+                />
+            } @else if (searchQuery.length < 2) {
+              <app-empty-state
+                icon="inventory_2"
+                title="Keep typing…"
+                message="Type at least 2 characters to search"
+                />
+            } @else if (searchResults.length > 0) {
               <div class="search-results">
                 @for (packet of searchResults; track packet.id; let i = $index) {
                   <div
@@ -166,28 +193,244 @@
                   </div>
                 }
               </div>
-            }
-
-            <!-- No results state -->
-            @if (searchResults.length === 0 && searchQuery && !isSearching && searchQuery.length >= 2) {
-              <div class="no-results">
-                <mat-icon>search_off</mat-icon>
-                <p>No packets found matching "{{ searchQuery }}"</p>
-                <span class="hint">Try a different search term</span>
-              </div>
+            } @else {
+              <!-- True empty result, never an error (S3-01). -->
+              <app-empty-state
+                icon="search_off"
+                [title]="'No packets found matching “' + searchQuery + '”'"
+                message="Try a different search term"
+                />
             }
           </div>
         </div>
       </mat-tab>
 
+      <!--
+        ============================ Generate (local bank) ============================
+        Deliberately NOT permission-gated (D15 amends D3): guests and players
+        keep this tab so `import-random` keeps working for them. Without
+        `packet:create` the backend now returns an EPHEMERAL, game-only
+        packet instead of an owned DRAFT (WP-Q4); callers with `packet:create`
+        still get the D3 owned-DRAFT behavior. Gating this tab on
+        `packet:create` would silently break guest/player packet generation.
+        S3-07: ordered before the permission-gated AI tab (it's ungated),
+        and labelled to read as a sibling of "Library"/"AI", not "Generate"
+        twice over. Index 1 — QUESTION_BANK_TAB_INDEX hides the shared
+        footer commit while this tab is active, since it commits inline.
+      -->
+      <mat-tab label="Question bank">
+        <div class="tab-content qb-content">
+          <div class="qb-intro">
+            <mat-icon>auto_awesome</mat-icon>
+            <div>
+              <div class="qb-intro-title">Build a packet from the question bank</div>
+              <div class="qb-intro-sub">Pick categories and difficulty, then generate a fresh mix.</div>
+            </div>
+            @if (hasActiveFilters) {
+              <button type="button" mat-button class="qb-clear" (click)="clearFilters()">
+                <mat-icon>filter_alt_off</mat-icon> Clear filters
+              </button>
+            }
+          </div>
+
+            <div class="qb-random">
+              <div class="qb-group">
+                <div class="qb-group-label">Categories <span class="qb-muted">(any if none picked)</span></div>
+                <div class="qb-chips">
+                  @for (c of qbCategories; track c) {
+                    <button type="button" class="qb-chip" [class.on]="qbSelectedCategories.includes(c)"
+                            [attr.aria-pressed]="qbSelectedCategories.includes(c)"
+                            (click)="toggleQbCategory(c)">{{ c }}@if (categoryCounts[c]) {
+                      <span class="qb-chip-n">{{ categoryCounts[c] | number }}</span>
+                    }</button>
+                  }
+                </div>
+              </div>
+
+              <div class="qb-group">
+                <div class="qb-group-label">Difficulty</div>
+                <div class="qb-chips">
+                  @for (t of qbDifficultyTiers; track t.label) {
+                    <button type="button" class="qb-chip" [class.on]="qbSelectedTiers.includes(t.label)"
+                            [attr.aria-pressed]="qbSelectedTiers.includes(t.label)"
+                            (click)="toggleQbTier(t.label)">{{ t.label }}</button>
+                  }
+                </div>
+              </div>
+
+              <div class="qb-form">
+                <mat-form-field appearance="outline" class="qb-num-field">
+                  <mat-label>Tossups</mat-label>
+                  <input matInput type="number" min="1" max="30" [(ngModel)]="qbTossupCount" (ngModelChange)="queueCount()">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="qb-num-field">
+                  <mat-label>Bonuses</mat-label>
+                  <input matInput type="number" min="0" max="30" [(ngModel)]="qbBonusCount" (ngModelChange)="queueCount()">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="qb-name-field">
+                  <mat-label>Packet name (optional)</mat-label>
+                  <input matInput [(ngModel)]="qbRandomName" placeholder="Custom mix">
+                </mat-form-field>
+              </div>
+
+              <!-- Advanced filters (full qbreader filter set) -->
+              <button type="button" class="qb-advanced-toggle" (click)="qbShowAdvanced = !qbShowAdvanced">
+                <mat-icon>{{ qbShowAdvanced ? 'expand_less' : 'expand_more' }}</mat-icon>
+                Advanced filters
+              </button>
+              @if (qbShowAdvanced) {
+                <div class="qb-advanced">
+                  <div class="qb-group">
+                    <div class="qb-group-label">Exact difficulty <span class="qb-muted">(overrides the tiers above)</span></div>
+                    <div class="qb-chips">
+                      @for (d of qbAllDifficulties; track d) {
+                        <button type="button" class="qb-chip qb-chip--sm" [class.on]="qbIndividualDifficulties.includes(d)"
+                                [attr.aria-pressed]="qbIndividualDifficulties.includes(d)"
+                                (click)="toggleIndividualDifficulty(d)">{{ d }}</button>
+                      }
+                    </div>
+                  </div>
+                  @if (qbAvailableSubcategories.length) {
+                    <mat-form-field appearance="outline" class="qb-typeahead">
+                      <mat-label>Subcategories (optional)</mat-label>
+                      <mat-chip-grid #subGrid aria-label="Subcategories">
+                        @for (s of qbSelectedSubcategories; track s) {
+                          <mat-chip-row (removed)="removeSub(s)">
+                            {{ s }}
+                            <button matChipRemove [attr.aria-label]="'Remove ' + s"><mat-icon>cancel</mat-icon></button>
+                          </mat-chip-row>
+                        }
+                      </mat-chip-grid>
+                      <input #subInput placeholder="Type to search subcategories…"
+                             [matChipInputFor]="subGrid" [matAutocomplete]="subAuto"
+                             (input)="filterSubs(subInput.value)" (focus)="filterSubs(subInput.value)">
+                      <mat-autocomplete #subAuto (optionSelected)="addSub($event.option.value); subInput.value = ''">
+                        @for (opt of subFiltered; track opt) {
+                          <mat-option [value]="opt">{{ opt }}@if (subCounts[opt]) {
+                            <span class="qb-opt-n">{{ subCounts[opt] | number }}</span> }</mat-option>
+                        }
+                      </mat-autocomplete>
+                    </mat-form-field>
+                  }
+                  @if (qbAvailableAlternateSubcategories.length) {
+                    <mat-form-field appearance="outline" class="qb-typeahead">
+                      <mat-label>Alternate subcategories (optional)</mat-label>
+                      <mat-chip-grid #altGrid aria-label="Alternate subcategories">
+                        @for (s of qbSelectedAlternateSubcategories; track s) {
+                          <mat-chip-row (removed)="removeAlt(s)">
+                            {{ s }}
+                            <button matChipRemove [attr.aria-label]="'Remove ' + s"><mat-icon>cancel</mat-icon></button>
+                          </mat-chip-row>
+                        }
+                      </mat-chip-grid>
+                      <input #altInput placeholder="e.g. Math, Poetry, Jazz…"
+                             [matChipInputFor]="altGrid" [matAutocomplete]="altAuto"
+                             (input)="filterAlts(altInput.value)" (focus)="filterAlts(altInput.value)">
+                      <mat-autocomplete #altAuto (optionSelected)="addAlt($event.option.value); altInput.value = ''">
+                        @for (opt of altFiltered; track opt) {
+                          <mat-option [value]="opt">{{ opt }}@if (altCounts[opt]) {
+                            <span class="qb-opt-n">{{ altCounts[opt] | number }}</span> }</mat-option>
+                        }
+                      </mat-autocomplete>
+                      <mat-hint>Few questions are tagged at this level, so these mixes can come back small.</mat-hint>
+                    </mat-form-field>
+                  }
+                  <div class="qb-form">
+                    <mat-form-field appearance="outline" class="qb-num-field">
+                      <mat-label>Min year</mat-label>
+                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMinYear"
+                             (ngModelChange)="queueCount()">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="qb-num-field">
+                      <mat-label>Max year</mat-label>
+                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMaxYear"
+                             (ngModelChange)="queueCount()">
+                    </mat-form-field>
+                  </div>
+                  <mat-slide-toggle color="primary" [(ngModel)]="qbStandardOnly" class="qb-toggle"
+                                    (change)="queueCount()">
+                    Standard sets only
+                  </mat-slide-toggle>
+                  <mat-slide-toggle color="primary" [(ngModel)]="qbBalanced" class="qb-toggle"
+                                    (change)="queueCount()">
+                    Balanced mix <span class="qb-muted">(spread across categories)</span>
+                  </mat-slide-toggle>
+                </div>
+              }
+
+              @if (auth.isAuthenticated()) {
+                <mat-slide-toggle color="primary" [(ngModel)]="qbAvoidRepeats" class="qb-toggle">
+                  Don't repeat questions I've already seen
+                </mat-slide-toggle>
+              }
+
+              <div class="qb-avail" aria-live="polite">
+                @if (countingAvail) {
+                  <span class="qb-avail-count">Counting…</span>
+                } @else if (availTossups !== null) {
+                  <span class="qb-avail-count">{{ availTossups | number }}</span> tossups
+                  <span class="qb-avail-sep">·</span>
+                  <span class="qb-avail-count">{{ availBonuses | number }}</span> bonuses match
+                  @if (availTossups === 0) {
+                    <span class="qb-avail-warn">(loosen the filters)</span>
+                  } @else if (availTossups < qbTossupCount) {
+                    <span class="qb-avail-warn">(fewer than the {{ qbTossupCount }} tossups requested)</span>
+                  }
+                }
+              </div>
+
+              <button mat-raised-button color="primary" class="qb-import-btn"
+                      [disabled]="qbImporting || availTossups === 0 || importLocked()" (click)="generateFromBank()">
+                @if (qbImporting) {
+                  <mat-spinner diameter="20" aria-label="Generating packet"></mat-spinner> <span>Generating…</span>
+                } @else {
+                  <span class="qb-btn-label"><mat-icon>auto_awesome</mat-icon> Generate &amp; use</span>
+                }
+              </button>
+            </div>
+        </div>
+      </mat-tab>
+
       <!-- Generate New Packet Tab -->
       @if (auth.hasPermission('question:generate')) {
-      <mat-tab label="Generate with AI">
+      <mat-tab label="AI">
         <div class="tab-content">
           <div class="generate-container">
             <!-- Form - hidden when generating -->
             @if (!isGenerating) {
               <div class="generate-form">
+                <!-- FF4 fix 2 (finish review #4, S3-37): the FF3 top-of-tab
+                     scroll-cue line is gone — the finish review's own
+                     regression note on it ("shows even on a taller viewport
+                     where nothing scrolls") was correct, and a `position:
+                     sticky` cue was already ruled out (it sits inside
+                     Material's own `overflow: hidden` `.mat-mdc-tab-body-content`,
+                     a non-visible-but-still-clipping ancestor that breaks
+                     sticky's containing-block chain up to the dialog's real
+                     scroll container). Instead the Context field is now kept
+                     off the 1440x900 fold by actually tightening the rhythm
+                     above it (dynamic subscript sizing on Topic/Context so
+                     each field's unused hint gutter collapses to 0, plus
+                     tighter gaps in this form and the banner below) rather
+                     than describing the clip with a caption. -->
+
+                <!-- Fail-closed (D12) / quota (D10) banner (S3-02): persistent,
+                     names the reason and the reset time when known, and points
+                     at the ungated tab instead. Not dismissable — a fresh
+                     attempt needs a fresh 429/503, which clears it. -->
+                @if (aiLimitBanner) {
+                  <div class="ai-limit-banner" role="alert">
+                    <mat-icon aria-hidden="true">{{ aiLimitBanner.icon }}</mat-icon>
+                    <div class="ai-limit-banner__body">
+                      <p class="ai-limit-banner__title">{{ aiLimitBanner.title }}</p>
+                      <p class="ai-limit-banner__message">{{ aiLimitBanner.message }}</p>
+                    </div>
+                    <button type="button" mat-stroked-button (click)="goToQuestionBankTab()">
+                      Use the question bank instead
+                    </button>
+                  </div>
+                }
+
                 <!-- Validation Error Banner -->
                 @if (validationError) {
                   <div class="validation-error">
@@ -196,6 +439,11 @@
                   </div>
                 }
 
+                <!-- Everything below is inert while the banner above is showing
+                     (S3-02: "disable the fields, not only the button"); the
+                     key/model picker is F1's shared, frozen component, so it's
+                     locked from outside rather than given its own disabled input. -->
+                <div class="generate-form__fields" [attr.inert]="aiLimitBanner ? '' : null">
                 <!-- API key + model (PB-08, shared/ai-key) -->
                 <app-ai-key-picker
                   [apiKey]="apiKey"
@@ -204,7 +452,7 @@
                   (modelChange)="onGenerateModelChange($event)"
                   ></app-ai-key-picker>
 
-                <mat-form-field class="topic-field" appearance="outline" floatLabel="always">
+                <mat-form-field class="topic-field" appearance="outline" floatLabel="always" subscriptSizing="dynamic">
                   <mat-label>Topic</mat-label>
                   <input
                     matInput
@@ -214,13 +462,23 @@
                     required
                     >
                 </mat-form-field>
-                <mat-form-field class="context-field" appearance="outline" floatLabel="always">
+                <!-- FF3 fix 2 (finish review #3): the placeholder was two
+                     lines long, which combined with `rows="3"` was the
+                     largest single contributor to this field landing at the
+                     dialog's fold at 1440x900 (finish review r2/r3). One
+                     shorter example and one fewer row keeps the field just
+                     as usable while shrinking its own footprint.
+                     FF4 fix 2 (finish review #4): `subscriptSizing="dynamic"`
+                     here and on Topic above collapses each field's reserved
+                     hint gutter to 0 since neither ever shows a hint or
+                     error, which is most of what still moved the fold. -->
+                <mat-form-field class="context-field" appearance="outline" floatLabel="always" subscriptSizing="dynamic">
                   <mat-label>Context (Optional)</mat-label>
                   <textarea
                     matInput
                     [(ngModel)]="generateContext"
-                    placeholder="e.g., Focus on the Roman Republic, Include chemical reactions, 1920s-1940s era"
-                    rows="3"
+                    placeholder="e.g., Focus on the Roman Republic era"
+                    rows="2"
                   ></textarea>
                 </mat-form-field>
 
@@ -242,7 +500,7 @@
                   class="generate-bonuses-checkbox"
                   [(ngModel)]="generateBonuses"
                   >
-                  Generate bonuses ({{ questionCount }} bonuses will be generated alongside tossups)
+                  Include bonuses
                 </mat-checkbox>
 
                 <!-- Advanced LLM Parameters -->
@@ -250,7 +508,7 @@
                   <mat-expansion-panel-header>
                     <mat-panel-title>
                       <mat-icon>tune</mat-icon>
-                      Advanced Options (LLM Parameters)
+                      Advanced
                     </mat-panel-title>
                   </mat-expansion-panel-header>
 
@@ -324,11 +582,12 @@
                     }
                   </div>
                 </mat-expansion-panel>
+                </div>
 
                 <button
                   mat-raised-button
-                  color="accent"
-                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked()"
+                  color="primary"
+                  [disabled]="!generateTopic || !apiKey || !selectedModel || generateLocked() || !!aiLimitBanner"
                   (click)="generateAIPacket()"
                   class="generate-btn"
                   >
@@ -341,7 +600,7 @@
             <!-- Generating state -->
             @if (isGenerating) {
               <div class="generating-state">
-                <mat-spinner diameter="50"></mat-spinner>
+                <mat-spinner diameter="50" aria-label="Generating packet with AI"></mat-spinner>
                 <p>Generating packet with AI...</p>
                 <span class="hint">This may take a minute</span>
               </div>
@@ -465,185 +724,6 @@
         </div>
       </mat-tab>
       }
-
-      <!--
-        ============================ Generate (local bank) ============================
-        Deliberately NOT permission-gated (D15 amends D3): guests and players
-        keep this tab so `import-random` keeps working for them. Without
-        `packet:create` the backend now returns an EPHEMERAL, game-only
-        packet instead of an owned DRAFT (WP-Q4); callers with `packet:create`
-        still get the D3 owned-DRAFT behavior. Gating this tab on
-        `packet:create` would silently break guest/player packet generation.
-      -->
-      <mat-tab label="Generate">
-        <div class="tab-content qb-content">
-          <div class="qb-intro">
-            <mat-icon>auto_awesome</mat-icon>
-            <div>
-              <div class="qb-intro-title">Build a packet from the question bank</div>
-              <div class="qb-intro-sub">Pick categories and difficulty, then generate a fresh mix.</div>
-            </div>
-            @if (hasActiveFilters) {
-              <button type="button" mat-button class="qb-clear" (click)="clearFilters()">
-                <mat-icon>filter_alt_off</mat-icon> Clear filters
-              </button>
-            }
-          </div>
-
-            <div class="qb-random">
-              <div class="qb-group">
-                <div class="qb-group-label">Categories <span class="qb-muted">(any if none picked)</span></div>
-                <div class="qb-chips">
-                  @for (c of qbCategories; track c) {
-                    <button type="button" class="qb-chip" [class.on]="qbSelectedCategories.includes(c)"
-                            (click)="toggleQbCategory(c)">{{ c }}@if (categoryCounts[c]) {
-                      <span class="qb-chip-n">{{ categoryCounts[c] | number }}</span>
-                    }</button>
-                  }
-                </div>
-              </div>
-
-              <div class="qb-group">
-                <div class="qb-group-label">Difficulty</div>
-                <div class="qb-chips">
-                  @for (t of qbDifficultyTiers; track t.label) {
-                    <button type="button" class="qb-chip" [class.on]="qbSelectedTiers.includes(t.label)"
-                            (click)="toggleQbTier(t.label)">{{ t.label }}</button>
-                  }
-                </div>
-              </div>
-
-              <div class="qb-form">
-                <mat-form-field appearance="outline" class="qb-num-field">
-                  <mat-label>Tossups</mat-label>
-                  <input matInput type="number" min="1" max="30" [(ngModel)]="qbTossupCount" (ngModelChange)="queueCount()">
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="qb-num-field">
-                  <mat-label>Bonuses</mat-label>
-                  <input matInput type="number" min="0" max="30" [(ngModel)]="qbBonusCount" (ngModelChange)="queueCount()">
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="qb-name-field">
-                  <mat-label>Packet name (optional)</mat-label>
-                  <input matInput [(ngModel)]="qbRandomName" placeholder="Custom mix">
-                </mat-form-field>
-              </div>
-
-              <!-- Advanced filters (full qbreader filter set) -->
-              <button type="button" class="qb-advanced-toggle" (click)="qbShowAdvanced = !qbShowAdvanced">
-                <mat-icon>{{ qbShowAdvanced ? 'expand_less' : 'expand_more' }}</mat-icon>
-                Advanced filters
-              </button>
-              @if (qbShowAdvanced) {
-                <div class="qb-advanced">
-                  <div class="qb-group">
-                    <div class="qb-group-label">Exact difficulty <span class="qb-muted">(overrides the tiers above)</span></div>
-                    <div class="qb-chips">
-                      @for (d of qbAllDifficulties; track d) {
-                        <button type="button" class="qb-chip qb-chip--sm" [class.on]="qbIndividualDifficulties.includes(d)"
-                                (click)="toggleIndividualDifficulty(d)">{{ d }}</button>
-                      }
-                    </div>
-                  </div>
-                  @if (qbAvailableSubcategories.length) {
-                    <mat-form-field appearance="outline" class="qb-typeahead">
-                      <mat-label>Subcategories (optional)</mat-label>
-                      <mat-chip-grid #subGrid aria-label="Subcategories">
-                        @for (s of qbSelectedSubcategories; track s) {
-                          <mat-chip-row (removed)="removeSub(s)">
-                            {{ s }}
-                            <button matChipRemove [attr.aria-label]="'Remove ' + s"><mat-icon>cancel</mat-icon></button>
-                          </mat-chip-row>
-                        }
-                      </mat-chip-grid>
-                      <input #subInput placeholder="Type to search subcategories…"
-                             [matChipInputFor]="subGrid" [matAutocomplete]="subAuto"
-                             (input)="filterSubs(subInput.value)" (focus)="filterSubs(subInput.value)">
-                      <mat-autocomplete #subAuto (optionSelected)="addSub($event.option.value); subInput.value = ''">
-                        @for (opt of subFiltered; track opt) {
-                          <mat-option [value]="opt">{{ opt }}@if (subCounts[opt]) {
-                            <span class="qb-opt-n">{{ subCounts[opt] | number }}</span> }</mat-option>
-                        }
-                      </mat-autocomplete>
-                    </mat-form-field>
-                  }
-                  @if (qbAvailableAlternateSubcategories.length) {
-                    <mat-form-field appearance="outline" class="qb-typeahead">
-                      <mat-label>Alternate subcategories (optional)</mat-label>
-                      <mat-chip-grid #altGrid aria-label="Alternate subcategories">
-                        @for (s of qbSelectedAlternateSubcategories; track s) {
-                          <mat-chip-row (removed)="removeAlt(s)">
-                            {{ s }}
-                            <button matChipRemove [attr.aria-label]="'Remove ' + s"><mat-icon>cancel</mat-icon></button>
-                          </mat-chip-row>
-                        }
-                      </mat-chip-grid>
-                      <input #altInput placeholder="e.g. Math, Poetry, Jazz…"
-                             [matChipInputFor]="altGrid" [matAutocomplete]="altAuto"
-                             (input)="filterAlts(altInput.value)" (focus)="filterAlts(altInput.value)">
-                      <mat-autocomplete #altAuto (optionSelected)="addAlt($event.option.value); altInput.value = ''">
-                        @for (opt of altFiltered; track opt) {
-                          <mat-option [value]="opt">{{ opt }}@if (altCounts[opt]) {
-                            <span class="qb-opt-n">{{ altCounts[opt] | number }}</span> }</mat-option>
-                        }
-                      </mat-autocomplete>
-                      <mat-hint>Few questions are tagged at this level, so these mixes can come back small.</mat-hint>
-                    </mat-form-field>
-                  }
-                  <div class="qb-form">
-                    <mat-form-field appearance="outline" class="qb-num-field">
-                      <mat-label>Min year</mat-label>
-                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMinYear"
-                             (ngModelChange)="queueCount()">
-                    </mat-form-field>
-                    <mat-form-field appearance="outline" class="qb-num-field">
-                      <mat-label>Max year</mat-label>
-                      <input matInput type="number" min="1990" max="2030" [(ngModel)]="qbMaxYear"
-                             (ngModelChange)="queueCount()">
-                    </mat-form-field>
-                  </div>
-                  <mat-slide-toggle color="primary" [(ngModel)]="qbStandardOnly" class="qb-toggle"
-                                    (change)="queueCount()">
-                    Standard sets only
-                  </mat-slide-toggle>
-                  <mat-slide-toggle color="primary" [(ngModel)]="qbBalanced" class="qb-toggle"
-                                    (change)="queueCount()">
-                    Balanced mix <span class="qb-muted">(spread across categories)</span>
-                  </mat-slide-toggle>
-                </div>
-              }
-
-              @if (auth.isAuthenticated()) {
-                <mat-slide-toggle color="primary" [(ngModel)]="qbAvoidRepeats" class="qb-toggle">
-                  Don't repeat questions I've already seen
-                </mat-slide-toggle>
-              }
-
-              <div class="qb-avail" aria-live="polite">
-                @if (countingAvail) {
-                  <span class="qb-avail-count">Counting…</span>
-                } @else if (availTossups !== null) {
-                  <span class="qb-avail-count">{{ availTossups | number }}</span> tossups
-                  <span class="qb-avail-sep">·</span>
-                  <span class="qb-avail-count">{{ availBonuses | number }}</span> bonuses match
-                  @if (availTossups === 0) {
-                    <span class="qb-avail-warn">(loosen the filters)</span>
-                  } @else if (availTossups < qbTossupCount) {
-                    <span class="qb-avail-warn">(fewer than the {{ qbTossupCount }} tossups requested)</span>
-                  }
-                }
-              </div>
-
-              <button mat-raised-button color="primary" class="qb-import-btn"
-                      [disabled]="qbImporting || availTossups === 0 || importLocked()" (click)="generateFromBank()">
-                @if (qbImporting) {
-                  <mat-spinner diameter="20"></mat-spinner> <span>Generating…</span>
-                } @else {
-                  <span class="qb-btn-label"><mat-icon>auto_awesome</mat-icon> Generate &amp; use</span>
-                }
-              </button>
-            </div>
-        </div>
-      </mat-tab>
     </mat-tab-group>
   </mat-dialog-content>
 
@@ -651,19 +731,24 @@
     <button mat-button (click)="close()" class="cancel-btn">
       Cancel
     </button>
-    <button
-      mat-raised-button
-      color="primary"
-      [disabled]="(!selectedPacketId && !generatedPacket) || selectionLoading"
-      (click)="confirmSelection()"
-      class="select-btn"
-      >
-      @if (selectionLoading) {
-        <mat-spinner diameter="18"></mat-spinner>
-      } @else {
-        <mat-icon>check</mat-icon>
-      }
-      Use Packet
-    </button>
+    <!-- The Question bank tab commits inline (Generate & use) and closes
+         itself — this shared commit stays hidden there so each tab has
+         exactly one commit (S3-07). -->
+    @if (selectedTabIndex !== QUESTION_BANK_TAB_INDEX) {
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="!hasActiveTabSelection() || selectionLoading"
+        (click)="confirmSelection()"
+        class="select-btn"
+        >
+        @if (selectionLoading) {
+          <mat-spinner diameter="18" aria-label="Confirming packet"></mat-spinner>
+        } @else {
+          <mat-icon>check</mat-icon>
+        }
+        <span class="select-btn__label">{{ activeTabSelectionLabel() }}</span>
+      </button>
+    }
   </mat-dialog-actions>
 </div>

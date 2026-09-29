@@ -1,16 +1,25 @@
-import { Component, OnInit, ChangeDetectionStrategy, computed, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, DestroyRef, ElementRef, HostListener, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ImportRandomResult, SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
 import { PacketPage, PacketSummary } from '../../../packets/models/packet-authoring.models';
-import { Subject, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
+import { Subject, of, TimeoutError } from 'rxjs';
+import { debounceTime, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
-import { isLimitHandled } from '../../../core/http/limit-errors';
+import { isLimitHandled, limitErrorFrom } from '../../../core/http/limit-errors';
+import { metricLabel, resetsPhrase } from '../../../core/http/limit-messages';
 
 const EMPTY_PACKET_PAGE: PacketPage = { items: [], total: 0, page: 0, size: 0 };
+
+/** The AI tab's persistent inline banner for a fail-closed (D12) or quota (D10) response (S3-02). */
+interface AiLimitBanner {
+  icon: string;
+  title: string;
+  message: string;
+}
 
 @Component({
     selector: 'app-packet-search',
@@ -46,6 +55,35 @@ export class PacketSearchComponent implements OnInit {
   readonly importLocked = computed(() =>
     this.rateLimitState.cooldown('import')() > 0 || this.rateLimitState.cooldown('import-ip')() > 0);
 
+  /**
+   * S3-37: true while the dialog body (the one scroll container, S3-10 r3)
+   * has content below its fold. Drives the bottom fade cue so a form cut off
+   * at the fold (the AI tab with a quota/fail-closed banner at 1440x900 and
+   * 390px) never reads as complete. Recomputed on scroll and whenever the
+   * body or its tab group resizes (tab switch, banner, async content).
+   */
+  readonly moreBelow = signal(false);
+  private readonly scrollBody = viewChild('scrollBody', { read: ElementRef<HTMLElement> });
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    afterNextRender(() => {
+      const el = this.scrollBody()?.nativeElement;
+      if (!el || typeof ResizeObserver === 'undefined') return;
+      const ro = new ResizeObserver(() => this.updateScrollCue());
+      ro.observe(el);
+      if (el.firstElementChild) ro.observe(el.firstElementChild);
+      this.destroyRef.onDestroy(() => ro.disconnect());
+      this.updateScrollCue();
+    });
+  }
+
+  updateScrollCue(): void {
+    const el = this.scrollBody()?.nativeElement;
+    if (!el) return;
+    this.moreBelow.set(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
+  }
+
   // Search tab properties. Both lists are the answer-free, policy-filtered
   // PacketSummary projection (`listPackets`, PB-19), not full Packet objects;
   // confirmSelection() fetches the full packet only once a choice is made.
@@ -58,11 +96,28 @@ export class PacketSearchComponent implements OnInit {
   // fix) and that comparison would silently under- or over-match.
   myPackets: PacketSummary[] = [];
   myPacketsLoading = false;
+  /** "My packets" failed to load (S3-01) — distinct from a true empty result. */
+  myPacketsError = false;
   selectedPacketId = "";
   isSearching = false;
+  /** The debounced search itself failed (S3-01) — distinct from a true "no results". */
+  searchError = false;
+  /** Set from generateAIPacket()'s 429/503 response (S3-02); null once cleared or never hit. */
+  aiLimitBanner: AiLimitBanner | null = null;
   /** True while confirmSelection() is fetching the full packet to hand back. */
   selectionLoading = false;
   private searchSubject = new Subject<string>();
+
+  /**
+   * Which tab is active (S3-07). The "Question bank" tab commits inline
+   * (`generateFromBank()` closes the dialog itself), so the shared footer
+   * "Use Packet" button is hidden while it's active — one commit per tab.
+   * Index 1 always names it: Library(0), Question bank(1), AI(2, gated).
+   */
+  selectedTabIndex = 0;
+  readonly QUESTION_BANK_TAB_INDEX = 1;
+  /** Only present with `question:generate` (S3-19's tab-aware commit source). */
+  readonly AI_TAB_INDEX = 2;
 
   // Generate tab properties
   generateTopic = "";
@@ -183,16 +238,21 @@ export class PacketSearchComponent implements OnInit {
     // full-detail `searchPacketsByName`.
     this.searchSubject.pipe(
       debounceTime(300),
-      distinctUntilChanged(),
+      // No distinctUntilChanged: Retry (S3-01) re-emits the same, unchanged
+      // searchQuery to re-run a failed search, and that resubmission must not
+      // be swallowed as a "duplicate" of the query that just failed.
       switchMap(query => {
         if (!query || query.length < 2) {
           this.isSearching = false;
+          this.searchError = false;
           return of(EMPTY_PACKET_PAGE);
         }
         this.isSearching = true;
+        this.searchError = false;
         return this.sockbowlQuestionsService.listPackets({ nameContains: query }, 0, 25).pipe(
           catchError(error => {
             console.error('Search error:', error);
+            this.searchError = true;
             return of(EMPTY_PACKET_PAGE);
           })
         );
@@ -245,9 +305,24 @@ export class PacketSearchComponent implements OnInit {
     this.searchSubject.next(this.searchQuery);
   }
 
+  /**
+   * Refreshes "My packets" when the window regains focus while this dialog
+   * is open (S3-24): a first-time author who just used "Open the builder" (a
+   * new tab) to create their first packet came back to a dialog that never
+   * knew it had appeared. The component only exists while the dialog is
+   * open, so this listener is never live otherwise.
+   */
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    if (this.auth.isAuthenticated()) {
+      this.loadMyPackets();
+    }
+  }
+
   /** Load the caller's own packets (PB-14), most recent first, up to 10. */
-  private loadMyPackets(): void {
+  loadMyPackets(): void {
     this.myPacketsLoading = true;
+    this.myPacketsError = false;
     this.sockbowlQuestionsService.listPackets({ mine: true }, 0, 10).subscribe({
       next: (page) => {
         this.myPackets = page.items;
@@ -257,6 +332,7 @@ export class PacketSearchComponent implements OnInit {
         console.error('Could not load My packets:', error);
         this.myPackets = [];
         this.myPacketsLoading = false;
+        this.myPacketsError = true;
       }
     });
   }
@@ -338,6 +414,9 @@ export class PacketSearchComponent implements OnInit {
 
   selectPacket(packet: PacketSummary): void {
     this.selectedPacketId = packet.id;
+    // S3-19: a fresh Library/My-packets pick is the only pending selection
+    // now — a packet generated earlier on the AI tab must never win over it.
+    this.generatedPacket = null;
   }
 
   /** (modelChange) from AiKeyPickerComponent: also refresh the LLM-parameter visibility. */
@@ -354,6 +433,7 @@ export class PacketSearchComponent implements OnInit {
 
     // Clear previous validation errors
     this.validationError = null;
+    this.aiLimitBanner = null;
 
     this.isGenerating = true;
     this.sockbowlQuestionsService.generatePacket(
@@ -370,21 +450,52 @@ export class PacketSearchComponent implements OnInit {
     ).subscribe({
       next: (packet) => {
         this.generatedPacket = packet;
+        // S3-19: symmetric with selectPacket() — a fresh AI generation is the
+        // only pending selection now, never a stale Library pick from before.
+        this.selectedPacketId = '';
         this.isGenerating = false;
         this.snackBar.open('Packet generated successfully!', 'Close', {
           duration: 3000
         });
       },
-      error: (error) => {
-        console.error('Generation error:', error);
+      error: (err: HttpErrorResponse | TimeoutError) => {
+        console.error('Generation error:', err);
         this.isGenerating = false;
+        this.aiLimitBanner = null;
+
+        // The 660s client-side timeout (rxjs `timeout()`) throws a
+        // TimeoutError, never an HttpErrorResponse — keep it out of the
+        // status-code checks below rather than mistyping it as one.
+        if (err instanceof TimeoutError) {
+          this.snackBar.open('Request timed out. The generation may still be processing.', 'Close', {
+            duration: 5000
+          });
+          return;
+        }
+        const error = err;
 
         // A 429 (rate_limited/quota_exceeded), 503 (limiter_unavailable), or
         // 403 banned/ip_banned is already surfaced by the global
-        // RateLimitInterceptor -- the first two with a cooldown that disables
-        // the Generate button above -- so don't double the snackbar
-        // (NG-V1-01).
+        // RateLimitInterceptor's single snackbar, so don't double it
+        // (NG-V1-01); render the persistent inline banner ourselves (S3-02),
+        // since the interceptor has no view to put one in.
         if (isLimitHandled(error)) {
+          this.aiLimitBanner = this.classifyLimitBanner(error);
+          if (this.aiLimitBanner) {
+            // FF3 (finish review #3, R2 regression): S3-37 raised the
+            // dialog's own max-height so more of the AI tab would fit,
+            // which left the interceptor's snackbar (already opened for
+            // this same response, by the time this handler runs) overlapping
+            // the now-taller dialog's footer and repeating this banner's
+            // message underneath it. `rate-limit.interceptor.ts` is a frozen
+            // shared file (H-05), so it can't be told not to open the
+            // snackbar in the first place; dismissing it the instant this
+            // banner takes over saying the same thing is the suppression the
+            // finish review asked for, done entirely from this surface's own
+            // file via the same singleton MatSnackBar instance the
+            // interceptor used to open it.
+            this.snackBar.dismiss();
+          }
           return;
         }
 
@@ -397,8 +508,6 @@ export class PacketSearchComponent implements OnInit {
         } else if (error.status === 502) {
           // The AI provider (not our own limiter) rate-limited the server-side call.
           errorMessage = 'The AI provider is rate-limiting requests. Please try again later.';
-        } else if (error.name === 'TimeoutError') {
-          errorMessage = 'Request timed out. The generation may still be processing.';
         }
 
         this.snackBar.open(errorMessage, 'Close', {
@@ -406,6 +515,51 @@ export class PacketSearchComponent implements OnInit {
         });
       }
     });
+  }
+
+  /**
+   * Classifies a 429/503 `generatePacket` response into the AI tab's
+   * persistent banner copy (S3-02: D12 fail-closed, D10 quota). Returns null
+   * for anything `limitErrorFrom` doesn't recognize, so the generic snackbar
+   * path still runs for those.
+   */
+  private classifyLimitBanner(error: HttpErrorResponse): AiLimitBanner | null {
+    const body = (error.error && typeof error.error === 'object' ? error.error : {}) as Record<string, unknown>;
+    const classification = typeof body['error'] === 'string' ? (body['error'] as string) : undefined;
+    const limitError = limitErrorFrom(classification, body);
+    if (!limitError) {
+      return null;
+    }
+    switch (limitError.kind) {
+      case 'limiter_unavailable':
+        return {
+          icon: 'cloud_off',
+          title: "AI generation isn't available right now",
+          message: 'The generator is temporarily offline. Try again shortly, or use the question bank tab instead.',
+        };
+      case 'quota_exceeded': {
+        const label = metricLabel(limitError.metric);
+        const limitText = limitError.limit != null ? ` (${limitError.limit})` : '';
+        return {
+          icon: 'hourglass_top',
+          title: `You've reached your ${label} limit${limitText}`,
+          message: `Resets ${resetsPhrase(limitError.resetsAt)}. Use the question bank tab instead in the meantime.`,
+        };
+      }
+      case 'rate_limited':
+        return {
+          icon: 'hourglass_top',
+          title: 'Slow down',
+          message: `Try again in ${Math.max(1, Math.ceil(limitError.retryAfterSeconds || 1))}s, or use the question bank tab instead.`,
+        };
+      default:
+        return null;
+    }
+  }
+
+  /** The AI banner's "use the question bank instead" action (S3-02). */
+  goToQuestionBankTab(): void {
+    this.selectedTabIndex = this.QUESTION_BANK_TAB_INDEX;
   }
 
   /**
@@ -484,10 +638,39 @@ export class PacketSearchComponent implements OnInit {
     return true;
   }
 
+  /**
+   * Whether the footer's shared "Use Packet" button has something to commit
+   * for the tab currently showing (S3-19) — never a stale pick left over on
+   * a tab the caller isn't even looking at.
+   */
+  hasActiveTabSelection(): boolean {
+    return this.selectedTabIndex === this.AI_TAB_INDEX ? !!this.generatedPacket : !!this.selectedPacketId;
+  }
+
+  /** The footer button's label: names the pending pick when there is one (S3-19). */
+  activeTabSelectionLabel(): string {
+    const name = this.activeTabSelectionName();
+    return name ? `Use "${name}"` : 'Use Packet';
+  }
+
+  private activeTabSelectionName(): string | null {
+    if (this.selectedTabIndex === this.AI_TAB_INDEX) {
+      return this.generatedPacket?.name ?? null;
+    }
+    return this.myPackets.find(p => p.id === this.selectedPacketId)?.name
+      ?? this.searchResults.find(p => p.id === this.selectedPacketId)?.name
+      ?? null;
+  }
+
   confirmSelection(): void {
-    // Prioritize generated packet if it exists
-    if (this.generatedPacket) {
-      this.dialogRef.close(this.generatedPacket);
+    // S3-19: commit exactly what the active tab shows as selected —
+    // confirmSelection() used to always prefer `generatedPacket` regardless
+    // of which tab the caller was looking at, so a packet generated earlier
+    // on the AI tab could silently override a later Library pick.
+    if (this.selectedTabIndex === this.AI_TAB_INDEX) {
+      if (this.generatedPacket) {
+        this.dialogRef.close(this.generatedPacket);
+      }
       return;
     }
 
@@ -679,7 +862,9 @@ export class PacketSearchComponent implements OnInit {
       this.onQbImportError(null);
       return;
     }
-    this.snackBar.open('Packet ready.', 'OK', { duration: 2500 });
+    // S3-07: the game-config screen already confirms with its own
+    // "Packet '<name>' selected." toast once the dialog closes (every
+    // commit path funnels through there) — a second one here just doubled up.
     this.dialogRef.close(PacketSearchComponent.packetFromImport(res));
   }
 
@@ -713,6 +898,11 @@ export class PacketSearchComponent implements OnInit {
       return;
     }
     this.snackBar.open('Could not build a packet. Try loosening the filters.', 'Close', { duration: 5000 });
+  }
+
+  /** "Open the builder" action on the true-empty "My packets" state (S3-14). */
+  openBuilder(): void {
+    window.open('/packets', '_blank', 'noopener');
   }
 
   clearSearch(): void {

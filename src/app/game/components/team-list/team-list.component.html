@@ -29,21 +29,31 @@
       @if (getPlayerCount(team) === 0) {
         <div class="roster-empty">No players yet</div>
       }
-      @for (player of team.teamPlayers; track player) {
-        <mat-list-item
-                   [ngClass]="{
-                     'current-buzz': isCurrentBuzz(player.playerId),
-                     'current-player': isCurrentPlayer(player.playerId)
-                   }"
-                   [attr.aria-label]="player.name + ', ' + getPlayerScore(player.playerId) + ' points' + (isCurrentPlayer(player.playerId) ? ', you' : '') + (isCurrentBuzz(player.playerId) ? ', buzzed in' : '')">
-          <span class="player-row">
-            @if (isCurrentPlayer(player.playerId)) {
-              <mat-icon class="current-player-icon" aria-hidden="true">person</mat-icon>
-            }
-            <span class="player-name">{{ player.name }}</span>
-            <span class="player-score" aria-hidden="true">{{ getPlayerScore(player.playerId) }}</span>
-          </span>
-        </mat-list-item>
+      @if (getPlayerCount(team) > 0) {
+        <!-- S3-13: `mat-list` above is forced to role="listitem" (it's an
+             item of the outer teams `role="list"`), so its own player rows
+             need their own `role="list"` ancestor here rather than nesting
+             directly under a listitem (axe: nested/conflicting list
+             semantics). -->
+        <div role="list" [attr.aria-label]="team.teamName + ' roster'">
+          @for (player of team.teamPlayers; track player) {
+            <mat-list-item
+                       role="listitem"
+                       [ngClass]="{
+                         'current-buzz': isCurrentBuzz(player.playerId),
+                         'current-player': isCurrentPlayer(player.playerId)
+                       }"
+                       [attr.aria-label]="player.name + ', ' + getPlayerScore(player.playerId) + ' points' + (isCurrentPlayer(player.playerId) ? ', you' : '') + (isCurrentBuzz(player.playerId) ? ', buzzed in' : '')">
+              <span class="player-row">
+                @if (isCurrentPlayer(player.playerId)) {
+                  <mat-icon class="current-player-icon" aria-hidden="true">person</mat-icon>
+                }
+                <span class="player-name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
+                <span class="player-score" aria-hidden="true">{{ getPlayerScore(player.playerId) }}</span>
+              </span>
+            </mat-list-item>
+          }
+        </div>
       }
     </mat-list>
   } @empty {

@@ -92,7 +92,7 @@
     .team-score {
       flex-shrink: 0;
       font-size: 1.25rem;
-      color: var(--accent-primary) !important;
+      color: var(--accent-primary-text) !important;
     }
 
     .team-meta {
@@ -113,7 +113,7 @@
     .you-badge {
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
@@ -184,9 +184,13 @@
     }
 
     .player-name {
+      // Single-line ellipsis + title (not wrap) so one extreme name can't
+      // push the score off-row or balloon the roster's height (S3-12).
       min-width: 0;
       flex: 1 1 auto;
-      overflow-wrap: anywhere;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .player-score {
@@ -196,9 +200,9 @@
     }
 
     &.current-player {
+      // Tone background + the leading .current-player-icon carry this state;
+      // no side-stripe needed (S3-15).
       background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 20%, transparent) 0%, color-mix(in srgb, var(--accent-secondary) 15%, transparent) 100%) !important;
-      border-left: 4px solid var(--accent-primary) !important;
-      border-bottom-color: color-mix(in srgb, var(--accent-primary) 30%, transparent) !important;
       font-weight: 600 !important;
 
       ::ng-deep .mdc-list-item__content {
@@ -207,7 +211,7 @@
       }
 
       .current-player-icon {
-        color: var(--accent-primary) !important;
+        color: var(--accent-primary-text) !important;
         font-size: 1.1rem !important;
         width: 1.1rem !important;
         height: 1.1rem !important;
@@ -225,13 +229,16 @@
 
     &.current-buzz {
       background: linear-gradient(135deg, color-mix(in srgb, var(--warning) 25%, transparent) 0%, color-mix(in srgb, var(--warning) 20%, transparent) 100%) !important;
-      border-left: 4px solid var(--warning) !important;
-      border-bottom-color: color-mix(in srgb, var(--warning) 30%, transparent) !important;
+      border: 2px solid color-mix(in srgb, var(--warning) 45%, var(--border-subtle)) !important;
       color: var(--warning) !important;
       font-weight: 700 !important;
-      box-shadow:
-        inset 0 0 20px color-mix(in srgb, var(--warning) 15%, transparent),
-        0 2px 10px color-mix(in srgb, var(--warning) 20%, transparent);
+      // FF1 fix 8 (OWN-WORLD No-Glow Rule): depth comes from shadow and
+      // tone, never a coloured glow — the inset `--warning`-tinted
+      // box-shadow that grew its blur on each pulse was exactly that glow.
+      // A flat, token-neutral shadow (matching every other row/card in the
+      // surface) plus a tone pulse on the border itself keeps the "this
+      // seat just buzzed" motion without it.
+      box-shadow: 0 2px 10px var(--shadow-color);
       animation: buzzPulse 1.5s ease-in-out infinite;
 
       &:hover {
@@ -253,14 +260,10 @@
 
 @keyframes buzzPulse {
   0%, 100% {
-    box-shadow:
-      inset 0 0 20px color-mix(in srgb, var(--warning) 15%, transparent),
-      0 2px 10px color-mix(in srgb, var(--warning) 20%, transparent);
+    border-color: color-mix(in srgb, var(--warning) 45%, var(--border-subtle));
   }
   50% {
-    box-shadow:
-      inset 0 0 30px color-mix(in srgb, var(--warning) 25%, transparent),
-      0 4px 15px color-mix(in srgb, var(--warning) 30%, transparent);
+    border-color: color-mix(in srgb, var(--warning) 85%, var(--border-subtle));
   }
 }
 

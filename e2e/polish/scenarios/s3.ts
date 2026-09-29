@@ -69,7 +69,7 @@ function withSteps(base: CaptureState, extra: (page: Page) => Promise<void>): Ca
  * (`presentationRequest.start()`) resolve instead of hanging/rejecting
  * against a receiver that doesn't exist, so `config-cast-button` below can
  * drive the UI all the way to `PresentationConnectionState.CONNECTED`
- * (`cast_connected` icon, "Stop casting" button) — the only way this row
+ * (`cast_connected` icon, "Casting · Stop" button) — the only way this row
  * ends up visually distinct from every other proctor row, since the idle
  * "Cast to TV" button is already on all of them regardless.
  */
@@ -91,6 +91,25 @@ async function mockPresentationApi(page: Page): Promise<void> {
   });
 }
 
+/**
+ * Same shape as {@link mockPresentationApi}, but `start()` never settles —
+ * for `config-cast-connecting`, which needs the CONNECTING state (disabled
+ * button, decorative spinner, S3-26) to stay up long enough to capture,
+ * rather than resolving straight through to CONNECTED after a microtask
+ * like the mock above (see that row's own comment in `states`).
+ */
+async function mockPresentationApiConnecting(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    class MockPresentationRequest {
+      constructor(_urls: string[]) {}
+      addEventListener(): void {}
+      removeEventListener(): void {}
+      start(): Promise<never> { return new Promise<never>(() => { /* intentionally never settles */ }); }
+    }
+    (window as unknown as { PresentationRequest: unknown }).PresentationRequest = MockPresentationRequest;
+  });
+}
+
 const FIND_A_PACKET = { role: 'button' as const, name: 'Find a Packet' };
 
 async function openPacketSearch(page: Page): Promise<void> {
@@ -98,9 +117,21 @@ async function openPacketSearch(page: Page): Promise<void> {
   await page.getByRole('dialog').waitFor({ state: 'visible' });
 }
 
-/** Fills the "Generate with AI" tab's key/model/topic, stopping just before Generate. */
+/** Fills the "AI" tab's key/model/topic, stopping just before Generate. */
 async function fillGenerateForm(page: Page, topic: string): Promise<void> {
-  await page.getByRole('tab', { name: 'Generate with AI' }).click();
+  await page.getByRole('tab', { name: 'AI' }).click();
+  // FF7 (finish review #4): `config-generate-bring-your-own-key`'s final
+  // captures landed mid-tab-switch — the Library panel still visible,
+  // the active-tab underline still under "Question bank", and the AI
+  // fields shifted/clipped. `MatTabGroup`'s body swap is a translate3d
+  // animation on `animationDuration` (default 500ms, unset here), and
+  // this tab click's only downstream wait (`gpt-4o` becoming visible) is
+  // about the mocked model fetch, not the tab animation — nothing in this
+  // helper actually waited for that transition to finish before the other
+  // two AI-tab states (fail-closed, quota-exhausted) happen to outrun it
+  // with their own longer generate/banner waits. Wait past it here, once,
+  // for every caller, instead of relying on incidental downstream timing.
+  await page.waitForTimeout(600);
   const apiKeyField = page.getByLabel('OpenAI API Key');
   await apiKeyField.fill('sk-h0-mock-key-not-a-real-secret');
   await apiKeyField.blur(); // AiKeyPickerComponent.onApiKeyBlur -> fetchAvailableModels
@@ -142,41 +173,73 @@ const states: CaptureState[] = [
   // --- Role views of the same real CONFIG session (quiz-bowl-classic, proctor claimed, 2v2, packet chosen) ---
   // Proctorless owner console (AUTO_PROCTOR): the owner manages config
   // directly, no proctor-claim step exists. Real, unsynthesized frame.
-  stompState('config-owner-view', 'auto-proctor', 'buzzer', 1),
+  // S3-10: also the 280px ("mobile-min") spot check for the lobby itself —
+  // the densest managing-seat view (hero + launch bar + Start CTA).
+  // S3-18 (r3): `role` is a `MockRole` OIDC identity (mock/oidc.ts), a
+  // separate axis from the STOMP seat this row replays — but it's also the
+  // only thing capture.spec.ts's filenames and the FR manifest's role column
+  // key off (H-04 scopes the deeper role/seat conflation itself to the
+  // shared harness). Every row below the "same session, four seats" block
+  // used to fall back to the default `role: 'player'`, so the manifest could
+  // not tell owner/proctor rows apart from an ordinary seated player. Within
+  // what this file can control (no oidc.ts edit): `admin` for the
+  // proctorless owner console, `moderator` for every row driven from the
+  // claimed-proctor seat — neither preset means "owner"/"proctor" literally,
+  // but each now reliably differs from `player`.
+  stompState('config-owner-view', 'auto-proctor', 'buzzer', 1, { role: 'admin', viewports: ['mobile-min', 'mobile', 'desktop'] }),
   // Nobody has claimed proctor yet (empty roster too — canBecomeProctor's
   // "first-come" G-01 design applies equally to any seat while unclaimed).
+  // Genuinely an ordinary seated player's view, so `role: 'player'` (the
+  // default) is accurate here, not a leftover.
   stompState('config-proctor-unclaimed', 'config-quiz-bowl-classic', 'player', 1),
   stompState('config-player-view', 'config-quiz-bowl-classic', 'player', 0),
   stompState('config-spectator-view', 'config-quiz-bowl-classic', 'spectator', 0),
 
   // --- Proctor's own config console: packet states ---
-  stompState('config-packet-not-chosen', 'config-quiz-bowl-classic', 'proctor', 0),
+  // S3-18 (r3): `role: 'moderator'` on every row below driven from the
+  // claimed-proctor seat (see the `config-owner-view` comment above for why).
+  stompState('config-packet-not-chosen', 'config-quiz-bowl-classic', 'proctor', 0, { role: 'moderator' }),
   // "loading": open the dialog and search with the GraphQL response hung,
   // so the capture lands on packet-search's own `isSearching` spinner
   // (capture.spec.ts's `isLoadingState` gives this one extra settle time
   // before the screenshot instead of waiting for a `networkidle` that a
   // hung mock would never reach).
   withSteps(
-    withMocks(stompState('config-packet-loading', 'config-quiz-bowl-classic', 'proctor', 0), hangingSearch),
+    withMocks(stompState('config-packet-loading', 'config-quiz-bowl-classic', 'proctor', 0, { role: 'moderator' }), hangingSearch),
     async page => {
       await openPacketSearch(page);
       await page.getByPlaceholder('Type to search for packets...').fill('quiz bowl');
       await page.waitForTimeout(300); // let the spinner actually paint
     },
   ),
-  stompState('config-packet-chosen-ephemeral', 'config-quiz-bowl-classic', 'proctor', 3),
-  stompState('config-packet-chosen-draft', 'config-quiz-bowl-classic', 'proctor', 2),
-  stompState('config-packet-chosen-published', 'config-quiz-bowl-classic', 'proctor', 1),
+  stompState('config-packet-chosen-ephemeral', 'config-quiz-bowl-classic', 'proctor', 3, { role: 'moderator' }),
+  stompState('config-packet-chosen-draft', 'config-quiz-bowl-classic', 'proctor', 2, { role: 'moderator' }),
+  stompState('config-packet-chosen-published', 'config-quiz-bowl-classic', 'proctor', 1, { role: 'moderator' }),
+  // S3-10: also the 280px spot check for the picker dialog (all three tabs
+  // must stay visible with no scroll arrow at the narrowest supported width).
   withSteps(
-    withMocks(stompState('config-my-packets-empty', 'config-quiz-bowl-classic', 'proctor', 0), emptyMyPackets),
-    openPacketSearch,
+    withMocks(
+      stompState('config-my-packets-empty', 'config-quiz-bowl-classic', 'proctor', 0, { role: 'moderator', viewports: ['mobile-min', 'mobile', 'desktop'] }),
+      emptyMyPackets,
+    ),
+    async page => {
+      await openPacketSearch(page);
+      // S3-18 (r2/r3): the pre-ad capture landed mid-fade (dialog and
+      // backdrop both still animating in) — `openPacketSearch`'s own wait
+      // only checks Playwright's `visible` state, which the dialog satisfies
+      // the instant it's in the DOM with non-zero size, well before
+      // Material's ~200ms enter transition (`mat-dialog-container`'s
+      // `transform`/`opacity`) finishes. Wait past that transition, plus
+      // some slack for the CDK overlay's own backdrop fade, before capture.
+      await page.waitForTimeout(350);
+    },
   ),
 
-  // --- "Generate with AI" tab: needs its own REST/GraphQL backdrop, not just STOMP replay ---
+  // --- "AI" tab: needs its own REST/GraphQL backdrop, not just STOMP replay ---
   withSteps(
     withMocks(
       // `role: 'author'` (not the default `player`) — packet-search's
-      // "Generate with AI" tab is gated on `auth.hasPermission('question:
+      // "AI" tab is gated on `auth.hasPermission('question:
       // generate')`, which only `author`/`admin` carry (`mock/oidc.ts`).
       stompState('config-generate-ai-fails-closed', 'config-quiz-bowl-classic', 'proctor', 0, { role: 'author' }),
       async page => {
@@ -190,6 +253,17 @@ const states: CaptureState[] = [
       await fillGenerateForm(page, 'Ancient Rome');
       await page.getByRole('button', { name: 'Generate Packet' }).click();
       await page.getByText('AI generation is temporarily unavailable').waitFor({ state: 'visible' });
+      // FF3 (finish review #3, R2 regression): the persistent banner and the
+      // interceptor's one-shot snackbar both appear from the same 429/503;
+      // packet-search.component.ts now dismisses that snackbar the instant
+      // the banner takes over, but Material's own exit transition still
+      // takes a beat to actually leave the DOM (confirmed via a live
+      // getBoundingClientRect probe: gone by +100ms, not +0ms). This is the
+      // same kind of deliberate settle-wait as `config-my-packets-empty`'s
+      // dialog-open wait below, not a race being timed around — the
+      // dismissal itself is unconditional and instant; only its animation
+      // needs the frame.
+      await page.waitForTimeout(200);
     },
   ),
   withSteps(
@@ -206,7 +280,15 @@ const states: CaptureState[] = [
       await openPacketSearch(page);
       await fillGenerateForm(page, 'Organic Chemistry');
       await page.getByRole('button', { name: 'Generate Packet' }).click();
-      await page.getByText(/reached your AI generation limit/).waitFor({ state: 'visible' });
+      // The banner text is echoed by the one-shot limit snackbar too (S3-02:
+      // "exactly one limit snackbar"), so scope to the persistent banner
+      // itself rather than the ambiguous text to avoid a strict-mode
+      // violation across the two matches.
+      await page.locator('.ai-limit-banner__title', { hasText: 'reached your AI generation limit' }).waitFor({ state: 'visible' });
+      // FF3 (finish review #3, R2 regression): see the matching comment on
+      // `config-generate-ai-fails-closed` above — same dismissed-snackbar
+      // settle wait.
+      await page.waitForTimeout(200);
     },
   ),
   withSteps(
@@ -225,19 +307,44 @@ const states: CaptureState[] = [
   ),
 
   // --- Team roster shapes ---
-  stompState('config-one-team', 'config-quiz-bowl-classic', 'proctor', 4),
-  stompState('config-many-teams-12-players', 'config-quiz-bowl-classic', 'proctor', 5),
+  stompState('config-one-team', 'config-quiz-bowl-classic', 'proctor', 4, { role: 'moderator' }),
+  // S3-18 (r3): frame 5 used to split its 12 real players 5/4/2/1 across 4
+  // teams — technically ">=12 seated across >=2 teams", but never a single
+  // roster long enough to exercise S3-27's own "12+ players per team"
+  // scaling fix. The fixture now gives Team 1 all 12 (verbatim, same
+  // ids/names) and seats one filler each on Teams 2-4 (`config-quiz-bowl-
+  // classic/proctor.json`'s own `_meta.note` has the exact diff).
+  stompState('config-many-teams-12-players', 'config-quiz-bowl-classic', 'proctor', 5, { role: 'moderator' }),
 
   // --- Cast ---
-  // Drives all the way to CONNECTED (see mockPresentationApi's comment) —
-  // the idle "Cast to TV" button alone is byte-identical to every other
-  // proctor row, since headless Chromium already exposes the Presentation
-  // API without any mock.
+  // S3-26: CONNECTING is a real, distinct third button state (disabled, with
+  // its own decorative spinner) between the idle "Cast to TV" and "Casting ·
+  // Stop" below — it used to render nothing at all (H-07, withdrawn once the
+  // service turned out to already expose it). `presentation-connection.
+  // service.ts`'s `startPresentation()` sets CONNECTING synchronously, then
+  // `await`s `presentationRequest.start()` before setting CONNECTED, so
+  // `mockPresentationApi`'s already-resolved `start()` would only leave the
+  // UI in CONNECTING for a few microtasks — not a reliably capturable frame.
+  // `mockPresentationApiConnecting` below mirrors `hangingSearch`'s idiom: a
+  // `start()` that never resolves, so CONNECTING stays up indefinitely.
   withSteps(
-    withMocks(stompState('config-cast-button', 'config-quiz-bowl-classic', 'proctor', 1), mockPresentationApi),
+    withMocks(stompState('config-cast-connecting', 'config-quiz-bowl-classic', 'proctor', 1, { role: 'moderator' }), mockPresentationApiConnecting),
     async page => {
       await page.getByRole('button', { name: 'Cast to TV' }).click();
-      await page.getByRole('button', { name: 'Stop casting' }).waitFor({ state: 'visible' });
+      await page.getByRole('button', { name: 'Connecting' }).waitFor({ state: 'visible' });
+      await page.waitForTimeout(150); // let the connecting spinner actually paint
+    },
+  ),
+  withSteps(
+    withMocks(stompState('config-cast-button', 'config-quiz-bowl-classic', 'proctor', 1, { role: 'moderator' }), mockPresentationApi),
+    async page => {
+      await page.getByRole('button', { name: 'Cast to TV' }).click();
+      // S3-26 (already landed) renamed the CONNECTED label from "Stop
+      // casting" to "Casting · Stop" (castButtonLabel() in
+      // game-config.component.ts) — this selector was left stale and hung
+      // every run past this row. `exact: true` avoids the substring match
+      // also picking up the DISCONNECTED "Cast to TV" button by accident.
+      await page.getByRole('button', { name: 'Casting · Stop', exact: true }).waitFor({ state: 'visible' });
       // H0 follow-up: this row's own snackbar (`MatSnackBar.open` for
       // "Connected to cast device") reliably left the Material Icons
       // ligature text unstyled document-wide under the `light` theme only

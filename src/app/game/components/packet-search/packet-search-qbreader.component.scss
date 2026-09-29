@@ -57,9 +57,9 @@
       &:hover { color: var(--text-primary); }
 
       &.on {
-        color: #fff;
+        color: var(--on-accent-primary);
         background: var(--accent-primary);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--shadow-md) var(--shadow-color);
       }
 
       &:focus-visible { outline: 2px solid var(--accent-secondary); outline-offset: 2px; }
@@ -110,7 +110,7 @@
     &.on {
       background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
       border-color: var(--accent-primary);
-      color: var(--accent-primary);
+      color: var(--accent-primary-text);
     }
 
     // Compact square variant for the 1-10 difficulty grid.
@@ -144,7 +144,7 @@
     min-height: 18px;
     .qb-avail-count { font-weight: 600; color: var(--text-primary); }
     .qb-avail-sep { opacity: 0.5; margin: 0 5px; }
-    .qb-avail-warn { color: var(--accent-primary); margin-left: 5px; }
+    .qb-avail-warn { color: var(--accent-primary-text); margin-left: 5px; }
   }
 
   .qb-random { display: flex; flex-direction: column; gap: 16px; }
@@ -158,7 +158,7 @@
     padding: 6px 10px;
     background: none;
     border: none;
-    color: var(--accent-primary);
+    color: var(--accent-primary-text);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
@@ -194,8 +194,8 @@
     // disabled state legible instead of a washed-out grey.
     &.mat-mdc-raised-button:not(:disabled) {
       background: var(--accent-primary) !important;
-      color: #fff !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      color: var(--on-accent-primary) !important;
+      box-shadow: var(--shadow-md) var(--shadow-color);
     }
     &.mat-mdc-raised-button:disabled {
       background: color-mix(in srgb, var(--accent-primary) 16%, transparent) !important;
@@ -204,7 +204,7 @@
 
     .qb-btn-label { display: inline-flex; align-items: center; gap: 6px; }
     mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    ::ng-deep mat-spinner circle { stroke: #fff; }
+    ::ng-deep mat-spinner circle { stroke: var(--on-accent-primary); }
   }
 }
 

@@ -1,78 +1,116 @@
 @if (gameSessionObs | async; as gameSession) {
   <div class="page">
-    <!-- HERO -->
+    <!-- HERO — the join code is the loudest object on the page (THESIS: "the
+         code comes first"). Proctor and Mode are stated in words by the
+         launch bar just below, so they don't repeat here (S3-04). -->
     <section class="hero">
       <div class="hero__card">
-        <div class="hero__info">
-          <div class="info-item">
-            <mat-icon aria-hidden="true">account_circle</mat-icon>
-            <span class="info-label">Proctor:</span>
-            <span class="info-value">{{ gameSession.gameSettings.proctorType || 'None' }}</span>
-          </div>
-          <div class="info-item">
-            <mat-icon aria-hidden="true">tune</mat-icon>
-            <span class="info-label">Mode:</span>
-            <span class="info-value">{{ gameSession.gameSettings.gameMode || 'None' }}</span>
-          </div>
-          @if (gameStateService.getCurrentPlayer()) {
-            <div class="info-item">
-              <mat-icon aria-hidden="true">person</mat-icon>
-              <span class="info-label">Player:</span>
-              <span class="info-value">{{ gameStateService.getCurrentPlayer()?.name }}</span>
-            </div>
-          }
-          <div class="info-item join-item">
-            <mat-icon aria-hidden="true">qr_code_2</mat-icon>
-            <span class="info-label">Code:</span>
-            <span class="info-value code-value">{{ gameSession.joinCode }}</span>
+        <div class="hero__code">
+          <!-- FF1 fix 5 (eyebrow ban): the code carries itself — no stacked
+               "ROOM CODE" label above it. Screen readers still get the
+               context via aria-label on the value itself. -->
+          <div class="hero__code-row">
+            <span class="hero__code-value" [attr.aria-label]="'Room code ' + gameSession.joinCode">{{ gameSession.joinCode }}</span>
             <button
               type="button"
               mat-icon-button
               aria-label="Copy join code"
               (click)="copyJoinCode(gameSession.joinCode)"
-              class="copy-btn"
+              class="hero__icon-btn"
               >
               <mat-icon>content_copy</mat-icon>
             </button>
 
-            <!-- Cast Button (only show if available and user is proctor) -->
+            <!-- Cast control (only show if available and user is proctor). S3-26:
+                 one control, three states — it used to render nothing at all
+                 for CONNECTING (the device picker open), so it looked like it
+                 vanished mid-handshake. Never icon-only on touch: the label
+                 is always the button's accessible name, and shows as visible
+                 text from 600px up.
+
+                 FF2 fix 4: `disableRipple` — the click that starts casting
+                 launches Material's own circular ripple on `mousedown`
+                 (before this button's own [disabled] binding flips true on
+                 CONNECTING), and that ripple's fade-out timer keeps running
+                 on its own schedule after the click, independent of the
+                 button becoming disabled. A capture taken while it's still
+                 fading showed as a lighter circular tint that doesn't reach
+                 the pill's rounded right cap — "the fill stops short of the
+                 right edge" (finish review r2). This control's three states
+                 are already carried by its icon, label and border color
+                 (S3-26/S3-32), so the ripple was decorative, not load-bearing
+                 for any state; removing it removes the artifact at its
+                 source instead of chasing capture timing. -->
             @if ((castAvailable$ | async) && gameStateService.isSelfProctor()) {
-              @if ((castConnectionState$ | async) === PresentationConnectionState.DISCONNECTED) {
+              @if (castConnectionState$ | async; as castState) {
                 <button
                   type="button"
-                  mat-icon-button
-                  aria-label="Cast to TV"
-                  (click)="startCasting()"
-                  matTooltip="Cast to TV"
-                  class="copy-btn cast-btn">
-                  <mat-icon>cast</mat-icon>
+                  mat-stroked-button
+                  disableRipple
+                  class="hero__cast-btn"
+                  [class.hero__cast-btn--connected]="castState === PresentationConnectionState.CONNECTED"
+                  [disabled]="castState === PresentationConnectionState.CONNECTING"
+                  [attr.aria-label]="castButtonLabel(castState)"
+                  (click)="onCastButtonClick(castState)">
+                  @if (castState === PresentationConnectionState.CONNECTING) {
+                    <!-- S3-13: mat-spinner's host always carries its own
+                         role="progressbar"/tabindex="-1", and axe's
+                         nested-interactive check flags that combination
+                         inside an interactive control regardless of
+                         aria-hidden/aria-label on it — it isn't a "hidden
+                         content" nuance, it fires on the focusable-ish host
+                         attributes alone. A plain decorative span has no
+                         implicit role or tabindex, so it can't trip that
+                         check; the button's own [attr.aria-label] above is
+                         still the accessible name.
+
+                         FF1 fix 4: `matButtonIcon` routes this into
+                         matButton's own leading-icon content-projection slot
+                         (the same slot a bare `<mat-icon>` lands in for the
+                         other two states) — MatButton's template only sends
+                         `.material-icons`/`mat-icon`/`[matButtonIcon]`
+                         content there; a plain, unmarked `<span>` instead
+                         falls through into `.mdc-button__label` alongside
+                         the text, where `.hero__cast-btn`'s own `gap` can't
+                         reach (the label span has no flex layout of its
+                         own), so the spinner touched the text with no space
+                         and sat off its baseline. This carries no role or
+                         behaviour, only where the node is slotted. -->
+                    <span class="hero__cast-spinner" matButtonIcon aria-hidden="true"></span>
+                  } @else if (castState === PresentationConnectionState.CONNECTED) {
+                    <mat-icon aria-hidden="true">cast_connected</mat-icon>
+                  } @else {
+                    <mat-icon aria-hidden="true">cast</mat-icon>
+                  }
+                  <span class="hero__cast-label">{{ castButtonLabel(castState) }}</span>
                 </button>
-              }
-              @if ((castConnectionState$ | async) === PresentationConnectionState.CONNECTED) {
-                <button
-                  type="button"
-                  mat-icon-button
-                  color="primary"
-                  aria-label="Stop casting"
-                  (click)="stopCasting()"
-                  matTooltip="Stop casting"
-                  class="copy-btn cast-btn cast-btn--connected">
-                  <mat-icon>cast_connected</mat-icon>
-                </button>
+                <span class="hero__cast-announce" aria-live="polite">{{ castButtonLabel(castState) }}</span>
               }
             }
           </div>
         </div>
+        @if (gameStateService.getCurrentPlayer()) {
+          <div class="hero__player">
+            <mat-icon aria-hidden="true">person</mat-icon>
+            <div class="hero__player-meta">
+              <!-- S3-23: "Playing as" so the in-game name reads distinctly
+                   from the navbar's signed-in account name. FF1 fix 5: said
+                   inline, not as a stacked eyebrow above the value. -->
+              <span class="hero__player-name">Playing as {{ gameStateService.getCurrentPlayer()?.name }}</span>
+            </div>
+          </div>
+        }
       </div>
     </section>
 
     <!-- LAUNCH BAR — proctor status + the primary Start Match action -->
     <section class="launch">
+      <!-- FF1 fix 5 (eyebrow ban): no stacked "MODE"/"PROCTOR" label above
+           the sentence — the sentence stands on its own. -->
       @if (gameStateService.isProctorless()) {
         <div class="launch__proctor">
           <mat-icon class="launch__icon">{{ gameStateService.isAutoProctor() ? 'groups' : (gameStateService.isFreeForAll() ? 'person_off' : 'person') }}</mat-icon>
           <div class="launch__meta">
-            <span class="launch__label">Mode</span>
             <span class="launch__name">
               {{ gameStateService.isAutoProctor() ? 'Auto-judged, no proctor' : (gameStateService.isFreeForAll() ? 'Free for all, everyone for themselves' : 'Solo practice, answers auto-judged') }}
             </span>
@@ -82,8 +120,14 @@
         <div class="launch__proctor">
           <mat-icon class="launch__icon">supervisor_account</mat-icon>
           <div class="launch__meta">
-            <span class="launch__label">Proctor</span>
-            <span class="launch__name">{{ gameStateService.getProctor()?.name || 'No proctor yet' }}</span>
+            <!-- FF2 R1: was `'Proctor ' + name`, which read "Proctor Proctor"
+                 for anyone actually named "Proctor" (the fixture, and any
+                 real account with that as a display name) once FF1 dropped
+                 the old stacked "PROCTOR" eyebrow that used to make the
+                 repetition read as label-then-value instead of a stutter.
+                 "Proctored by <name>" can't duplicate the role word twice in
+                 a row regardless of what the name is. -->
+            <span class="launch__name">{{ gameStateService.getProctor()?.name ? ('Proctored by ' + gameStateService.getProctor()?.name) : 'No proctor yet' }}</span>
           </div>
         </div>
       }
@@ -93,52 +137,117 @@
               [attr.aria-label]="(isPacketSet() ? 'Packet selected' : 'Packet not selected yet')">
           <mat-icon aria-hidden="true">{{ isPacketSet() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
         </span>
-        <span class="launch__step" role="listitem"
-              [class.done]="hasAnyPlayers()"
-              [attr.aria-label]="(hasAnyPlayers() ? 'Players have joined' : 'No players have joined yet')">
-          <mat-icon aria-hidden="true">{{ hasAnyPlayers() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Players
+        <!-- S3-21: an informational count, not a checklist step — Start
+             gates only on the packet (startDisabledReason), so a player
+             count here must never look like a second, uncleared gate. -->
+        <span class="launch__step launch__step--info" role="listitem"
+              [attr.aria-label]="playerCountLabel()">
+          <mat-icon aria-hidden="true">groups</mat-icon> {{ playerCountLabel() }}
         </span>
       </div>
       <div class="launch__cta">
         @if (canBecomeProctor()) {
-          <button mat-stroked-button color="primary" (click)="becomeProctor()">
-            <mat-icon>workspace_premium</mat-icon> Become Proctor
-          </button>
+          <div class="launch__proctor-cta">
+            <button mat-stroked-button color="primary" (click)="becomeProctor()">
+              <mat-icon>workspace_premium</mat-icon> Become Proctor
+            </button>
+            <span class="launch__hint">Manage the packet, timers and start.</span>
+          </div>
         }
         @if (canManageConfig()) {
-          <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
-                  [disabled]="!isPacketSet()">
-            <mat-icon>play_arrow</mat-icon> Start Match
-          </button>
+          <div class="launch__start-cta">
+            <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
+                    [disabled]="!isPacketSet() || startPending"
+                    [attr.title]="startDisabledReason() || null">
+              <mat-icon>{{ startPending ? 'hourglass_top' : 'play_arrow' }}</mat-icon> {{ startButtonLabel() }}
+            </button>
+            @if (startDisabledReason()) {
+              <span class="launch__hint">{{ startDisabledReason() }}</span>
+            }
+          </div>
+        } @else if (!canBecomeProctor()) {
+          <!-- S3-20: everyone who isn't managing config is told where they
+               stand instead of seeing an empty CTA slot. -->
+          <span class="launch__status-line" aria-live="polite">{{ nonManagerStatusLine() }}</span>
         }
       </div>
     </section>
 
-    <!-- GRID -->
-    <section class="grid">
+    <!-- S3-13: names the seat just taken (contract STORY step 2), visually
+         hidden but reachable by a screen reader's polite live region. -->
+    <span class="visually-hidden-announce" aria-live="polite">{{ joinAnnouncement }}</span>
+
+    <!-- GRID. For non-managers the Teams/Players card comes first in the
+         template itself (S3-13/contract r2: DOM order, tab order and
+         reading order all match what's seen — an `@if` split, not the old
+         CSS `order: -1`, which left DOM/tab order pointing at Packet first
+         regardless — WCAG 1.3.2/2.4.3). Spectators keeps its own place
+         after the config cards in both views, exactly as the old `order`
+         rule left it (it never carried `.card--teams`). -->
+    @if (!canManageConfig()) {
+      <section class="grid grid--player-view">
+        <ng-container [ngTemplateOutlet]="teamsAndPlayersCard"></ng-container>
+        <ng-container [ngTemplateOutlet]="packetAndTimerCards"></ng-container>
+        <ng-container [ngTemplateOutlet]="spectatorsCard"></ng-container>
+      </section>
+    } @else {
+      <section class="grid">
+        <ng-container [ngTemplateOutlet]="packetAndTimerCards"></ng-container>
+        <ng-container [ngTemplateOutlet]="teamsAndPlayersCard"></ng-container>
+        <ng-container [ngTemplateOutlet]="spectatorsCard"></ng-container>
+      </section>
+    }
+
+    <ng-template #packetAndTimerCards>
       <!-- Packet -->
       <mat-card class="card">
         <mat-card-header>
-          <mat-card-title>
+          <h2 mat-card-title>
             <mat-icon>inventory_2</mat-icon>
             Packet
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle>Choose a packet to use for this match.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           @if (isPacketSet()) {
-            <div class="kv">
-              <!-- Only the proctor (or a proctorless owner) is sent the id (WP-FIXG5). -->
+            <div class="packet-summary">
+              <div class="packet-summary__name">{{ gameSession.currentMatch.packet.name }}</div>
+              <div class="packet-summary__meta">
+                @if (packetVisibilityLabel()) {
+                  <span class="packet-badge">{{ packetVisibilityLabel() }}</span>
+                }
+                <!-- FF1 fix 1 (THESIS "Nothing on this page lies" / H-08): a
+                     not-yet-restored session packet can carry present-but-
+                     empty tossups/bonuses arrays. Rather than render a
+                     fabricated "0 tossups · 0 bonuses", state plainly that
+                     the counts aren't in yet. H-08 (backend) stays open. -->
+                @if (packetCountsAvailable()) {
+                  <span class="packet-summary__counts">
+                    {{ getTossupCount() }} {{ getTossupCount() === 1 ? 'tossup' : 'tossups' }}
+                    &middot;
+                    {{ getBonusCount() }} {{ getBonusCount() === 1 ? 'bonus' : 'bonuses' }}
+                  </span>
+                } @else {
+                  <span class="packet-summary__counts packet-summary__counts--unknown">Counts unavailable</span>
+                }
+              </div>
+              <!-- Only the proctor (or a proctorless owner) is sent the id (WP-FIXG5).
+                   Demoted to a secondary, copyable detail (S3-08) — never the headline. -->
               @if (gameSession.currentMatch.packet.id) {
-                <div class="kv__row">
-                  <span class="kv__key">Packet ID: </span>
-                  <span class="kv__val code">{{ gameSession.currentMatch.packet.id }}</span>
+                <div class="packet-summary__id">
+                  <span class="packet-summary__id-label">Packet ID</span>
+                  <span class="packet-summary__id-value">{{ gameSession.currentMatch.packet.id }}</span>
+                  <button
+                    type="button"
+                    mat-icon-button
+                    aria-label="Copy packet ID"
+                    (click)="copyPacketId(gameSession.currentMatch.packet.id)"
+                    class="packet-summary__id-copy"
+                    >
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
                 </div>
               }
-              <div class="kv__row">
-                <span class="kv__key">Name: </span>
-                <span class="kv__val">{{ gameSession.currentMatch.packet.name }}</span>
-              </div>
             </div>
             <!-- Bonus Settings -->
             @if (hasPacketBonuses()) {
@@ -147,7 +256,8 @@
                 <p class="bonus-info">
                   <mat-icon class="info-icon">info</mat-icon>
                   <span>
-                    This packet contains <strong>{{ getBonusCount() }}</strong> bonus questions.
+                    This packet contains <strong>{{ getBonusCount() }}</strong>
+                    {{ getBonusCount() === 1 ? 'bonus question' : 'bonus questions' }}.
                     Each bonus part is worth 10 points (bonuses may have a different number of parts).
                   </span>
                 </p>
@@ -164,34 +274,38 @@
           } @else {
             <div class="empty-state">
               <mat-icon>inventory_2</mat-icon>
-              <p>No packet yet. Generate one from the question bank or search the library to set the questions for this match.</p>
+              <p>{{ packetEmptyMessage() }}</p>
             </div>
           }
         </mat-card-content>
-        <mat-card-actions align="end">
-          <!-- Preview reveals answers, so only a human proctor may see it — never a
-               player in a proctorless (solo / auto-judged) mode. -->
-          @if (gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) {
-            <button mat-stroked-button color="primary" (click)="openPacketPreview()">
-              <mat-icon>visibility</mat-icon>
-              Preview
-            </button>
-          }
-          @if (canManageConfig()) {
-            <button mat-raised-button color="primary" (click)="openPacketSearch()">
-              <mat-icon>travel_explore</mat-icon>
-              Find a Packet
-            </button>
-          }
-        </mat-card-actions>
+        <!-- S3-23: no empty ruled action bar left behind for a viewer who gets
+             neither button (a non-proctor in a proctorless-owner match). -->
+        @if ((gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) || canManageConfig()) {
+          <mat-card-actions align="end">
+            <!-- Preview reveals answers, so only a human proctor may see it — never a
+                 player in a proctorless (solo / auto-judged) mode. -->
+            @if (gameStateService.isSelfProctor() && gameSession.currentMatch.packet?.id) {
+              <button mat-stroked-button color="primary" (click)="openPacketPreview()">
+                <mat-icon>visibility</mat-icon>
+                Preview
+              </button>
+            }
+            @if (canManageConfig()) {
+              <button mat-raised-button color="primary" (click)="openPacketSearch()">
+                <mat-icon>travel_explore</mat-icon>
+                Find a Packet
+              </button>
+            }
+          </mat-card-actions>
+        }
       </mat-card>
       <!-- Timer Settings -->
       <mat-card class="card">
         <mat-card-header>
-          <mat-card-title>
+          <h2 mat-card-title>
             <mat-icon>timer</mat-icon>
             Timer Settings
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle>
             @if (canEditTimerSettings()) {
               Configure timer durations and behavior.
@@ -208,7 +322,7 @@
                 matInput
                 type="number"
                 [(ngModel)]="tossupTimerSeconds"
-                (ngModelChange)="updateTimerSettings()"
+                (change)="commitTossupTimer()"
                 [disabled]="!canEditTimerSettings()"
                 min="1"
                 max="60"
@@ -221,7 +335,7 @@
                 matInput
                 type="number"
                 [(ngModel)]="bonusTimerSeconds"
-                (ngModelChange)="updateTimerSettings()"
+                (change)="commitBonusTimer()"
                 [disabled]="!canEditTimerSettings()"
                 min="1"
                 max="60"
@@ -235,7 +349,7 @@
                   matInput
                   type="number"
                   [(ngModel)]="readingWordsPerSecond"
-                  (ngModelChange)="updateTimerSettings()"
+                  (change)="commitReadingSpeed()"
                   [disabled]="!canEditTimerSettings()"
                   min="1"
                   max="10"
@@ -254,14 +368,17 @@
           </div>
         </mat-card-content>
       </mat-card>
+    </ng-template>
+
+    <ng-template #teamsAndPlayersCard>
       <!-- Teams -->
       @if (!gameStateService.isFreeForAll()) {
-        <mat-card class="card card--span2">
+        <mat-card class="card card--span2 card--teams">
           <mat-card-header>
-            <mat-card-title>
+            <h2 mat-card-title>
               <mat-icon>groups</mat-icon>
               Teams
-            </mat-card-title>
+            </h2>
             <mat-card-subtitle>Join a team or switch to spectating.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -273,8 +390,25 @@
                   <div class="team__header">
                     <h3 class="team__name">
                       {{ team.teamName }}
-                      <span class="team__count">{{ team.teamPlayers.length || 0 }}</span>
+                      <span class="team__count">{{ team.teamPlayers.length || 0 }} {{ team.teamPlayers.length === 1 ? 'player' : 'players' }}</span>
                     </h3>
+                    <!-- S3-27: Join lives in the header, beside the count, so a
+                         player never has to scroll past a full (12+) roster to
+                         reach it. The proctor never gets a seat to join
+                         (S3-09): they aren't "on" any team either, so
+                         !isSelfOnTeam alone used to offer it. -->
+                    @if (!gameStateService.isSelfOnTeam(team.teamId) && !gameStateService.isSelfProctor()) {
+                      <button
+                        mat-stroked-button
+                        color="primary"
+                        class="team__join"
+                        [attr.aria-label]="'Join ' + team.teamName"
+                        (click)="joinTeam(team)"
+                        >
+                        <mat-icon>login</mat-icon>
+                        Join
+                      </button>
+                    }
                   </div>
                   <div class="team__players">
                     @for (player of team.teamPlayers; track trackByPlayerId($index, player)) {
@@ -282,20 +416,11 @@
                         class="player"
                         >
                         <mat-icon class="player__avatar">face</mat-icon>
-                        <span class="player__name">{{ player.name }}</span>
+                        <span class="player__name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
+                        @if (isSelfPlayer(player.playerId)) {
+                          <span class="you-chip">You</span>
+                        }
                       </div>
-                    }
-                  </div>
-                  <div class="team__actions">
-                    @if (!gameStateService.isSelfOnTeam(team.teamId)) {
-                      <button
-                        mat-stroked-button
-                        color="primary"
-                        (click)="joinTeam(team)"
-                        >
-                        <mat-icon>login</mat-icon>
-                        Join {{ team.teamName }}
-                      </button>
                     }
                   </div>
                 </div>
@@ -306,12 +431,12 @@
       }
       <!-- Free for all: flat player list, no join/spectate switching -->
       @if (gameStateService.isFreeForAll()) {
-        <mat-card class="card card--span2">
+        <mat-card class="card card--span2 card--teams">
           <mat-card-header>
-            <mat-card-title>
+            <h2 mat-card-title>
               <mat-icon>person_off</mat-icon>
               Players
-            </mat-card-title>
+            </h2>
             <mat-card-subtitle>Everyone plays for themselves.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -319,47 +444,71 @@
               @for (player of gameSession.playerList; track trackByPlayerId($index, player)) {
                 <div class="player">
                   <mat-icon class="player__avatar">face</mat-icon>
-                  <span class="player__name">{{ player.name }}</span>
+                  <span class="player__name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
+                  @if (isSelfPlayer(player.playerId)) {
+                    <span class="you-chip">You</span>
+                  }
                 </div>
               }
             </div>
           </mat-card-content>
         </mat-card>
       }
+    </ng-template>
+
+    <ng-template #spectatorsCard>
       <!-- Spectators -->
       <mat-card class="card card--span2">
         <mat-card-header>
-          <mat-card-title>
+          <h2 mat-card-title>
             <mat-icon>visibility</mat-icon>
             Spectators
-          </mat-card-title>
+          </h2>
           <mat-card-subtitle>People watching the match.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <mat-list class="spectators">
-            @for (player of gameSession.playerList; track trackByPlayerId($index, player)) {
-              <mat-list-item
-                [style.display]="player.playerMode === PlayerMode.SPECTATOR ? '' : 'none'"
-                >
-                <mat-icon matListItemIcon>face</mat-icon>
-                <div matListItemTitle>{{ player.name }}</div>
-              </mat-list-item>
-            }
-          </mat-list>
+          <!-- S3-12: filter to actual spectators (the list used to render every
+               player and hide the rest with CSS, so an empty spectator list
+               rendered as a blank card instead of a designed empty state).
+               S3-23: a one-line empty, not a tall empty-state block — the
+               Spectators card doesn't need the same weight as the Packet
+               card's true "nothing set up yet" empty state. -->
+          @if (spectators(gameSession).length === 0) {
+            <p class="spectators-empty">No one is spectating yet.</p>
+          } @else {
+            <mat-list class="spectators">
+              @for (player of spectators(gameSession); track trackByPlayerId($index, player)) {
+                <mat-list-item>
+                  <mat-icon matListItemIcon>face</mat-icon>
+                  <div matListItemTitle>
+                    <span class="spectator-name" dir="auto" [attr.title]="player.name">{{ player.name }}</span>
+                    @if (isSelfPlayer(player.playerId)) {
+                      <span class="you-chip">You</span>
+                    }
+                  </div>
+                </mat-list-item>
+              }
+            </mat-list>
+          }
         </mat-card-content>
-        <mat-card-actions align="end">
-          @if (gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()) {
+        <!-- S3-23: no empty ruled action bar for a viewer who can't spectate
+             from here (already spectating, or not on a team/proctor). -->
+        @if (gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()) {
+          <mat-card-actions align="end">
+            <!-- S3-28: Spectate is never the loudest seat action — Join (a
+                 team) is the one filled action for an unseated player.
+                 Leaving a seat stays available, just demoted. -->
             <button
-              mat-raised-button
+              mat-stroked-button
               color="primary"
               (click)="switchToSpectate()"
               >
               <mat-icon>visibility</mat-icon>
               Spectate
             </button>
-          }
-        </mat-card-actions>
+          </mat-card-actions>
+        }
       </mat-card>
-    </section>
+    </ng-template>
   </div>
 }
