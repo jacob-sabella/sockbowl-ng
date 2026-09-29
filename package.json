@@ -46,10 +46,10 @@
     "@angular/compiler-cli": "^22.2.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
-    "@types/jasmine": "^6.0.0",
+    "@types/jasmine": "^7.0.0",
     "@types/sockjs-client": "^1.5.4",
     "angular-eslint": "22.5.0",
-    "eslint": "^10.9.1",
+    "eslint": "^10.11.0",
     "graphql": "^17.0.2",
     "istanbul-lib-instrument": "^6.0.3",
     "jasmine-core": "~7.0.2",
@@ -60,7 +60,7 @@
     "karma-jasmine-html-reporter": "~2.3.0",
     "quicktype": "^26.0.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "8.70.1"
+    "typescript-eslint": "8.71.0"
   },
   "overrides": {
     "http-proxy-middleware": "^3.0.7",
