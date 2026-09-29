@@ -1,4 +1,16 @@
-import {Component, DestroyRef, inject, ChangeDetectionStrategy, OnDestroy, OnInit} from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostBinding,
+  NgZone,
+  inject,
+  ChangeDetectionStrategy,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Location} from '@angular/common';
 import {ActivatedRoute, ParamMap, Router} from "@angular/router";
@@ -34,7 +46,7 @@ const CONNECTING_ESCALATION_MS = 15000;
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class GameCanvasComponent implements OnInit, OnDestroy {
+export class GameCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private location = inject(Location);
@@ -42,6 +54,7 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private gameStateService = inject(GameStateService);
   private gameWebSocketService = inject(GameWebSocketService);
+  private ngZone = inject(NgZone);
 
 
   gameSession$: Observable<GameSession>;
@@ -65,6 +78,26 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
    */
   bannerActive = false;
   private bannerActiveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * The stomp-error-banner's own real rendered height, in px (M5 FF3
+   * remaining #3): the finish review found the previous fix's reserve
+   * (`game-buzzer.component.scss`'s `&--banner` padding) was a guessed
+   * constant re-measured by hand each round and never proven at every
+   * width. A `ResizeObserver` on the banner's own rendered element (see
+   * `ngAfterViewInit`) replaces the guess with the
+   * banner's actual box, published as a CSS custom property on this
+   * component's own host so any descendant, at any width, can reserve
+   * exactly that much space and no more — the reserve now follows the
+   * banner by construction instead of by estimate. Doesn't change
+   * `bannerActive`'s own boolean/timer semantics above: that still answers
+   * *whether* the slot should be reserved (mirroring the banner's auto-hide
+   * window); this answers *how much*.
+   */
+  @HostBinding('style.--stomp-banner-height.px') stompBannerHeightPx = 0;
+  @ViewChild('stompBanner', {read: ElementRef}) private stompBannerHostRef?: ElementRef<HTMLElement>;
+  private stompBannerResizeObserver?: ResizeObserver;
+  private stompBannerMutationObserver?: MutationObserver;
 
   /**
    * The socket's connection lifecycle (M5 S1-03), for a non-fatal
@@ -127,9 +160,67 @@ export class GameCanvasComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Starts measuring the stomp-error-banner's real height (M5 FF3 remaining
+   * #3, see `stompBannerHeightPx`'s doc).
+   *
+   * `#stompBanner` sits on `<app-stomp-error-banner>` itself, but that host
+   * element is never sized by its own content: the banner's template wraps
+   * everything in a `position: fixed` div (by design — see that file's own
+   * comment on why it's an overlay, not in flow), and a fixed-position
+   * descendant contributes nothing to its unstyled, default-`inline` parent's
+   * box. So this reaches one level in, to the `.stomp-error-banner` div
+   * itself, which is what actually has the height this component needs.
+   * That div is also only in the DOM while `visible()` is true (the banner's
+   * own `@if`), appearing and disappearing on its own schedule (dismiss,
+   * the non-fatal auto-hide, a new error) that this component doesn't
+   * otherwise observe — a `MutationObserver` on the stable host element
+   * re-runs `sync()` on every such change, so the live `ResizeObserver`
+   * always ends up attached to the current div, or to nothing (height 0)
+   * when there isn't one, without this file needing to know why it changed.
+   *
+   * Guarded for environments without `ResizeObserver`/`MutationObserver`
+   * (older tooling, e.g. Karma's own iframe in edge cases) so a missing
+   * measurement degrades to the CSS var's fallback rather than throwing.
+   * Both observers' callbacks run outside Angular's zone unless zone.js has
+   * patched them, so the update is wrapped in `NgZone.run` to guarantee the
+   * `@HostBinding` actually flushes to the DOM.
+   */
+  ngAfterViewInit(): void {
+    const host = this.stompBannerHostRef?.nativeElement;
+    if (!host || typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') {
+      return;
+    }
+    const setHeight = (height: number) => {
+      if (height !== this.stompBannerHeightPx) {
+        this.ngZone.run(() => {
+          this.stompBannerHeightPx = height;
+        });
+      }
+    };
+    const sync = () => {
+      const banner = host.querySelector<HTMLElement>('.stomp-error-banner');
+      this.stompBannerResizeObserver?.disconnect();
+      if (!banner) {
+        setHeight(0);
+        return;
+      }
+      setHeight(banner.getBoundingClientRect().height);
+      this.stompBannerResizeObserver = new ResizeObserver(
+        () => setHeight(banner.getBoundingClientRect().height)
+      );
+      this.stompBannerResizeObserver.observe(banner);
+    };
+    sync();
+    this.stompBannerMutationObserver = new MutationObserver(sync);
+    this.stompBannerMutationObserver.observe(host, {childList: true});
+  }
+
   /** Leaving the canvas means leaving this game seat (NG-R4-02). */
   ngOnDestroy(): void {
     this.clearBannerActiveTimer();
+    this.stompBannerResizeObserver?.disconnect();
+    this.stompBannerMutationObserver?.disconnect();
     this.gameStateService.leaveGame();
   }
 

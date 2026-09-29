@@ -89,28 +89,37 @@
   // the banner's own auto-hide window (see the `@Input` doc), so this
   // reserves space for exactly as long as the banner would normally be up.
   //
-  // M5 FF2 remaining #3: 3.5rem (56px) assumed a one-line banner, but the
-  // banner's own text is server-supplied and wraps at narrow widths — the
-  // S1-22 rate-limited fixture ("Buzzes are coming in too fast — try again
-  // in a few seconds." + its "Try again in Ns." clause) wraps to 2 lines at
-  // 390px and measured 88px tall (pixel-sampled from the FF1 final capture:
-  // the banner's own bottom border lands at y=144, 56px navbar + 88px
-  // banner). That's 32px past the old 56px reserve, so the card's top edge
-  // and rounded corner rendered underneath the banner instead of below it.
-  // 6rem (96px) clears the measured 88px with a buffer for minor
-  // font-metric/browser variance; ≥600px keeps its old value (the banner
-  // has the width there to stay on one line — "Desktop is clean" per the
-  // finish review) and landscape phone is unchanged for the same reason
-  // (844px is plenty wide for one line).
+  // M5 FF2 remaining #3: raised the reserve from a one-line 3.5rem guess to
+  // a hand-measured 6rem after the S1-22 rate-limited fixture wrapped to 2
+  // lines at 390px — which the finish review then marked partial again:
+  // the guess was re-measured, not fixed, and still unproven at 280px,
+  // where this same message wraps to several more lines than either round
+  // budgeted for.
+  //
+  // M5 FF3 remaining #3: replaced the guess entirely. `--stomp-banner-height`
+  // (set on `app-game-canvas`'s own host by a `ResizeObserver` in
+  // `game-canvas.component.ts`, see `stompBannerHeightPx`'s doc) is the
+  // banner's actual rendered height, at whatever width the page happens to
+  // be — so the reserve now follows the banner by construction instead of
+  // by re-measuring one fixture and hoping the next one fits. The `96px`
+  // fallback (the old 6rem value) only matters for the one frame before the
+  // observer's first callback fires, or if `ResizeObserver` is unavailable;
+  // `bannerActive` still gates whether `&--banner` applies at all, so a
+  // hidden banner reserves nothing regardless of this variable's value.
+  // Desktop and landscape phone keep their own base-padding halves (2rem /
+  // 0.5rem, unrelated to the banner) plus the same live variable, since a
+  // real height already reflects however narrow or wide the banner's own
+  // wrap turns out to be at that breakpoint — a per-breakpoint reserve
+  // constant is no longer needed now that the value itself is real.
   &--banner {
-    padding-top: calc(1rem + 6rem);
+    padding-top: calc(1rem + var(--stomp-banner-height, 96px));
 
     @media (min-width: 600px) {
-      padding-top: calc(2rem + 3.5rem);
+      padding-top: calc(2rem + var(--stomp-banner-height, 96px));
     }
 
     @media (orientation: landscape) and (max-height: 500px) {
-      padding-top: calc(0.5rem + 3.5rem);
+      padding-top: calc(0.5rem + var(--stomp-banner-height, 96px));
     }
   }
 }
@@ -725,8 +734,21 @@
   // arbitrary fraction of one, so the current player's own row (typically
   // the first rendered) is reachable without scrolling on first view. Own
   // margins trimmed too, same rationale as the dome unit's.
+  //
+  // M5 FF3 remaining R1: 7.5rem (120px) was picked to fit, not measured —
+  // the finish review found it still sliced a row (both a plain header and
+  // the taller, two-line `.you-badge` header measured on the real frozen
+  // `team-list.component.scss` markup this component can only read, not
+  // change). Replaced it with the actual worst case: the frozen team-list
+  // component's own `.team-lists-container` (`margin-top: 1.25rem` = 20px at
+  // this breakpoint) plus a header showing the meta pills on their own wrapped
+  // line (measured 116.25px, taller than the plain 84.6875px header) plus
+  // one row (`mat-list-item`'s frozen `min-height: 48px` = 3rem) = 184.25px;
+  // 11.625rem (186px) clears it with a small rounding buffer. As a
+  // `min-height`, a shorter header (the common case) still yields a
+  // taller-than-strictly-needed but never a sliced box.
   @media (max-width: 320px) {
-    min-height: 7.5rem;
+    min-height: 11.625rem;
     margin-top: 0.25rem;
     margin-bottom: 0.25rem;
   }
