@@ -40,7 +40,6 @@
                       role="button"
                       tabindex="0"
                       [attr.aria-disabled]="!packet.playable"
-                      [attr.title]="!packet.playable ? 'Not playable yet: add tossups and resolve validation issues.' : null"
                       (click)="packet.playable && selectPacket(packet)"
                       (keydown.enter)="packet.playable && selectPacket(packet)"
                       (keydown.space)="$event.preventDefault(); packet.playable && selectPacket(packet)"
@@ -55,6 +54,12 @@
                             <span>{{ packet.tossupCount }} tossups &middot; {{ packet.bonusCount }} bonuses</span>
                             @if (packet.visibility === 'DRAFT') {
                               <span class="draft-hint">Draft (only you can play)</span>
+                            }
+                            @if (!packet.playable) {
+                              <!-- S3-24: the reason used to live only in a hover
+                                   tooltip (title); visible text now, so it reads
+                                   on touch and without a mouse. -->
+                              <span class="not-playable-reason">Not playable yet — add tossups and resolve validation issues.</span>
                             }
                           </div>
                         </div>
@@ -701,7 +706,7 @@
       <button
         mat-raised-button
         color="primary"
-        [disabled]="(!selectedPacketId && !generatedPacket) || selectionLoading"
+        [disabled]="!hasActiveTabSelection() || selectionLoading"
         (click)="confirmSelection()"
         class="select-btn"
         >
@@ -710,7 +715,7 @@
         } @else {
           <mat-icon>check</mat-icon>
         }
-        Use Packet
+        <span class="select-btn__label">{{ activeTabSelectionLabel() }}</span>
       </button>
     }
   </mat-dialog-actions>

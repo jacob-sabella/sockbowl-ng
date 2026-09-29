@@ -19,30 +19,32 @@
               <mat-icon>content_copy</mat-icon>
             </button>
 
-            <!-- Cast Button (only show if available and user is proctor) -->
+            <!-- Cast control (only show if available and user is proctor). S3-26:
+                 one control, three states — it used to render nothing at all
+                 for CONNECTING (the device picker open), so it looked like it
+                 vanished mid-handshake. Never icon-only on touch: the label
+                 is always the button's accessible name, and shows as visible
+                 text from 600px up. -->
             @if ((castAvailable$ | async) && gameStateService.isSelfProctor()) {
-              @if ((castConnectionState$ | async) === PresentationConnectionState.DISCONNECTED) {
+              @if (castConnectionState$ | async; as castState) {
                 <button
                   type="button"
-                  mat-icon-button
-                  aria-label="Cast to TV"
-                  (click)="startCasting()"
-                  matTooltip="Cast to TV"
-                  class="hero__icon-btn hero__icon-btn--cast">
-                  <mat-icon>cast</mat-icon>
+                  mat-stroked-button
+                  class="hero__cast-btn"
+                  [class.hero__cast-btn--connected]="castState === PresentationConnectionState.CONNECTED"
+                  [disabled]="castState === PresentationConnectionState.CONNECTING"
+                  [attr.aria-label]="castButtonLabel(castState)"
+                  (click)="onCastButtonClick(castState)">
+                  @if (castState === PresentationConnectionState.CONNECTING) {
+                    <mat-spinner diameter="18" aria-hidden="true" class="hero__cast-spinner"></mat-spinner>
+                  } @else if (castState === PresentationConnectionState.CONNECTED) {
+                    <mat-icon aria-hidden="true">cast_connected</mat-icon>
+                  } @else {
+                    <mat-icon aria-hidden="true">cast</mat-icon>
+                  }
+                  <span class="hero__cast-label">{{ castButtonLabel(castState) }}</span>
                 </button>
-              }
-              @if ((castConnectionState$ | async) === PresentationConnectionState.CONNECTED) {
-                <button
-                  type="button"
-                  mat-icon-button
-                  color="primary"
-                  aria-label="Stop casting"
-                  (click)="stopCasting()"
-                  matTooltip="Stop casting"
-                  class="hero__icon-btn hero__icon-btn--cast hero__icon-btn--connected">
-                  <mat-icon>cast_connected</mat-icon>
-                </button>
+                <span class="hero__cast-announce" aria-live="polite">{{ castButtonLabel(castState) }}</span>
               }
             }
           </div>
@@ -88,10 +90,12 @@
               [attr.aria-label]="(isPacketSet() ? 'Packet selected' : 'Packet not selected yet')">
           <mat-icon aria-hidden="true">{{ isPacketSet() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Packet
         </span>
-        <span class="launch__step" role="listitem"
-              [class.done]="hasAnyPlayers()"
-              [attr.aria-label]="(hasAnyPlayers() ? 'Players have joined' : 'No players have joined yet')">
-          <mat-icon aria-hidden="true">{{ hasAnyPlayers() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon> Players
+        <!-- S3-21: an informational count, not a checklist step — Start
+             gates only on the packet (startDisabledReason), so a player
+             count here must never look like a second, uncleared gate. -->
+        <span class="launch__step launch__step--info" role="listitem"
+              [attr.aria-label]="playerCountLabel()">
+          <mat-icon aria-hidden="true">groups</mat-icon> {{ playerCountLabel() }}
         </span>
       </div>
       <div class="launch__cta">
@@ -108,7 +112,7 @@
             <button mat-raised-button color="primary" (click)="startMatch()" class="start-game-btn"
                     [disabled]="!isPacketSet() || startPending"
                     [attr.title]="startDisabledReason() || null">
-              <mat-icon>play_arrow</mat-icon> Start Match
+              <mat-icon>{{ startPending ? 'hourglass_top' : 'play_arrow' }}</mat-icon> {{ startButtonLabel() }}
             </button>
             @if (startDisabledReason()) {
               <span class="launch__hint">{{ startDisabledReason() }}</span>
@@ -404,8 +408,11 @@
              from here (already spectating, or not on a team/proctor). -->
         @if (gameStateService.isSelfOnAnyTeam() || gameStateService.isSelfProctor()) {
           <mat-card-actions align="end">
+            <!-- S3-28: Spectate is never the loudest seat action — Join (a
+                 team) is the one filled action for an unseated player.
+                 Leaving a seat stays available, just demoted. -->
             <button
-              mat-raised-button
+              mat-stroked-button
               color="primary"
               (click)="switchToSpectate()"
               >

@@ -235,11 +235,6 @@ export class GameConfigComponent implements OnInit {
 
   /* ─── Proctor ──────────────────────────────────────────────────────────── */
 
-  /** True once at least one player has joined a team (a match needs players). */
-  hasAnyPlayers(): boolean {
-    return (this.gameSession?.teamList ?? []).some(t => (t.teamPlayers?.length ?? 0) > 0);
-  }
-
   canBecomeProctor(): boolean {
     // Proctorless modes have no proctor role.
     if (this.gameStateService.isProctorless()) {
@@ -377,8 +372,12 @@ export class GameConfigComponent implements OnInit {
         this.packetId = result.id;
         this.selectedPacketId = result.id;
         this.selectedPacket = result;  // Store full packet for bonus info
+        // S3-19: this pick was optimistic too (the dialog never asked the
+        // game server), so the confirmation waits for the same server echo
+        // `confirmPendingPacketIfEchoed` already waits for — never fired
+        // just because the dialog closed with something in hand.
+        this.awaitingPacketConfirmationId = result.id?.toString() ?? null;
         this.gameStateService.setMatchPacket(this.packetId);
-        this.snack.open('Packet selected.', 'OK', { duration: 2000 });
 
         // Reset bonuses if packet doesn't have any
         if (!this.hasPacketBonuses() && this.bonusesEnabled) {
@@ -455,8 +454,13 @@ export class GameConfigComponent implements OnInit {
    * backend's existing proctorless-owner authorization in updateGameSettings).
    */
   canEditTimerSettings(): boolean {
+    // S3-25: the backend's updateGameSettings authorizes the session owner
+    // for every proctorless mode (isProctorless(), which is single-player OR
+    // auto-judged multiplayer), not just auto-judged multiplayer — this used
+    // to exclude single-player, so a solo owner saw their own timers as
+    // read-only even though the server would have accepted the change.
     return this.gameStateService.isSelfProctor()
-      || (this.gameStateService.isAutoJudgedMultiplayer() && this.gameStateService.isCurrentPlayerGameOwner());
+      || (this.gameStateService.isProctorless() && this.gameStateService.isCurrentPlayerGameOwner());
   }
 
   /**
@@ -538,6 +542,35 @@ export class GameConfigComponent implements OnInit {
   /** Why Start is disabled right now, stated in words (S3-17). Empty once ready. */
   startDisabledReason(): string {
     return this.isPacketSet() ? '' : 'Choose a packet to start';
+  }
+
+  /**
+   * The Start button's own label (S3-21/S3-09): "Starting…" while a click is
+   * in flight, so the button doesn't just sit there disabled with no
+   * explanation for the gap before the match actually starts.
+   */
+  startButtonLabel(): string {
+    return this.startPending ? 'Starting…' : 'Start Match';
+  }
+
+  /**
+   * Total players in the room right now (S3-21): informational only, and
+   * deliberately never a gate — Start stays gated on the packet alone
+   * (contract STORY step 6 / `startDisabledReason`). Mirrors the template's
+   * own FFA/team-based branch (`isFreeForAll`) so this counts the same
+   * players the Teams/Players card shows.
+   */
+  playerCount(): number {
+    if (this.gameStateService.isFreeForAll()) {
+      return (this.gameSession?.playerList ?? []).filter(p => p.playerMode === PlayerMode.BUZZER).length;
+    }
+    return (this.gameSession?.teamList ?? []).reduce((sum, t) => sum + (t.teamPlayers?.length ?? 0), 0);
+  }
+
+  /** The readiness strip's Players text (S3-21): a count, not an unchecked checklist step. */
+  playerCountLabel(): string {
+    const n = this.playerCount();
+    return n === 0 ? '0 players yet' : `${n} ${n === 1 ? 'player' : 'players'}`;
   }
 
   /**
@@ -644,5 +677,31 @@ export class GameConfigComponent implements OnInit {
    */
   stopCasting(): void {
     this.presentationConnectionService.stopPresentation();
+  }
+
+  /**
+   * The cast control's label for its current state (S3-26). The control used
+   * to render nothing at all while CONNECTING (the device picker is open),
+   * so it appeared to vanish mid-handshake; every state now has words.
+   */
+  castButtonLabel(state: PresentationConnectionState | null): string {
+    switch (state) {
+      case PresentationConnectionState.CONNECTING:
+        return 'Connecting…';
+      case PresentationConnectionState.CONNECTED:
+        return 'Casting · Stop';
+      default:
+        // DISCONNECTED, TERMINATED, or not yet known — all offer to start.
+        return 'Cast to TV';
+    }
+  }
+
+  /** The cast control's click handler (S3-26): disabled while connecting, so this never fires then. */
+  onCastButtonClick(state: PresentationConnectionState | null): void {
+    if (state === PresentationConnectionState.CONNECTED) {
+      this.stopCasting();
+    } else if (state !== PresentationConnectionState.CONNECTING) {
+      this.startCasting();
+    }
   }
 }

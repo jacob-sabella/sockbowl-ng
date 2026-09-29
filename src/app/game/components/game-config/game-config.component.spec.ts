@@ -1,4 +1,5 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -13,6 +14,7 @@ import { PresentationConnectionService } from '../../services/presentation-conne
 import { CastStateService } from '../../services/cast-state.service';
 import { PacketPreviewComponent } from '../packet-preview/packet-preview.component';
 import { GameSession, MatchState, Packet, PlayerMode } from '../../models/sockbowl/sockbowl-interfaces';
+import { PresentationConnectionState } from '../../models/cast-interfaces';
 
 describe('GameConfigComponent proctor preview', () => {
   let session$: ReplaySubject<GameSession>;
@@ -222,6 +224,47 @@ describe('GameConfigComponent proctor preview', () => {
     processErrors$.next({ error: 'StartMatch: Permission Denied' });
     expect(snack.open).toHaveBeenCalledWith('StartMatch: Permission Denied', 'Dismiss', jasmine.anything());
   });
+
+  describe('packet dialog confirmation follows the server echo (S3-19)', () => {
+    function openDialogWith(result: Packet | undefined): void {
+      dialog.open.and.returnValue({ afterClosed: () => of(result) } as any);
+      component.openPacketSearch();
+    }
+
+    it('does not confirm merely because the dialog closed with a pick', () => {
+      component.ngOnInit();
+      session$.next(sessionWith({ id: null, name: null, tossups: [] } as any));
+      snack.open.calls.reset();
+
+      openDialogWith({ id: 'packet-7', name: 'Regionals', tossups: [], bonuses: [] } as any);
+
+      expect(gameStateService.setMatchPacket).toHaveBeenCalledWith('packet-7');
+      expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
+    });
+
+    it('shows "Packet \'<name>\' selected." once the session echoes the same id back', () => {
+      component.ngOnInit();
+      session$.next(sessionWith({ id: null, name: null, tossups: [] } as any));
+      snack.open.calls.reset();
+
+      openDialogWith({ id: 'packet-7', name: 'Regionals', tossups: [], bonuses: [] } as any);
+      expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
+
+      session$.next(sessionWith({ id: 'packet-7', name: 'Regionals' } as any));
+
+      expect(snack.open).toHaveBeenCalledWith("Packet 'Regionals' selected.", 'OK', jasmine.anything());
+    });
+
+    it('never confirms if a different packet lands on the session first', () => {
+      component.ngOnInit();
+      session$.next(sessionWith({ id: null, name: null, tossups: [] } as any));
+
+      openDialogWith({ id: 'packet-7', name: 'Regionals', tossups: [], bonuses: [] } as any);
+      session$.next(sessionWith({ id: 'packet-other', name: "Someone else's" } as any));
+
+      expect(snack.open).not.toHaveBeenCalledWith(jasmine.stringMatching(/selected/), 'OK', jasmine.anything());
+    });
+  });
 });
 
 describe('GameConfigComponent impeccable polish (S3)', () => {
@@ -246,7 +289,7 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
     gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
       'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
       'isProctorless', 'getProctor', 'requestGameSession', 'setMatchPacket', 'updateGameSettings',
-      'getCurrentPlayer', 'startMatch', 'isSelfSpectator', 'getCurrentPlayerTeam',
+      'getCurrentPlayer', 'startMatch', 'isSelfSpectator', 'getCurrentPlayerTeam', 'isFreeForAll',
     ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
     gameStateService.isSelfProctor.and.returnValue(true);
 
@@ -258,7 +301,15 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
         { provide: SockbowlQuestionsService, useValue: jasmine.createSpyObj<SockbowlQuestionsService>('SockbowlQuestionsService', ['getPacketById']) },
         { provide: MatDialog, useValue: jasmine.createSpyObj<MatDialog>('MatDialog', ['open']) },
         { provide: MatSnackBar, useValue: jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']) },
-        { provide: PresentationConnectionService, useValue: { isAvailable$: of(false), connectionState$: of(null) } },
+        {
+          provide: PresentationConnectionService,
+          useValue: {
+            isAvailable$: of(false),
+            connectionState$: of(null),
+            startPresentation: jasmine.createSpy('startPresentation'),
+            stopPresentation: jasmine.createSpy('stopPresentation'),
+          },
+        },
         { provide: CastStateService, useValue: {} },
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -554,6 +605,188 @@ describe('GameConfigComponent impeccable polish (S3)', () => {
       expect(result.length).toBe(3);
       expect(result[0].name).toBe(longName);
     });
+  });
+
+  describe('readiness strip: Players is a count, not a checklist step (S3-21)', () => {
+    it('reads "0 players yet" with no one seated', () => {
+      const session = sessionWith({ teamList: [{ teamId: 't1', teamPlayers: [] } as any] });
+      gameStateService.isFreeForAll.and.returnValue(false);
+      session$.next(session);
+      component.ngOnInit();
+
+      expect(component.playerCountLabel()).toBe('0 players yet');
+    });
+
+    it('pluralises the count across every team', () => {
+      gameStateService.isFreeForAll.and.returnValue(false);
+      session$.next(sessionWith({
+        teamList: [
+          { teamId: 't1', teamPlayers: [{ playerId: 'p1' }] } as any,
+          { teamId: 't2', teamPlayers: [{ playerId: 'p2' }, { playerId: 'p3' }] } as any,
+        ],
+      }));
+      component.ngOnInit();
+
+      expect(component.playerCountLabel()).toBe('3 players');
+    });
+
+    it('uses the singular for exactly one player', () => {
+      gameStateService.isFreeForAll.and.returnValue(false);
+      session$.next(sessionWith({ teamList: [{ teamId: 't1', teamPlayers: [{ playerId: 'p1' }] } as any] }));
+      component.ngOnInit();
+
+      expect(component.playerCountLabel()).toBe('1 player');
+    });
+
+    it('counts from playerList in free-for-all, where teamList is not the source of truth', () => {
+      gameStateService.isFreeForAll.and.returnValue(true);
+      session$.next(sessionWith({
+        teamList: [],
+        playerList: [
+          { playerId: 'p1', playerMode: PlayerMode.BUZZER } as any,
+          { playerId: 'p2', playerMode: PlayerMode.BUZZER } as any,
+          { playerId: 'p3', playerMode: PlayerMode.SPECTATOR } as any,
+        ],
+      }));
+      component.ngOnInit();
+
+      expect(component.playerCountLabel()).toBe('2 players');
+    });
+  });
+
+  describe('Start button reads "Starting…" while pending (S3-21, alongside S3-09)', () => {
+    it('reports "Start Match" normally and "Starting…" once a click is in flight', () => {
+      expect(component.startButtonLabel()).toBe('Start Match');
+
+      component.startMatch();
+
+      expect(component.startButtonLabel()).toBe('Starting…');
+    });
+  });
+
+  describe('solo owner may edit their own timer settings (S3-25)', () => {
+    beforeEach(() => {
+      session$.next(sessionWith({
+        gameSettings: {
+          proctorType: 'NONE', gameMode: 'SINGLE_PLAYER', bonusesEnabled: false,
+          timerSettings: { tossupTimerSeconds: 5, bonusTimerSeconds: 5, autoTimerEnabled: true, readingWordsPerSecond: 4 },
+        } as any,
+      }));
+      component.ngOnInit();
+      gameStateService.isSelfProctor.and.returnValue(false);
+      gameStateService.isAutoJudgedMultiplayer.and.returnValue(false);
+    });
+
+    it('may edit timer settings as the single-player owner (matches the backend\'s isProctorless gate)', () => {
+      gameStateService.isProctorless.and.returnValue(true);
+      gameStateService.isCurrentPlayerGameOwner.and.returnValue(true);
+
+      expect(component.canEditTimerSettings()).toBeTrue();
+    });
+
+    it('still cannot edit timer settings if somehow not the session owner in a proctorless game', () => {
+      gameStateService.isProctorless.and.returnValue(true);
+      gameStateService.isCurrentPlayerGameOwner.and.returnValue(false);
+
+      expect(component.canEditTimerSettings()).toBeFalse();
+    });
+  });
+
+  describe('cast control: three states, never vanishing (S3-26)', () => {
+    it('offers to start casting when disconnected (and equally for a terminated connection)', () => {
+      expect(component.castButtonLabel(PresentationConnectionState.DISCONNECTED)).toBe('Cast to TV');
+      expect(component.castButtonLabel(PresentationConnectionState.TERMINATED)).toBe('Cast to TV');
+      expect(component.castButtonLabel(null)).toBe('Cast to TV');
+    });
+
+    it('reads "Connecting…" while the handshake is in progress', () => {
+      expect(component.castButtonLabel(PresentationConnectionState.CONNECTING)).toBe('Connecting…');
+    });
+
+    it('reads "Casting · Stop" once connected', () => {
+      expect(component.castButtonLabel(PresentationConnectionState.CONNECTED)).toBe('Casting · Stop');
+    });
+
+    it('starts casting from disconnected, and does nothing while connecting', () => {
+      const presentationConnectionService = TestBed.inject(PresentationConnectionService) as unknown as
+        { startPresentation: jasmine.Spy; stopPresentation: jasmine.Spy };
+
+      component.onCastButtonClick(PresentationConnectionState.DISCONNECTED);
+      expect(presentationConnectionService.startPresentation).toHaveBeenCalledTimes(1);
+
+      component.onCastButtonClick(PresentationConnectionState.CONNECTING);
+      expect(presentationConnectionService.startPresentation).toHaveBeenCalledTimes(1);
+      expect(presentationConnectionService.stopPresentation).not.toHaveBeenCalled();
+    });
+
+    it('stops casting when connected', () => {
+      const presentationConnectionService = TestBed.inject(PresentationConnectionService) as unknown as
+        { stopPresentation: jasmine.Spy };
+
+      component.onCastButtonClick(PresentationConnectionState.CONNECTED);
+
+      expect(presentationConnectionService.stopPresentation).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('GameConfigComponent rendered lobby (S3-28)', () => {
+  let session$: ReplaySubject<GameSession>;
+  let gameStateService: jasmine.SpyObj<GameStateService>;
+  let fixture: ReturnType<typeof TestBed.createComponent<GameConfigComponent>>;
+
+  function sessionWith(overrides: Partial<GameSession>): GameSession {
+    return {
+      gameSettings: {},
+      currentMatch: { packet: null },
+      teamList: [],
+      playerList: [],
+      ...overrides,
+    } as unknown as GameSession;
+  }
+
+  beforeEach(() => {
+    session$ = new ReplaySubject<GameSession>(1);
+    gameStateService = jasmine.createSpyObj<GameStateService>('GameStateService', [
+      'isSelfProctor', 'isSinglePlayer', 'isAutoJudgedMultiplayer', 'isCurrentPlayerGameOwner',
+      'isProctorless', 'isAutoProctor', 'isFreeForAll', 'getProctor', 'requestGameSession',
+      'setMatchPacket', 'updateGameSettings', 'getCurrentPlayer', 'startMatch', 'isSelfSpectator',
+      'getCurrentPlayerTeam', 'isSelfOnTeam', 'isSelfOnAnyTeam',
+    ], { gameSession$: session$.asObservable(), playerSessionId: 'p1' });
+    gameStateService.isSelfProctor.and.returnValue(true);
+    gameStateService.isProctorless.and.returnValue(false);
+    gameStateService.isFreeForAll.and.returnValue(false);
+    gameStateService.isSelfOnTeam.and.returnValue(false);
+    gameStateService.isSelfOnAnyTeam.and.returnValue(false);
+
+    TestBed.configureTestingModule({
+      declarations: [GameConfigComponent],
+      imports: [CommonModule],
+      providers: [
+        { provide: GameStateService, useValue: gameStateService },
+        { provide: GameMessageService, useValue: { gameEventObservables: { ProcessError: of(null) } } },
+        { provide: SockbowlQuestionsService, useValue: jasmine.createSpyObj<SockbowlQuestionsService>('SockbowlQuestionsService', ['getPacketById']) },
+        { provide: MatDialog, useValue: jasmine.createSpyObj<MatDialog>('MatDialog', ['open']) },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']) },
+        { provide: PresentationConnectionService, useValue: { isAvailable$: of(false), connectionState$: of(null) } },
+        { provide: CastStateService, useValue: {} },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    fixture = TestBed.createComponent(GameConfigComponent);
+    fixture.componentInstance.ngOnInit();
+    session$.next(sessionWith({ teamList: [{ teamId: 't1', teamName: 'Team A', teamPlayers: [] } as any] }));
+    fixture.detectChanges();
+  });
+
+  it('renders Spectate as a stroked button, never a raised primary one (S3-28)', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const spectateBtn = Array.from(el.querySelectorAll('button'))
+      .find(b => b.textContent?.includes('Spectate')) as HTMLButtonElement | undefined;
+
+    expect(spectateBtn).withContext('Spectate button should render for the proctor seat').toBeTruthy();
+    expect(spectateBtn?.hasAttribute('mat-stroked-button')).toBeTrue();
+    expect(spectateBtn?.hasAttribute('mat-raised-button')).toBeFalse();
   });
 });
 

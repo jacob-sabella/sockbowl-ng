@@ -154,6 +154,60 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* ===== Cast control (S3-26) =====
+   One stroked button, three states. The global `.mat-mdc-outlined-button`
+   rule already gives this a >=44px touch target and a hairline border
+   (material-theme.scss/_material-overrides.scss, F1); this only adds the
+   icon+label layout and the state colours. */
+.hero__cast-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+
+  .hero__cast-label {
+    /* Icon + aria-label only below 600px (FORM: "never icon-only on touch",
+       but the accessible name still comes from aria-label, not this text). */
+    display: none;
+  }
+
+  @media (min-width: 601px) {
+    .hero__cast-label { display: inline; }
+  }
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+.hero__cast-btn--connected {
+  color: var(--accent-primary-text) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.hero__cast-spinner {
+  /* Decorative (aria-hidden): the button's own aria-label already names the
+     "Connecting…" state, so this never needs its own accessible name. */
+  display: inline-flex;
+}
+
+/* Visually hidden, but still reachable by a screen reader's polite live
+   region — announces the cast state changing without adding a second
+   visible copy of the label next to the button. */
+.hero__cast-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .hero__player {
   display: flex;
   align-items: center;
@@ -821,6 +875,9 @@ mat-card-title { font-family: var(--font-display); letter-spacing: -0.01em; }
     mat-icon { font-size: 18px; width: 18px; height: 18px; }
     &.done { color: var(--success-text); }
   }
+  /* S3-21: Players is informational only — it never gates Start, so it never
+     takes the checklist's done/not-done colour treatment. */
+  .launch__step--info { color: var(--text-muted); }
 
   .launch__cta {
     display: flex;

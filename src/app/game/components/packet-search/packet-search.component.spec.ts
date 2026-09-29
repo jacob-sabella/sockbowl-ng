@@ -296,6 +296,7 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
   let component: PacketSearchComponent;
   let fixture: ComponentFixture<PacketSearchComponent>;
   let questions: jasmine.SpyObj<SockbowlQuestionsService>;
+  let dialogClose: jasmine.Spy;
 
   const somePacket: PacketSummary = {
     id: 'p1', name: 'A Packet', visibility: 'DRAFT', version: 1,
@@ -324,12 +325,13 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
       (myPacketsResponse ?? of({ items: myPacketsItems, total: myPacketsItems.length, page: 0, size: 10 })) as any
     );
     questions.getPacketById.and.returnValue(of(null));
+    dialogClose = jasmine.createSpy('close');
 
     TestBed.configureTestingModule({
       declarations: [PacketSearchComponent],
       imports: STATE_PRIMITIVES,
       providers: [
-        { provide: MatDialogRef, useValue: { close: () => { /* noop test double */ } } },
+        { provide: MatDialogRef, useValue: { close: dialogClose } },
         { provide: MAT_DIALOG_DATA, useValue: {} },
         { provide: MatSnackBar, useValue: { open: () => { /* noop test double */ } } },
         { provide: SockbowlQuestionsService, useValue: questions },
@@ -396,6 +398,74 @@ describe('PacketSearchComponent My packets / search (PB-14)', () => {
     component.confirmSelection();
 
     expect(questions.getPacketById).toHaveBeenCalledWith('p1');
+  });
+
+  describe('refreshes My packets on window focus (S3-24)', () => {
+    it('reloads My packets when the window regains focus while signed in', () => {
+      configure(true, [somePacket]);
+      expect(questions.listPackets).toHaveBeenCalledTimes(1);
+
+      questions.listPackets.and.returnValue(of({ items: [somePacket, unplayablePacket], total: 2, page: 0, size: 10 }));
+      component.onWindowFocus();
+
+      expect(questions.listPackets).toHaveBeenCalledTimes(2);
+      expect(component.myPackets).toEqual([somePacket, unplayablePacket]);
+    });
+
+    it('does nothing on window focus when not authenticated', () => {
+      configure(false);
+      expect(questions.listPackets).not.toHaveBeenCalled();
+
+      component.onWindowFocus();
+
+      expect(questions.listPackets).not.toHaveBeenCalled();
+    });
+
+    it('shows the reason a My packets row is not playable, instead of a hidden tooltip', () => {
+      configure(true, [unplayablePacket]);
+
+      const reason = (fixture.nativeElement as HTMLElement).querySelector('.not-playable-reason');
+      expect(reason).not.toBeNull();
+      expect(reason?.textContent).toContain('Not playable yet');
+    });
+  });
+
+  describe('one commit source across tabs (S3-19)', () => {
+    it('selecting a Library packet clears a prior AI generation, so confirmSelection commits the Library pick', () => {
+      configure(true, [somePacket]);
+      component.generatedPacket = { id: 'g1', name: 'Generated', tossups: [], bonuses: [] } as any;
+      component.selectedTabIndex = 0;
+
+      component.selectPacket(somePacket);
+
+      expect(component.generatedPacket).toBeNull();
+      expect(component.hasActiveTabSelection()).toBeTrue();
+      expect(component.activeTabSelectionLabel()).toBe('Use "A Packet"');
+    });
+
+    it('generating on the AI tab clears a prior Library pick, so confirmSelection commits the generated packet', () => {
+      configure(true, [somePacket]);
+      component.selectPacket(somePacket);
+      component.selectedTabIndex = component.AI_TAB_INDEX;
+
+      const generated = { id: 'g1', name: 'AI Packet', tossups: [], bonuses: [] } as any;
+      component.generatedPacket = generated;
+      component.selectedPacketId = '';
+
+      expect(component.hasActiveTabSelection()).toBeTrue();
+      expect(component.activeTabSelectionLabel()).toBe('Use "AI Packet"');
+
+      component.confirmSelection();
+
+      expect(dialogClose).toHaveBeenCalledWith(generated);
+      expect(questions.getPacketById).not.toHaveBeenCalled();
+    });
+
+    it('footer button reads "Use Packet" with nothing selected on the active tab', () => {
+      configure(true, [somePacket]);
+      expect(component.hasActiveTabSelection()).toBeFalse();
+      expect(component.activeTabSelectionLabel()).toBe('Use Packet');
+    });
   });
 
   describe('My packets and search: loading/empty/error states (S3-01, S3-14)', () => {

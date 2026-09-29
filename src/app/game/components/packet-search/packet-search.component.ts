@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, computed, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, HostListener, computed, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -77,6 +77,8 @@ export class PacketSearchComponent implements OnInit {
    */
   selectedTabIndex = 0;
   readonly QUESTION_BANK_TAB_INDEX = 1;
+  /** Only present with `question:generate` (S3-19's tab-aware commit source). */
+  readonly AI_TAB_INDEX = 2;
 
   // Generate tab properties
   generateTopic = "";
@@ -264,6 +266,20 @@ export class PacketSearchComponent implements OnInit {
     this.searchSubject.next(this.searchQuery);
   }
 
+  /**
+   * Refreshes "My packets" when the window regains focus while this dialog
+   * is open (S3-24): a first-time author who just used "Open the builder" (a
+   * new tab) to create their first packet came back to a dialog that never
+   * knew it had appeared. The component only exists while the dialog is
+   * open, so this listener is never live otherwise.
+   */
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    if (this.auth.isAuthenticated()) {
+      this.loadMyPackets();
+    }
+  }
+
   /** Load the caller's own packets (PB-14), most recent first, up to 10. */
   loadMyPackets(): void {
     this.myPacketsLoading = true;
@@ -359,6 +375,9 @@ export class PacketSearchComponent implements OnInit {
 
   selectPacket(packet: PacketSummary): void {
     this.selectedPacketId = packet.id;
+    // S3-19: a fresh Library/My-packets pick is the only pending selection
+    // now — a packet generated earlier on the AI tab must never win over it.
+    this.generatedPacket = null;
   }
 
   /** (modelChange) from AiKeyPickerComponent: also refresh the LLM-parameter visibility. */
@@ -392,6 +411,9 @@ export class PacketSearchComponent implements OnInit {
     ).subscribe({
       next: (packet) => {
         this.generatedPacket = packet;
+        // S3-19: symmetric with selectPacket() — a fresh AI generation is the
+        // only pending selection now, never a stale Library pick from before.
+        this.selectedPacketId = '';
         this.isGenerating = false;
         this.snackBar.open('Packet generated successfully!', 'Close', {
           duration: 3000
@@ -561,10 +583,39 @@ export class PacketSearchComponent implements OnInit {
     return true;
   }
 
+  /**
+   * Whether the footer's shared "Use Packet" button has something to commit
+   * for the tab currently showing (S3-19) — never a stale pick left over on
+   * a tab the caller isn't even looking at.
+   */
+  hasActiveTabSelection(): boolean {
+    return this.selectedTabIndex === this.AI_TAB_INDEX ? !!this.generatedPacket : !!this.selectedPacketId;
+  }
+
+  /** The footer button's label: names the pending pick when there is one (S3-19). */
+  activeTabSelectionLabel(): string {
+    const name = this.activeTabSelectionName();
+    return name ? `Use "${name}"` : 'Use Packet';
+  }
+
+  private activeTabSelectionName(): string | null {
+    if (this.selectedTabIndex === this.AI_TAB_INDEX) {
+      return this.generatedPacket?.name ?? null;
+    }
+    return this.myPackets.find(p => p.id === this.selectedPacketId)?.name
+      ?? this.searchResults.find(p => p.id === this.selectedPacketId)?.name
+      ?? null;
+  }
+
   confirmSelection(): void {
-    // Prioritize generated packet if it exists
-    if (this.generatedPacket) {
-      this.dialogRef.close(this.generatedPacket);
+    // S3-19: commit exactly what the active tab shows as selected —
+    // confirmSelection() used to always prefer `generatedPacket` regardless
+    // of which tab the caller was looking at, so a packet generated earlier
+    // on the AI tab could silently override a later Library pick.
+    if (this.selectedTabIndex === this.AI_TAB_INDEX) {
+      if (this.generatedPacket) {
+        this.dialogRef.close(this.generatedPacket);
+      }
       return;
     }
 
