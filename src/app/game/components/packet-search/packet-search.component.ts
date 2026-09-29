@@ -441,6 +441,21 @@ export class PacketSearchComponent implements OnInit {
         // since the interceptor has no view to put one in.
         if (error.status === 429 || error.status === 503) {
           this.aiLimitBanner = this.classifyLimitBanner(error);
+          if (this.aiLimitBanner) {
+            // FF3 (finish review #3, R2 regression): S3-37 raised the
+            // dialog's own max-height so more of the AI tab would fit,
+            // which left the interceptor's snackbar (already opened for
+            // this same response, by the time this handler runs) overlapping
+            // the now-taller dialog's footer and repeating this banner's
+            // message underneath it. `rate-limit.interceptor.ts` is a frozen
+            // shared file (H-05), so it can't be told not to open the
+            // snackbar in the first place; dismissing it the instant this
+            // banner takes over saying the same thing is the suppression the
+            // finish review asked for, done entirely from this surface's own
+            // file via the same singleton MatSnackBar instance the
+            // interceptor used to open it.
+            this.snackBar.dismiss();
+          }
           return;
         }
 

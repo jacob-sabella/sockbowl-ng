@@ -399,6 +399,26 @@
             <!-- Form - hidden when generating -->
             @if (!isGenerating) {
               <div class="generate-form">
+                <!-- FF3 fix 2 (finish review #3): a visible, always-shown
+                     scroll affordance at the top of the tab, where it's seen
+                     without having to scroll first (a `position: sticky`
+                     cue at the fold turned out to sit inside Material's own
+                     `.mat-mdc-tab-body-content`, which is `overflow:
+                     hidden` — a non-visible-but-still-clipping ancestor
+                     that breaks sticky's containing-block chain up to the
+                     dialog's real scroll container; overriding Material's
+                     internals here risked the tab-switch animation). This
+                     tab still doesn't fit inside the dialog's one scroll
+                     container at 1440x900 even after S3-30/S3-37's and this
+                     round's own shrinking (contract FIRST VIEWPORT r3:
+                     "nothing ... is cut off at any viewport" — reachable by
+                     the one scroll, but nothing was showing that it needed
+                     to be). -->
+                <p class="generate-form__scroll-cue">
+                  <mat-icon aria-hidden="true">unfold_more</mat-icon>
+                  This tab scrolls — Generate and Advanced options are further down.
+                </p>
+
                 <!-- Fail-closed (D12) / quota (D10) banner (S3-02): persistent,
                      names the reason and the reset time when known, and points
                      at the ungated tab instead. Not dismissable — a fresh
@@ -447,13 +467,21 @@
                     required
                     >
                 </mat-form-field>
+                <!-- FF3 fix 2 (finish review #3): the placeholder was two
+                     lines long, which combined with `rows="3"` was the
+                     largest single contributor to this field landing at the
+                     dialog's fold at 1440x900 (finish review r2/r3). One
+                     shorter example and one fewer row keeps the field just
+                     as usable while shrinking its own footprint; the
+                     scroll cue at the top of this tab (`.generate-form__scroll-cue`
+                     above) covers whatever the freed room still doesn't. -->
                 <mat-form-field class="context-field" appearance="outline" floatLabel="always">
                   <mat-label>Context (Optional)</mat-label>
                   <textarea
                     matInput
                     [(ngModel)]="generateContext"
-                    placeholder="e.g., Focus on the Roman Republic, Include chemical reactions, 1920s-1940s era"
-                    rows="3"
+                    placeholder="e.g., Focus on the Roman Republic era"
+                    rows="2"
                   ></textarea>
                 </mat-form-field>
 

@@ -24,11 +24,13 @@ describe('PacketSearchComponent', () => {
   let authSpy: jasmine.SpyObj<AuthService>;
   let dialogClose: jasmine.Spy;
   let snackOpen: jasmine.Spy;
+  let snackDismiss: jasmine.Spy;
   let questions: Record<string, jasmine.Spy>;
 
   function configure(permissions: string[], importResult: any = { id: 'p1', name: 'Generated' }): void {
     dialogClose = jasmine.createSpy('close');
     snackOpen = jasmine.createSpy('open');
+    snackDismiss = jasmine.createSpy('dismiss');
     questions = {
       getBankTaxonomyCounts: jasmine.createSpy('getBankTaxonomyCounts')
         .and.returnValue(of({ categories: {}, subcategories: {}, alternates: {} })),
@@ -56,7 +58,7 @@ describe('PacketSearchComponent', () => {
       providers: [
         { provide: MatDialogRef, useValue: { close: dialogClose } },
         { provide: MAT_DIALOG_DATA, useValue: {} },
-        { provide: MatSnackBar, useValue: { open: snackOpen } },
+        { provide: MatSnackBar, useValue: { open: snackOpen, dismiss: snackDismiss } },
         { provide: SockbowlQuestionsService, useValue: questions },
         { provide: OpenAiModelService, useValue: {} },
         { provide: AuthService, useValue: authSpy },
@@ -302,6 +304,26 @@ describe('PacketSearchComponent', () => {
       expect(component.aiLimitBanner).toBeNull();
       expect(fixture.nativeElement.querySelector('.ai-limit-banner')).toBeNull();
       expect(snackOpen).toHaveBeenCalledWith(jasmine.stringMatching(/Invalid request/), jasmine.anything(), jasmine.anything());
+      // A plain 400 has no interceptor snackbar of its own to suppress.
+      expect(snackDismiss).not.toHaveBeenCalled();
+    });
+
+    // FF3 (finish review #3, R2 regression): S3-37's taller dialog left the
+    // global RateLimitInterceptor's snackbar (already open by the time this
+    // handler runs, from the same 429/503) overlapping the dialog's own
+    // footer and repeating this banner's message underneath it.
+    it('dismisses the interceptor\'s snackbar once the inline banner takes over (429/503, R2)', () => {
+      configure(['question:generate']);
+      questions['generatePacket'].and.returnValue(throwError(() => new HttpErrorResponse({
+        status: 503, error: { error: 'limiter_unavailable', policy: 'ai-generate' },
+      })));
+      fillGenerateForm();
+
+      component.generateAIPacket();
+      fixture.detectChanges();
+
+      expect(component.aiLimitBanner).not.toBeNull();
+      expect(snackDismiss).toHaveBeenCalled();
     });
 
     it('clears the banner once a fresh attempt is made', () => {

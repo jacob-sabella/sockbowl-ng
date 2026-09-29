@@ -241,6 +241,17 @@ const states: CaptureState[] = [
       await fillGenerateForm(page, 'Ancient Rome');
       await page.getByRole('button', { name: 'Generate Packet' }).click();
       await page.getByText('AI generation is temporarily unavailable').waitFor({ state: 'visible' });
+      // FF3 (finish review #3, R2 regression): the persistent banner and the
+      // interceptor's one-shot snackbar both appear from the same 429/503;
+      // packet-search.component.ts now dismisses that snackbar the instant
+      // the banner takes over, but Material's own exit transition still
+      // takes a beat to actually leave the DOM (confirmed via a live
+      // getBoundingClientRect probe: gone by +100ms, not +0ms). This is the
+      // same kind of deliberate settle-wait as `config-my-packets-empty`'s
+      // dialog-open wait below, not a race being timed around — the
+      // dismissal itself is unconditional and instant; only its animation
+      // needs the frame.
+      await page.waitForTimeout(200);
     },
   ),
   withSteps(
@@ -262,6 +273,10 @@ const states: CaptureState[] = [
       // itself rather than the ambiguous text to avoid a strict-mode
       // violation across the two matches.
       await page.locator('.ai-limit-banner__title', { hasText: 'reached your AI generation limit' }).waitFor({ state: 'visible' });
+      // FF3 (finish review #3, R2 regression): see the matching comment on
+      // `config-generate-ai-fails-closed` above — same dismissed-snackbar
+      // settle wait.
+      await page.waitForTimeout(200);
     },
   ),
   withSteps(

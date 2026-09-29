@@ -1059,6 +1059,22 @@ mat-card-actions {
   .launch .launch__proctor-cta,
   .launch .launch__start-cta {
     align-items: stretch;
+
+    // FF3 fix 7 (finish review #3): the specificity fix above made
+    // `align-items: stretch` actually apply, but that only stretches the
+    // button to fill *this column's own* width — and the column itself is
+    // a row flex item of `.launch__cta` with no flex-basis of its own, so
+    // it still only grows as wide as its widest child (the button's
+    // content), which is circular and leaves the button exactly where it
+    // started (~157px, finish review r2 confirmed via a live DOM dump: the
+    // fix's `align-items` computed correctly, but the button's own
+    // `getBoundingClientRect().width` hadn't moved). `.launch__cta button {
+    // flex: 1; }` above doesn't reach this either — the button's actual
+    // flex container is this column (`flex-direction: column`), so `flex`
+    // there governs its *height* share, not its width. The column itself
+    // needs to claim the full row before `align-items: stretch` has
+    // anything to stretch the button into.
+    flex: 1 1 100%;
   }
 }
 
