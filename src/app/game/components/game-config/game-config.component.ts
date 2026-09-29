@@ -450,6 +450,23 @@ export class GameConfigComponent implements OnInit {
   }
 
   /**
+   * Whether getTossupCount()/getBonusCount() reflect the packet's real
+   * content (FF1 material fix 1 / THESIS "Nothing on this page lies").
+   *
+   * H-08: a non-selecting seat's first GameSessionUpdate can carry a packet
+   * with `tossups: []`/`bonuses: []` present-but-empty before the full
+   * packet is restored — indistinguishable from a genuinely empty count by
+   * `.length` alone. `hasQuestions` is the same "real packet content"
+   * check `syncSelectedPacket` already uses to decide whether to re-ask the
+   * game server, so a fabricated "0 tossups · 0 bonuses" is never rendered
+   * from that same not-yet-restored state. H-08 stays open for the backend;
+   * this only stops the lie.
+   */
+  packetCountsAvailable(): boolean {
+    return GameConfigComponent.hasQuestions(this.selectedPacket);
+  }
+
+  /**
    * The packet's visibility badge text (S3-08): EPHEMERAL/DRAFT/PUBLISHED,
    * read off whichever seat's view carries it. A non-proctor's session
    * packet may not carry visibility at all (H-03); this only ever shows

@@ -12,7 +12,10 @@
 .generate-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  // FF1 fix 2: was 1rem — one of three candidates tightened so the AI tab's
+  // Context field isn't sliced at the scroll edge at 1440x900 (contract
+  // FIRST VIEWPORT r3: "not cut off at any viewport").
+  gap: 0.75rem;
 
   // Validation error banner
   .validation-error {
@@ -39,8 +42,11 @@
   .ai-limit-banner {
     display: flex;
     align-items: flex-start;
-    gap: 0.75rem;
-    padding: 1rem 1.25rem;
+    // FF1 fix 2: tightened alongside .generate-form's gap and the Remember
+    // row below (candidates named in the finish review) so the AI tab fits
+    // at 1440x900 without slicing the Context field.
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
     background: color-mix(in srgb, var(--warning) 12%, var(--surface));
     border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
     border-radius: var(--radius-md);
@@ -56,7 +62,7 @@
     }
 
     &__title {
-      margin: 0 0 0.25rem;
+      margin: 0 0 0.15rem;
       font-weight: 700;
       color: var(--text-primary);
     }
@@ -65,6 +71,7 @@
       margin: 0;
       color: var(--text-secondary);
       font-size: var(--text-sm);
+      line-height: 1.35;
     }
 
     button {
@@ -79,6 +86,18 @@
         align-self: flex-start;
       }
     }
+  }
+
+  // FF1 fix 2: an explicit, deliberately tight column gap for the whole
+  // fields group (ai-key-picker, Topic, Context, count, checkbox,
+  // Advanced) instead of each field's own default subscript spacing —
+  // `app-ai-key-picker`'s own internal layout (including its Remember row)
+  // is frozen (F1/Must keep), so this is the space this component controls
+  // around it.
+  &__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   // Everything the banner above locks out while it's showing (S3-02).

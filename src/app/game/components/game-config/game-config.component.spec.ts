@@ -872,6 +872,87 @@ describe('GameConfigComponent rendered lobby (S3-28)', () => {
     expect(cardTitles.length).toBeGreaterThan(0);
     cardTitles.forEach(title => expect(title.tagName).toBe('H2'));
   });
+
+  it('states counts are unavailable rather than a fabricated "0 tossups · 0 bonuses" (H-08, FF1 fix 1)', () => {
+    // The H-08 shape: a non-selecting seat's session packet carries an id
+    // and a name, but present-but-empty tossups/bonuses arrays — never
+    // restored, not genuinely a zero-question packet.
+    session$.next(sessionWith({
+      currentMatch: { packet: { id: 'p1', name: 'Regionals', tossups: [], bonuses: [] } } as unknown as GameSession['currentMatch'],
+    }));
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const counts = el.querySelector('.packet-summary__counts');
+    expect(counts?.textContent?.trim()).toBe('Counts unavailable');
+    expect(counts?.classList.contains('packet-summary__counts--unknown')).toBeTrue();
+  });
+
+  it('shows the real tossup/bonus counts once the packet actually carries its questions (FF1 fix 1)', () => {
+    session$.next(sessionWith({
+      currentMatch: {
+        packet: {
+          id: 'p1', name: 'Regionals',
+          tossups: [{ tossup: { question: 'Q1', answer: 'A1' } }],
+          bonuses: [{ bonus: { question: 'B1' } }],
+        },
+      },
+    } as unknown as Partial<GameSession>));
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const counts = el.querySelector('.packet-summary__counts');
+    expect(counts?.textContent).toContain('1 tossup');
+    expect(counts?.textContent).toContain('1 bonus');
+    expect(counts?.classList.contains('packet-summary__counts--unknown')).toBeFalse();
+  });
+
+  it('states "Playing as" inline with the name, not as a stacked eyebrow label (FF1 fix 5)', () => {
+    gameStateService.getCurrentPlayer.and.returnValue({ name: 'Solo' } as unknown as ReturnType<GameStateService['getCurrentPlayer']>);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.hero__code-label')).withContext('the stacked eyebrow label is gone').toBeNull();
+    expect(el.querySelector('.hero__player-name')?.textContent?.trim()).toBe('Playing as Solo');
+  });
+
+  it('states the room code without a stacked "Room code" eyebrow, but keeps it in the accessible name (FF1 fix 5)', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const codeValue = el.querySelector('.hero__code-value');
+    expect(el.querySelector('.hero__code-label')).withContext('the stacked eyebrow label is gone').toBeNull();
+    expect(codeValue?.getAttribute('aria-label')).toContain('Room code');
+  });
+
+  it('states Proctor as a standalone sentence, not under a stacked "Proctor" eyebrow (FF1 fix 5)', () => {
+    gameStateService.getProctor.and.returnValue({ name: 'Alice' } as unknown as ReturnType<GameStateService['getProctor']>);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.launch__label')).withContext('the stacked MODE/PROCTOR eyebrow is gone').toBeNull();
+    expect(el.querySelector('.launch__name')?.textContent?.trim()).toBe('Proctor Alice');
+  });
+
+  it('every team header reserves the same 44px Join row whether or not Join renders there (r3 regression, FF1 fix 6)', () => {
+    gameStateService.isSelfProctor.and.returnValue(false);
+    gameStateService.isSelfOnTeam.and.callFake((teamId: string) => teamId === 't1');
+    session$.next(sessionWith({
+      teamList: [
+        { teamId: 't1', teamName: 'Team A', teamPlayers: [] } as unknown as Team,
+        { teamId: 't2', teamName: 'Team B', teamPlayers: [] } as unknown as Team,
+      ],
+    }));
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const headers = Array.from(el.querySelectorAll('.team__header')) as HTMLElement[];
+    expect(headers.length).toBe(2);
+    // Team A: already seated, no Join. Team B: not seated, Join renders.
+    expect(headers[0].querySelector('.team__join')).toBeNull();
+    expect(headers[1].querySelector('.team__join')).toBeTruthy();
+    headers.forEach(header => {
+      expect(getComputedStyle(header).minHeight).toBe('44px');
+    });
+  });
 });
 
 describe('GameConfigComponent pending packet (PB-15)', () => {

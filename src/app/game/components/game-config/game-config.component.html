@@ -6,9 +6,11 @@
     <section class="hero">
       <div class="hero__card">
         <div class="hero__code">
-          <span class="hero__code-label">Room code</span>
+          <!-- FF1 fix 5 (eyebrow ban): the code carries itself — no stacked
+               "ROOM CODE" label above it. Screen readers still get the
+               context via aria-label on the value itself. -->
           <div class="hero__code-row">
-            <span class="hero__code-value">{{ gameSession.joinCode }}</span>
+            <span class="hero__code-value" [attr.aria-label]="'Room code ' + gameSession.joinCode">{{ gameSession.joinCode }}</span>
             <button
               type="button"
               mat-icon-button
@@ -45,8 +47,21 @@
                          attributes alone. A plain decorative span has no
                          implicit role or tabindex, so it can't trip that
                          check; the button's own [attr.aria-label] above is
-                         still the accessible name. -->
-                    <span class="hero__cast-spinner" aria-hidden="true"></span>
+                         still the accessible name.
+
+                         FF1 fix 4: `matButtonIcon` routes this into
+                         matButton's own leading-icon content-projection slot
+                         (the same slot a bare `<mat-icon>` lands in for the
+                         other two states) — MatButton's template only sends
+                         `.material-icons`/`mat-icon`/`[matButtonIcon]`
+                         content there; a plain, unmarked `<span>` instead
+                         falls through into `.mdc-button__label` alongside
+                         the text, where `.hero__cast-btn`'s own `gap` can't
+                         reach (the label span has no flex layout of its
+                         own), so the spinner touched the text with no space
+                         and sat off its baseline. This carries no role or
+                         behaviour, only where the node is slotted. -->
+                    <span class="hero__cast-spinner" matButtonIcon aria-hidden="true"></span>
                   } @else if (castState === PresentationConnectionState.CONNECTED) {
                     <mat-icon aria-hidden="true">cast_connected</mat-icon>
                   } @else {
@@ -64,9 +79,9 @@
             <mat-icon aria-hidden="true">person</mat-icon>
             <div class="hero__player-meta">
               <!-- S3-23: "Playing as" so the in-game name reads distinctly
-                   from the navbar's signed-in account name. -->
-              <span class="hero__code-label">Playing as</span>
-              <span class="hero__player-name">{{ gameStateService.getCurrentPlayer()?.name }}</span>
+                   from the navbar's signed-in account name. FF1 fix 5: said
+                   inline, not as a stacked eyebrow above the value. -->
+              <span class="hero__player-name">Playing as {{ gameStateService.getCurrentPlayer()?.name }}</span>
             </div>
           </div>
         }
@@ -75,11 +90,12 @@
 
     <!-- LAUNCH BAR — proctor status + the primary Start Match action -->
     <section class="launch">
+      <!-- FF1 fix 5 (eyebrow ban): no stacked "MODE"/"PROCTOR" label above
+           the sentence — the sentence stands on its own. -->
       @if (gameStateService.isProctorless()) {
         <div class="launch__proctor">
           <mat-icon class="launch__icon">{{ gameStateService.isAutoProctor() ? 'groups' : (gameStateService.isFreeForAll() ? 'person_off' : 'person') }}</mat-icon>
           <div class="launch__meta">
-            <span class="launch__label">Mode</span>
             <span class="launch__name">
               {{ gameStateService.isAutoProctor() ? 'Auto-judged, no proctor' : (gameStateService.isFreeForAll() ? 'Free for all, everyone for themselves' : 'Solo practice, answers auto-judged') }}
             </span>
@@ -89,8 +105,7 @@
         <div class="launch__proctor">
           <mat-icon class="launch__icon">supervisor_account</mat-icon>
           <div class="launch__meta">
-            <span class="launch__label">Proctor</span>
-            <span class="launch__name">{{ gameStateService.getProctor()?.name || 'No proctor yet' }}</span>
+            <span class="launch__name">{{ gameStateService.getProctor()?.name ? ('Proctor ' + gameStateService.getProctor()?.name) : 'No proctor yet' }}</span>
           </div>
         </div>
       }
@@ -179,11 +194,20 @@
                 @if (packetVisibilityLabel()) {
                   <span class="packet-badge">{{ packetVisibilityLabel() }}</span>
                 }
-                <span class="packet-summary__counts">
-                  {{ getTossupCount() }} {{ getTossupCount() === 1 ? 'tossup' : 'tossups' }}
-                  &middot;
-                  {{ getBonusCount() }} {{ getBonusCount() === 1 ? 'bonus' : 'bonuses' }}
-                </span>
+                <!-- FF1 fix 1 (THESIS "Nothing on this page lies" / H-08): a
+                     not-yet-restored session packet can carry present-but-
+                     empty tossups/bonuses arrays. Rather than render a
+                     fabricated "0 tossups · 0 bonuses", state plainly that
+                     the counts aren't in yet. H-08 (backend) stays open. -->
+                @if (packetCountsAvailable()) {
+                  <span class="packet-summary__counts">
+                    {{ getTossupCount() }} {{ getTossupCount() === 1 ? 'tossup' : 'tossups' }}
+                    &middot;
+                    {{ getBonusCount() }} {{ getBonusCount() === 1 ? 'bonus' : 'bonuses' }}
+                  </span>
+                } @else {
+                  <span class="packet-summary__counts packet-summary__counts--unknown">Counts unavailable</span>
+                }
               </div>
               <!-- Only the proctor (or a proctorless owner) is sent the id (WP-FIXG5).
                    Demoted to a secondary, copyable detail (S3-08) — never the headline. -->

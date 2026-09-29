@@ -4,6 +4,24 @@
  * anyComponentStyle budget entry stays under the 20kB warning threshold -
  * this one dialog used to hold all three tabs' CSS as a single 29kB file. */
 
+:host {
+  display: block;
+}
+
+// FF1 fix 7: in the full-screen dialog (`openPacketSearch()`'s
+// `height/maxHeight: '100dvh'`), `.mat-mdc-dialog-surface` (Material's own,
+// height: 100%) is a column flex container whose only child is THIS
+// component's host element — an ordinary element has no intrinsic height,
+// so with no height/flex of its own it sizes to its content instead of
+// filling the surface, leaving the sticky footer floating above a blank
+// strip at the true bottom of the panel whenever the tab's content is
+// shorter than the viewport (the My-packets-empty state, for one). Only the
+// fullscreen surface is stretched to `100dvh` in the first place, so this
+// is scoped to it rather than changed for the centered dialog too.
+:host-context(.packet-search-dialog--fullscreen) {
+  height: 100%;
+}
+
 .packet-search-dialog {
   display: flex;
   flex-direction: column;
@@ -68,6 +86,18 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    // FF1 fix 7: Material's own `.mat-mdc-dialog-content` ships a
+    // `max-height: 65vh` (see node_modules/@angular/material's dialog
+    // styles) that this rule never cleared. `flex: 1` only decides how much
+    // of the *available* track space this item is willing to claim — the
+    // result is still clamped to `max-height` afterwards, so the surface
+    // (already correctly stretched to `100dvh`/`100%` by the two rules
+    // above) left a blank ~35vh strip below the footer on every capture
+    // shorter than that cap, which is exactly "the sticky footer floating
+    // above a blank strip" this fix batch named. `min-height: 0` above is
+    // what makes it *shrinkable*; `max-height: none` is what makes it
+    // *growable* past Material's own ceiling.
+    max-height: none;
     gap: 2rem;
     padding: 0 !important;
     overflow-y: auto;
