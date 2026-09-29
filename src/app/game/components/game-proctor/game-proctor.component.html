@@ -269,7 +269,6 @@
               @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_READING_PREAMBLE) {
                 <div>
                   <div class="bonus-preamble-section">
-                    <h4>Preamble</h4>
                     <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
                     </div>
                   </div>
@@ -291,7 +290,6 @@
                 <div>
                   <!-- Show preamble (read-only) -->
                   <div class="bonus-preamble-section completed">
-                    <h4>Preamble (read)</h4>
                     <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
                     </div>
                   </div>
@@ -399,7 +397,6 @@
               @if (gameSession.currentMatch.currentRound.roundState === RoundState.BONUS_COMPLETED) {
                 <div>
                   <div class="bonus-preamble-section completed">
-                    <h4>Preamble (read)</h4>
                     <div class="bonus-preamble" [innerHTML]="gameSession.currentMatch.currentRound.currentBonus?.preamble || '(No preamble)'">
                     </div>
                   </div>

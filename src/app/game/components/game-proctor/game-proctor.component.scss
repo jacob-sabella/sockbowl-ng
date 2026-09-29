@@ -33,9 +33,13 @@
   max-width: 1200px;
   margin: 0 auto;
   background: var(--surface) !important;
-  border: 1px solid var(--border-subtle) !important;
   border-radius: var(--radius-lg) !important;
-  box-shadow: var(--shadow-lg) !important;
+  // M5 FF1: a colourless `--shadow-lg` resolves to `currentColor`, which
+  // read as a near-white halo in the dark themes and a heavy band in light.
+  // Naming `--shadow-color` fixes the tint; the 1px border this used to
+  // pair with is dropped (a border plus a wide shadow is two depth systems
+  // stacked on the same edge - No-Glow allows only one).
+  box-shadow: var(--shadow-lg) var(--shadow-color);
   position: relative;
   padding: var(--spacing-md) !important;
 
@@ -64,14 +68,9 @@
       padding-right: 5.5rem !important;
     }
 
-    &::before {
-      content: '';
-      display: inline-block;
-      width: 3px;
-      height: 1.1rem;
-      background: var(--accent-primary);
-      border-radius: 2px;
-    }
+    // M5 FF1: the stripe/accent-bar treatment is reserved for the
+    // question/answer/verdict reading blocks - not chrome like this title.
+    // Removed rather than restyled.
 
     .last-tossup-chip {
       font-family: var(--font-display);
@@ -516,21 +515,20 @@
   }
 }
 
+// M5 FF1: plain status text, not a second bordered/tinted bar sitting under
+// the Timeout button - that pairing read as a second, disabled button and
+// broke the one-button-system promise.
 .timer-display {
   text-align: center;
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin-top: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  background: color-mix(in srgb, var(--warning) 14%, var(--surface));
-  border: 2px solid color-mix(in srgb, var(--warning) 45%, transparent);
-  border-radius: var(--radius-md);
-  color: var(--warning-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 
   p {
     margin: 0 !important;
-    font-size: 1.15rem !important;
+    font-size: 0.95rem !important;
   }
 }
 
@@ -591,28 +589,16 @@
 
   .bonus-preamble-section {
     margin-bottom: var(--spacing-md);
-
-    h4 {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--accent-secondary-text);
-      margin: 0 0 0.5rem 0;
-    }
-
-    // M5 S2 AY: dimming this heading to 0.7 opacity dropped it to 2.95:1
-    // (dark) / 3.28:1 (light), far under 4.5:1 - `--accent-secondary-text`
-    // on `--surface` clears AA only narrowly at full strength (4.55:1 in
-    // dark), leaving no room to fade it. The template's own "(read)" suffix
-    // already carries the completed state, so the heading stays full-colour.
+    // M5 FF1: the "Preamble"/"Preamble (read)" heading was a tracked
+    // uppercase kicker above the preamble text - the craft floor's eyebrow
+    // ban allows no exception. Removed; the preamble block speaks for
+    // itself, same as the tossup question/answer need no heading either.
   }
 
   .bonus-preamble {
     padding: 0.9rem;
     margin-bottom: 0;
     background: var(--bg-secondary);
-    border-left: 3px solid var(--accent-secondary);
     border-radius: var(--radius-sm);
     // M5 S2-22: font-size/line-height come from the `.game-proctor
     // .bonus-preamble` reading-role rule at the bottom of this file, which
@@ -798,7 +784,13 @@ app-team-list {
   font-size: clamp(1.15rem, 1rem + 1vw, 1.5rem);
   line-height: 1.7;
   letter-spacing: 0.005em;
-  max-width: 70ch;
+  // M5 FF1: `ch` measures the "0" glyph of the element's *own* computed
+  // font, so the answer's 700 weight (set below) measured a few px wider
+  // than the preamble/question's 400 weight at the same font-size - a
+  // ragged right edge across otherwise-aligned blocks. `rem` is tied to the
+  // root font-size only, so the same ~70ch measure now lands identically
+  // regardless of weight.
+  max-width: 44rem;
 }
 .game-proctor mat-card-content .answer-section .info-value { font-weight: 700; }
 

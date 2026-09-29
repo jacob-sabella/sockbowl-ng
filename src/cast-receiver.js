@@ -372,9 +372,12 @@
    * Shows the disconnected status as an edge toast, honest about what's
    * happening without dimming the board into uselessness — the room can
    * keep reading the last question and scoreboard while it waits (M5 S2-08).
+   * M5 FF1: no emoji glyph (floor glyph ban) — an empty icon leaves the
+   * `.status-icon` element for `#status.disconnected` to draw as a plain
+   * CSS dot (cast-receiver.css).
    */
   function showDisconnected() {
-    setStatus('disconnected', '⚠️', 'Waiting for the proctor to reconnect');
+    setStatus('disconnected', '', 'Waiting for the proctor to reconnect');
   }
 
   /**
