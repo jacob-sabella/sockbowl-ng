@@ -483,6 +483,19 @@
                   ></textarea>
                 </mat-form-field>
 
+                @if (difficulties.length) {
+                  <mat-form-field class="difficulty-field" appearance="outline" floatLabel="always" subscriptSizing="dynamic">
+                    <mat-label>Difficulty</mat-label>
+                    <mat-select [(ngModel)]="generateDifficultyId" name="generateDifficultyId">
+                      <mat-option value="">Not set</mat-option>
+                      @for (d of difficulties; track d.id) {
+                        <mat-option [value]="d.id">{{ d.name }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-hint>{{ generateDifficultyId ? (generateDifficultyDescription || 'No description yet; the AI only gets the name.') : 'The AI writes at its own level.' }}</mat-hint>
+                  </mat-form-field>
+                }
+
                 <mat-form-field class="question-count-field" appearance="outline" floatLabel="always">
                   <mat-label>Number of Questions</mat-label>
                   <input

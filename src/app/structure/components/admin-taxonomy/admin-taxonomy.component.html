@@ -6,6 +6,7 @@
   <p class="admin-taxonomy__hint">
     Create, rename and merge categories, subcategories and difficulties. There's no delete here — an
     unwanted entry is merged into another instead (everything under it moves, and it's removed).
+    A difficulty's description tells AI generation who the players are and how hard to write.
   </p>
 
   @if (loading) {
@@ -233,6 +234,13 @@
                         </button>
                         <button
                           mat-icon-button
+                          [attr.aria-label]="'Edit description of difficulty ' + difficulty.name"
+                          (click)="startDescribe(difficulty)"
+                        >
+                          <mat-icon aria-hidden="true">notes</mat-icon>
+                        </button>
+                        <button
+                          mat-icon-button
                           [attr.aria-label]="'Merge difficulty ' + difficulty.name"
                           (click)="startMerge('difficulty', difficulty.id, difficulty.name)"
                         >
@@ -240,6 +248,33 @@
                         </button>
                       }
                     </div>
+
+                    @if (describing && describing.id === difficulty.id) {
+                      <div class="admin-taxonomy__describe-form">
+                        <mat-form-field appearance="outline" class="admin-taxonomy__describe-field">
+                          <mat-label>Description used by AI generation</mat-label>
+                          <textarea
+                            matInput
+                            name="describeDraft"
+                            rows="4"
+                            [maxlength]="descriptionMax"
+                            [(ngModel)]="describing.draft"
+                            placeholder="Who the players are, how well-known the answers should be, how hard the first clues can get"
+                          ></textarea>
+                          <mat-hint align="end">{{ describing.draft.length }} / {{ descriptionMax }}</mat-hint>
+                        </mat-form-field>
+                        <div class="admin-taxonomy__describe-actions">
+                          <button mat-button color="primary" [disabled]="describingBusy" (click)="confirmDescribe()">Save</button>
+                          <button mat-button (click)="cancelDescribe()">Cancel</button>
+                        </div>
+                      </div>
+                    } @else if (difficulty.description) {
+                      <p class="admin-taxonomy__description">{{ difficulty.description }}</p>
+                    } @else {
+                      <p class="admin-taxonomy__description admin-taxonomy__description--empty">
+                        No description: generation only gets the name.
+                      </p>
+                    }
 
                     @if (collision && collision.kind === 'difficulty' && collision.sourceId === difficulty.id) {
                       <div class="admin-taxonomy__collision">

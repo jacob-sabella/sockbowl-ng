@@ -83,6 +83,11 @@ export class AdminTaxonomyComponent implements OnInit {
   merging: MergeState | null = null;
   mergingBusy = false;
 
+  /** The difficulty whose generation description is being edited, with the draft text. */
+  describing: { id: string; draft: string } | null = null;
+  describingBusy = false;
+  readonly descriptionMax = 2000;
+
   ngOnInit(): void {
     this.reload();
   }
@@ -414,6 +419,34 @@ export class AdminTaxonomyComponent implements OnInit {
    * classifications). A second, empty-text snackbar here would both duplicate
    * the notice and show nothing useful.
    */
+  startDescribe(difficulty: Difficulty): void {
+    this.describing = { id: difficulty.id, draft: difficulty.description ?? '' };
+  }
+
+  cancelDescribe(): void {
+    this.describing = null;
+  }
+
+  confirmDescribe(): void {
+    if (!this.describing || this.describingBusy) {
+      return;
+    }
+    const { id, draft } = this.describing;
+    this.describingBusy = true;
+    this.packetAuthoringService.setDifficultyDescription(id, draft.trim()).subscribe({
+      next: (updated) => {
+        this.describingBusy = false;
+        this.difficulties = this.difficulties.map((d) => (d.id === id ? { ...d, description: updated.description } : d));
+        this.snackBar.open(`Saved the description for "${updated.name}"`, 'Dismiss', { duration: 3000 });
+        this.describing = null;
+      },
+      error: (err) => {
+        this.describingBusy = false;
+        this.reportError(err);
+      }
+    });
+  }
+
   private reportError(err: unknown): void {
     const message = describeGraphqlError(err);
     if (message) {

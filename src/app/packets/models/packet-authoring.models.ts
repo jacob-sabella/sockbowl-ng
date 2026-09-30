@@ -45,6 +45,8 @@ export interface GenerateTossupInput {
 export interface Difficulty {
   id: string;
   name: string;
+  /** What the level means; AI generation puts it in every prompt at this difficulty. */
+  description?: string | null;
 }
 
 export interface Category {

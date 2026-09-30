@@ -48,7 +48,7 @@ export class PacketAuthoringService {
   /* --------------------------- taxonomy queries --------------------------- */
 
   getAllDifficulties(): Observable<Difficulty[]> {
-    const query = `query { getAllDifficulties { id name } }`;
+    const query = `query { getAllDifficulties { id name description } }`;
     return this.post<{ getAllDifficulties: Difficulty[] }>(query, {}).pipe(
       map(d => d.getAllDifficulties)
     );
@@ -482,6 +482,18 @@ export class PacketAuthoringService {
     `;
     return this.post<{ mergeSubcategories: Subcategory }>(query, { sourceId, targetId }).pipe(
       map(d => d.mergeSubcategories)
+    );
+  }
+
+  /** Sets a difficulty's generation description (taxonomy:manage); blank clears it. */
+  setDifficultyDescription(id: string, description: string): Observable<Difficulty> {
+    const query = `
+      mutation ($id: ID!, $description: String) {
+        setDifficultyDescription(id: $id, description: $description) { id name description }
+      }
+    `;
+    return this.post<{ setDifficultyDescription: Difficulty }>(query, { id, description }).pipe(
+      map(d => d.setDifficultyDescription)
     );
   }
 

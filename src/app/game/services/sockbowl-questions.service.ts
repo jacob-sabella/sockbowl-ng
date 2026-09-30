@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Packet } from '../models/sockbowl/packet-types.generated';
-import { PacketFilter, PacketPage } from '../../packets/models/packet-authoring.models';
+import { Difficulty, PacketFilter, PacketPage } from '../../packets/models/packet-authoring.models';
 // Adds the GraphQL owner { id name } view to Packet (see packet-owner.ts).
 import '../models/sockbowl/packet-owner';
 import {environment} from "../../../environments/environment";
@@ -188,6 +188,13 @@ export class SockbowlQuestionsService {
       .pipe(map(data => data.getAllPackets.map(p => sortPacketRelationships(p) as Packet)));
   }
 
+  /** Every difficulty with its generation description, for the AI generator's picker. */
+  getAllDifficulties(): Observable<Difficulty[]> {
+    return this.graphqlClient
+      .request<{ getAllDifficulties: Difficulty[] }>(this.graphqlUrl, 'query { getAllDifficulties { id name description } }')
+      .pipe(map(data => data.getAllDifficulties));
+  }
+
   /**
    * Get a packet by ID with full details including bonuses.
    *
@@ -336,6 +343,7 @@ export class SockbowlQuestionsService {
    * @param topP Controls diversity via nucleus sampling (0.0-1.0, default 1.0)
    * @param frequencyPenalty Penalizes token frequency (-2.0 to 2.0, default 0.0)
    * @param presencePenalty Penalizes token presence (-2.0 to 2.0, default 0.0)
+   * @param difficultyId Difficulty to write at (its description goes into the prompts), or none
    * @return Observable of generated Packet
    */
   generatePacket(
@@ -348,12 +356,17 @@ export class SockbowlQuestionsService {
     temperature?: number,
     topP?: number,
     frequencyPenalty?: number,
-    presencePenalty?: number
+    presencePenalty?: number,
+    difficultyId?: string
   ): Observable<Packet> {
     const url = `${environment.sockbowlQuestionsApiUrl}api/packets/generate`;
     const body: {
       topic: string; additionalContext?: string; questionCount?: number; generateBonuses?: boolean;
+      difficultyId?: string;
     } = { topic };
+    if (difficultyId) {
+      body.difficultyId = difficultyId;
+    }
     if (additionalContext) {
       body.additionalContext = additionalContext;
     }

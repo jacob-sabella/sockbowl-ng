@@ -47,6 +47,10 @@ describe('PacketSearchComponent', () => {
       recordUsedQuestionIds: jasmine.createSpy('recordUsedQuestionIds').and.returnValue(of(null)),
       // M3 (PB-14): a signed-in caller's dialog loads "My packets" on init.
       listPackets: jasmine.createSpy('listPackets').and.returnValue(of({ items: [], total: 0, page: 0, size: 10 })),
+      getAllDifficulties: jasmine.createSpy('getAllDifficulties').and.returnValue(of([
+        { id: 'd-ms', name: 'Middle School', description: 'Ages 11-14.' },
+        { id: 'd-col', name: 'College', description: null },
+      ])),
     };
     authSpy = jasmine.createSpyObj('AuthService', ['hasPermission', 'isAuthenticated']);
     authSpy.hasPermission.and.callFake((p: string) => permissions.includes(p));
@@ -302,6 +306,26 @@ describe('PacketSearchComponent', () => {
       expect(args[3]).toBe('');
       expect(args[8]).toBeUndefined();
       expect(args[9]).toBeUndefined();
+    });
+
+    it('sends the picked difficulty and shows what the AI is told about it', () => {
+      configure(['question:generate']);
+      component.generateTopic = 'Topic';
+      component.useSavedKey = true;
+      component.apiKey = '';
+      component.selectedModel = '';
+      fixture.detectChanges();
+
+      expect(component.difficulties.map(d => d.name)).toEqual(['College', 'Middle School']);
+      component.generateDifficultyId = 'd-ms';
+      expect(component.generateDifficultyDescription).toBe('Ages 11-14.');
+
+      component.generateAIPacket();
+      expect(questions['generatePacket'].calls.mostRecent().args[10]).toBe('d-ms');
+
+      component.generateDifficultyId = '';
+      component.generateAIPacket();
+      expect(questions['generatePacket'].calls.mostRecent().args[10]).toBeUndefined();
     });
 
     it('still requires a key without the saved key', () => {

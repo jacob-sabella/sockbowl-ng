@@ -35,7 +35,7 @@ describe('AdminTaxonomyComponent', () => {
 
   function difficulties(): Difficulty[] {
     return [
-      { id: easyId, name: 'Easy' },
+      { id: easyId, name: 'Easy', description: 'Ages 8-11.' },
       { id: mediumId, name: 'Medium' }
     ];
   }
@@ -53,7 +53,8 @@ describe('AdminTaxonomyComponent', () => {
       'renameDifficulty',
       'mergeCategories',
       'mergeSubcategories',
-      'mergeDifficulties'
+      'mergeDifficulties',
+      'setDifficultyDescription'
     ]);
     packetAuthoringSpy.getAllCategories.and.returnValue(of(categories()));
     packetAuthoringSpy.getAllSubcategories.and.returnValue(of(subcategories()));
@@ -226,6 +227,43 @@ describe('AdminTaxonomyComponent', () => {
 
       expect(component.collision).toBeNull();
       expect(snackBarSpy.open).toHaveBeenCalledWith('collides', 'Dismiss', jasmine.any(Object));
+    });
+  });
+
+  describe('difficulty descriptions', () => {
+    it('shows each description, or says there is none', () => {
+      configure();
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(component.difficulties.find((d) => d.id === easyId)?.description).toBe('Ages 8-11.');
+      expect(text).toContain('Ages 8-11.');
+      expect(text).toContain('No description: generation only gets the name.');
+    });
+
+    it('edits a description and keeps the saved text', () => {
+      configure();
+      packetAuthoringSpy.setDifficultyDescription.and.returnValue(
+        of({ id: mediumId, name: 'Medium', description: 'Typical high school.' }));
+
+      component.startDescribe(component.difficulties.find((d) => d.id === mediumId)!);
+      expect(component.describing?.draft).toBe('');
+      component.describing!.draft = '  Typical high school.  ';
+      component.confirmDescribe();
+
+      expect(packetAuthoringSpy.setDifficultyDescription).toHaveBeenCalledWith(mediumId, 'Typical high school.');
+      expect(component.difficulties.find((d) => d.id === mediumId)?.description).toBe('Typical high school.');
+      expect(component.describing).toBeNull();
+    });
+
+    it('keeps the editor open when saving fails', () => {
+      configure();
+      packetAuthoringSpy.setDifficultyDescription.and.returnValue(throwError(() => new Error('boom')));
+
+      component.startDescribe(component.difficulties.find((d) => d.id === easyId)!);
+      expect(component.describing?.draft).toBe('Ages 8-11.');
+      component.confirmDescribe();
+
+      expect(component.describing).not.toBeNull();
+      expect(component.describingBusy).toBeFalse();
     });
   });
 

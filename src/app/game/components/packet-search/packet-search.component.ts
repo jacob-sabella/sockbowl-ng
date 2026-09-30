@@ -4,9 +4,10 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ImportRandomResult, SockbowlQuestionsService } from '../../services/sockbowl-questions.service';
 import { Packet } from '../../models/sockbowl/packet-types.generated';
-import { PacketPage, PacketSummary } from '../../../packets/models/packet-authoring.models';
+import { Difficulty, PacketPage, PacketSummary } from '../../../packets/models/packet-authoring.models';
 import { Subject, of, TimeoutError } from 'rxjs';
 import { debounceTime, switchMap, catchError } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RateLimitStateService } from '../../../core/http/rate-limit-state.service';
 import { isLimitHandled, limitErrorFrom } from '../../../core/http/limit-errors';
@@ -124,6 +125,9 @@ export class PacketSearchComponent implements OnInit {
   generateContext = "";
   questionCount = 5;  // Default to 5, max 30
   generateBonuses = true;  // Default to true
+  /** Difficulties for the generator's picker; '' means none (the prompt gets no level). */
+  difficulties: Difficulty[] = [];
+  generateDifficultyId = '';
   isGenerating = false;
   generatedPacket: Packet | null = null;
 
@@ -236,6 +240,14 @@ export class PacketSearchComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    if (this.auth.hasPermission('question:generate')) {
+      this.sockbowlQuestionsService.getAllDifficulties().pipe(
+        catchError(() => of([] as Difficulty[])),
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe(list => {
+        this.difficulties = [...list].sort((a, b) => a.name.localeCompare(b.name));
+      });
+    }
     // Set up debounced search. switchMap cancels the in-flight request when a newer
     // query arrives, so a slow response for an earlier query can never overwrite the
     // results of a later one (the classic search race). Uses the paginated,
@@ -430,6 +442,11 @@ export class PacketSearchComponent implements OnInit {
     this.updateParameterVisibility();
   }
 
+  /** The picked difficulty's description, shown under the picker so the user sees what the AI is told. */
+  get generateDifficultyDescription(): string {
+    return this.difficulties.find(d => d.id === this.generateDifficultyId)?.description ?? '';
+  }
+
   generateAIPacket(): void {
     // Validate all required fields
     if (!this.validateGenerationForm()) {
@@ -451,7 +468,8 @@ export class PacketSearchComponent implements OnInit {
       this.temperature,
       this.topP,
       this.useSavedKey ? undefined : this.frequencyPenalty,
-      this.useSavedKey ? undefined : this.presencePenalty
+      this.useSavedKey ? undefined : this.presencePenalty,
+      this.generateDifficultyId || undefined
     ).subscribe({
       next: (packet) => {
         this.generatedPacket = packet;

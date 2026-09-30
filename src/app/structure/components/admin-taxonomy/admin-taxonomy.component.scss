@@ -118,6 +118,32 @@
     font-size: 0.9rem;
   }
 
+  &__description {
+    margin: 0 0 0.5rem;
+    padding-right: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    white-space: pre-line;
+
+    &--empty {
+      font-style: italic;
+    }
+  }
+
+  &__describe-form {
+    padding: 0.25rem 0.5rem 0.5rem 0;
+  }
+
+  &__describe-field {
+    width: 100%;
+  }
+
+  &__describe-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
   &__merge-form {
     display: flex;
     align-items: baseline;
