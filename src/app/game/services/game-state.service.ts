@@ -354,6 +354,8 @@ export class GameStateService {
               nextRound.remainingAnswerTimerSeconds = msg.remainingSeconds;
             } else if (msg.timerType === 'ADVANCE') {
               nextRound.remainingAdvanceSeconds = msg.remainingSeconds;
+            } else if (msg.timerType === 'BONUS_START') {
+              nextRound.remainingBonusStartSeconds = msg.remainingSeconds;
             }
           });
         })

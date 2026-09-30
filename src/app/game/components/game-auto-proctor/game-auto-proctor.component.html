@@ -177,6 +177,9 @@
               } @else {
                 <span class="waiting-hint">Waiting for {{ bonusTeamName }} to start the bonus.</span>
               }
+              @if (bonusStartSecondsLeft !== null) {
+                <span class="waiting-hint" aria-live="polite">Bonus starts in {{ bonusStartSecondsLeft }}s</span>
+              }
             </div>
           }
         </div>

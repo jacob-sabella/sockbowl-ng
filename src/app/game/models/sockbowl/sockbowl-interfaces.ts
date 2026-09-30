@@ -566,6 +566,7 @@ export class Round {
   remainingAnswerTimerSeconds?: number;
   /** Auto-judged multiplayer: seconds until the server advances a finished round. */
   remainingAdvanceSeconds?: number;
+  remainingBonusStartSeconds?: number;
   timerStartedAtMillis?: number;
   // Reveal fields (AUTO_PROCTOR only)
   revealedWordCount?: number;
@@ -592,6 +593,7 @@ export class Round {
     this.remainingBonusTimerSeconds = data.remainingBonusTimerSeconds;
     this.remainingAnswerTimerSeconds = data.remainingAnswerTimerSeconds;
     this.remainingAdvanceSeconds = data.remainingAdvanceSeconds;
+    this.remainingBonusStartSeconds = data.remainingBonusStartSeconds;
     this.timerStartedAtMillis = data.timerStartedAtMillis;
     this.revealedWordCount = data.revealedWordCount;
     this.totalWordCount = data.totalWordCount;

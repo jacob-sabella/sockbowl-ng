@@ -122,7 +122,12 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     return this.isCompleted ? (this.round?.remainingAdvanceSeconds ?? null) : null;
   }
 
-  /** Tossup won, bonus set up but not yet started — the pause requiring an explicit Start bonus press. */
+  /** Seconds until the server starts the pending bonus on its own. */
+  get bonusStartSecondsLeft(): number | null {
+    return this.isBonusPending ? (this.round?.remainingBonusStartSeconds ?? null) : null;
+  }
+
+  /** Tossup won, bonus set up but not yet started; the server starts it after a short pause, or a player can start it sooner. */
   get isBonusPending(): boolean {
     return this.roundState === RoundState.BONUS_PENDING;
   }

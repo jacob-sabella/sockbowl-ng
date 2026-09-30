@@ -320,4 +320,10 @@ describe('GameAutoProctorComponent server-driven countdowns', () => {
     tick(10_000);
     expect(gameStateService.sendAdvanceRound).not.toHaveBeenCalled();
   }));
+
+  it('shows the server countdown before a pending bonus starts', () => {
+    fixture.detectChanges();
+    emit({ roundState: RoundState.BONUS_PENDING, bonusEligibleTeamId: 't9', remainingBonusStartSeconds: 4 });
+    expect(text()).toContain('Bonus starts in 4s');
+  });
 });
