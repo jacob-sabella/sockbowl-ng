@@ -74,16 +74,32 @@ describe('GameAutoProctorComponent reading placeholder (M5 S1-17)', () => {
     expect(root.querySelector('.reveal-cursor')).toBeNull();
   });
 
-  it('shows the revealed text (and cursor) once the server has streamed some words', () => {
+  it('eases the revealed words in one at a time (with the cursor) once the server has streamed some', fakeAsync(() => {
     fixture.detectChanges();
     gameSession$.next(session('Alpha bravo charlie', 3, 12));
+    tick(0);
     fixture.detectChanges();
 
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.waiting-hint')).toBeNull();
-    expect(root.textContent).toContain('Alpha bravo charlie');
+    expect(root.textContent).toContain('Alpha');
+    expect(root.textContent).not.toContain('Alpha bravo');
     expect(root.querySelector('.reveal-cursor')).not.toBeNull();
-  });
+
+    tick(1000);
+    fixture.detectChanges();
+    expect(root.textContent).toContain('Alpha bravo charlie');
+  }));
+
+  it('snaps the previous tick\'s words in when the next tick arrives early', fakeAsync(() => {
+    fixture.detectChanges();
+    gameSession$.next(session('Alpha bravo charlie', 3, 12));
+    tick(0);
+    gameSession$.next(session('Alpha bravo charlie delta', 4, 11));
+    tick(0);
+    expect(component.shownText).toBe('Alpha bravo charlie delta');
+    tick(1000);
+  }));
 
   it('has no question card at all before gameSession$ has emitted', () => {
     fixture.detectChanges();

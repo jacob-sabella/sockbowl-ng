@@ -470,10 +470,10 @@ export class TimerSettings {
   readingWordsPerSecond: number;
 
   constructor(data?: Partial<TimerSettings>) {
-    this.tossupTimerSeconds = data?.tossupTimerSeconds ?? 5;
-    this.bonusTimerSeconds = data?.bonusTimerSeconds ?? 5;
+    this.tossupTimerSeconds = data?.tossupTimerSeconds ?? 8;
+    this.bonusTimerSeconds = data?.bonusTimerSeconds ?? 15;
     this.autoTimerEnabled = data?.autoTimerEnabled ?? true;
-    this.readingWordsPerSecond = data?.readingWordsPerSecond ?? 4;
+    this.readingWordsPerSecond = data?.readingWordsPerSecond ?? 3;
   }
 }
 

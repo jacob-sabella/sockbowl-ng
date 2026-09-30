@@ -3,6 +3,7 @@ import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
 import {SpeechService} from '../../services/speech.service';
+import { wordWeight } from '../../services/reading-cadence';
 
 /**
  * Solo play surface with a moderator-style reader/buzz mechanic: the tossup is
@@ -39,7 +40,7 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
   revealedCount = 0;
   hasBuzzed = false;
   /** 1 (slow) … 10 (fast); persisted per browser. */
-  readingSpeed = 5;
+  readingSpeed = 4;
 
   /** Grace window (seconds) to buzz once the read finishes before the tossup is forgone. */
   private static readonly BUZZ_WINDOW = 8;
@@ -239,14 +240,14 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
 
   /** Reading-speed presets (map the 1..10 rate to three friendly choices). */
   readonly speedPresets = [
-    { key: 'Slow', value: 3 },
-    { key: 'Normal', value: 6 },
-    { key: 'Fast', value: 9 },
+    { key: 'Slow', value: 2 },
+    { key: 'Normal', value: 4 },
+    { key: 'Fast', value: 7 },
   ];
 
   get activePreset(): string {
-    if (this.readingSpeed <= 4) return 'Slow';
-    if (this.readingSpeed <= 7) return 'Normal';
+    if (this.readingSpeed <= 2) return 'Slow';
+    if (this.readingSpeed <= 5) return 'Normal';
     return 'Fast';
   }
 
@@ -314,16 +315,20 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Reveals the next word after that word's reading time, so the pace sounds human (reading-cadence). */
   private scheduleTick(): void {
     this.clearTimer();
-    this.readingTimer = setInterval(() => {
+    const next = this.words[this.revealedCount];
+    const delay = next === undefined ? 0 : Math.round(this.intervalMs() * wordWeight(next));
+    this.readingTimer = setTimeout(() => {
+      this.readingTimer = null;
       if (this.revealedCount < this.words.length) {
         this.revealedCount++;
+        this.scheduleTick();
       } else {
-        this.clearTimer();
         this.startBuzzWindow();
       }
-    }, this.intervalMs());
+    }, delay);
   }
 
   /** After the read finishes, count down the grace period; forgo if it elapses. */
@@ -349,14 +354,14 @@ export class GameSinglePlayerComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** speed 1..10 → ~520ms (slow) down to ~70ms (fast) per word. */
+  /** speed 1..10 → ~520ms (slow) down to ~70ms (fast) for an average word. */
   private intervalMs(): number {
     return Math.round(520 - (this.readingSpeed - 1) * 50);
   }
 
   private clearTimer(): void {
     if (this.readingTimer) {
-      clearInterval(this.readingTimer);
+      clearTimeout(this.readingTimer);
       this.readingTimer = null;
     }
   }

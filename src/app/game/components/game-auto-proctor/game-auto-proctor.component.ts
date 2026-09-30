@@ -3,6 +3,7 @@ import {Subscription} from 'rxjs';
 import {GameSession, RoundState} from '../../models/sockbowl/sockbowl-interfaces';
 import {GameStateService} from '../../services/game-state.service';
 import {SpeechService} from '../../services/speech.service';
+import { wordWeight } from '../../services/reading-cadence';
 
 /**
  * Auto-proctor multiplayer play surface: the tossup auto-reveals word-by-word;
@@ -49,6 +50,16 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   private lastAnswerKey = '';
   private lastSpokenBonusKey = '';
 
+  /**
+   * Words of the server's revealed text shown so far. The server reveals about a second of
+   * reading per tick; each tick's words ease in one at a time at the same cadence
+   * (reading-cadence), so the text reads like a person instead of jumping in chunks.
+   */
+  shownWordCount = 0;
+  private easedTo = 0;
+  private revealRoundKey = '';
+  private revealTimers: ReturnType<typeof setTimeout>[] = [];
+
   /** Last cumulative revealed text spoken by the TTS reader, to compute the delta on each new chunk. */
   private lastSpokenRevealedText = '';
 
@@ -76,6 +87,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearRevealTimers();
     this.speech.cancel();
     this.sub?.unsubscribe();
   }
@@ -230,6 +242,15 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
 
   get revealedText(): string {
     return this.round?.question || '';
+  }
+
+  /** The revealed text as displayed: eased in word by word while the question is being read. */
+  get shownText(): string {
+    if (!this.isBuzzable) {
+      return this.revealedText;
+    }
+    const words = this.splitWords(this.revealedText);
+    return words.slice(0, Math.min(this.shownWordCount, words.length)).join(' ');
   }
 
   get readingComplete(): boolean {
@@ -393,6 +414,7 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
       setTimeout(() => this.answerInput?.nativeElement?.focus(), 0);
     }
     this.lastAnswerKey = answerKey;
+    this.easeReveal();
 
     if (this.isBuzzable) {
       // Server-driven reveal: speak only the newly-arrived increment.
@@ -424,6 +446,51 @@ export class GameAutoProctorComponent implements OnInit, OnDestroy {
     if (delta) {
       this.speech.speak(delta, GameAutoProctorComponent.READER_SPEECH_RATE);
     }
+  }
+
+  private easeReveal(): void {
+    const words = this.splitWords(this.revealedText);
+    const key = String(this.round?.roundNumber ?? '');
+    if (key !== this.revealRoundKey || words.length < this.easedTo) {
+      this.clearRevealTimers();
+      this.revealRoundKey = key;
+      this.shownWordCount = 0;
+      this.easedTo = 0;
+    }
+    if (!this.isBuzzable) {
+      this.clearRevealTimers();
+      this.shownWordCount = this.easedTo = words.length;
+      return;
+    }
+    if (words.length === this.easedTo) {
+      return;
+    }
+    // The last tick's words are all out by now; this tick's ease in over (at most) a second.
+    this.clearRevealTimers();
+    this.shownWordCount = Math.max(this.shownWordCount, this.easedTo);
+    const msPerWord = 1000 / Math.max(1, this.gameSession?.gameSettings?.timerSettings?.readingWordsPerSecond ?? 3);
+    const costs = words.slice(this.easedTo).map(w => msPerWord * wordWeight(w));
+    const total = costs.reduce((a, b) => a + b, 0);
+    const scale = total > 950 ? 950 / total : 1;
+    let at = 0;
+    costs.forEach((cost, i) => {
+      const count = this.easedTo + i + 1;
+      this.revealTimers.push(setTimeout(() => {
+        this.shownWordCount = Math.max(this.shownWordCount, count);
+      }, Math.round(at)));
+      at += cost * scale;
+    });
+    this.easedTo = words.length;
+  }
+
+  private clearRevealTimers(): void {
+    this.revealTimers.forEach(t => clearTimeout(t));
+    this.revealTimers = [];
+  }
+
+  private splitWords(text: string): string[] {
+    const t = (text || '').trim();
+    return t ? t.split(/\s+/) : [];
   }
 
   private tokenize(html: string): string[] {

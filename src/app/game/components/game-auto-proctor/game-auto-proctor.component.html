@@ -49,7 +49,7 @@
           } @else {
             <div class="info-value font-serif" aria-live="polite" aria-atomic="true">
               @if (revealedText) {
-                <span>{{ revealedText }}</span>@if (!readingComplete && isBuzzable) { <span class="reveal-cursor" aria-hidden="true">▍</span> }
+                <span>{{ shownText }}</span>@if (!readingComplete && isBuzzable) { <span class="reveal-cursor" aria-hidden="true">▍</span> }
               } @else {
                 <span class="waiting-hint">Reading… the question will appear here</span>
               }

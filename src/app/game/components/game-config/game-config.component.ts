@@ -58,15 +58,15 @@ export class GameConfigComponent implements OnInit {
   selectedPacket: Packet | null = null;
 
   // Timer settings
-  tossupTimerSeconds = 5;
-  bonusTimerSeconds = 5;
+  tossupTimerSeconds = 8;
+  bonusTimerSeconds = 15;
   autoTimerEnabled = true;
-  readingWordsPerSecond = 4;
+  readingWordsPerSecond = 3;
   /**
    * The session's last-confirmed timer values (S3-09): what a field reverts
    * to on commit if the user cleared it rather than typing a new number.
    */
-  private committedTimer = { tossup: 5, bonus: 5, reading: 4 };
+  private committedTimer = { tossup: 8, bonus: 15, reading: 3 };
 
   /** Guards the Start button against a double click while the server hasn't replied yet (S3-09). */
   startPending = false;
