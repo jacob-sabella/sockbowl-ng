@@ -30,7 +30,7 @@
     "@angular/material": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/platform-browser-dynamic": "^22.2.0",
-    "@angular/router": "^22.2.0",
+    "@angular/router": "^22.2.1",
     "@angular/service-worker": "^22.2.0",
     "@stomp/rx-stomp": "^2.4.0",
     "@stomp/stompjs": "^7.3.0",
