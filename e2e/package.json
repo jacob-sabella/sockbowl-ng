@@ -16,12 +16,12 @@
     "record-stomp": "tsx polish/record-stomp.ts"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.10.0",
-    "@stomp/stompjs": "^7.3.0",
+    "@axe-core/playwright": "^4.14.0",
+    "@stomp/stompjs": "^7.5.0",
     "ws": "^8.22.0",
     "tsx": "^4.23.15",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.1",
     "typescript": "~6.0.3",
-    "undici": "^8.11.2"
+    "undici": "^8.12.3"
   }
 }
