@@ -22,6 +22,6 @@
     "tsx": "^4.23.15",
     "@playwright/test": "^1.63.0",
     "typescript": "~6.0.3",
-    "undici": "^8.11.2"
+    "undici": "^8.12.2"
   }
 }
