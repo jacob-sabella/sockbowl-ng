@@ -10,6 +10,20 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      # Angular packages pin each other as exact peers (router 22.2.1 needs
+      # common 22.2.1), so they have to move together, security updates too.
+      angular:
+        applies-to: version-updates
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+      angular-security:
+        applies-to: security-updates
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
       minor-and-patch:
         update-types:
           - "minor"
